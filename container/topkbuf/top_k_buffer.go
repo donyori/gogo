@@ -1,5 +1,5 @@
 // gogo. A Golang toolbox.
-// Copyright (C) $date.year Yuan Gao
+// Copyright (C) 2019 Yuan Gao
 //
 // This file is part of gogo.
 //
