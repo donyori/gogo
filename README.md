@@ -3,7 +3,7 @@ A Golang toolbox.
 
 ---
 
-This library is not systematic and is just a toolbox.
+This library is not systematic and just contains some scattered tools.
 
 The library is under development.
 More codes and documents will be added in the future.
