@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package topkbuf provides OOP-style buffer for saving the first K smallest items.
 package topkbuf
 
 import (
@@ -24,6 +23,7 @@ import (
 	"fmt"
 
 	"github.com/donyori/gogo/container/pqueue"
+	"github.com/donyori/gogo/function"
 )
 
 // Buffer for saving the first K smallest items.
@@ -43,6 +43,9 @@ type TopKBuffer interface {
 	// Discard all items and release the memory.
 	Clear()
 }
+
+// Export github.com/donyori/gogo/function.LessFunc.
+type LessFunc = function.LessFunc
 
 // An implementation of TopKBuffer,
 // based on github.com/donyori/gogo/container/pqueue.PriorityQueue.

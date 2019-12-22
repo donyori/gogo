@@ -16,15 +16,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package pqueue provides OOP-style priority queue.
-// There are three priority queue versions in this package:
-// mini version (PriorityQueueMini), standard version (PriorityQueue),
-// and ex version (PriorityQueueEx).
 package pqueue
 
 import (
 	"container/heap"
 	"errors"
+
+	"github.com/donyori/gogo/function"
 )
 
 // Priority queue, mini version.
@@ -86,6 +84,9 @@ type PriorityQueueEx interface {
 	// Time complexity: O(n), where n = pq.Len().
 	DisorderlyScan(handler func(x interface{}) (doesContinue bool))
 }
+
+// Export github.com/donyori/gogo/function.LessFunc.
+type LessFunc = function.LessFunc
 
 // An implementation of PriorityQueueMini, PriorityQueue and PriorityQueueEx,
 // based on container/heap.

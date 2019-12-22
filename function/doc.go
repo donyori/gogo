@@ -16,9 +16,5 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package topkbuf
-
-import "github.com/donyori/gogo/container/pqueue"
-
-// Export github.com/donyori/gogo/container/pqueue.LessFunc.
-type LessFunc = pqueue.LessFunc
+// Package function provides basic and general-purpose functions.
+package function

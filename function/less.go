@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package pqueue
+package function
 
 // A function to test whether a < b.
 type LessFunc func(a, b interface{}) bool
