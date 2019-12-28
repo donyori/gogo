@@ -36,3 +36,18 @@ func (lf LessFunc) Reverse() LessFunc {
 	}
 	return f
 }
+
+// A prefab LessFunc for int.
+func IntLess(a, b interface{}) bool {
+	return a.(int) < b.(int)
+}
+
+// A prefab LessFunc for float64.
+func Float64Less(a, b interface{}) bool {
+	return a.(float64) < b.(float64)
+}
+
+// A prefab LessFunc for string.
+func StringLess(a, b interface{}) bool {
+	return a.(string) < b.(string)
+}
