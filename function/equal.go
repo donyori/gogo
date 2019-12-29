@@ -18,34 +18,17 @@
 
 package function
 
-// A function to test whether a < b.
-type LessFunc func(a, b interface{}) bool
+// A function to test whether a == b.
+type EqualFunc func(a, b interface{}) bool
 
-// Negative the function, i.e., to test whether !(a < b).
-func (lf LessFunc) Not() LessFunc {
+// Negative the function, i.e., to test whether !(a == b).
+func (ef EqualFunc) Not() EqualFunc {
 	return func(a, b interface{}) bool {
-		return !lf(a, b)
+		return !ef(a, b)
 	}
 }
 
-// Reverse the function, i.e., to test whether b < a.
-func (lf LessFunc) Reverse() LessFunc {
-	return func(a, b interface{}) bool {
-		return lf(b, a)
-	}
-}
-
-// A prefab LessFunc for int.
-func IntLess(a, b interface{}) bool {
-	return a.(int) < b.(int)
-}
-
-// A prefab LessFunc for float64.
-func Float64Less(a, b interface{}) bool {
-	return a.(float64) < b.(float64)
-}
-
-// A prefab LessFunc for string.
-func StringLess(a, b interface{}) bool {
-	return a.(string) < b.(string)
+// A prefab EqualFunc for comparable variables.
+func Equal(a, b interface{}) bool {
+	return a == b
 }

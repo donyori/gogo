@@ -18,34 +18,46 @@
 
 package function
 
-// A function to test whether a < b.
-type LessFunc func(a, b interface{}) bool
+import "testing"
 
-// Negative the function, i.e., to test whether !(a < b).
-func (lf LessFunc) Not() LessFunc {
-	return func(a, b interface{}) bool {
-		return !lf(a, b)
+func TestEqual(t *testing.T) {
+	pairs := [][2]interface{}{
+		{nil, nil},
+		{1, nil},
+		{nil, 1},
+		{1, 1},
+		{1, 0},
+		{0, 1},
+		{1., 1.},
+		{1, 1.},
+		{1., 1},
+	}
+	for _, pair := range pairs {
+		if r := Equal(pair[0], pair[1]); r != (pair[0] == pair[1]) {
+			t.Errorf("Equal(%v, %v) = %t.", pair[0], pair[1], r)
+		}
 	}
 }
 
-// Reverse the function, i.e., to test whether b < a.
-func (lf LessFunc) Reverse() LessFunc {
-	return func(a, b interface{}) bool {
-		return lf(b, a)
+func TestEqualFunc_Not(t *testing.T) {
+	pairs := [][2]interface{}{
+		{nil, nil},
+		{1, nil},
+		{nil, 1},
+		{1, 1},
+		{1, 0},
+		{0, 1},
+		{1., 1.},
+		{1, 1.},
+		{1., 1},
 	}
-}
-
-// A prefab LessFunc for int.
-func IntLess(a, b interface{}) bool {
-	return a.(int) < b.(int)
-}
-
-// A prefab LessFunc for float64.
-func Float64Less(a, b interface{}) bool {
-	return a.(float64) < b.(float64)
-}
-
-// A prefab LessFunc for string.
-func StringLess(a, b interface{}) bool {
-	return a.(string) < b.(string)
+	var eq EqualFunc = Equal
+	nEq := eq.Not()
+	for _, pair := range pairs {
+		r1 := !eq(pair[0], pair[1])
+		r2 := nEq(pair[0], pair[1])
+		if r1 != r2 {
+			t.Errorf("nEq(%v, %v) != !eq(%[1]v, %v).", pair[0], pair[1])
+		}
+	}
 }
