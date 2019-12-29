@@ -21,6 +21,14 @@ package function
 // A function to test whether a == b.
 type EqualFunc func(a, b interface{}) bool
 
+// Generate EqualFunc via LessFunc.
+// equal(a, b) = !(less(a, b) || less(b, a)).
+func GenerateEqualViaLess(less LessFunc) EqualFunc {
+	return func(a, b interface{}) bool {
+		return !(less(a, b) || less(b, a))
+	}
+}
+
 // Negative the function, i.e., to test whether !(a == b).
 func (ef EqualFunc) Not() EqualFunc {
 	return func(a, b interface{}) bool {

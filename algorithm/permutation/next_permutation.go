@@ -19,6 +19,7 @@
 package permutation
 
 import (
+	"errors"
 	"sort"
 
 	"github.com/donyori/gogo/adapter/sorta"
@@ -30,11 +31,15 @@ type LessFunc = function.LessFunc
 
 // Transform data to its next permutation in lexical order.
 // It returns false if len(data) == 0 or the permutations are exhausted.
+// It panics if less is nil.
 // Time complexity: O(n), where n = len(data).
-func NextPermutationSlice(data []interface{}, lessFunc LessFunc) bool {
+func NextPermutationSlice(data []interface{}, less LessFunc) bool {
+	if less == nil {
+		panic(errors.New("less is nil"))
+	}
 	itf := &sorta.Slice{
-		Data:     data,
-		LessFunc: lessFunc,
+		Data:   data,
+		LessFn: less,
 	}
 	return NextPermutationSortItf(itf)
 }

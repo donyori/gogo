@@ -85,37 +85,62 @@ type PriorityQueueEx interface {
 	DisorderlyScan(handler func(x interface{}) (doesContinue bool))
 }
 
+// Export github.com/donyori/gogo/function.EqualFunc.
+type EqualFunc = function.EqualFunc
+
 // Export github.com/donyori/gogo/function.LessFunc.
 type LessFunc = function.LessFunc
 
-// An implementation of PriorityQueueMini, PriorityQueue and PriorityQueueEx,
+// An implementation of PriorityQueueMini and PriorityQueue,
 // based on container/heap.
 type priorityQueue intlHeap
 
+// An implementation of PriorityQueueEx,
+// based on container/heap.
+type priorityQueueEx struct {
+	priorityQueue
+	EqualFn EqualFunc
+}
+
 // Create a new priority queue (mini version).
 // data is the initial items in the queue.
-// It panics if lessFunc is nil.
-func NewPriorityQueueMini(lessFunc LessFunc, data ...interface{}) PriorityQueueMini {
-	return PriorityQueueMini(NewPriorityQueueEx(lessFunc, data...))
+// It panics if less is nil.
+func NewPriorityQueueMini(less LessFunc, data ...interface{}) PriorityQueueMini {
+	return PriorityQueueMini(NewPriorityQueue(less, data...))
 }
 
 // Create a new priority queue (standard version).
 // data is the initial items in the queue.
-// It panics if lessFunc is nil.
-func NewPriorityQueue(lessFunc LessFunc, data ...interface{}) PriorityQueue {
-	return PriorityQueue(NewPriorityQueueEx(lessFunc, data...))
+// It panics if less is nil.
+func NewPriorityQueue(less LessFunc, data ...interface{}) PriorityQueue {
+	if less == nil {
+		panic(errors.New("less is nil"))
+	}
+	pq := &priorityQueue{
+		Data:   append(data[:0:0], data...),
+		LessFn: less,
+	}
+	pq.Maintain()
+	return pq
 }
 
 // Create a new priority queue (ex version).
 // data is the initial items in the queue.
-// It panics if lessFunc is nil.
-func NewPriorityQueueEx(lessFunc LessFunc, data ...interface{}) PriorityQueueEx {
-	if lessFunc == nil {
-		panic(errors.New("lessFunc is nil"))
+// It panics if less is nil.
+// equal can be nil. If equal is nil, it will be generated via less.
+func NewPriorityQueueEx(less LessFunc, equal EqualFunc, data ...interface{}) PriorityQueueEx {
+	if less == nil {
+		panic(errors.New("less is nil"))
 	}
-	pq := &priorityQueue{
-		Data:     append(data[:0:0], data...),
-		LessFunc: lessFunc,
+	if equal == nil {
+		equal = function.GenerateEqualViaLess(less)
+	}
+	pq := &priorityQueueEx{
+		priorityQueue: priorityQueue{
+			Data:   append(data[:0:0], data...),
+			LessFn: less,
+		},
+		EqualFn: equal,
 	}
 	pq.Maintain()
 	return pq
@@ -167,52 +192,52 @@ func (pq *priorityQueue) Maintain() {
 	heap.Init((*intlHeap)(pq))
 }
 
-func (pq *priorityQueue) DoesContain(x interface{}) bool {
-	return pq.find(x) >= 0
+func (pqx *priorityQueueEx) DoesContain(x interface{}) bool {
+	return pqx.find(x) >= 0
 }
 
-func (pq *priorityQueue) Remove(x interface{}) (ok bool) {
-	idx := pq.find(x)
+func (pqx *priorityQueueEx) Remove(x interface{}) (ok bool) {
+	idx := pqx.find(x)
 	if idx < 0 {
 		return false
 	}
-	heap.Remove((*intlHeap)(pq), idx)
+	heap.Remove((*intlHeap)(&pqx.priorityQueue), idx)
 	return true
 }
 
-func (pq *priorityQueue) Replace(oldX, newX interface{}) (ok bool) {
-	idx := pq.find(oldX)
+func (pqx *priorityQueueEx) Replace(oldX, newX interface{}) (ok bool) {
+	idx := pqx.find(oldX)
 	if idx < 0 {
 		return false
 	}
-	pq.Data[idx] = newX
-	heap.Fix((*intlHeap)(pq), idx)
+	pqx.Data[idx] = newX
+	heap.Fix((*intlHeap)(&pqx.priorityQueue), idx)
 	return true
 }
 
-func (pq *priorityQueue) DisorderlyScan(handler func(x interface{}) (doesContinue bool)) {
-	if handler == nil || pq.Len() == 0 {
+func (pqx *priorityQueueEx) DisorderlyScan(handler func(x interface{}) (doesContinue bool)) {
+	if handler == nil || pqx.Len() == 0 {
 		return
 	}
-	for _, x := range pq.Data {
+	for _, x := range pqx.Data {
 		if !handler(x) {
 			return
 		}
 	}
 }
 
-func (pq *priorityQueue) find(x interface{}) int {
-	if pq.Len() == 0 {
+func (pqx *priorityQueueEx) find(x interface{}) int {
+	if pqx.Len() == 0 {
 		return -1
 	}
-	if x == pq.Data[0] {
+	if pqx.EqualFn(x, pqx.Data[0]) {
 		return 0
 	}
-	if pq.LessFunc(x, pq.Data[0]) {
+	if pqx.LessFn(x, pqx.Data[0]) {
 		return -1
 	}
 	jmpMap := make(map[int]int)
-	for i, n := 1, pq.Len(); i < n; i++ {
+	for i, n := 1, pqx.Len(); i < n; i++ {
 		to := jmpMap[i]
 		if to > 0 {
 			maintainJumpMap(jmpMap, i, to)
@@ -221,10 +246,10 @@ func (pq *priorityQueue) find(x interface{}) int {
 		} else if to < 0 { // if int overflow
 			return -1
 		}
-		if x == pq.Data[i] {
+		if pqx.EqualFn(x, pqx.Data[i]) {
 			return i
 		}
-		if pq.LessFunc(x, pq.Data[i]) {
+		if pqx.LessFn(x, pqx.Data[i]) {
 			maintainJumpMap(jmpMap, i, i)
 		}
 	}

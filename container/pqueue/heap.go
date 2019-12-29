@@ -20,8 +20,8 @@ package pqueue
 
 // An implementation of container/heap.Interface.
 type intlHeap struct {
-	Data     []interface{}
-	LessFunc LessFunc
+	Data   []interface{}
+	LessFn LessFunc
 }
 
 func (h *intlHeap) Len() int {
@@ -39,7 +39,7 @@ func (h *intlHeap) Cap() int {
 }
 
 func (h *intlHeap) Less(i, j int) bool {
-	return h.LessFunc(h.Data[i], h.Data[j])
+	return h.LessFn(h.Data[i], h.Data[j])
 }
 
 func (h *intlHeap) Swap(i, j int) {

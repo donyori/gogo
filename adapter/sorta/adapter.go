@@ -23,8 +23,8 @@ import "github.com/donyori/gogo/function"
 // An adapter for: []interface{} + github.com/donyori/gogo/function.LessFunc
 // -> sort.Interface.
 type Slice struct {
-	Data     []interface{}
-	LessFunc function.LessFunc
+	Data   []interface{}
+	LessFn function.LessFunc
 }
 
 func (s *Slice) Len() int {
@@ -32,7 +32,7 @@ func (s *Slice) Len() int {
 }
 
 func (s *Slice) Less(i, j int) bool {
-	return s.LessFunc(s.Data[i], s.Data[j])
+	return s.LessFn(s.Data[i], s.Data[j])
 }
 
 func (s *Slice) Swap(i, j int) {

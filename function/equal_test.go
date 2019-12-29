@@ -61,3 +61,13 @@ func TestEqualFunc_Not(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerateEqualViaLess(t *testing.T) {
+	intPairs := [][2]int{{0, 0}, {0, 1}, {1, 0}, {1, 1}}
+	eq := GenerateEqualViaLess(IntLess)
+	for _, pair := range intPairs {
+		if r := eq(pair[0], pair[1]); r != (pair[0] == pair[1]) {
+			t.Errorf("eq(%d, %d) = %t.", pair[0], pair[1], r)
+		}
+	}
+}

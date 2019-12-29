@@ -21,11 +21,13 @@ package topkbuf
 import (
 	"sort"
 	"testing"
+
+	"github.com/donyori/gogo/function"
 )
 
 func TestNewTopKBuffer(t *testing.T) {
 	k := 5
-	tkb := NewTopKBuffer(k, intLess, 3, 2, 5)
+	tkb := NewTopKBuffer(k, function.IntLess, 3, 2, 5)
 	y := []int{2, 3, 5}
 	x := tkb.Drain()
 	if len(x) == len(y) {
@@ -37,7 +39,7 @@ func TestNewTopKBuffer(t *testing.T) {
 	} else {
 		t.Errorf("test1: len(x) = %d != len(y) = %d", len(x), len(y))
 	}
-	tkb = NewTopKBuffer(k, intLess, 3, 2, 5, 1, 0, 7, 9, 3)
+	tkb = NewTopKBuffer(k, function.IntLess, 3, 2, 5, 1, 0, 7, 9, 3)
 	y = []int{0, 1, 2, 3, 3}
 	x = tkb.Drain()
 	if len(x) == len(y) {
@@ -54,7 +56,7 @@ func TestNewTopKBuffer(t *testing.T) {
 func TestTopKBuffer(t *testing.T) {
 	k := 5
 	samples := []int{3, 2, 5, 1, 0, 7, 9, 0, 3}
-	tkb := NewTopKBuffer(k, intLess)
+	tkb := NewTopKBuffer(k, function.IntLess)
 	if x := tkb.GetK(); x != k {
 		t.Errorf("tkb.GetK() = %d != %d", x, k)
 	}
@@ -96,8 +98,4 @@ func TestTopKBuffer(t *testing.T) {
 	if n := tkb.Len(); n != 0 {
 		t.Errorf("After clear: tkb.Len() = %d != 0", n)
 	}
-}
-
-func intLess(a, b interface{}) bool {
-	return a.(int) < b.(int)
 }

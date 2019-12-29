@@ -50,30 +50,30 @@ type LessFunc = function.LessFunc
 // An implementation of TopKBuffer,
 // based on github.com/donyori/gogo/container/pqueue.PriorityQueue.
 type topKBuffer struct {
-	K      int
-	LessFn LessFunc
-	PQ     pqueue.PriorityQueue
+	K         int
+	GreaterFn LessFunc
+	PQ        pqueue.PriorityQueue
 }
 
 // Create a new TopKBuffer.
 // data is the initial items in the buffer.
-// It panics if k <= 0 or lessFunc is nil.
-func NewTopKBuffer(k int, lessFunc LessFunc, data ...interface{}) TopKBuffer {
+// It panics if k <= 0 or less is nil.
+func NewTopKBuffer(k int, less LessFunc, data ...interface{}) TopKBuffer {
 	if k <= 0 {
 		panic(fmt.Errorf("K = %d <= 0", k))
 	}
-	if lessFunc == nil {
-		panic(errors.New("lessFunc is nil"))
+	if less == nil {
+		panic(errors.New("less is nil"))
 	}
-	lessFn := lessFunc.Reverse()
+	greater := less.Reverse()
 	tkb := &topKBuffer{
-		K:      k,
-		LessFn: lessFn,
+		K:         k,
+		GreaterFn: greater,
 	}
 	if len(data) <= k {
-		tkb.PQ = pqueue.NewPriorityQueue(lessFn, data...)
+		tkb.PQ = pqueue.NewPriorityQueue(greater, data...)
 	} else {
-		tkb.PQ = pqueue.NewPriorityQueue(lessFn)
+		tkb.PQ = pqueue.NewPriorityQueue(greater)
 		for _, x := range data {
 			tkb.Add(x)
 		}
@@ -100,7 +100,7 @@ func (tkb *topKBuffer) Add(x interface{}) {
 		tkb.PQ.Enqueue(x)
 		return
 	}
-	if top, _ := tkb.PQ.Top(); tkb.LessFn(top, x) {
+	if top, _ := tkb.PQ.Top(); tkb.GreaterFn(top, x) {
 		tkb.PQ.ReplaceTop(x)
 	}
 }

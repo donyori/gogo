@@ -21,6 +21,8 @@ package pqueue
 import (
 	"sort"
 	"testing"
+
+	"github.com/donyori/gogo/function"
 )
 
 type XBoolCase struct {
@@ -30,7 +32,7 @@ type XBoolCase struct {
 
 func TestPriorityQueueMini(t *testing.T) {
 	samples := []int{0, -1, 1, 1, 2, 5, 0}
-	pq := NewPriorityQueueMini(intLess)
+	pq := NewPriorityQueueMini(function.IntLess)
 	for _, x := range samples {
 		pq.Enqueue(x)
 	}
@@ -54,7 +56,7 @@ func TestPriorityQueue_Len(t *testing.T) {
 	if n != 0 {
 		t.Errorf("pq.Len() = %d != 0 when pq == nil.", n)
 	}
-	pq := NewPriorityQueue(intLess)
+	pq := NewPriorityQueue(function.IntLess)
 	n = pq.Len()
 	if n != 0 {
 		t.Errorf("pq.Len() = %d != 0 when pq is empty.", n)
@@ -66,7 +68,7 @@ func TestPriorityQueue_Len(t *testing.T) {
 			t.Errorf("pq.Len() = %d != %d.", n, i+1)
 		}
 	}
-	pq = NewPriorityQueue(intLess, 1, 2, 3, 4)
+	pq = NewPriorityQueue(function.IntLess, 1, 2, 3, 4)
 	n = pq.Len()
 	if n != 4 {
 		t.Errorf("pq.Len() = %d != 4.", n)
@@ -75,7 +77,7 @@ func TestPriorityQueue_Len(t *testing.T) {
 
 func TestPriorityQueue_ReplaceTop(t *testing.T) {
 	samples := []interface{}{1, 2, 3}
-	pq := NewPriorityQueue(intLess, samples...)
+	pq := NewPriorityQueue(function.IntLess, samples...)
 	t.Log("Data:", pq.(*priorityQueue).Data)
 	pq.ReplaceTop(0)
 	t.Log("Data after replace top to 0:", pq.(*priorityQueue).Data)
@@ -89,7 +91,7 @@ func TestPriorityQueue_ReplaceTop(t *testing.T) {
 	}
 }
 
-func TestPriorityQueue_DoesContain(t *testing.T) {
+func TestPriorityQueueEx_DoesContain(t *testing.T) {
 	positiveSamples := []interface{}{5, 1, 1, 2, 7, 2, 0, 1, 8, 7}
 	negativeSamples := []interface{}{-1, -2, 3, 4, 6, 9, 10}
 	var cs []XBoolCase
@@ -105,15 +107,11 @@ func TestPriorityQueue_DoesContain(t *testing.T) {
 			Result: false,
 		})
 	}
-	pq := NewPriorityQueueEx(intLess, positiveSamples...)
-	t.Log("Data:", pq.(*priorityQueue).Data)
+	pq := NewPriorityQueueEx(function.IntLess, nil, positiveSamples...)
+	t.Log("Data:", pq.(*priorityQueueEx).Data)
 	for _, c := range cs {
 		if pq.DoesContain(c.X) != c.Result {
 			t.Errorf("pqueue.DoesContain(%v) != %t", c.X, c.Result)
 		}
 	}
-}
-
-func intLess(a, b interface{}) bool {
-	return a.(int) < b.(int)
 }
