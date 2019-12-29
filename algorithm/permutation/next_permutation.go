@@ -30,6 +30,7 @@ type LessFunc = function.LessFunc
 
 // Transform data to its next permutation in lexical order.
 // It returns false if len(data) == 0 or the permutations are exhausted.
+// Time complexity: O(n), where n = len(data).
 func NextPermutationSlice(data []interface{}, lessFunc LessFunc) bool {
 	itf := &sortw.Slice{
 		Data:     data,
@@ -40,6 +41,7 @@ func NextPermutationSlice(data []interface{}, lessFunc LessFunc) bool {
 
 // Do the same thing as NextPermutationSlice,
 // but work on sort.Interface.
+// Time complexity: O(n), where n = data.Len().
 func NextPermutationSortItf(data sort.Interface) bool {
 	if data == nil {
 		return false
@@ -51,13 +53,20 @@ func NextPermutationSortItf(data sort.Interface) bool {
 	if i < 0 {
 		return false
 	}
-	j := data.Len() - 1
-	for !data.Less(i, j) {
-		j--
+	j := i + 1
+	k := data.Len()
+	m := (j + k) / 2
+	for j != m {
+		if data.Less(i, m) {
+			j = m
+		} else {
+			k = m
+		}
+		m = (j + k) / 2
 	}
 	data.Swap(i, j)
-	for i, j = i+1, data.Len()-1; i < j; i, j = i+1, j-1 {
-		data.Swap(i, j)
+	for j, k = i+1, data.Len()-1; j < k; j, k = j+1, k-1 {
+		data.Swap(j, k)
 	}
 	return true
 }
