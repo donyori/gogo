@@ -16,25 +16,5 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package sortw
-
-import "github.com/donyori/gogo/function"
-
-// A wrapper for: []interface{} + github.com/donyori/gogo/function.LessFunc
-// -> sort.Interface.
-type Slice struct {
-	Data     []interface{}
-	LessFunc function.LessFunc
-}
-
-func (s *Slice) Len() int {
-	return len(s.Data)
-}
-
-func (s *Slice) Less(i, j int) bool {
-	return s.LessFunc(s.Data[i], s.Data[j])
-}
-
-func (s *Slice) Swap(i, j int) {
-	s.Data[i], s.Data[j] = s.Data[j], s.Data[i]
-}
+// Package adapter provides adapters for other APIs.
+package adapter

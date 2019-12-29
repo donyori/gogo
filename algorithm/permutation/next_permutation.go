@@ -21,8 +21,8 @@ package permutation
 import (
 	"sort"
 
+	"github.com/donyori/gogo/adapter/sortw"
 	"github.com/donyori/gogo/function"
-	"github.com/donyori/gogo/wrapper/sortw"
 )
 
 // Export github.com/donyori/gogo/function.LessFunc.
