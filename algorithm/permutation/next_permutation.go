@@ -21,7 +21,7 @@ package permutation
 import (
 	"sort"
 
-	"github.com/donyori/gogo/adapter/sortw"
+	"github.com/donyori/gogo/adapter/sorta"
 	"github.com/donyori/gogo/function"
 )
 
@@ -32,7 +32,7 @@ type LessFunc = function.LessFunc
 // It returns false if len(data) == 0 or the permutations are exhausted.
 // Time complexity: O(n), where n = len(data).
 func NextPermutationSlice(data []interface{}, lessFunc LessFunc) bool {
-	itf := &sortw.Slice{
+	itf := &sorta.Slice{
 		Data:     data,
 		LessFunc: lessFunc,
 	}
