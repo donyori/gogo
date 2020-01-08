@@ -1,5 +1,5 @@
 // gogo. A Golang toolbox.
-// Copyright (C) 2019 Yuan Gao
+// Copyright (C) 2019-2020 Yuan Gao
 //
 // This file is part of gogo.
 //
@@ -21,50 +21,9 @@ package permutation
 import (
 	"sort"
 	"testing"
-
-	"github.com/donyori/gogo/function"
 )
 
-func TestNextPermutationSlice(t *testing.T) {
-	ps := [][4]interface{}{
-		{0, 1, 1, 3},
-		{0, 1, 3, 1},
-		{0, 3, 1, 1},
-		{1, 0, 1, 3},
-		{1, 0, 3, 1},
-		{1, 1, 0, 3},
-		{1, 1, 3, 0},
-		{1, 3, 0, 1},
-		{1, 3, 1, 0},
-		{3, 0, 1, 1},
-		{3, 1, 0, 1},
-		{3, 1, 1, 0},
-	}
-	p := ps[0]
-	s := p[:]
-	for i, n := 1, len(ps); i < n; i++ {
-		if r := NextPermutationSlice(s, function.IntLess); !r {
-			t.Fatalf("No %d. NextPermutationSlice returns false before exhausted.", i)
-		}
-		if p != ps[i] {
-			t.Errorf("No %d. Wrong permutation, want %v, got %v.", i, ps[i], p)
-		}
-	}
-	if r := NextPermutationSlice(s, function.IntLess); r {
-		t.Error("NextPermutationSlice returns true after exhausted.")
-	}
-	if r := NextPermutationSlice(nil, function.IntLess); r {
-		t.Error("NextPermutationSlice returns true for nil slice.")
-	}
-	if r := NextPermutationSlice([]interface{}{}, function.IntLess); r {
-		t.Error("NextPermutationSlice returns true for empty slice.")
-	}
-	if r := NextPermutationSlice([]interface{}{1}, function.IntLess); r {
-		t.Error("NextPermutationSlice returns true for one-element slice.")
-	}
-}
-
-func TestNextPermutationSortItf(t *testing.T) {
+func TestNextPermutation(t *testing.T) {
 	ps := [][4]int{
 		{0, 1, 1, 3},
 		{0, 1, 3, 1},
@@ -82,23 +41,23 @@ func TestNextPermutationSortItf(t *testing.T) {
 	p := ps[0]
 	itf := sort.IntSlice(p[:])
 	for i, n := 1, len(ps); i < n; i++ {
-		if r := NextPermutationSortItf(itf); !r {
-			t.Fatalf("No %d. NextPermutationSlice returns false before exhausted.", i)
+		if r := NextPermutation(itf); !r {
+			t.Fatalf("No %d. NextPermutationArray returns false before exhausted.", i)
 		}
 		if p != ps[i] {
 			t.Errorf("No %d. Wrong permutation, want %v, got %v.", i, ps[i], p)
 		}
 	}
-	if r := NextPermutationSortItf(itf); r {
-		t.Error("NextPermutationSlice returns true after exhausted.")
+	if r := NextPermutation(itf); r {
+		t.Error("NextPermutationArray returns true after exhausted.")
 	}
-	if r := NextPermutationSortItf(nil); r {
-		t.Error("NextPermutationSlice returns true for nil slice.")
+	if r := NextPermutation(nil); r {
+		t.Error("NextPermutationArray returns true for nil Interface.")
 	}
-	if r := NextPermutationSortItf(sort.IntSlice{}); r {
-		t.Error("NextPermutationSlice returns true for empty slice.")
+	if r := NextPermutation(sort.IntSlice{}); r {
+		t.Error("NextPermutationArray returns true for empty Interface.")
 	}
-	if r := NextPermutationSortItf(sort.IntSlice{1}); r {
-		t.Error("NextPermutationSlice returns true for one-element slice.")
+	if r := NextPermutation(sort.IntSlice{1}); r {
+		t.Error("NextPermutationArray returns true for one-element Interface.")
 	}
 }

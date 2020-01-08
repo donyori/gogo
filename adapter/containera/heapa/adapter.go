@@ -16,5 +16,38 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package container provides OOP-style containers.
-package container
+package heapa
+
+import (
+	"github.com/donyori/gogo/container/sequence"
+	"github.com/donyori/gogo/function"
+)
+
+// An adapter for: DynamicArray + LessFunc -> container/heap.Interface.
+type DynamicArray struct {
+	Data   sequence.DynamicArray
+	LessFn function.LessFunc
+}
+
+func (da *DynamicArray) Len() int {
+	if da == nil || da.Data == nil {
+		return 0
+	}
+	return da.Data.Len()
+}
+
+func (da *DynamicArray) Less(i, j int) bool {
+	return da.LessFn(da.Data.Get(i), da.Data.Get(j))
+}
+
+func (da *DynamicArray) Swap(i, j int) {
+	da.Data.Swap(i, j)
+}
+
+func (da *DynamicArray) Push(x interface{}) {
+	da.Data.Push(x)
+}
+
+func (da *DynamicArray) Pop() interface{} {
+	return da.Data.Pop()
+}

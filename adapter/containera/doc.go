@@ -16,5 +16,5 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package container provides OOP-style containers.
-package container
+// Package containera provides adapters for package container.
+package containera

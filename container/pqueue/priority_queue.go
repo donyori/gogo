@@ -1,5 +1,5 @@
 // gogo. A Golang toolbox.
-// Copyright (C) 2019 Yuan Gao
+// Copyright (C) 2019-2020 Yuan Gao
 //
 // This file is part of gogo.
 //
@@ -22,42 +22,48 @@ import (
 	"container/heap"
 	"errors"
 
+	"github.com/donyori/gogo/adapter/containera/heapa"
+	"github.com/donyori/gogo/container/sequence"
 	"github.com/donyori/gogo/function"
 )
 
 // Priority queue, mini version.
-// It contains two basic method: Enqueue and Dequeue.
 type PriorityQueueMini interface {
-	// Add an item, x, into the priority queue.
+	// Return the number of items in the queue.
+	// It returns 0 if the queue is nil.
+	Len() int
+
+	// Add an item, x, into the queue.
 	// Time complexity: O(log n), where n = pq.Len().
 	Enqueue(x interface{})
-	// Pop the minimum item in the priority queue.
-	// x is the minimum item. It is nil if the queue is nil or empty.
-	// ok is an indicator. It is false if the queue is nil or empty, and true otherwise.
+
+	// Pop the minimum item in the queue.
+	// It panics if the queue is nil or empty.
 	// Time complexity: O(log n), where n = pq.Len().
-	Dequeue() (x interface{}, ok bool)
+	Dequeue() interface{}
 }
 
 // Priority queue (standard version).
 type PriorityQueue interface {
 	PriorityQueueMini
-	// Return the number of items in the queue.
-	// It returns 0 if the queue is nil.
-	Len() int
+
 	// Return the capacity of the queue.
 	// It returns 0 if the queue is nil.
 	Cap() int
+
 	// Discard all items in the queue and release the memory.
 	Clear()
+
 	// Return the minimum item in the queue, without popping it.
-	// x is the minimum item. It is nil if the queue is nil or empty.
-	// ok is an indicator. It is false if the queue is nil or empty, and true otherwise.
-	Top() (x interface{}, ok bool)
+	// It panics if the queue is nil or empty.
+	// Time complexity: O(1).
+	Top() interface{}
+
 	// Replace the minimum item with newX.
-	// If the queue is nil or empty, it returns false.
-	// Otherwise it replaces the minimum item and returns true.
+	// It panics if the queue is nil or empty.
 	// Time complexity: O(log n), where n = pq.Len().
-	ReplaceTop(newX interface{}) (ok bool)
+	ReplaceTop(newX interface{})
+
 	// Maintain the priority queue to keep its underlying structure valid.
 	// It is idempotent with respect to the priority queue.
 	// Time complexity: O(n), where n = pq.Len().
@@ -67,77 +73,125 @@ type PriorityQueue interface {
 // Priority queue, ex version.
 type PriorityQueueEx interface {
 	PriorityQueue
+
 	// Returns true if x is in the queue, otherwise false.
 	// Time complexity: O(n), where n = pq.Len().
-	DoesContain(x interface{}) bool
+	Contain(x interface{}) bool
+
 	// Remove the item x in the queue.
 	// If x is in the queue and has been removed successfully, it returns true, otherwise false.
 	// If there are multiple items equals to x in the queue, it removes one of them.
 	// Time complexity: O(n), where n = pq.Len().
 	Remove(x interface{}) (ok bool)
+
 	// Replace oldX in the queue with newX.
 	// If oldX is in the queue and has been replaced successfully, it returns true, otherwise false.
 	// If there are multiple items equals to oldX in the queue, it replaces one of them.
 	// Time complexity: O(n), where n = pq.Len().
 	Replace(oldX, newX interface{}) (ok bool)
+
 	// Scan the items in the queue as fast as possible.
 	// Time complexity: O(n), where n = pq.Len().
-	DisorderlyScan(handler func(x interface{}) (doesContinue bool))
+	ScanWithoutOrder(handler func(x interface{}) (cont bool))
 }
-
-// Export github.com/donyori/gogo/function.EqualFunc.
-type EqualFunc = function.EqualFunc
-
-// Export github.com/donyori/gogo/function.LessFunc.
-type LessFunc = function.LessFunc
 
 // An implementation of PriorityQueueMini and PriorityQueue,
 // based on container/heap.
-type priorityQueue intlHeap
-
-// An implementation of PriorityQueueEx,
-// based on container/heap.
-type priorityQueueEx struct {
-	priorityQueue
-	EqualFn EqualFunc
-}
+type priorityQueue heapa.DynamicArray
 
 // Create a new priority queue (mini version).
 // data is the initial items in the queue.
 // It panics if less is nil.
-func NewPriorityQueueMini(less LessFunc, data ...interface{}) PriorityQueueMini {
+func NewPriorityQueueMini(less function.LessFunc, data ...interface{}) PriorityQueueMini {
 	return PriorityQueueMini(NewPriorityQueue(less, data...))
 }
 
 // Create a new priority queue (standard version).
 // data is the initial items in the queue.
 // It panics if less is nil.
-func NewPriorityQueue(less LessFunc, data ...interface{}) PriorityQueue {
+func NewPriorityQueue(less function.LessFunc, data ...interface{}) PriorityQueue {
 	if less == nil {
 		panic(errors.New("less is nil"))
 	}
+	gda := sequence.GeneralDynamicArray(append(data[:0:0], data...))
 	pq := &priorityQueue{
-		Data:   append(data[:0:0], data...),
+		Data:   &gda,
 		LessFn: less,
 	}
 	pq.Maintain()
 	return pq
 }
 
+func (pq *priorityQueue) Len() int {
+	return (*heapa.DynamicArray)(pq).Len()
+}
+
+func (pq *priorityQueue) Enqueue(x interface{}) {
+	heap.Push((*heapa.DynamicArray)(pq), x)
+}
+
+func (pq *priorityQueue) Dequeue() interface{} {
+	if pq.Len() == 0 {
+		panic(errors.New("priority queue is nil or empty"))
+	}
+	return heap.Pop((*heapa.DynamicArray)(pq))
+}
+
+func (pq *priorityQueue) Cap() int {
+	if pq == nil || pq.Data == nil {
+		return 0
+	}
+	return pq.Data.Cap()
+}
+
+func (pq *priorityQueue) Clear() {
+	pq.Data.Clear()
+}
+
+func (pq *priorityQueue) Top() interface{} {
+	if pq.Len() == 0 {
+		panic(errors.New("priority queue is nil or empty"))
+	}
+	return pq.Data.Front()
+}
+
+func (pq *priorityQueue) ReplaceTop(newX interface{}) {
+	if pq.Len() == 0 {
+		panic(errors.New("priority queue is nil or empty"))
+	}
+	pq.Data.SetFront(newX)
+	heap.Fix((*heapa.DynamicArray)(pq), 0)
+}
+
+func (pq *priorityQueue) Maintain() {
+	if pq.Len() == 0 {
+		return
+	}
+	heap.Init((*heapa.DynamicArray)(pq))
+}
+
+// An implementation of PriorityQueueEx,
+// based on container/heap.
+type priorityQueueEx struct {
+	priorityQueue
+	EqualFn function.EqualFunc
+}
+
 // Create a new priority queue (ex version).
 // data is the initial items in the queue.
 // It panics if less is nil.
 // equal can be nil. If equal is nil, it will be generated via less.
-func NewPriorityQueueEx(less LessFunc, equal EqualFunc, data ...interface{}) PriorityQueueEx {
+func NewPriorityQueueEx(less function.LessFunc, equal function.EqualFunc, data ...interface{}) PriorityQueueEx {
 	if less == nil {
 		panic(errors.New("less is nil"))
 	}
 	if equal == nil {
 		equal = function.GenerateEqualViaLess(less)
 	}
+	gda := sequence.GeneralDynamicArray(append(data[:0:0], data...))
 	pq := &priorityQueueEx{
 		priorityQueue: priorityQueue{
-			Data:   append(data[:0:0], data...),
+			Data:   &gda,
 			LessFn: less,
 		},
 		EqualFn: equal,
@@ -146,53 +200,7 @@ func NewPriorityQueueEx(less LessFunc, equal EqualFunc, data ...interface{}) Pri
 	return pq
 }
 
-func (pq *priorityQueue) Enqueue(x interface{}) {
-	heap.Push((*intlHeap)(pq), x)
-}
-
-func (pq *priorityQueue) Dequeue() (x interface{}, ok bool) {
-	if pq.Len() == 0 {
-		return nil, false
-	}
-	return heap.Pop((*intlHeap)(pq)), true
-}
-
-func (pq *priorityQueue) Len() int {
-	return (*intlHeap)(pq).Len()
-}
-
-func (pq *priorityQueue) Cap() int {
-	return (*intlHeap)(pq).Cap()
-}
-
-func (pq *priorityQueue) Clear() {
-	(*intlHeap)(pq).Clear()
-}
-
-func (pq *priorityQueue) Top() (x interface{}, ok bool) {
-	if pq.Len() == 0 {
-		return nil, false
-	}
-	return pq.Data[0], true
-}
-
-func (pq *priorityQueue) ReplaceTop(newX interface{}) (ok bool) {
-	if pq.Len() == 0 {
-		return false
-	}
-	pq.Data[0] = newX
-	heap.Fix((*intlHeap)(pq), 0)
-	return true
-}
-
-func (pq *priorityQueue) Maintain() {
-	if pq.Len() == 0 {
-		return
-	}
-	heap.Init((*intlHeap)(pq))
-}
-
-func (pqx *priorityQueueEx) DoesContain(x interface{}) bool {
+func (pqx *priorityQueueEx) Contain(x interface{}) bool {
 	return pqx.find(x) >= 0
 }
 
@@ -201,7 +209,7 @@ func (pqx *priorityQueueEx) Remove(x interface{}) (ok bool) {
 	if idx < 0 {
 		return false
 	}
-	heap.Remove((*intlHeap)(&pqx.priorityQueue), idx)
+	heap.Remove((*heapa.DynamicArray)(&pqx.priorityQueue), idx)
 	return true
 }
 
@@ -210,30 +218,26 @@ func (pqx *priorityQueueEx) Replace(oldX, newX interface{}) (ok bool) {
 	if idx < 0 {
 		return false
 	}
-	pqx.Data[idx] = newX
-	heap.Fix((*intlHeap)(&pqx.priorityQueue), idx)
+	pqx.Data.Set(idx, newX)
+	heap.Fix((*heapa.DynamicArray)(&pqx.priorityQueue), idx)
 	return true
 }
 
-func (pqx *priorityQueueEx) DisorderlyScan(handler func(x interface{}) (doesContinue bool)) {
+func (pqx *priorityQueueEx) ScanWithoutOrder(handler func(x interface{}) (cont bool)) {
 	if handler == nil || pqx.Len() == 0 {
 		return
 	}
-	for _, x := range pqx.Data {
-		if !handler(x) {
-			return
-		}
-	}
+	pqx.Data.Scan(handler)
 }
 
 func (pqx *priorityQueueEx) find(x interface{}) int {
 	if pqx.Len() == 0 {
 		return -1
 	}
-	if pqx.EqualFn(x, pqx.Data[0]) {
+	if pqx.EqualFn(x, pqx.Data.Front()) {
 		return 0
 	}
-	if pqx.LessFn(x, pqx.Data[0]) {
+	if pqx.LessFn(x, pqx.Data.Front()) {
 		return -1
 	}
 	jmpMap := make(map[int]int)
@@ -246,10 +250,10 @@ func (pqx *priorityQueueEx) find(x interface{}) int {
 		} else if to < 0 { // if int overflow
 			return -1
 		}
-		if pqx.EqualFn(x, pqx.Data[i]) {
+		if pqx.EqualFn(x, pqx.Data.Get(i)) {
 			return i
 		}
-		if pqx.LessFn(x, pqx.Data[i]) {
+		if pqx.LessFn(x, pqx.Data.Get(i)) {
 			maintainJumpMap(jmpMap, i, i)
 		}
 	}

@@ -1,5 +1,5 @@
 // gogo. A Golang toolbox.
-// Copyright (C) 2019 Yuan Gao
+// Copyright (C) 2019-2020 Yuan Gao
 //
 // This file is part of gogo.
 //
@@ -31,34 +31,35 @@ type TopKBuffer interface {
 	// Return the parameter K.
 	// It returns 0 if the buffer is nil.
 	GetK() int
+
 	// Return the number of items in the buffer.
 	// It returns 0 if the buffer is nil.
 	Len() int
+
 	// Add an item, x, into the buffer.
 	// Time complexity: O(log n), where n = b.Len().
 	Add(x interface{})
+
 	// Pop all items and return in ascending order.
 	// Time complexity: O(n log n), where n = b.Len().
 	Drain() []interface{}
+
 	// Discard all items and release the memory.
 	Clear()
 }
-
-// Export github.com/donyori/gogo/function.LessFunc.
-type LessFunc = function.LessFunc
 
 // An implementation of TopKBuffer,
 // based on github.com/donyori/gogo/container/pqueue.PriorityQueue.
 type topKBuffer struct {
 	K         int
-	GreaterFn LessFunc
+	GreaterFn function.LessFunc
 	PQ        pqueue.PriorityQueue
 }
 
 // Create a new TopKBuffer.
 // data is the initial items in the buffer.
 // It panics if k <= 0 or less is nil.
-func NewTopKBuffer(k int, less LessFunc, data ...interface{}) TopKBuffer {
+func NewTopKBuffer(k int, less function.LessFunc, data ...interface{}) TopKBuffer {
 	if k <= 0 {
 		panic(fmt.Errorf("K = %d <= 0", k))
 	}
@@ -100,7 +101,7 @@ func (tkb *topKBuffer) Add(x interface{}) {
 		tkb.PQ.Enqueue(x)
 		return
 	}
-	if top, _ := tkb.PQ.Top(); tkb.GreaterFn(top, x) {
+	if top := tkb.PQ.Top(); tkb.GreaterFn(top, x) {
 		tkb.PQ.ReplaceTop(x)
 	}
 }
@@ -112,7 +113,7 @@ func (tkb *topKBuffer) Drain() []interface{} {
 	}
 	result := make([]interface{}, n)
 	for i := n - 1; i >= 0; i-- {
-		result[i], _ = tkb.PQ.Dequeue()
+		result[i] = tkb.PQ.Dequeue()
 	}
 	return result
 }

@@ -1,5 +1,5 @@
 // gogo. A Golang toolbox.
-// Copyright (C) 2019 Yuan Gao
+// Copyright (C) 2019-2020 Yuan Gao
 //
 // This file is part of gogo.
 //
@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package pqueue provides OOP-style priority queue.
+// Package pqueue provides OOP-style priority queues.
 // There are three priority queue versions in this package:
 // mini version (PriorityQueueMini), standard version (PriorityQueue),
 // and ex version (PriorityQueueEx).

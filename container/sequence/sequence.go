@@ -16,5 +16,33 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package container provides OOP-style containers.
-package container
+package sequence
+
+// General sequence interface.
+type Sequence interface {
+	// Return the number of items in the sequence.
+	// It returns 0 if the sequence is nil.
+	Len() int
+
+	// Return the first item of the sequence.
+	// It panics if the sequence is nil or empty.
+	Front() interface{}
+
+	// Set the first item to x.
+	// It panics if the sequence is nil or empty.
+	SetFront(x interface{})
+
+	// Return the last item of the sequence.
+	// It panics if the sequence is nil or empty.
+	Back() interface{}
+
+	// Set the last item to x.
+	// It panics if the sequence is nil or empty.
+	SetBack(x interface{})
+
+	// Reverse items of the sequence.
+	Reverse()
+
+	// Scan the items in the sequence from the first to the last.
+	Scan(handler func(x interface{}) (cont bool))
+}

@@ -1,5 +1,5 @@
 // gogo. A Golang toolbox.
-// Copyright (C) 2019 Yuan Gao
+// Copyright (C) 2019-2020 Yuan Gao
 //
 // This file is part of gogo.
 //
@@ -18,36 +18,11 @@
 
 package permutation
 
-import (
-	"errors"
-	"sort"
-
-	"github.com/donyori/gogo/adapter/sorta"
-	"github.com/donyori/gogo/function"
-)
-
-// Export github.com/donyori/gogo/function.LessFunc.
-type LessFunc = function.LessFunc
-
 // Transform data to its next permutation in lexical order.
-// It returns false if len(data) == 0 or the permutations are exhausted.
-// It panics if less is nil.
-// Time complexity: O(n), where n = len(data).
-func NextPermutationSlice(data []interface{}, less LessFunc) bool {
-	if less == nil {
-		panic(errors.New("less is nil"))
-	}
-	itf := &sorta.Slice{
-		Data:   data,
-		LessFn: less,
-	}
-	return NextPermutationSortItf(itf)
-}
-
-// Do the same thing as NextPermutationSlice,
-// but work on sort.Interface.
+// It returns false if data.Len() == 0 or the permutations are exhausted,
+// and true otherwise.
 // Time complexity: O(n), where n = data.Len().
-func NextPermutationSortItf(data sort.Interface) bool {
+func NextPermutation(data Interface) bool {
 	if data == nil {
 		return false
 	}

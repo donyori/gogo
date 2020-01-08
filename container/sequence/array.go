@@ -16,5 +16,26 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package container provides OOP-style containers.
-package container
+package sequence
+
+// Array, i.e., fixed-length direct-access sequence.
+type Array interface {
+	Sequence
+
+	// Return the i-th item of the array.
+	// It panics if i is out of range.
+	Get(i int) interface{}
+
+	// Set the i-th item to x.
+	// It panics if i is out of range.
+	Set(i int, x interface{})
+
+	// Swap the i-th and j-th items.
+	// It panics if i or j is out of range.
+	Swap(i, j int)
+
+	// Return a slice from argument begin (inclusive) to
+	// argument end (exclusive) of the array, as an Array.
+	// It panics if begin or end is out of range, or begin > end.
+	Slice(begin, end int) Array
+}

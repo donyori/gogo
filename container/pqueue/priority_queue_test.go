@@ -1,5 +1,5 @@
 // gogo. A Golang toolbox.
-// Copyright (C) 2019 Yuan Gao
+// Copyright (C) 2019-2020 Yuan Gao
 //
 // This file is part of gogo.
 //
@@ -39,11 +39,7 @@ func TestPriorityQueueMini(t *testing.T) {
 	t.Log("Data:", pq.(*priorityQueue).Data)
 	sort.Ints(samples)
 	for _, x := range samples {
-		item, ok := pq.Dequeue()
-		if !ok {
-			t.Errorf("Item(%d) is not in the priority queue.", x)
-			continue
-		}
+		item := pq.Dequeue()
 		if item != x {
 			t.Errorf("Item(%v) != %d", item, x)
 		}
@@ -81,13 +77,13 @@ func TestPriorityQueue_ReplaceTop(t *testing.T) {
 	t.Log("Data:", pq.(*priorityQueue).Data)
 	pq.ReplaceTop(0)
 	t.Log("Data after replace top to 0:", pq.(*priorityQueue).Data)
-	if x, ok := pq.Top(); x != 0 || !ok {
-		t.Errorf("Top() = %v, %t != 0, true", x, ok)
+	if x := pq.Top(); x != 0 {
+		t.Errorf("Top() = %v != 0.", x)
 	}
 	pq.ReplaceTop(4)
 	t.Log("Data after replace top to 4:", pq.(*priorityQueue).Data)
-	if x, ok := pq.Top(); x != 2 || !ok {
-		t.Errorf("Top() = %v, %t != 2, true", x, ok)
+	if x := pq.Top(); x != 2 {
+		t.Errorf("Top() = %v != 2.", x)
 	}
 }
 
@@ -110,8 +106,8 @@ func TestPriorityQueueEx_DoesContain(t *testing.T) {
 	pq := NewPriorityQueueEx(function.IntLess, nil, positiveSamples...)
 	t.Log("Data:", pq.(*priorityQueueEx).Data)
 	for _, c := range cs {
-		if pq.DoesContain(c.X) != c.Result {
-			t.Errorf("pqueue.DoesContain(%v) != %t", c.X, c.Result)
+		if pq.Contain(c.X) != c.Result {
+			t.Errorf("pqueue.Contain(%v) != %t", c.X, c.Result)
 		}
 	}
 }
