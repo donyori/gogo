@@ -18,6 +18,12 @@
 
 package permutation
 
+import (
+	"errors"
+
+	"github.com/donyori/gogo/algorithm/search/sequence"
+)
+
 // Transform data to its next permutation in lexical order.
 // It returns false if data.Len() == 0 or the permutations are exhausted,
 // and true otherwise.
@@ -33,20 +39,44 @@ func NextPermutation(data Interface) bool {
 	if i < 0 {
 		return false
 	}
-	j := i + 1
-	k := data.Len()
-	m := (j + k) / 2
-	for j != m {
-		if data.Less(i, m) {
-			j = m
-		} else {
-			k = m
-		}
-		m = (j + k) / 2
+	npbsi := &nextPermutationBinarySearchInterface{
+		Data:   data,
+		Target: i,
+		Begin:  i + 1,
+		End:    data.Len(),
 	}
+	j := npbsi.Begin + sequence.BinarySearchMaxLess(npbsi, nil) // target is set in npbsi.
 	data.Swap(i, j)
-	for j, k = i+1, data.Len()-1; j < k; j, k = j+1, k-1 {
-		data.Swap(j, k)
+	for i, j = i+1, data.Len()-1; i < j; i, j = i+1, j-1 {
+		data.Swap(i, j)
 	}
 	return true
+}
+
+type nextPermutationBinarySearchInterface struct {
+	Data   Interface
+	Target int
+	Begin  int
+	End    int
+}
+
+func (npbsi *nextPermutationBinarySearchInterface) Len() int {
+	if npbsi == nil || npbsi.Data == nil {
+		return 0
+	}
+	return npbsi.End - npbsi.Begin
+}
+
+func (npbsi *nextPermutationBinarySearchInterface) Equal(i int, x interface{}) bool {
+	panic(errors.New("method Equal not implement"))
+}
+
+// Here, x is just a dummy argument.
+// This method should act as a Greater() because the Data is in descending order.
+func (npbsi *nextPermutationBinarySearchInterface) Less(i int, x interface{}) bool {
+	return npbsi.Data.Less(npbsi.Target, i+npbsi.Begin)
+}
+
+func (npbsi *nextPermutationBinarySearchInterface) Greater(i int, x interface{}) bool {
+	panic(errors.New("method Greater not implement"))
 }

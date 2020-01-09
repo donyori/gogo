@@ -23,7 +23,8 @@ import (
 	"github.com/donyori/gogo/function"
 )
 
-// A type standing for an integer-indexed sequence used in BinarySearch.
+// A type standing for an integer-indexed sequence
+// used in binary search algorithm.
 type BinarySearchInterface interface {
 	// Return the number of items in the sequence.
 	// It returns 0 if the sequence is nil.
@@ -43,17 +44,24 @@ type BinarySearchInterface interface {
 }
 
 // Find target in data using binary search algorithm.
+//
 // data must be sorted in ascending order!
 // (If data is in descending order, you can exchange the behavior
 // of Less and Greater methods of BinarySearchInterface.)
 // This function won't check whether data is sorted.
 // You must sort data before calling this function,
 // otherwise, target may not be found as expected.
+//
 // If multiple items equal to target, it returns the index of one of them.
 // It returns -1 if target is not found.
+//
+// target is only used to call the methods of data (BinarySearchInterface).
+// It's OK to handle target in your implementation of BinarySearchInterface,
+// and set target to an arbitrary value, such as nil.
+//
 // Time complexity: O(log n + m), where n = data.Len(),
-// m = the number of items satisfy: !Equal() && !Less() && !Greater().
-func BinarySearch(target interface{}, data BinarySearchInterface) int {
+// m = the number of items that satisfy: !Equal() && !Less() && !Greater().
+func BinarySearch(data BinarySearchInterface, target interface{}) int {
 	if data.Len() == 0 {
 		return -1
 	}
@@ -85,6 +93,100 @@ func BinarySearch(target interface{}, data BinarySearchInterface) int {
 	return -1
 }
 
+// Find the maximum item less than target in data
+// using binary search algorithm.
+//
+// data must be sorted in ascending order!
+// (If data is in descending order, you can exchange the behavior
+// of Less and Greater methods of BinarySearchInterface, and then
+// use BinarySearchMinGreater instead of this function.)
+// This function won't check whether data is sorted.
+// You must sort data before calling this function,
+// otherwise, the item may not be found as expected.
+//
+// If multiple items satisfy the condition,
+// it returns the index of the last one of them.
+// It returns -1 if no such item in data.
+//
+// Only Len() and Less() are used in this function,
+// and it's OK to leave Equal() and Greater() as empty functions.
+//
+// target is only used to call the method Less() of data (BinarySearchInterface).
+// It's OK to handle target in your implementation of BinarySearchInterface,
+// and set target to an arbitrary value, such as nil.
+//
+// Time complexity: O(log n), where n = data.Len().
+func BinarySearchMaxLess(data BinarySearchInterface, target interface{}) int {
+	n := data.Len()
+	if n == 0 {
+		return -1
+	}
+	if !data.Less(0, target) {
+		return -1
+	}
+	if data.Less(n-1, target) {
+		return n - 1
+	}
+	low, high := 0, n
+	mid := (low + high) / 2
+	for low != mid {
+		if data.Less(mid, target) {
+			low = mid
+		} else {
+			high = mid
+		}
+		mid = (low + high) / 2
+	}
+	return low
+}
+
+// Find the minimum item greater than target in data
+// using binary search algorithm.
+//
+// data must be sorted in ascending order!
+// (If data is in descending order, you can exchange the behavior
+// of Less and Greater methods of BinarySearchInterface, and then
+// use BinarySearchMaxLess instead of this function.)
+// This function won't check whether data is sorted.
+// You must sort data before calling this function,
+// otherwise, the item may not be found as expected.
+//
+// If multiple items satisfy the condition,
+// it returns the index of the first one of them.
+// It returns -1 if no such item in data.
+//
+// Only Len() and Greater() are used in this function,
+// and it's OK to leave Equal() and Less() as empty functions.
+//
+// target is only used to call the method Greater() of data (BinarySearchInterface).
+// It's OK to handle target in your implementation of BinarySearchInterface,
+// and set target to an arbitrary value, such as nil.
+//
+// Time complexity: O(log n), where n = data.Len().
+func BinarySearchMinGreater(data BinarySearchInterface, target interface{}) int {
+	n := data.Len()
+	if n == 0 {
+		return -1
+	}
+	if data.Greater(0, target) {
+		return 0
+	}
+	if !data.Greater(n-1, target) {
+		return -1
+	}
+	low, high := 0, n
+	mid := (low + high) / 2
+	for low != mid {
+		if data.Greater(mid, target) {
+			high = mid
+		} else {
+			low = mid
+		}
+		mid = (low + high) / 2
+	}
+	return high
+}
+
 // An adapter for: Array + EqualFunc + LessFunc -> BinarySearchInterface.
 type BinarySearchArrayAdapter struct {
 	Data    sequence.Array
@@ -100,6 +202,9 @@ func (bsad *BinarySearchArrayAdapter) Len() int {
 }
 
 func (bsad *BinarySearchArrayAdapter) Equal(i int, x interface{}) bool {
+	if bsad.EqualFn == nil && bsad.LessFn != nil {
+		bsad.EqualFn = function.GenerateEqualViaLess(bsad.LessFn)
+	}
 	return bsad.EqualFn(bsad.Data.Get(i), x)
 }
 

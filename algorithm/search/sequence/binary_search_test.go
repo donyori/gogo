@@ -34,6 +34,58 @@ func TestBinarySearch(t *testing.T) {
 	testBinarySearch(t, data2, negativeSamples2)
 }
 
+func TestBinarySearchMaxLess(t *testing.T) {
+	data := sequence.GeneralDynamicArray{1, 1, 1, 2, 2, 2, 4, 4, 4}
+	itf := &BinarySearchArrayAdapter{
+		Data:    data,
+		EqualFn: function.Equal,
+		LessFn:  function.IntLess,
+	}
+	cases := []struct {
+		Target int
+		Index  int
+	}{
+		{0, -1},
+		{1, -1},
+		{2, 2},
+		{3, 5},
+		{4, 5},
+		{5, 8},
+	}
+	for _, c := range cases {
+		idx := BinarySearchMaxLess(itf, c.Target)
+		if idx != c.Index {
+			t.Errorf("BinarySearchMaxLess(%v, %d) = %d != %d.", data, c.Target, idx, c.Index)
+		}
+	}
+}
+
+func TestBinarySearchMinGreater(t *testing.T) {
+	data := sequence.GeneralDynamicArray{1, 1, 1, 2, 2, 2, 4, 4, 4}
+	itf := &BinarySearchArrayAdapter{
+		Data:    data,
+		EqualFn: function.Equal,
+		LessFn:  function.IntLess,
+	}
+	cases := []struct {
+		Target int
+		Index  int
+	}{
+		{0, 0},
+		{1, 3},
+		{2, 6},
+		{3, 6},
+		{4, -1},
+		{5, -1},
+	}
+	for _, c := range cases {
+		idx := BinarySearchMinGreater(itf, c.Target)
+		if idx != c.Index {
+			t.Errorf("BinarySearchMinGreater(%v, %d) = %d != %d.", data, c.Target, idx, c.Index)
+		}
+	}
+}
+
 func testBinarySearch(t *testing.T, data, negativeSamples []int) {
 	s := make(sequence.GeneralDynamicArray, len(data))
 	for i, n := 0, len(data); i < n; i++ {
@@ -53,21 +105,21 @@ func testBinarySearch(t *testing.T, data, negativeSamples []int) {
 		LessFn:  less,
 	}
 	for i, x := range s {
-		idx := BinarySearch(x, itf1)
+		idx := BinarySearch(itf1, x)
 		if idx != i {
 			t.Errorf("BinarySearch(%v [%d], ...) = %d != %d.", x, *x.(*int), idx, i)
 		}
-		idx = BinarySearch(x, itf2)
+		idx = BinarySearch(itf2, x)
 		if *x.(*int) != data[idx] {
 			t.Errorf("BinarySearch(%v [%d], ...) = %d [%d].", x, *x.(*int), idx, data[idx])
 		}
 	}
 	for i := range negativeSamples {
-		idx := BinarySearch(&negativeSamples[i], itf1)
+		idx := BinarySearch(itf1, &negativeSamples[i])
 		if idx != -1 {
 			t.Errorf("BinarySearch(%v [%d], ...) = %d != -1.", &negativeSamples[i], negativeSamples[i], idx)
 		}
-		idx = BinarySearch(&negativeSamples[i], itf2)
+		idx = BinarySearch(itf2, &negativeSamples[i])
 		if idx == -1 {
 			for j := range data {
 				if data[j] == negativeSamples[i] {
