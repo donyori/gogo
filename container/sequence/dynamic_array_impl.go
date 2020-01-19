@@ -489,6 +489,10 @@ func (ida *IntDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 	*ida = (*ida)[:n]
 }
 
+func (ida IntDynamicArray) Less(i, j int) bool {
+	return ida[i] < ida[j]
+}
+
 // A prefab DynamicArray for float64.
 type Float64DynamicArray []float64
 
@@ -715,6 +719,10 @@ func (fda *Float64DynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 		}
 	}
 	*fda = (*fda)[:n]
+}
+
+func (fda Float64DynamicArray) Less(i, j int) bool {
+	return fda[i] < fda[j]
 }
 
 // A prefab DynamicArray for string.
@@ -958,4 +966,8 @@ func (sda *StringDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 		(*sda)[i] = "" // avoid memory leak
 	}
 	*sda = (*sda)[:n]
+}
+
+func (sda StringDynamicArray) Less(i, j int) bool {
+	return sda[i] < sda[j]
 }
