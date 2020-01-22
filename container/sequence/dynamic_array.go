@@ -78,7 +78,7 @@ type DynamicArray interface {
 	// It panics if i is out of range, i.e., i < 0 or i > Len(), or n < 0.
 	Expand(i, n int)
 
-	// Request the capacity of the dynamic array is at least capacity.
+	// Request the capacity of the dynamic array is at least the given capacity.
 	// It does nothing if capacity <= Cap().
 	Reserve(capacity int)
 
