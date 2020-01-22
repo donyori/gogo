@@ -34,6 +34,8 @@ type DynamicArray interface {
 	Pop() interface{}
 
 	// Append s to the back of the dynamic array.
+	// s shouldn't be modified during calling this method,
+	// otherwise, unknown error may occur.
 	Append(s Sequence)
 
 	// Remove the i-th and all subsequent items of the dynamic array.
@@ -54,6 +56,8 @@ type DynamicArray interface {
 
 	// Insert s to the front of the i-th item of the dynamic array.
 	// It panics if i is out of range, i.e., i < 0 or i > Len().
+	// s shouldn't be modified during calling this method,
+	// otherwise, unknown error may occur.
 	InsertSequence(i int, s Sequence)
 
 	// Remove items from argument begin (inclusive) to
@@ -74,7 +78,7 @@ type DynamicArray interface {
 	// It panics if i is out of range, i.e., i < 0 or i > Len(), or n < 0.
 	Expand(i, n int)
 
-	// Request the capacity of the dynamic array is at least cap.
+	// Request the capacity of the dynamic array is at least capacity.
 	// It does nothing if capacity <= Cap().
 	Reserve(capacity int)
 

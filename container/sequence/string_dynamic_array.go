@@ -107,7 +107,7 @@ func (sda *StringDynamicArray) Append(s Sequence) {
 	s.Scan(func(x interface{}) (cont bool) {
 		(*sda)[i] = x.(string)
 		i++
-		return i < len(*sda)
+		return true
 	})
 }
 
@@ -133,14 +133,12 @@ func (sda *StringDynamicArray) Insert(i int, x interface{}) {
 }
 
 func (sda *StringDynamicArray) Remove(i int) interface{} {
-	if i == len(*sda)-1 {
+	back := len(*sda) - 1
+	if i == back {
 		return sda.Pop()
 	}
 	x := (*sda)[i]
-	back := len(*sda) - 1
-	if i < back {
-		copy((*sda)[i:], (*sda)[i+1:])
-	}
+	copy((*sda)[i:], (*sda)[i+1:])
 	(*sda)[back] = "" // avoid memory leak
 	*sda = (*sda)[:back]
 	return x
@@ -149,7 +147,9 @@ func (sda *StringDynamicArray) Remove(i int) interface{} {
 func (sda *StringDynamicArray) RemoveWithoutOrder(i int) interface{} {
 	x := (*sda)[i]
 	back := len(*sda) - 1
-	(*sda)[i] = (*sda)[back]
+	if i != back {
+		(*sda)[i] = (*sda)[back]
+	}
 	(*sda)[back] = "" // avoid memory leak
 	*sda = (*sda)[:back]
 	return x
@@ -171,16 +171,19 @@ func (sda *StringDynamicArray) InsertSequence(i int, s Sequence) {
 	s.Scan(func(x interface{}) (cont bool) {
 		(*sda)[k] = x.(string)
 		k++
-		return k < i+n
+		return true
 	})
 }
 
 func (sda *StringDynamicArray) Cut(begin, end int) {
+	_ = (*sda)[begin:end] // ensure begin and end are valid
+	if begin == end {
+		return
+	}
 	if end == len(*sda) {
 		sda.Truncate(begin)
 		return
 	}
-	_ = (*sda)[begin:end] // ensure begin and end are valid
 	copy((*sda)[begin:], (*sda)[end:])
 	for i := len(*sda) - end + begin; i < len(*sda); i++ {
 		(*sda)[i] = "" // avoid memory leak
@@ -189,11 +192,14 @@ func (sda *StringDynamicArray) Cut(begin, end int) {
 }
 
 func (sda *StringDynamicArray) CutWithoutOrder(begin, end int) {
+	_ = (*sda)[begin:end] // ensure begin and end are valid
+	if begin == end {
+		return
+	}
 	if end == len(*sda) {
 		sda.Truncate(begin)
 		return
 	}
-	_ = (*sda)[begin:end] // ensure begin and end are valid
 	copyIdx := len(*sda) - end + begin
 	if copyIdx < end {
 		copyIdx = end
@@ -223,7 +229,7 @@ func (sda *StringDynamicArray) Expand(i, n int) {
 }
 
 func (sda *StringDynamicArray) Reserve(capacity int) {
-	if capacity <= cap(*sda) {
+	if capacity <= 0 || (sda != nil && capacity <= cap(*sda)) {
 		return
 	}
 	s := make(StringDynamicArray, len(*sda), capacity)
@@ -232,7 +238,7 @@ func (sda *StringDynamicArray) Reserve(capacity int) {
 }
 
 func (sda *StringDynamicArray) Shrink() {
-	if len(*sda) == cap(*sda) {
+	if sda == nil || len(*sda) == cap(*sda) {
 		return
 	}
 	s := make(StringDynamicArray, len(*sda))
@@ -241,11 +247,13 @@ func (sda *StringDynamicArray) Shrink() {
 }
 
 func (sda *StringDynamicArray) Clear() {
-	*sda = nil
+	if sda != nil {
+		*sda = nil
+	}
 }
 
 func (sda *StringDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
-	if len(*sda) == 0 {
+	if sda == nil || len(*sda) == 0 {
 		return
 	}
 	n := 0
@@ -254,6 +262,9 @@ func (sda *StringDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 			(*sda)[n] = x
 			n++
 		}
+	}
+	if n == len(*sda) {
+		return
 	}
 	for i := n; i < len(*sda); i++ {
 		(*sda)[i] = "" // avoid memory leak

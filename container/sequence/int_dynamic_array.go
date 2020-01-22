@@ -106,7 +106,7 @@ func (ida *IntDynamicArray) Append(s Sequence) {
 	s.Scan(func(x interface{}) (cont bool) {
 		(*ida)[i] = x.(int)
 		i++
-		return i < len(*ida)
+		return true
 	})
 }
 
@@ -129,14 +129,12 @@ func (ida *IntDynamicArray) Insert(i int, x interface{}) {
 }
 
 func (ida *IntDynamicArray) Remove(i int) interface{} {
-	if i == len(*ida)-1 {
+	back := len(*ida) - 1
+	if i == back {
 		return ida.Pop()
 	}
 	x := (*ida)[i]
-	back := len(*ida) - 1
-	if i < back {
-		copy((*ida)[i:], (*ida)[i+1:])
-	}
+	copy((*ida)[i:], (*ida)[i+1:])
 	*ida = (*ida)[:back]
 	return x
 }
@@ -144,7 +142,9 @@ func (ida *IntDynamicArray) Remove(i int) interface{} {
 func (ida *IntDynamicArray) RemoveWithoutOrder(i int) interface{} {
 	x := (*ida)[i]
 	back := len(*ida) - 1
-	(*ida)[i] = (*ida)[back]
+	if i != back {
+		(*ida)[i] = (*ida)[back]
+	}
 	*ida = (*ida)[:back]
 	return x
 }
@@ -165,26 +165,32 @@ func (ida *IntDynamicArray) InsertSequence(i int, s Sequence) {
 	s.Scan(func(x interface{}) (cont bool) {
 		(*ida)[k] = x.(int)
 		k++
-		return k < i+n
+		return true
 	})
 }
 
 func (ida *IntDynamicArray) Cut(begin, end int) {
+	_ = (*ida)[begin:end] // ensure begin and end are valid
+	if begin == end {
+		return
+	}
 	if end == len(*ida) {
 		ida.Truncate(begin)
 		return
 	}
-	_ = (*ida)[begin:end] // ensure begin and end are valid
 	copy((*ida)[begin:], (*ida)[end:])
 	*ida = (*ida)[:len(*ida)-end+begin]
 }
 
 func (ida *IntDynamicArray) CutWithoutOrder(begin, end int) {
+	_ = (*ida)[begin:end] // ensure begin and end are valid
+	if begin == end {
+		return
+	}
 	if end == len(*ida) {
 		ida.Truncate(begin)
 		return
 	}
-	_ = (*ida)[begin:end] // ensure begin and end are valid
 	copyIdx := len(*ida) - end + begin
 	if copyIdx < end {
 		copyIdx = end
@@ -211,7 +217,7 @@ func (ida *IntDynamicArray) Expand(i, n int) {
 }
 
 func (ida *IntDynamicArray) Reserve(capacity int) {
-	if capacity <= cap(*ida) {
+	if capacity <= 0 || (ida != nil && capacity <= cap(*ida)) {
 		return
 	}
 	s := make(IntDynamicArray, len(*ida), capacity)
@@ -220,7 +226,7 @@ func (ida *IntDynamicArray) Reserve(capacity int) {
 }
 
 func (ida *IntDynamicArray) Shrink() {
-	if len(*ida) == cap(*ida) {
+	if ida == nil || len(*ida) == cap(*ida) {
 		return
 	}
 	s := make(IntDynamicArray, len(*ida))
@@ -229,11 +235,13 @@ func (ida *IntDynamicArray) Shrink() {
 }
 
 func (ida *IntDynamicArray) Clear() {
-	*ida = nil
+	if ida != nil {
+		*ida = nil
+	}
 }
 
 func (ida *IntDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
-	if len(*ida) == 0 {
+	if ida == nil || len(*ida) == 0 {
 		return
 	}
 	n := 0

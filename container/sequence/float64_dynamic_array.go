@@ -106,7 +106,7 @@ func (fda *Float64DynamicArray) Append(s Sequence) {
 	s.Scan(func(x interface{}) (cont bool) {
 		(*fda)[i] = x.(float64)
 		i++
-		return i < len(*fda)
+		return true
 	})
 }
 
@@ -129,14 +129,12 @@ func (fda *Float64DynamicArray) Insert(i int, x interface{}) {
 }
 
 func (fda *Float64DynamicArray) Remove(i int) interface{} {
-	if i == len(*fda)-1 {
+	back := len(*fda) - 1
+	if i == back {
 		return fda.Pop()
 	}
 	x := (*fda)[i]
-	back := len(*fda) - 1
-	if i < back {
-		copy((*fda)[i:], (*fda)[i+1:])
-	}
+	copy((*fda)[i:], (*fda)[i+1:])
 	*fda = (*fda)[:back]
 	return x
 }
@@ -144,7 +142,9 @@ func (fda *Float64DynamicArray) Remove(i int) interface{} {
 func (fda *Float64DynamicArray) RemoveWithoutOrder(i int) interface{} {
 	x := (*fda)[i]
 	back := len(*fda) - 1
-	(*fda)[i] = (*fda)[back]
+	if i != back {
+		(*fda)[i] = (*fda)[back]
+	}
 	*fda = (*fda)[:back]
 	return x
 }
@@ -165,26 +165,32 @@ func (fda *Float64DynamicArray) InsertSequence(i int, s Sequence) {
 	s.Scan(func(x interface{}) (cont bool) {
 		(*fda)[k] = x.(float64)
 		k++
-		return k < i+n
+		return true
 	})
 }
 
 func (fda *Float64DynamicArray) Cut(begin, end int) {
+	_ = (*fda)[begin:end] // ensure begin and end are valid
+	if begin == end {
+		return
+	}
 	if end == len(*fda) {
 		fda.Truncate(begin)
 		return
 	}
-	_ = (*fda)[begin:end] // ensure begin and end are valid
 	copy((*fda)[begin:], (*fda)[end:])
 	*fda = (*fda)[:len(*fda)-end+begin]
 }
 
 func (fda *Float64DynamicArray) CutWithoutOrder(begin, end int) {
+	_ = (*fda)[begin:end] // ensure begin and end are valid
+	if begin == end {
+		return
+	}
 	if end == len(*fda) {
 		fda.Truncate(begin)
 		return
 	}
-	_ = (*fda)[begin:end] // ensure begin and end are valid
 	copyIdx := len(*fda) - end + begin
 	if copyIdx < end {
 		copyIdx = end
@@ -211,7 +217,7 @@ func (fda *Float64DynamicArray) Expand(i, n int) {
 }
 
 func (fda *Float64DynamicArray) Reserve(capacity int) {
-	if capacity <= cap(*fda) {
+	if capacity <= 0 || (fda != nil && capacity <= cap(*fda)) {
 		return
 	}
 	s := make(Float64DynamicArray, len(*fda), capacity)
@@ -220,7 +226,7 @@ func (fda *Float64DynamicArray) Reserve(capacity int) {
 }
 
 func (fda *Float64DynamicArray) Shrink() {
-	if len(*fda) == cap(*fda) {
+	if fda == nil || len(*fda) == cap(*fda) {
 		return
 	}
 	s := make(Float64DynamicArray, len(*fda))
@@ -229,11 +235,13 @@ func (fda *Float64DynamicArray) Shrink() {
 }
 
 func (fda *Float64DynamicArray) Clear() {
-	*fda = nil
+	if fda != nil {
+		*fda = nil
+	}
 }
 
 func (fda *Float64DynamicArray) Filter(filter func(x interface{}) (keep bool)) {
-	if len(*fda) == 0 {
+	if fda == nil || len(*fda) == 0 {
 		return
 	}
 	n := 0

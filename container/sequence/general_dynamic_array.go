@@ -107,7 +107,7 @@ func (gda *GeneralDynamicArray) Append(s Sequence) {
 	s.Scan(func(x interface{}) (cont bool) {
 		(*gda)[i] = x
 		i++
-		return i < len(*gda)
+		return true
 	})
 }
 
@@ -133,14 +133,12 @@ func (gda *GeneralDynamicArray) Insert(i int, x interface{}) {
 }
 
 func (gda *GeneralDynamicArray) Remove(i int) interface{} {
-	if i == len(*gda)-1 {
+	back := len(*gda) - 1
+	if i == back {
 		return gda.Pop()
 	}
 	x := (*gda)[i]
-	back := len(*gda) - 1
-	if i < back {
-		copy((*gda)[i:], (*gda)[i+1:])
-	}
+	copy((*gda)[i:], (*gda)[i+1:])
 	(*gda)[back] = nil // avoid memory leak
 	*gda = (*gda)[:back]
 	return x
@@ -149,7 +147,9 @@ func (gda *GeneralDynamicArray) Remove(i int) interface{} {
 func (gda *GeneralDynamicArray) RemoveWithoutOrder(i int) interface{} {
 	x := (*gda)[i]
 	back := len(*gda) - 1
-	(*gda)[i] = (*gda)[back]
+	if i != back {
+		(*gda)[i] = (*gda)[back]
+	}
 	(*gda)[back] = nil // avoid memory leak
 	*gda = (*gda)[:back]
 	return x
@@ -171,16 +171,19 @@ func (gda *GeneralDynamicArray) InsertSequence(i int, s Sequence) {
 	s.Scan(func(x interface{}) (cont bool) {
 		(*gda)[k] = x
 		k++
-		return k < i+n
+		return true
 	})
 }
 
 func (gda *GeneralDynamicArray) Cut(begin, end int) {
+	_ = (*gda)[begin:end] // ensure begin and end are valid
+	if begin == end {
+		return
+	}
 	if end == len(*gda) {
 		gda.Truncate(begin)
 		return
 	}
-	_ = (*gda)[begin:end] // ensure begin and end are valid
 	copy((*gda)[begin:], (*gda)[end:])
 	for i := len(*gda) - end + begin; i < len(*gda); i++ {
 		(*gda)[i] = nil // avoid memory leak
@@ -189,11 +192,14 @@ func (gda *GeneralDynamicArray) Cut(begin, end int) {
 }
 
 func (gda *GeneralDynamicArray) CutWithoutOrder(begin, end int) {
+	_ = (*gda)[begin:end] // ensure begin and end are valid
+	if begin == end {
+		return
+	}
 	if end == len(*gda) {
 		gda.Truncate(begin)
 		return
 	}
-	_ = (*gda)[begin:end] // ensure begin and end are valid
 	copyIdx := len(*gda) - end + begin
 	if copyIdx < end {
 		copyIdx = end
@@ -223,7 +229,7 @@ func (gda *GeneralDynamicArray) Expand(i, n int) {
 }
 
 func (gda *GeneralDynamicArray) Reserve(capacity int) {
-	if capacity <= cap(*gda) {
+	if capacity <= 0 || (gda != nil && capacity <= cap(*gda)) {
 		return
 	}
 	s := make(GeneralDynamicArray, len(*gda), capacity)
@@ -232,7 +238,7 @@ func (gda *GeneralDynamicArray) Reserve(capacity int) {
 }
 
 func (gda *GeneralDynamicArray) Shrink() {
-	if len(*gda) == cap(*gda) {
+	if gda == nil || len(*gda) == cap(*gda) {
 		return
 	}
 	s := make(GeneralDynamicArray, len(*gda))
@@ -241,11 +247,13 @@ func (gda *GeneralDynamicArray) Shrink() {
 }
 
 func (gda *GeneralDynamicArray) Clear() {
-	*gda = nil
+	if gda != nil {
+		*gda = nil
+	}
 }
 
 func (gda *GeneralDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
-	if len(*gda) == 0 {
+	if gda == nil || len(*gda) == 0 {
 		return
 	}
 	n := 0
@@ -254,6 +262,9 @@ func (gda *GeneralDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 			(*gda)[n] = x
 			n++
 		}
+	}
+	if n == len(*gda) {
+		return
 	}
 	for i := n; i < len(*gda); i++ {
 		(*gda)[i] = nil // avoid memory leak
