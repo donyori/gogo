@@ -27,7 +27,7 @@ func TestIntLess(t *testing.T) {
 	intPairs := [][2]int{{1, 2}, {2, 1}, {1, 1}}
 	for _, pair := range intPairs {
 		if r := IntLess(pair[0], pair[1]); r != (pair[0] < pair[1]) {
-			t.Errorf("IntLess(%d, %d) = %t.", pair[0], pair[1], r)
+			t.Errorf("IntLess(%d, %d): %t.", pair[0], pair[1], r)
 		}
 	}
 }
@@ -45,7 +45,7 @@ func TestFloat64Less(t *testing.T) {
 	}
 	for _, pair := range floatPairs {
 		if r := Float64Less(pair[0], pair[1]); r != (pair[0] < pair[1]) {
-			t.Errorf("Float64Less(%f, %f) = %t.", pair[0], pair[1], r)
+			t.Errorf("Float64Less(%f, %f): %t.", pair[0], pair[1], r)
 		}
 	}
 }
@@ -56,7 +56,7 @@ func TestStringLess(t *testing.T) {
 	}
 	for _, pair := range stringPairs {
 		if r := StringLess(pair[0], pair[1]); r != (pair[0] < pair[1]) {
-			t.Errorf("StringLess(%s, %s) = %t.", pair[0], pair[1], r)
+			t.Errorf("StringLess(%s, %s): %t.", pair[0], pair[1], r)
 		}
 	}
 }

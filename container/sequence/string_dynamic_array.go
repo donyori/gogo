@@ -94,6 +94,9 @@ func (sda *StringDynamicArray) Pop() interface{} {
 }
 
 func (sda *StringDynamicArray) Append(s Sequence) {
+	if s == nil {
+		return
+	}
 	n := s.Len()
 	if n == 0 {
 		return
@@ -161,6 +164,9 @@ func (sda *StringDynamicArray) InsertSequence(i int, s Sequence) {
 		return
 	}
 	_ = (*sda)[i] // ensure i is valid
+	if s == nil {
+		return
+	}
 	n := s.Len()
 	if n == 0 {
 		return

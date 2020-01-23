@@ -50,24 +50,24 @@ func TestPriorityQueue_Len(t *testing.T) {
 	var intlPQ *priorityQueue
 	n := intlPQ.Len()
 	if n != 0 {
-		t.Errorf("pq.Len() = %d != 0 when pq == nil.", n)
+		t.Errorf("pq.Len(): %d != 0 when pq == nil.", n)
 	}
 	pq := NewPriorityQueue(function.IntLess)
 	n = pq.Len()
 	if n != 0 {
-		t.Errorf("pq.Len() = %d != 0 when pq is empty.", n)
+		t.Errorf("pq.Len(): %d != 0 when pq is empty.", n)
 	}
 	for i := 0; i < 3; i++ {
 		pq.Enqueue(i)
 		n = pq.Len()
 		if n != i+1 {
-			t.Errorf("pq.Len() = %d != %d.", n, i+1)
+			t.Errorf("pq.Len(): %d != %d.", n, i+1)
 		}
 	}
 	pq = NewPriorityQueue(function.IntLess, 1, 2, 3, 4)
 	n = pq.Len()
 	if n != 4 {
-		t.Errorf("pq.Len() = %d != 4.", n)
+		t.Errorf("pq.Len(): %d != 4.", n)
 	}
 }
 
@@ -78,12 +78,12 @@ func TestPriorityQueue_ReplaceTop(t *testing.T) {
 	pq.ReplaceTop(0)
 	t.Log("Data after replace top to 0:", pq.(*priorityQueue).Data)
 	if x := pq.Top(); x != 0 {
-		t.Errorf("Top() = %v != 0.", x)
+		t.Errorf("Top(): %v != 0.", x)
 	}
 	pq.ReplaceTop(4)
 	t.Log("Data after replace top to 4:", pq.(*priorityQueue).Data)
 	if x := pq.Top(); x != 2 {
-		t.Errorf("Top() = %v != 2.", x)
+		t.Errorf("Top(): %v != 2.", x)
 	}
 }
 

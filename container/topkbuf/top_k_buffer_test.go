@@ -37,7 +37,7 @@ func TestNewTopKBuffer(t *testing.T) {
 			}
 		}
 	} else {
-		t.Errorf("test1: len(x) = %d != len(y) = %d", len(x), len(y))
+		t.Errorf("test1: len(x): %d != len(y): %d", len(x), len(y))
 	}
 	tkb = NewTopKBuffer(k, function.IntLess, 3, 2, 5, 1, 0, 7, 9, 3)
 	y = []int{0, 1, 2, 3, 3}
@@ -49,7 +49,7 @@ func TestNewTopKBuffer(t *testing.T) {
 			}
 		}
 	} else {
-		t.Errorf("test2: len(x) = %d != len(y) = %d", len(x), len(y))
+		t.Errorf("test2: len(x): %d != len(y): %d", len(x), len(y))
 	}
 }
 
@@ -58,10 +58,10 @@ func TestTopKBuffer(t *testing.T) {
 	samples := []int{3, 2, 5, 1, 0, 7, 9, 0, 3}
 	tkb := NewTopKBuffer(k, function.IntLess)
 	if x := tkb.GetK(); x != k {
-		t.Errorf("tkb.GetK() = %d != %d", x, k)
+		t.Errorf("tkb.GetK(): %d != %d", x, k)
 	}
 	if n := tkb.Len(); n != 0 {
-		t.Errorf("After create an empty TopKBuffer: tkb.Len() = %d != 0", n)
+		t.Errorf("After create an empty TopKBuffer: tkb.Len(): %d != 0", n)
 	}
 	for i, sample := range samples {
 		tkb.Add(sample)
@@ -70,7 +70,7 @@ func TestTopKBuffer(t *testing.T) {
 			wantedLen = i + 1
 		}
 		if n := tkb.Len(); n != wantedLen {
-			t.Errorf("After add samples[%d]: tkb.Len() = %d != %d", i, n, wantedLen)
+			t.Errorf("After add samples[%d]: tkb.Len(): %d != %d", i, n, wantedLen)
 		}
 	}
 	output := tkb.Drain()
@@ -83,19 +83,19 @@ func TestTopKBuffer(t *testing.T) {
 			}
 		}
 	} else {
-		t.Errorf("len(output) = %d != %d", n, k)
+		t.Errorf("len(output): %d != %d", n, k)
 	}
 	if n := tkb.Len(); n != 0 {
-		t.Errorf("After drain: tkb.Len() = %d != 0", n)
+		t.Errorf("After drain: tkb.Len(): %d != 0", n)
 	}
 	for _, sample := range samples {
 		tkb.Add(sample)
 	}
 	if n := tkb.Len(); n != k {
-		t.Errorf("After add samples again: tkb.Len() = %d != %d", n, k)
+		t.Errorf("After add samples again: tkb.Len(): %d != %d", n, k)
 	}
 	tkb.Clear()
 	if n := tkb.Len(); n != 0 {
-		t.Errorf("After clear: tkb.Len() = %d != 0", n)
+		t.Errorf("After clear: tkb.Len(): %d != 0", n)
 	}
 }

@@ -94,6 +94,9 @@ func (gda *GeneralDynamicArray) Pop() interface{} {
 }
 
 func (gda *GeneralDynamicArray) Append(s Sequence) {
+	if s == nil {
+		return
+	}
 	n := s.Len()
 	if n == 0 {
 		return
@@ -161,6 +164,9 @@ func (gda *GeneralDynamicArray) InsertSequence(i int, s Sequence) {
 		return
 	}
 	_ = (*gda)[i] // ensure i is valid
+	if s == nil {
+		return
+	}
 	n := s.Len()
 	if n == 0 {
 		return

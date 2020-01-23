@@ -93,6 +93,9 @@ func (ida *IntDynamicArray) Pop() interface{} {
 }
 
 func (ida *IntDynamicArray) Append(s Sequence) {
+	if s == nil {
+		return
+	}
 	n := s.Len()
 	if n == 0 {
 		return
@@ -155,6 +158,9 @@ func (ida *IntDynamicArray) InsertSequence(i int, s Sequence) {
 		return
 	}
 	_ = (*ida)[i] // ensure i is valid
+	if s == nil {
+		return
+	}
 	n := s.Len()
 	if n == 0 {
 		return

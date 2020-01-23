@@ -55,7 +55,7 @@ func TestBinarySearchMaxLess(t *testing.T) {
 	for _, c := range cases {
 		idx := BinarySearchMaxLess(itf, c.Target)
 		if idx != c.Index {
-			t.Errorf("BinarySearchMaxLess(%v, %d) = %d != %d.", data, c.Target, idx, c.Index)
+			t.Errorf("BinarySearchMaxLess(%v, %d): %d != %d.", data, c.Target, idx, c.Index)
 		}
 	}
 }
@@ -81,7 +81,7 @@ func TestBinarySearchMinGreater(t *testing.T) {
 	for _, c := range cases {
 		idx := BinarySearchMinGreater(itf, c.Target)
 		if idx != c.Index {
-			t.Errorf("BinarySearchMinGreater(%v, %d) = %d != %d.", data, c.Target, idx, c.Index)
+			t.Errorf("BinarySearchMinGreater(%v, %d): %d != %d.", data, c.Target, idx, c.Index)
 		}
 	}
 }
@@ -107,27 +107,27 @@ func testBinarySearch(t *testing.T, data, negativeSamples []int) {
 	for i, x := range s {
 		idx := BinarySearch(itf1, x)
 		if idx != i {
-			t.Errorf("BinarySearch(%v [%d], ...) = %d != %d.", x, *x.(*int), idx, i)
+			t.Errorf("BinarySearch(%v [%d], ...): %d != %d.", x, *x.(*int), idx, i)
 		}
 		idx = BinarySearch(itf2, x)
 		if *x.(*int) != data[idx] {
-			t.Errorf("BinarySearch(%v [%d], ...) = %d [%d].", x, *x.(*int), idx, data[idx])
+			t.Errorf("BinarySearch(%v [%d], ...): %d [%d].", x, *x.(*int), idx, data[idx])
 		}
 	}
 	for i := range negativeSamples {
 		idx := BinarySearch(itf1, &negativeSamples[i])
 		if idx != -1 {
-			t.Errorf("BinarySearch(%v [%d], ...) = %d != -1.", &negativeSamples[i], negativeSamples[i], idx)
+			t.Errorf("BinarySearch(%v [%d], ...): %d != -1.", &negativeSamples[i], negativeSamples[i], idx)
 		}
 		idx = BinarySearch(itf2, &negativeSamples[i])
 		if idx == -1 {
 			for j := range data {
 				if data[j] == negativeSamples[i] {
-					t.Errorf("BinarySearch(%v [%d], ...) = -1 != %d.", &negativeSamples[i], negativeSamples[i], j)
+					t.Errorf("BinarySearch(%v [%d], ...): -1 != %d.", &negativeSamples[i], negativeSamples[i], j)
 				}
 			}
 		} else if negativeSamples[i] != data[idx] {
-			t.Errorf("BinarySearch(%v [%d], ...) = %d [%d].", &negativeSamples[i], negativeSamples[i], idx, negativeSamples[idx])
+			t.Errorf("BinarySearch(%v [%d], ...): %d [%d].", &negativeSamples[i], negativeSamples[i], idx, negativeSamples[idx])
 		}
 	}
 }

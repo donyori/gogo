@@ -34,7 +34,7 @@ func TestEqual(t *testing.T) {
 	}
 	for _, pair := range pairs {
 		if r := Equal(pair[0], pair[1]); r != (pair[0] == pair[1]) {
-			t.Errorf("Equal(%v, %v) = %t.", pair[0], pair[1], r)
+			t.Errorf("Equal(%v, %v): %t.", pair[0], pair[1], r)
 		}
 	}
 }
@@ -67,7 +67,7 @@ func TestGenerateEqualViaLess(t *testing.T) {
 	eq := GenerateEqualViaLess(IntLess)
 	for _, pair := range intPairs {
 		if r := eq(pair[0], pair[1]); r != (pair[0] == pair[1]) {
-			t.Errorf("eq(%d, %d) = %t.", pair[0], pair[1], r)
+			t.Errorf("eq(%d, %d): %t.", pair[0], pair[1], r)
 		}
 	}
 }

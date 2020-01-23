@@ -35,19 +35,33 @@ func NewSliceDynamicArray(slicePtr interface{}) *SliceDynamicArray {
 	if slicePtr == nil {
 		panic("slicePtr is nil")
 	}
-	p := reflect.ValueOf(slicePtr)
-	if p.Kind() != reflect.Ptr {
+	sda := new(SliceDynamicArray)
+	sda.p = reflect.ValueOf(slicePtr)
+	if sda.p.Kind() != reflect.Ptr {
 		panic("slicePtr is NOT a pointer")
 	}
-	v := p.Elem()
-	for v.Kind() == reflect.Ptr {
-		p = v
-		v = v.Elem()
+	sda.v = sda.p.Elem()
+	for sda.v.Kind() == reflect.Ptr || sda.v.Kind() == reflect.Interface {
+		sda.v = sda.v.Elem()
 	}
-	if v.Kind() != reflect.Slice {
+	if sda.v.Kind() != reflect.Slice {
 		panic("slicePtr does NOT point to a slice")
 	}
-	return &SliceDynamicArray{p: p, v: v}
+	return sda
+}
+
+// Make a SliceDynamicArray with given itemType, length and capacity.
+// The underlying slice will be: make([]itemType, length, capacity).
+// It panics if itemType is nil, or length or capacity is illegal.
+func MakeSliceDynamicArray(itemType reflect.Type, length int, capacity int) *SliceDynamicArray {
+	if itemType == nil {
+		panic("itemType is nil")
+	}
+	s := reflect.MakeSlice(reflect.SliceOf(itemType), length, capacity).Interface()
+	sda := new(SliceDynamicArray)
+	sda.p = reflect.ValueOf(&s)
+	sda.v = sda.p.Elem().Elem()
+	return sda
 }
 
 // Return the pointer to the slice.
@@ -80,7 +94,7 @@ func (sda *SliceDynamicArray) Front() interface{} {
 }
 
 func (sda *SliceDynamicArray) SetFront(x interface{}) {
-	sda.v.Index(0).Set(reflect.ValueOf(x))
+	sda.v.Index(0).Set(sda.valueOf(x))
 }
 
 func (sda *SliceDynamicArray) Back() interface{} {
@@ -88,7 +102,7 @@ func (sda *SliceDynamicArray) Back() interface{} {
 }
 
 func (sda *SliceDynamicArray) SetBack(x interface{}) {
-	sda.v.Index(sda.v.Len() - 1).Set(reflect.ValueOf(x))
+	sda.v.Index(sda.v.Len() - 1).Set(sda.valueOf(x))
 }
 
 func (sda *SliceDynamicArray) Reverse() {
@@ -121,7 +135,7 @@ func (sda *SliceDynamicArray) Get(i int) interface{} {
 }
 
 func (sda *SliceDynamicArray) Set(i int, x interface{}) {
-	sda.v.Index(i).Set(reflect.ValueOf(x))
+	sda.v.Index(i).Set(sda.valueOf(x))
 }
 
 func (sda *SliceDynamicArray) Swap(i, j int) {
@@ -129,9 +143,9 @@ func (sda *SliceDynamicArray) Swap(i, j int) {
 }
 
 func (sda *SliceDynamicArray) Slice(begin, end int) Array {
-	v := sda.v.Slice3(begin, end, end)
-	p := v.Addr()
-	return &SliceDynamicArray{p: p, v: v}
+	p := reflect.New(sda.v.Type())
+	p.Elem().Set(sda.v.Slice3(begin, end, end))
+	return &SliceDynamicArray{p: p, v: p.Elem()}
 }
 
 func (sda *SliceDynamicArray) Cap() int {
@@ -142,7 +156,7 @@ func (sda *SliceDynamicArray) Cap() int {
 }
 
 func (sda *SliceDynamicArray) Push(x interface{}) {
-	sda.v.Set(reflect.Append(sda.v, reflect.ValueOf(x)))
+	sda.v.Set(reflect.Append(sda.v, sda.valueOf(x)))
 }
 
 func (sda *SliceDynamicArray) Pop() interface{} {
@@ -155,6 +169,9 @@ func (sda *SliceDynamicArray) Pop() interface{} {
 }
 
 func (sda *SliceDynamicArray) Append(s Sequence) {
+	if s == nil {
+		return
+	}
 	n := s.Len()
 	if n == 0 {
 		return
@@ -167,7 +184,7 @@ func (sda *SliceDynamicArray) Append(s Sequence) {
 	i := sda.v.Len()
 	sda.v.Set(reflect.AppendSlice(sda.v, reflect.MakeSlice(sda.v.Type(), n, n)))
 	s.Scan(func(x interface{}) (cont bool) {
-		sda.v.Index(i).Set(reflect.ValueOf(x))
+		sda.v.Index(i).Set(sda.valueOf(x))
 		i++
 		return true
 	})
@@ -197,7 +214,7 @@ func (sda *SliceDynamicArray) Insert(i int, x interface{}) {
 	sda.v.Set(reflect.Append(sda.v, reflect.Zero(sda.v.Type().Elem())))
 	end := sda.v.Len()
 	reflect.Copy(sda.v.Slice(i+1, end), sda.v.Slice(i, end))
-	sda.v.Index(i).Set(reflect.ValueOf(x))
+	sda.v.Index(i).Set(sda.valueOf(x))
 }
 
 func (sda *SliceDynamicArray) Remove(i int) interface{} {
@@ -232,6 +249,9 @@ func (sda *SliceDynamicArray) InsertSequence(i int, s Sequence) {
 		return
 	}
 	sda.v.Index(i) // ensure i is valid
+	if s == nil {
+		return
+	}
 	n := s.Len()
 	if n == 0 {
 		return
@@ -241,7 +261,7 @@ func (sda *SliceDynamicArray) InsertSequence(i int, s Sequence) {
 	reflect.Copy(sda.v.Slice(i+n, end), sda.v.Slice(i, end))
 	k := i
 	s.Scan(func(x interface{}) (cont bool) {
-		sda.v.Index(k).Set(reflect.ValueOf(x))
+		sda.v.Index(k).Set(sda.valueOf(x))
 		k++
 		return true
 	})
@@ -316,7 +336,7 @@ func (sda *SliceDynamicArray) Reserve(capacity int) {
 }
 
 func (sda *SliceDynamicArray) Shrink() {
-	if sda.Len() == sda.Cap() {
+	if sda == nil || sda.v.Len() == sda.v.Cap() {
 		return
 	}
 	v := reflect.MakeSlice(sda.v.Type(), sda.v.Len(), sda.v.Len())
@@ -351,4 +371,15 @@ func (sda *SliceDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 		sda.v.Index(i).Set(zero) // avoid memory leak
 	}
 	sda.v.Set(sda.v.Slice(0, n))
+}
+
+func (sda *SliceDynamicArray) valueOf(x interface{}) reflect.Value {
+	if x != nil {
+		return reflect.ValueOf(x)
+	}
+	xV := reflect.Zero(sda.v.Type().Elem())
+	if xV.Interface() != x {
+		panic("DynamicArray: x cannot be assigned to the item of the dynamic array.")
+	}
+	return xV
 }

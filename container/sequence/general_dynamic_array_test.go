@@ -23,22 +23,22 @@ import "testing"
 func TestNewGeneralDynamicArray(t *testing.T) {
 	gda := NewGeneralDynamicArray(3)
 	if n, c := gda.Len(), gda.Cap(); n != 0 || c != 3 {
-		t.Errorf("NewGeneralDynamicArray(3) - Len() = %d, Cap() = %d.", n, c)
+		t.Errorf("NewGeneralDynamicArray(3) - Len(): %d, Cap(): %d.", n, c)
 	}
 }
 
 func TestGeneralDynamicArray_Len(t *testing.T) {
 	var gda GeneralDynamicArray
 	if n := gda.Len(); n != 0 {
-		t.Errorf("gda.Len() = %d != 0.", n)
+		t.Errorf("gda.Len(): %d != 0.", n)
 	}
 	gda = GeneralDynamicArray{}
 	if n := gda.Len(); n != 0 {
-		t.Errorf("gda.Len() = %d != 0.", n)
+		t.Errorf("gda.Len(): %d != 0.", n)
 	}
 	gda = GeneralDynamicArray{1}
 	if n := gda.Len(); n != 1 {
-		t.Errorf("gda.Len() = %d != 1.", n)
+		t.Errorf("gda.Len(): %d != 1.", n)
 	}
 }
 
@@ -63,15 +63,15 @@ func TestGeneralDynamicArray_Swap(t *testing.T) {
 func TestGeneralDynamicArray_Cap(t *testing.T) {
 	var gda GeneralDynamicArray
 	if c := gda.Cap(); c != 0 {
-		t.Errorf("gda.Cap() = %d != 0.", c)
+		t.Errorf("gda.Cap(): %d != 0.", c)
 	}
 	gda = make(GeneralDynamicArray, 0)
 	if c := gda.Cap(); c != 0 {
-		t.Errorf("gda.Cap() = %d != 0.", c)
+		t.Errorf("gda.Cap(): %d != 0.", c)
 	}
 	gda = make(GeneralDynamicArray, 2, 10)
 	if c := gda.Cap(); c != 10 {
-		t.Errorf("gda.Cap() = %d != 10.", c)
+		t.Errorf("gda.Cap(): %d != 10.", c)
 	}
 }
 
@@ -86,6 +86,11 @@ func TestGeneralDynamicArray_Push(t *testing.T) {
 	gda.Push(2)
 	if sliceUnequal(gda, wanted) {
 		t.Errorf("After 2nd push: %v, wanted: %v.", gda, wanted)
+	}
+	wanted = append(wanted, nil)
+	gda.Push(nil)
+	if sliceUnequal(gda, wanted) {
+		t.Errorf("After 3rd push: %v, wanted: %v.", gda, wanted)
 	}
 }
 
@@ -124,6 +129,10 @@ func TestGeneralDynamicArray_Append(t *testing.T) {
 	gda.Append(GeneralDynamicArray{1})
 	if sliceUnequal(gda, wanted) {
 		t.Errorf("After 3rd append: %v, wanted: %v.", gda, wanted)
+	}
+	gda.Append(nil)
+	if sliceUnequal(gda, wanted) {
+		t.Errorf("After 4th append: %v, wanted: %v.", gda, wanted)
 	}
 }
 
@@ -166,6 +175,11 @@ func TestGeneralDynamicArray_Insert(t *testing.T) {
 	gda.Insert(0, 0)
 	if sliceUnequal(gda, wanted) {
 		t.Errorf("After 3rd insert: %v, wanted: %v.", gda, wanted)
+	}
+	wanted = []interface{}{0, nil, 1, 2}
+	gda.Insert(1, nil)
+	if sliceUnequal(gda, wanted) {
+		t.Errorf("After 4th insert: %v, wanted: %v.", gda, wanted)
 	}
 }
 
@@ -247,6 +261,10 @@ func TestGeneralDynamicArray_InsertSequence(t *testing.T) {
 	gda.InsertSequence(0, seq)
 	if sliceUnequal(gda, wanted) {
 		t.Errorf("After 4th insert sequence: %v, wanted: %v.", gda, wanted)
+	}
+	gda.InsertSequence(1, nil)
+	if sliceUnequal(gda, wanted) {
+		t.Errorf("After 5th insert sequence: %v, wanted: %v.", gda, wanted)
 	}
 }
 
@@ -380,15 +398,15 @@ func TestGeneralDynamicArray_Reserve(t *testing.T) {
 	gda := make(GeneralDynamicArray, 2, 5)
 	gda.Reserve(1)
 	if c := gda.Cap(); c < 1 {
-		t.Errorf("After 1st reserve, Cap() = %d < 1.", c)
+		t.Errorf("After 1st reserve, Cap(): %d < 1.", c)
 	}
 	gda.Reserve(5)
 	if c := gda.Cap(); c < 5 {
-		t.Errorf("After 2nd reserve, Cap() = %d < 5.", c)
+		t.Errorf("After 2nd reserve, Cap(): %d < 5.", c)
 	}
 	gda.Reserve(10)
 	if c := gda.Cap(); c < 10 {
-		t.Errorf("After 3rd reserve, Cap() = %d < 10.", c)
+		t.Errorf("After 3rd reserve, Cap(): %d < 10.", c)
 	}
 }
 
@@ -397,7 +415,7 @@ func TestGeneralDynamicArray_Shrink(t *testing.T) {
 	gda := GeneralDynamicArray(data)
 	gda.Shrink()
 	if n, c := gda.Len(), gda.Cap(); c != n {
-		t.Errorf("After shrink, Len() = %d, Cap() = %d.", n, c)
+		t.Errorf("After shrink, Len(): %d, Cap(): %d.", n, c)
 	}
 	gda.Set(0, 1)
 	if data[0] != nil {
@@ -418,27 +436,6 @@ func TestGeneralDynamicArray_Filter(t *testing.T) {
 	}
 	if testNonNilItem(data[4:]) {
 		t.Errorf("After filter, the tail of underlying data has non-nil item: %v.", data)
-	}
-}
-
-func TestNewIntDynamicArray(t *testing.T) {
-	ida := NewIntDynamicArray(3)
-	if n, c := ida.Len(), ida.Cap(); n != 0 || c != 3 {
-		t.Errorf("NewIntDynamicArray(3) - Len() = %d, Cap() = %d.", n, c)
-	}
-}
-
-func TestNewFloat64DynamicArray(t *testing.T) {
-	fda := NewFloat64DynamicArray(3)
-	if n, c := fda.Len(), fda.Cap(); n != 0 || c != 3 {
-		t.Errorf("NewFloat64DynamicArray(3) - Len() = %d, Cap() = %d.", n, c)
-	}
-}
-
-func TestNewStringDynamicArray(t *testing.T) {
-	sda := NewStringDynamicArray(3)
-	if n, c := sda.Len(), sda.Cap(); n != 0 || c != 3 {
-		t.Errorf("NewStringDynamicArray(3) - Len() = %d, Cap() = %d.", n, c)
 	}
 }
 
