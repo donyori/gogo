@@ -233,7 +233,7 @@ func (sda *SliceDynamicArray) Remove(i int) interface{} {
 func (sda *SliceDynamicArray) RemoveWithoutOrder(i int) interface{} {
 	iV := sda.v.Index(i)
 	x := iV.Interface()
-	back := sda.v.Len()
+	back := sda.v.Len() - 1
 	backV := sda.v.Index(back)
 	if i != back {
 		iV.Set(backV)
@@ -319,7 +319,7 @@ func (sda *SliceDynamicArray) Expand(i, n int) {
 	sda.v.Index(i) // ensure i is valid
 	sda.v.Set(reflect.AppendSlice(sda.v, reflect.MakeSlice(sda.v.Type(), n, n)))
 	end := sda.v.Len()
-	reflect.Copy(sda.v.Slice(i+n, end), sda.v.Slice(i, n))
+	reflect.Copy(sda.v.Slice(i+n, end), sda.v.Slice(i, end))
 	zero := reflect.Zero(sda.v.Type().Elem())
 	for k := i; k < i+n; k++ {
 		sda.v.Index(k).Set(zero)
