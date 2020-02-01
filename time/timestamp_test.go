@@ -32,13 +32,17 @@ var testUnixTimestampCases = []struct {
 	{UnixTimestamp(stdtime.Unix(0, 0)), []byte("0")},
 	{UnixTimestamp(stdtime.Unix(1580516402, 0)), []byte("1580516402")},
 	{UnixTimestamp(stdtime.Unix(1580516402, 242926600)), []byte("1580516402.2429266")},
+	{UnixTimestamp(stdtime.Unix(1580516402, 2429266)), []byte("1580516402.002429266")},
 	{UnixTimestamp(stdtime.Unix(1580516402, 242926678)), []byte("1580516402.242926678")},
 	{UnixTimestamp(stdtime.Unix(0, 1580516402242926600)), []byte("1580516402.2429266")},
+	{UnixTimestamp(stdtime.Unix(0, 1580516402002429266)), []byte("1580516402.002429266")},
 	{UnixTimestamp(stdtime.Unix(0, 1580516402242926678)), []byte("1580516402.242926678")},
 	{UnixTimestamp(stdtime.Date(1960, 1, 2, 15, 3, 4, 0, stdtime.UTC)), []byte("-315478616")},
 	{UnixTimestamp(stdtime.Unix(-315478616, -242926600)), []byte("-315478616.2429266")},
+	{UnixTimestamp(stdtime.Unix(-315478616, -2429266)), []byte("-315478616.002429266")},
 	{UnixTimestamp(stdtime.Unix(-315478616, -242926678)), []byte("-315478616.242926678")},
 	{UnixTimestamp(stdtime.Unix(0, -315478616242926600)), []byte("-315478616.2429266")},
+	{UnixTimestamp(stdtime.Unix(0, -315478616002429266)), []byte("-315478616.002429266")},
 	{UnixTimestamp(stdtime.Unix(0, -315478616242926678)), []byte("-315478616.242926678")},
 }
 
