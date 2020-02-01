@@ -33,19 +33,19 @@ type SliceDynamicArray struct {
 // It panics if slicePtr isn't a pointer to a slice.
 func NewSliceDynamicArray(slicePtr interface{}) *SliceDynamicArray {
 	if slicePtr == nil {
-		panic("slicePtr is nil")
+		panic("sequence: slicePtr is nil")
 	}
 	sda := new(SliceDynamicArray)
 	sda.p = reflect.ValueOf(slicePtr)
 	if sda.p.Kind() != reflect.Ptr {
-		panic("slicePtr is NOT a pointer")
+		panic("sequence: slicePtr is NOT a pointer")
 	}
 	sda.v = sda.p.Elem()
 	for sda.v.Kind() == reflect.Ptr || sda.v.Kind() == reflect.Interface {
 		sda.v = sda.v.Elem()
 	}
 	if sda.v.Kind() != reflect.Slice {
-		panic("slicePtr does NOT point to a slice")
+		panic("sequence: slicePtr does NOT point to a slice")
 	}
 	return sda
 }
@@ -55,7 +55,7 @@ func NewSliceDynamicArray(slicePtr interface{}) *SliceDynamicArray {
 // It panics if itemType is nil, or length or capacity is illegal.
 func MakeSliceDynamicArray(itemType reflect.Type, length int, capacity int) *SliceDynamicArray {
 	if itemType == nil {
-		panic("itemType is nil")
+		panic("sequence: itemType is nil")
 	}
 	s := reflect.MakeSlice(reflect.SliceOf(itemType), length, capacity).Interface()
 	sda := new(SliceDynamicArray)
@@ -379,7 +379,7 @@ func (sda *SliceDynamicArray) valueOf(x interface{}) reflect.Value {
 	}
 	xV := reflect.Zero(sda.v.Type().Elem())
 	if xV.Interface() != x {
-		panic("DynamicArray: x cannot be assigned to the item of the dynamic array.")
+		panic("sequence: x cannot be assigned to the item of the dynamic array.")
 	}
 	return xV
 }

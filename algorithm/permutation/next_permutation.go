@@ -18,11 +18,7 @@
 
 package permutation
 
-import (
-	"errors"
-
-	"github.com/donyori/gogo/algorithm/search/sequence"
-)
+import "github.com/donyori/gogo/algorithm/search/sequence"
 
 // Transform data to its next permutation in lexical order.
 // It returns false if data.Len() == 0 or the permutations are exhausted,
@@ -68,7 +64,7 @@ func (npbsi *nextPermutationBinarySearchInterface) Len() int {
 }
 
 func (npbsi *nextPermutationBinarySearchInterface) Equal(i int, x interface{}) bool {
-	panic(errors.New("method Equal not implement"))
+	panic("permutation: method Equal not implement")
 }
 
 // Here, x is just a dummy argument.
@@ -78,5 +74,5 @@ func (npbsi *nextPermutationBinarySearchInterface) Less(i int, x interface{}) bo
 }
 
 func (npbsi *nextPermutationBinarySearchInterface) Greater(i int, x interface{}) bool {
-	panic(errors.New("method Greater not implement"))
+	panic("permutation: method Greater not implement")
 }

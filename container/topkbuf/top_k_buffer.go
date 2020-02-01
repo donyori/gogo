@@ -19,7 +19,6 @@
 package topkbuf
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/donyori/gogo/container/pqueue"
@@ -30,7 +29,7 @@ import (
 type TopKBuffer interface {
 	// Return the parameter K.
 	// It returns 0 if the buffer is nil.
-	GetK() int
+	K() int
 
 	// Return the number of items in the buffer.
 	// It returns 0 if the buffer is nil.
@@ -51,7 +50,7 @@ type TopKBuffer interface {
 // An implementation of TopKBuffer,
 // based on github.com/donyori/gogo/container/pqueue.PriorityQueue.
 type topKBuffer struct {
-	K         int
+	ParamK    int
 	GreaterFn function.LessFunc
 	PQ        pqueue.PriorityQueue
 }
@@ -61,14 +60,14 @@ type topKBuffer struct {
 // It panics if k <= 0 or less is nil.
 func NewTopKBuffer(k int, less function.LessFunc, data ...interface{}) TopKBuffer {
 	if k <= 0 {
-		panic(fmt.Errorf("K = %d <= 0", k))
+		panic(fmt.Sprintf("topkbuf: k: %d <= 0", k))
 	}
 	if less == nil {
-		panic(errors.New("less is nil"))
+		panic("topkbuf: less is nil")
 	}
 	greater := less.Reverse()
 	tkb := &topKBuffer{
-		K:         k,
+		ParamK:    k,
 		GreaterFn: greater,
 	}
 	if len(data) <= k {
@@ -82,11 +81,11 @@ func NewTopKBuffer(k int, less function.LessFunc, data ...interface{}) TopKBuffe
 	return tkb
 }
 
-func (tkb *topKBuffer) GetK() int {
+func (tkb *topKBuffer) K() int {
 	if tkb == nil {
 		return 0
 	}
-	return tkb.K
+	return tkb.ParamK
 }
 
 func (tkb *topKBuffer) Len() int {
@@ -97,7 +96,7 @@ func (tkb *topKBuffer) Len() int {
 }
 
 func (tkb *topKBuffer) Add(x interface{}) {
-	if tkb.Len() < tkb.K {
+	if tkb.Len() < tkb.ParamK {
 		tkb.PQ.Enqueue(x)
 		return
 	}

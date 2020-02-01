@@ -57,8 +57,8 @@ func TestTopKBuffer(t *testing.T) {
 	k := 5
 	samples := []int{3, 2, 5, 1, 0, 7, 9, 0, 3}
 	tkb := NewTopKBuffer(k, function.IntLess)
-	if x := tkb.GetK(); x != k {
-		t.Errorf("tkb.GetK(): %d != %d", x, k)
+	if x := tkb.K(); x != k {
+		t.Errorf("tkb.K(): %d != %d", x, k)
 	}
 	if n := tkb.Len(); n != 0 {
 		t.Errorf("After create an empty TopKBuffer: tkb.Len(): %d != 0", n)
