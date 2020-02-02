@@ -26,19 +26,72 @@ import (
 	stdtime "time"
 )
 
-// Unix timestamp.
+const (
+	// Unix timestamp pattern. (without escape to fit more languages)
+	UnixTimestampPattern = "^[+-]?[0-9]+([.][0-9]{1,9})?$"
+	// Millisecond timestamp pattern. (without escape to fit more languages)
+	MilliTimestampPattern = "^[+-]?[0-9]+([.][0-9]{1,6})?$"
+	// Microsecond timestamp pattern. (without escape to fit more languages)
+	MicroTimestampPattern = "^[+-]?[0-9]+([.][0-9]{1,3})?$"
+	// Nanosecond timestamp pattern. (without escape to fit more languages)
+	NanoTimestampPattern = "^[+-]?[0-9]+$"
+)
+
+// Timestamp.
+// Auto detect the time unit (seconds, milliseconds, microseconds, or nanoseconds)
+// when parse from string.
+// Treated as UnixTimestamp when format string.
+//
+// It determines the time unit by the integer part digits, as follows:
+// less than 12-digits: in seconds,
+// 12-digits to 14-digits: in milliseconds,
+// 15-digits or 16-digits: in microseconds,
+// more than 16-digits: in nanoseconds.
+type Timestamp stdtime.Time
+
+func (ts Timestamp) String() string {
+	return string(timeToTimestamp(autoTimestamp, stdtime.Time(ts)))
+}
+
+func (ts Timestamp) MarshalText() (text []byte, err error) {
+	return timeToTimestamp(autoTimestamp, stdtime.Time(ts)), nil
+}
+
+func (ts *Timestamp) UnmarshalText(text []byte) error {
+	t, err := timestampToTime(autoTimestamp, text)
+	if err != nil {
+		return err
+	}
+	*(*stdtime.Time)(ts) = t
+	return nil
+}
+
+func (ts Timestamp) MarshalJSON() ([]byte, error) {
+	return timeToTimestamp(autoTimestamp, stdtime.Time(ts)), nil
+}
+
+func (ts *Timestamp) UnmarshalJSON(b []byte) error {
+	t, err := timestampToTime(autoTimestamp, b)
+	if err != nil {
+		return err
+	}
+	*(*stdtime.Time)(ts) = t
+	return nil
+}
+
+// Unix timestamp, in seconds.
 type UnixTimestamp stdtime.Time
 
 func (ut UnixTimestamp) String() string {
-	return string(timeToUnixTimestamp(stdtime.Time(ut)))
+	return string(timeToTimestamp(unixTimestamp, stdtime.Time(ut)))
 }
 
 func (ut UnixTimestamp) MarshalText() (text []byte, err error) {
-	return timeToUnixTimestamp(stdtime.Time(ut)), nil
+	return timeToTimestamp(unixTimestamp, stdtime.Time(ut)), nil
 }
 
 func (ut *UnixTimestamp) UnmarshalText(text []byte) error {
-	t, err := unixTimestampToTime(text)
+	t, err := timestampToTime(unixTimestamp, text)
 	if err != nil {
 		return err
 	}
@@ -47,11 +100,11 @@ func (ut *UnixTimestamp) UnmarshalText(text []byte) error {
 }
 
 func (ut UnixTimestamp) MarshalJSON() ([]byte, error) {
-	return timeToUnixTimestamp(stdtime.Time(ut)), nil
+	return timeToTimestamp(unixTimestamp, stdtime.Time(ut)), nil
 }
 
 func (ut *UnixTimestamp) UnmarshalJSON(b []byte) error {
-	t, err := unixTimestampToTime(b)
+	t, err := timestampToTime(unixTimestamp, b)
 	if err != nil {
 		return err
 	}
@@ -59,25 +112,175 @@ func (ut *UnixTimestamp) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// Unix timestamp pattern. (without escape to fit more languages)
-const UnixTimestampPatternStr = "^[+-]?[0-9]+([.][0-9]{1,9})?$"
+// Timestamp in milliseconds.
+// Often used in JavaScript.
+type MilliTimestamp stdtime.Time
 
-var unixTimestampPattern = regexp.MustCompile(UnixTimestampPatternStr)
+func (mt MilliTimestamp) String() string {
+	return string(timeToTimestamp(milliTimestamp, stdtime.Time(mt)))
+}
 
-func unixTimestampToTime(ts []byte) (t stdtime.Time, err error) {
+func (mt MilliTimestamp) MarshalText() (text []byte, err error) {
+	return timeToTimestamp(milliTimestamp, stdtime.Time(mt)), nil
+}
+
+func (mt *MilliTimestamp) UnmarshalText(text []byte) error {
+	t, err := timestampToTime(milliTimestamp, text)
+	if err != nil {
+		return err
+	}
+	*(*stdtime.Time)(mt) = t
+	return nil
+}
+
+func (mt MilliTimestamp) MarshalJSON() ([]byte, error) {
+	return timeToTimestamp(milliTimestamp, stdtime.Time(mt)), nil
+}
+
+func (mt *MilliTimestamp) UnmarshalJSON(b []byte) error {
+	t, err := timestampToTime(milliTimestamp, b)
+	if err != nil {
+		return err
+	}
+	*(*stdtime.Time)(mt) = t
+	return nil
+}
+
+// Timestamp in microseconds.
+type MicroTimestamp stdtime.Time
+
+func (ct MicroTimestamp) String() string {
+	return string(timeToTimestamp(microTimestamp, stdtime.Time(ct)))
+}
+
+func (ct MicroTimestamp) MarshalText() (text []byte, err error) {
+	return timeToTimestamp(microTimestamp, stdtime.Time(ct)), nil
+}
+
+func (ct *MicroTimestamp) UnmarshalText(text []byte) error {
+	t, err := timestampToTime(microTimestamp, text)
+	if err != nil {
+		return err
+	}
+	*(*stdtime.Time)(ct) = t
+	return nil
+}
+
+func (ct MicroTimestamp) MarshalJSON() ([]byte, error) {
+	return timeToTimestamp(microTimestamp, stdtime.Time(ct)), nil
+}
+
+func (ct *MicroTimestamp) UnmarshalJSON(b []byte) error {
+	t, err := timestampToTime(microTimestamp, b)
+	if err != nil {
+		return err
+	}
+	*(*stdtime.Time)(ct) = t
+	return nil
+}
+
+// Timestamp in nanoseconds.
+type NanoTimestamp stdtime.Time
+
+func (nt NanoTimestamp) String() string {
+	return string(timeToTimestamp(nanoTimestamp, stdtime.Time(nt)))
+}
+
+func (nt NanoTimestamp) MarshalText() (text []byte, err error) {
+	return timeToTimestamp(nanoTimestamp, stdtime.Time(nt)), nil
+}
+
+func (nt *NanoTimestamp) UnmarshalText(text []byte) error {
+	t, err := timestampToTime(nanoTimestamp, text)
+	if err != nil {
+		return err
+	}
+	*(*stdtime.Time)(nt) = t
+	return nil
+}
+
+func (nt NanoTimestamp) MarshalJSON() ([]byte, error) {
+	return timeToTimestamp(nanoTimestamp, stdtime.Time(nt)), nil
+}
+
+func (nt *NanoTimestamp) UnmarshalJSON(b []byte) error {
+	t, err := timestampToTime(nanoTimestamp, b)
+	if err != nil {
+		return err
+	}
+	*(*stdtime.Time)(nt) = t
+	return nil
+}
+
+type timestampType int8
+
+const (
+	autoTimestamp timestampType = iota
+	unixTimestamp
+	milliTimestamp
+	microTimestamp
+	nanoTimestamp
+)
+
+var (
+	unixTimestampRegExpr  = regexp.MustCompile(UnixTimestampPattern)
+	milliTimestampRegExpr = regexp.MustCompile(MilliTimestampPattern)
+	microTimestampRegExpr = regexp.MustCompile(MicroTimestampPattern)
+	nanoTimestampRegExpr  = regexp.MustCompile(NanoTimestampPattern)
+)
+
+var (
+	timestampRegExprMapping = []*regexp.Regexp{
+		unixTimestampRegExpr,
+		unixTimestampRegExpr,
+		milliTimestampRegExpr,
+		microTimestampRegExpr,
+		nanoTimestampRegExpr,
+	}
+	// Reflect the float point position relative to nanoseconds.
+	timestampFloatShiftMapping    = []int{1e9, 1e9, 1e6, 1e3, 1}
+	timestampFractionalLenMapping = []int{-1, 9, 6, 3, 0}
+)
+
+func timestampToTime(tsType timestampType, ts []byte) (t stdtime.Time, err error) {
 	if len(ts) == 0 {
 		return stdtime.Time{}, errors.New("time: empty timestamp")
 	}
-	if ok := unixTimestampPattern.Match(ts); !ok {
+	// Check tsType if this function is exported.
+	if ok := timestampRegExprMapping[tsType].Match(ts); !ok {
 		return stdtime.Time{}, errors.New("time: invalid timestamp")
 	}
-	i := bytes.IndexRune(ts, '.')
+	pointIdx := bytes.IndexRune(ts, '.')
+	tst := tsType
+	if tsType == autoTimestamp {
+		var k int // length of integer part
+		if pointIdx < 0 {
+			k = len(ts)
+		} else {
+			k = pointIdx
+		}
+		if ts[0] == '-' || ts[0] == '+' {
+			k--
+		}
+		if k < 12 {
+			tst = unixTimestamp
+		} else if k < 15 {
+			tst = milliTimestamp
+		} else if k < 17 {
+			tst = microTimestamp
+		} else {
+			tst = nanoTimestamp
+		}
+		if pointIdx >= 0 && len(ts)-pointIdx-1 > timestampFractionalLenMapping[tst] {
+			return stdtime.Time{}, errors.New("time: invalid timestamp")
+		}
+	}
 	var s, ns []byte
-	if i < 0 {
+	if pointIdx < 0 {
 		s = ts
 	} else {
-		s = ts[:i]
-		ns = ts[i+1:]
+		s = ts[:pointIdx]
+		ns = ts[pointIdx+1:]
 	}
 	var sec, nsec int64
 	sec, err = strconv.ParseInt(string(s), 10, 64)
@@ -89,36 +292,45 @@ func unixTimestampToTime(ts []byte) (t stdtime.Time, err error) {
 		if err != nil {
 			return stdtime.Time{}, err
 		}
-		for i := len(ns); i < 9; i++ {
+		for i, end := len(ns), timestampFractionalLenMapping[tst]; i < end; i++ {
 			nsec *= 10
 		}
 		if sec < 0 {
 			nsec = -nsec
 		}
 	}
+	shift := int64(timestampFloatShiftMapping[tst])
+	radix := 1e9 / shift
+	nsec += (sec % radix) * shift // valid for negative values
+	sec /= radix
 	return stdtime.Unix(sec, nsec), nil
 }
 
-func timeToUnixTimestamp(t stdtime.Time) []byte {
-	sec := t.Unix()
-	nsec := t.Nanosecond()
-	if sec < 0 && nsec != 0 {
-		nsec = 1e9 - nsec
-		sec++
+func timeToTimestamp(tsType timestampType, t stdtime.Time) []byte {
+	// Check tsType if this function is exported.
+	intPart := t.Unix()
+	sign := 1                  // specially, sign = 1 for zero
+	fracPart := t.Nanosecond() // Nanosecond() always returns non-negative value, so adjust as follows:
+	if intPart < 0 {
+		sign = -sign
+		if fracPart != 0 {
+			fracPart = 1e9 - fracPart
+			intPart++
+		}
 	}
-	s := strconv.FormatInt(sec, 10)
-	if nsec == 0 {
+	shift := timestampFloatShiftMapping[tsType]
+	intPart = intPart*int64(1e9/shift) + int64(sign*fracPart/shift)
+	fracPart %= shift // valid for negative values
+	s := strconv.FormatInt(intPart, 10)
+	if fracPart == 0 {
 		return []byte(s)
 	}
 	var b bytes.Buffer
 	b.WriteString(s)
 	b.WriteRune('.')
-	for radix := int(1e8); radix > 1 && nsec != 0; radix /= 10 {
-		b.WriteRune('0' + rune(nsec/radix))
-		nsec %= radix
-	}
-	if nsec != 0 {
-		b.WriteRune('0' + rune(nsec))
+	for radix := shift / 10; radix > 0 && fracPart != 0; radix /= 10 {
+		b.WriteRune('0' + rune(fracPart/radix))
+		fracPart %= radix
 	}
 	return b.Bytes()
 }
