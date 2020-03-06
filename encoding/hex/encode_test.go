@@ -25,30 +25,42 @@ import (
 	"testing"
 )
 
-var testEncodeCases []struct {
+type testEncodeCase struct {
+	dst   string
 	src   string
 	upper bool
-	dst   string
 }
 
+var testEncodeCases []*testEncodeCase
+var testEncodeCasesDstMaxLen int
+
 func init() {
-	testEncodeCases = []struct {
-		src   string
-		upper bool
-		dst   string
-	}{
-		{"", false, ""},
-		{"", true, ""},
-		{"Hello world! 你好，世界！", false, ""},
-		{"Hello world! 你好，世界！", true, ""},
+	srcs := []string{"", "Hello world! 你好，世界！", ""}
+	var longStringBuilder strings.Builder
+	longStringBuilder.Grow(16384 + len(srcs[1]))
+	for longStringBuilder.Len() < 16384 {
+		longStringBuilder.WriteString(srcs[1])
 	}
-	// Generate dst in cases
-	for i, c := range testEncodeCases {
-		s := hex.EncodeToString([]byte(c.src))
-		if c.upper {
-			s = strings.ToUpper(s)
+	srcs[2] = longStringBuilder.String()
+	uppers := []bool{false, true}
+	testEncodeCases = make([]*testEncodeCase, len(srcs)*len(uppers))
+	var i int
+	for _, src := range srcs {
+		for _, upper := range uppers {
+			s := hex.EncodeToString([]byte(src))
+			if upper {
+				s = strings.ToUpper(s)
+			}
+			testEncodeCases[i] = &testEncodeCase{
+				dst:   s,
+				src:   src,
+				upper: upper,
+			}
+			i++
+			if testEncodeCasesDstMaxLen < len(s) {
+				testEncodeCasesDstMaxLen = len(s)
+			}
 		}
-		testEncodeCases[i].dst = s // don't use c.dst, because c is a copy of cases[i]
 	}
 }
 
@@ -67,22 +79,28 @@ func TestEncode_CompareWithOfficial(t *testing.T) {
 	}
 }
 
-func TestEncode(t *testing.T) {
-	dst := make([]byte, 1024)
+func TestEncodedLen(t *testing.T) {
 	for _, c := range testEncodeCases {
-		n := Encode(dst, []byte(c.src), c.upper)
-		if n != len(c.dst) || string(dst[:n]) != c.dst {
-			t.Errorf("dst: %q != %q, src: %q, upper: %t.", dst[:n], c.dst, c.src, c.upper)
+		if n := EncodedLen(len(c.src)); n != len(c.dst) {
+			t.Errorf("EncodedLen: %d != %d, src: %q, upper: %t.", n, len(c.dst), c.src, c.upper)
 		}
 	}
 }
 
-func TestEncodedLen(t *testing.T) {
-	dst := make([]byte, 1024)
+func TestEncodedLen64(t *testing.T) {
 	for _, c := range testEncodeCases {
-		n := EncodedLen(len(c.src))
-		if n2 := Encode(dst, []byte(c.src), c.upper); n != n2 {
-			t.Errorf("EncodedLen: %d != %d, src: %q, upper: %t.", n, n2, c.src, c.upper)
+		if n := EncodedLen64(int64(len(c.src))); n != int64(len(c.dst)) {
+			t.Errorf("EncodedLen: %d != %d, src: %q, upper: %t.", n, len(c.dst), c.src, c.upper)
+		}
+	}
+}
+
+func TestEncode(t *testing.T) {
+	dst := make([]byte, testEncodeCasesDstMaxLen+1024)
+	for _, c := range testEncodeCases {
+		n := Encode(dst, []byte(c.src), c.upper)
+		if string(dst[:n]) != c.dst {
+			t.Errorf("dst: %q != %q, src: %q, upper: %t.", dst[:n], c.dst, c.src, c.upper)
 		}
 	}
 }
@@ -97,7 +115,7 @@ func TestEncodeToString(t *testing.T) {
 }
 
 func TestEncoder_Write(t *testing.T) {
-	buf := make([]byte, 1024)
+	buf := make([]byte, testEncodeCasesDstMaxLen+1024)
 	w := bytes.NewBuffer(buf)
 	upperEncoder := NewEncoder(w, true)
 	lowerEncoder := NewEncoder(w, false)
@@ -121,7 +139,7 @@ func TestEncoder_Write(t *testing.T) {
 }
 
 func TestEncoder_WriteByte(t *testing.T) {
-	buf := make([]byte, 1024)
+	buf := make([]byte, testEncodeCasesDstMaxLen+1024)
 	w := bytes.NewBuffer(buf)
 	upperEncoder := NewEncoder(w, true)
 	lowerEncoder := NewEncoder(w, false)
@@ -137,7 +155,7 @@ func TestEncoder_WriteByte(t *testing.T) {
 			err := encoder.WriteByte(b)
 			if err != nil {
 				t.Errorf("Error: %v, src: %q, upper: %t.", err, c.src, c.upper)
-				continue
+				break
 			}
 			n++
 		}
@@ -150,7 +168,7 @@ func TestEncoder_WriteByte(t *testing.T) {
 }
 
 func TestEncoder_ReadFrom(t *testing.T) {
-	buf := make([]byte, 1024)
+	buf := make([]byte, testEncodeCasesDstMaxLen+1024)
 	w := bytes.NewBuffer(buf)
 	upperEncoder := NewEncoder(w, true)
 	lowerEncoder := NewEncoder(w, false)
@@ -161,12 +179,11 @@ func TestEncoder_ReadFrom(t *testing.T) {
 		} else {
 			encoder = lowerEncoder
 		}
-		r := strings.NewReader(c.src)
-		n, err := encoder.ReadFrom(r)
+		n, err := encoder.ReadFrom(strings.NewReader(c.src))
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, upper: %t.", err, c.src, c.upper)
 		}
-		n = int64(EncodedLen(int(n)))
+		n = EncodedLen64(n)
 		if string(buf[:n]) != c.dst {
 			t.Errorf("Output: %q != %q, src: %q, upper: %t.", buf[:n], c.dst, c.src, c.upper)
 		}

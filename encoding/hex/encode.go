@@ -25,8 +25,20 @@ import (
 
 const hexTable = "0123456789ABCDEF0123456789abcdef"
 
+func getHexTable(upper bool) string {
+	if upper {
+		return hexTable[:16]
+	}
+	return hexTable[16:]
+}
+
 // Return the length of encoding of n source bytes, exactly n * 2.
 func EncodedLen(n int) int {
+	return n * 2
+}
+
+// Return the length of encoding of n source bytes, exactly n * 2.
+func EncodedLen64(n int64) int64 {
 	return n * 2
 }
 
@@ -35,12 +47,7 @@ func EncodedLen(n int) int {
 // It returns the number of bytes written into dst, exactly EncodedLen(len(src)).
 // Encode(dst, src, false) is equivalent to Encode(dst, src) in official package encoding/hex.
 func Encode(dst, src []byte, upper bool) int {
-	var ht string
-	if upper {
-		ht = hexTable[:16]
-	} else {
-		ht = hexTable[16:]
-	}
+	ht := getHexTable(upper)
 	var n int
 	for _, b := range src {
 		dst[n] = ht[b>>4]
@@ -59,18 +66,21 @@ func EncodeToString(src []byte, upper bool) string {
 	return string(dst)
 }
 
-const chunkSize = 512
+// Size of chunk to be encoded once by Encoder.
+const encodeChunkLen = 512
 
-var chunkPool = sync.Pool{
+// Pool of chunks to be encoded once by Encoder.
+var encodeChunkPool = sync.Pool{
 	New: func() interface{} {
-		b := make([]byte, chunkSize)
+		b := make([]byte, encodeChunkLen)
 		return &b
 	},
 }
 
+// Pool of buffers to store hexadecimal encoding characters.
 var encodeBufferPool = sync.Pool{
 	New: func() interface{} {
-		b := make([]byte, EncodedLen(chunkSize))
+		b := make([]byte, EncodedLen(encodeChunkLen))
 		return &b
 	},
 }
@@ -91,46 +101,44 @@ func NewEncoder(w io.Writer, upper bool) *Encoder {
 }
 
 func (e *Encoder) Write(p []byte) (n int, err error) {
-	size := chunkSize
 	bufp := encodeBufferPool.Get().(*[]byte)
+	defer encodeBufferPool.Put(bufp)
 	buf := *bufp
+	size := encodeChunkLen
 	for len(p) > 0 && err == nil {
 		if len(p) < size {
 			size = len(p)
 		}
-		encoded := Encode(buf[:], p[:size], e.upper)
+		encoded := Encode(buf, p[:size], e.upper)
 		var written int
 		written, err = e.w.Write(buf[:encoded])
-		n += written / 2
+		n += DecodedLen(written)
 		p = p[size:]
 	}
-	encodeBufferPool.Put(bufp)
 	return n, err
 }
 
 func (e *Encoder) WriteByte(c byte) error {
 	bufp := encodeBufferPool.Get().(*[]byte)
+	defer encodeBufferPool.Put(bufp)
 	buf := *bufp
 	buf[0] = c
 	encoded := Encode(buf[1:], buf[:1], e.upper)
 	_, err := e.w.Write(buf[1 : 1+encoded])
-	encodeBufferPool.Put(bufp)
 	return err
 }
 
 func (e *Encoder) ReadFrom(r io.Reader) (n int64, err error) {
-	bufp := chunkPool.Get().(*[]byte)
-	defer func() {
-		chunkPool.Put(bufp)
-	}()
+	bufp := encodeChunkPool.Get().(*[]byte)
+	defer encodeChunkPool.Put(bufp)
 	buf := *bufp
-	var readSize int
+	var readLen int
 	var readErr, writeErr error
 	for {
-		readSize, readErr = r.Read(buf)
-		if readSize > 0 {
-			n += int64(readSize)
-			_, writeErr = e.Write(buf[:readSize])
+		readLen, readErr = r.Read(buf)
+		if readLen > 0 {
+			n += int64(readLen)
+			_, writeErr = e.Write(buf[:readLen])
 		}
 		err = readErr
 		if err == io.EOF {
