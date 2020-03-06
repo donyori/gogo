@@ -18,19 +18,7 @@
 
 package hex
 
-import (
-	"io"
-	"sync"
-)
-
-const hexTable = "0123456789ABCDEF0123456789abcdef"
-
-func getHexTable(upper bool) string {
-	if upper {
-		return hexTable[:16]
-	}
-	return hexTable[16:]
-}
+import "io"
 
 // Return the length of encoding of n source bytes, exactly n * 2.
 func EncodedLen(n int) int {
@@ -66,25 +54,6 @@ func EncodeToString(src []byte, upper bool) string {
 	return string(dst)
 }
 
-// Size of chunk to be encoded once by Encoder.
-const encodeChunkLen = 512
-
-// Pool of chunks to be encoded once by Encoder.
-var encodeChunkPool = sync.Pool{
-	New: func() interface{} {
-		b := make([]byte, encodeChunkLen)
-		return &b
-	},
-}
-
-// Pool of buffers to store hexadecimal encoding characters.
-var encodeBufferPool = sync.Pool{
-	New: func() interface{} {
-		b := make([]byte, EncodedLen(encodeChunkLen))
-		return &b
-	},
-}
-
 // An encoder to write hexadecimal characters.
 type Encoder struct {
 	w     io.Writer
@@ -94,6 +63,9 @@ type Encoder struct {
 // Create an encoder to write hexadecimal characters to w.
 // upper indicates to use upper case in hexadecimal representation.
 func NewEncoder(w io.Writer, upper bool) *Encoder {
+	if w == nil {
+		panic("hex: NewEncoder: w is nil")
+	}
 	return &Encoder{
 		w:     w,
 		upper: upper,
@@ -104,7 +76,7 @@ func (e *Encoder) Write(p []byte) (n int, err error) {
 	bufp := encodeBufferPool.Get().(*[]byte)
 	defer encodeBufferPool.Put(bufp)
 	buf := *bufp
-	size := encodeChunkLen
+	size := chunkLen
 	for len(p) > 0 && err == nil {
 		if len(p) < size {
 			size = len(p)
@@ -129,8 +101,8 @@ func (e *Encoder) WriteByte(c byte) error {
 }
 
 func (e *Encoder) ReadFrom(r io.Reader) (n int64, err error) {
-	bufp := encodeChunkPool.Get().(*[]byte)
-	defer encodeChunkPool.Put(bufp)
+	bufp := chunkPool.Get().(*[]byte)
+	defer chunkPool.Put(bufp)
 	buf := *bufp
 	var readLen int
 	var readErr, writeErr error

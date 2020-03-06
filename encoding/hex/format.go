@@ -18,10 +18,7 @@
 
 package hex
 
-import (
-	"io"
-	"sync"
-)
+import "io"
 
 // Configuration for hexadecimal formatting.
 type FormatConfig struct {
@@ -106,24 +103,6 @@ func FormatTo(w io.Writer, src []byte, cfg *FormatConfig) (n int, err error) {
 	return n, err
 }
 
-const formatBufferLen = 1024
-
-var formatBufferPool = sync.Pool{
-	New: func() interface{} {
-		b := make([]byte, formatBufferLen)
-		return &b
-	},
-}
-
-const formatChunkLen = 512
-
-var formatChunkPool = sync.Pool{
-	New: func() interface{} {
-		b := make([]byte, formatChunkLen)
-		return &b
-	},
-}
-
 // A formatter to write hexadecimal characters with separators to w.
 // Formatter should be closed after use.
 type Formatter struct {
@@ -140,6 +119,9 @@ type Formatter struct {
 // so you can't change its config after create it.
 // Formatter should be closed after use.
 func NewFormatter(w io.Writer, cfg *FormatConfig) *Formatter {
+	if w == nil {
+		panic("hex: NewFormatter: w is nil")
+	}
 	f := &Formatter{w: w}
 	if cfg != nil {
 		f.cfg = *cfg
@@ -157,33 +139,31 @@ func (f *Formatter) Write(p []byte) (n int, err error) {
 		f.bufp = formatBufferPool.Get().(*[]byte)
 		f.idx, f.written = 0, 0
 	}
-	ht := getHexTable(f.cfg.Upper)
-	return f.write(ht, p)
+	return f.write(getHexTable(f.cfg.Upper), p)
 }
 
 // Flush the buffer.
 // It reports no error if formatter is nil.
 func (f *Formatter) Flush() error {
-	if f == nil || f.bufp == nil {
+	if f == nil || f.w == nil {
 		return nil
 	}
-	n, err := f.w.Write((*f.bufp)[f.written:f.idx])
-	f.written += n
-	if err == nil {
-		formatBufferPool.Put(f.bufp)
-		f.bufp = nil
-		f.idx, f.written = 0, 0
-	}
-	return err
+	return f.flush()
 }
 
 // Flush the buffer.
 // It reports no error is formatter is nil.
 func (f *Formatter) Close() error {
-	if f == nil {
+	if f == nil || f.w == nil {
 		return nil
 	}
-	return f.Flush()
+	err := f.flush()
+	if err != nil {
+		return err
+	}
+	f.w = nil
+	f.sepCd = 0
+	return nil
 }
 
 func (f *Formatter) WriteByte(c byte) error {
@@ -200,8 +180,8 @@ func (f *Formatter) ReadFrom(r io.Reader) (n int64, err error) {
 		f.idx, f.written = 0, 0
 	}
 	ht := getHexTable(f.cfg.Upper)
-	bufp := formatChunkPool.Get().(*[]byte)
-	defer formatChunkPool.Put(bufp)
+	bufp := chunkPool.Get().(*[]byte)
+	defer chunkPool.Put(bufp)
 	buf := *bufp
 	var readLen int
 	var readErr, writeErr error
@@ -226,16 +206,31 @@ func (f *Formatter) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 }
 
-// Caller should guarantee that f != nil.
+// Caller should guarantee that f != nil and f.w != nil.
+func (f *Formatter) flush() error {
+	if f.bufp == nil {
+		return nil
+	}
+	n, err := f.w.Write((*f.bufp)[f.written:f.idx])
+	f.written += n
+	if err == nil {
+		formatBufferPool.Put(f.bufp)
+		f.bufp = nil
+		f.idx, f.written = 0, 0
+	}
+	return err
+}
+
+// Caller should guarantee that f != nil and f.w != nil.
 func (f *Formatter) flushAndGetBuffer() error {
-	err := f.Flush()
+	err := f.flush()
 	if err == nil && f.bufp == nil {
 		f.bufp = formatBufferPool.Get().(*[]byte)
 	}
 	return err
 }
 
-// Caller should guarantee that f != nil and f.bufp != nil.
+// Caller should guarantee that f != nil, f.w != nil and f.bufp != nil.
 // ht is getHexTable(f.cfg.Upper).
 func (f *Formatter) writeByte(ht string, b byte) error {
 	buf := *f.bufp
@@ -264,7 +259,7 @@ func (f *Formatter) writeByte(ht string, b byte) error {
 	return nil
 }
 
-// Caller should guarantee that f != nil and f.bufp != nil.
+// Caller should guarantee that f != nil, f.w != nil and f.bufp != nil.
 // ht is getHexTable(f.cfg.Upper).
 func (f *Formatter) write(ht string, p []byte) (n int, err error) {
 	for _, b := range p {

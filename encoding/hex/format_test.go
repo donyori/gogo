@@ -60,14 +60,14 @@ func init() {
 						capacity = (len(src) + blockLen - 1) / blockLen
 					}
 					blocks := make([]string, 0, capacity)
-					blockSize := blockLen * 2
+					blockSize := hex.EncodedLen(blockLen)
 					if blockSize <= 0 {
 						blockSize = len(s)
 					}
 					p := s
 					for len(p) > 0 {
 						end := blockSize
-						if end > len(p) {
+						if len(p) < end {
 							end = len(p)
 						}
 						blocks = append(blocks, p[:end])
@@ -157,6 +157,10 @@ func TestFormatter_Write(t *testing.T) {
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
+		err = formatter.Close() // Close() again, to detect whether two Close() can make output wrong.
+		if err != nil {
+			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
+		}
 		n = FormattedLen(n, c.cfg)
 		if string(buf[:n]) != c.dst {
 			t.Errorf("Output: %q != %q, src: %q, cfg: %+v.", buf[:n], c.dst, c.src, c.cfg)
@@ -183,6 +187,10 @@ func TestFormatter_WriteByte(t *testing.T) {
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
+		err = formatter.Close() // Close() again, to detect whether two Close() can make output wrong.
+		if err != nil {
+			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
+		}
 		n = FormattedLen(n, c.cfg)
 		if string(buf[:n]) != c.dst {
 			t.Errorf("Output: %q != %q, src: %q, cfg: %+v.", buf[:n], c.dst, c.src, c.cfg)
@@ -201,6 +209,10 @@ func TestFormatter_ReadFrom(t *testing.T) {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
 		err = formatter.Close()
+		if err != nil {
+			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
+		}
+		err = formatter.Close() // Close() again, to detect whether two Close() can make output wrong.
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
