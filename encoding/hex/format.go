@@ -30,8 +30,9 @@ type FormatConfig struct {
 	BlockLen int
 }
 
-func (fc *FormatConfig) notValid() bool {
-	return fc == nil || fc.Sep == "" || fc.BlockLen <= 0
+// Return true if formatting with cfg won't insert any separators.
+func formatCfgNotValid(cfg *FormatConfig) bool {
+	return cfg == nil || cfg.Sep == "" || cfg.BlockLen <= 0
 }
 
 // Return the length of formatting with cfg of n source bytes.
@@ -39,7 +40,7 @@ func FormattedLen(n int, cfg *FormatConfig) int {
 	if n == 0 {
 		return 0
 	}
-	if cfg.notValid() {
+	if formatCfgNotValid(cfg) {
 		return EncodedLen(n)
 	}
 	return (n-1)/cfg.BlockLen*(cfg.BlockLen*2+len(cfg.Sep)) + ((n-1)%cfg.BlockLen+1)*2
@@ -50,7 +51,7 @@ func FormattedLen64(n int64, cfg *FormatConfig) int64 {
 	if n == 0 {
 		return 0
 	}
-	if cfg.notValid() {
+	if formatCfgNotValid(cfg) {
 		return EncodedLen64(n)
 	}
 	blockLen := int64(cfg.BlockLen)
@@ -61,7 +62,7 @@ func FormattedLen64(n int64, cfg *FormatConfig) int64 {
 // It returns the number of bytes written into dst, exactly FormattedLen(len(src), cfg).
 // Format(dst, src, nil) is equivalent to Encode(dst, src) in official package encoding/hex.
 func Format(dst, src []byte, cfg *FormatConfig) int {
-	if cfg.notValid() {
+	if formatCfgNotValid(cfg) {
 		upper := false
 		if cfg != nil {
 			upper = cfg.Upper
@@ -111,7 +112,7 @@ type Formatter struct {
 	bufp    *[]byte // Pointer of the buffer to store formatted characters.
 	idx     int     // Index of unused buffer.
 	written int     // Index of already written to w.
-	sepCd   int     // Countdown for writing a separator, negative if cfg.notValid().
+	sepCd   int     // Countdown for writing a separator, negative if formatCfgNotValid(cfg).
 }
 
 // Create a formatter to write hexadecimal characters with separators to w.
@@ -126,7 +127,7 @@ func NewFormatter(w io.Writer, cfg *FormatConfig) *Formatter {
 	if cfg != nil {
 		f.cfg = *cfg
 	}
-	if f.cfg.notValid() {
+	if formatCfgNotValid(&f.cfg) {
 		f.sepCd = -1
 	} else {
 		f.sepCd = f.cfg.BlockLen

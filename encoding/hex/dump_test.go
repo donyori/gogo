@@ -99,7 +99,7 @@ func init() {
 									if blockSize <= 0 {
 										blockSize = len(s)
 									}
-									if !cfg.lineNotValid() && prefixFn != nil {
+									if !dumpCfgLineNotValid(cfg) && prefixFn != nil {
 										builder.Write(prefixFn())
 									}
 									var line []byte
@@ -107,7 +107,7 @@ func init() {
 									t := src
 									var j int
 									for len(p) > 0 {
-										if !cfg.lineNotValid() && j > 0 && j%blocksPerLine == 0 && prefixFn != nil {
+										if !dumpCfgLineNotValid(cfg) && j > 0 && j%blocksPerLine == 0 && prefixFn != nil {
 											builder.Write(prefixFn())
 										}
 										end := blockSize
@@ -119,17 +119,17 @@ func init() {
 										p = p[end:]
 										t = t[DecodedLen(end):]
 										j++
-										if !cfg.lineNotValid() && j > 0 && j%blocksPerLine == 0 {
+										if !dumpCfgLineNotValid(cfg) && j > 0 && j%blocksPerLine == 0 {
 											if suffixFn != nil {
 												builder.Write(suffixFn(line))
 											}
 											line = line[:0]
 											builder.WriteString(lineSep)
-										} else if !cfg.formatNotValid() && len(p) > 0 {
+										} else if !formatCfgNotValid(&cfg.FormatConfig) && len(p) > 0 {
 											builder.WriteString(sep)
 										}
 									}
-									if !cfg.lineNotValid() && (j == 0 || j%blocksPerLine != 0) {
+									if !dumpCfgLineNotValid(cfg) && (j == 0 || j%blocksPerLine != 0) {
 										if suffixFn != nil {
 											builder.Write(suffixFn(line))
 										}

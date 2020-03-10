@@ -37,15 +37,12 @@ type DumpConfig struct {
 	// Only valid when LineSep != "" && BlockLen > 0 && BlocksPerLine > 0.
 	SuffixFn func(line []byte) []byte
 
-	bytesPerLine int // If !dc.lineNotValid(), = BlockLen * BlocksPerLine. Otherwise, = 0.
+	bytesPerLine int // If !dumpCfgLineNotValid(dc), = BlockLen * BlocksPerLine. Otherwise, = 0.
 }
 
-func (dc *DumpConfig) formatNotValid() bool {
-	return dc == nil || dc.FormatConfig.notValid()
-}
-
-func (dc *DumpConfig) lineNotValid() bool {
-	return dc == nil || dc.LineSep == "" || dc.BlockLen <= 0 || dc.BlocksPerLine <= 0
+// Return true if dumping with cfg won't separate lines, or add prefixes or suffixes.
+func dumpCfgLineNotValid(cfg *DumpConfig) bool {
+	return cfg == nil || cfg.BlockLen <= 0 || cfg.BlocksPerLine <= 0
 }
 
 // Return a string containing a hexadecimal dump of src with cfg.
@@ -76,12 +73,12 @@ func DumpTo(w io.Writer, src []byte, cfg *DumpConfig) (n int, err error) {
 type Dumper struct {
 	w       io.Writer
 	cfg     DumpConfig
-	line    []byte // Buffer to store current line, only valid when cfg.SuffixFn != nil && !cfg.lineNotValid().
+	line    []byte // Buffer to store current line, only valid when cfg.SuffixFn != nil && !dumpCfgLineNotValid(cfg).
 	buf     []byte // Buffer to write blocks in one line, exclude the line separator, prefix and suffix.
 	idx     int    // Index of unused buffer.
 	written int    // Index of already written to w.
-	sepCd   int    // Countdown for writing a separator, negative if cfg.formatNotValid().
-	lineCd  int    // Countdown for writing a separator, negative if cfg.lineNotValid().
+	sepCd   int    // Countdown for writing a separator, negative if formatCfgNotValid(cfg).
+	lineCd  int    // Countdown for writing a separator, negative if dumpCfgLineNotValid(cfg).
 	used    bool   // Indicate whether anything has been asked to be written to the dumper or not.
 }
 
@@ -97,12 +94,12 @@ func NewDumper(w io.Writer, cfg *DumpConfig) *Dumper {
 	if cfg != nil {
 		d.cfg = *cfg
 	}
-	if d.cfg.formatNotValid() {
+	if formatCfgNotValid(&d.cfg.FormatConfig) {
 		d.sepCd = -1
 	} else {
 		d.sepCd = d.cfg.BlockLen
 	}
-	if d.cfg.lineNotValid() {
+	if dumpCfgLineNotValid(&d.cfg) {
 		d.cfg.bytesPerLine = 0
 		d.buf = make([]byte, 1024)
 		d.lineCd = -1
@@ -140,7 +137,7 @@ func (d *Dumper) Close() error {
 	if err != nil {
 		return err
 	}
-	if !d.cfg.lineNotValid() {
+	if !dumpCfgLineNotValid(&d.cfg) {
 		appendSuffix := false
 		if d.used {
 			appendSuffix = d.lineCd < d.cfg.bytesPerLine
