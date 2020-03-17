@@ -212,7 +212,7 @@ func (f *Formatter) ReadFrom(r io.Reader) (n int64, err error) {
 			_, writeErr = f.write(ht, buf[:readLen])
 		}
 		err = readErr
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			err = nil
 		}
 		if readErr != nil {

@@ -123,7 +123,7 @@ func (e *Encoder) ReadFrom(r io.Reader) (n int64, err error) {
 			_, writeErr = e.Write(buf[:readLen])
 		}
 		err = readErr
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			err = nil
 		}
 		if readErr != nil {
