@@ -18,10 +18,12 @@
 
 package errors
 
-// An interface for wrapped error, to simplify working with errors that
+// Interfaces combining error and other methods supported since Go 1.13.
+
+// An error with method Unwrap, to simplify working with errors that
 // contain other errors since Go 1.13. For more details,
 // see <https://blog.golang.org/go1.13-errors>.
-type WrappedError interface {
+type WrappingError interface {
 	error
 
 	// Return the contained error.
