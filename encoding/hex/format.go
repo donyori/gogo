@@ -18,7 +18,11 @@
 
 package hex
 
-import "io"
+import (
+	"io"
+
+	"github.com/donyori/gogo/errors"
+)
 
 // Configuration for hexadecimal formatting.
 type FormatConfig struct {
@@ -101,7 +105,10 @@ func FormatTo(w io.Writer, src []byte, cfg *FormatConfig) (n int, err error) {
 	} else {
 		n = ParsedLen(n, cfg)
 	}
-	return n, err
+	if err != nil {
+		err = errors.AutoWrap(err)
+	}
+	return
 }
 
 // A formatter to write hexadecimal characters with separators to w.
@@ -121,7 +128,7 @@ type Formatter struct {
 // Formatter should be closed after use.
 func NewFormatter(w io.Writer, cfg *FormatConfig) *Formatter {
 	if w == nil {
-		panic("hex: NewFormatter: w is nil")
+		panic(errors.AutoMsg("w is nil"))
 	}
 	f := &Formatter{w: w}
 	if cfg != nil {
@@ -140,7 +147,11 @@ func (f *Formatter) Write(p []byte) (n int, err error) {
 		f.bufp = formatBufferPool.Get().(*[]byte)
 		f.idx, f.written = 0, 0
 	}
-	return f.write(getHexTable(f.cfg.Upper), p)
+	n, err = f.write(getHexTable(f.cfg.Upper), p)
+	if err != nil {
+		err = errors.AutoWrap(err)
+	}
+	return
 }
 
 // Flush the buffer.
@@ -149,7 +160,11 @@ func (f *Formatter) Flush() error {
 	if f == nil || f.w == nil {
 		return nil
 	}
-	return f.flush()
+	err := f.flush()
+	if err != nil {
+		err = errors.AutoWrap(err)
+	}
+	return err
 }
 
 // Flush the buffer.
@@ -160,7 +175,7 @@ func (f *Formatter) Close() error {
 	}
 	err := f.flush()
 	if err != nil {
-		return err
+		return errors.AutoWrap(err)
 	}
 	f.w = nil
 	f.sepCd = 0
@@ -172,7 +187,11 @@ func (f *Formatter) WriteByte(c byte) error {
 		f.bufp = formatBufferPool.Get().(*[]byte)
 		f.idx, f.written = 0, 0
 	}
-	return f.writeByte(getHexTable(f.cfg.Upper), c)
+	err := f.writeByte(getHexTable(f.cfg.Upper), c)
+	if err != nil {
+		err = errors.AutoWrap(err)
+	}
+	return err
 }
 
 func (f *Formatter) ReadFrom(r io.Reader) (n int64, err error) {
@@ -198,11 +217,11 @@ func (f *Formatter) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 		if readErr != nil {
 			if err != nil {
-				return n, err
+				return n, errors.AutoWrap(err)
 			}
-			return n, writeErr
+			return n, errors.AutoWrap(writeErr)
 		} else if writeErr != nil {
-			return n, writeErr
+			return n, errors.AutoWrap(writeErr)
 		}
 	}
 }
@@ -266,9 +285,9 @@ func (f *Formatter) write(ht string, p []byte) (n int, err error) {
 	for _, b := range p {
 		err = f.writeByte(ht, b)
 		if err != nil {
-			return n, err
+			return
 		}
 		n++
 	}
-	return n, nil
+	return
 }

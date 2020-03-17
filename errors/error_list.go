@@ -21,8 +21,6 @@ package errors
 import (
 	"strconv"
 	"strings"
-
-	"github.com/donyori/gogo/container/sequence"
 )
 
 // An error list, to collect multiple errors.
@@ -86,18 +84,25 @@ func (el *ErrorList) Deduplicate() {
 		return
 	}
 	set := make(map[string]bool)
-	sda := sequence.NewSliceDynamicArray(el)
-	sda.Filter(func(x interface{}) (keep bool) {
-		if x == nil || x.(error) == nil {
-			return false
+	n := 0
+	for i := 0; i < len(*el); i++ {
+		x := (*el)[i]
+		if x != nil {
+			errStr := x.Error()
+			if !set[errStr] {
+				set[errStr] = true
+				(*el)[n] = x
+				n++
+			}
 		}
-		errStr := x.(error).Error()
-		if set[errStr] {
-			return false
-		}
-		set[errStr] = true
-		return true
-	})
+	}
+	if n == len(*el) {
+		return
+	}
+	for i := n; i < len(*el); i++ {
+		(*el)[i] = nil
+	}
+	*el = (*el)[:n]
 }
 
 // Return the same as el.String().

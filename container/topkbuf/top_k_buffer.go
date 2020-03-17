@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/donyori/gogo/container/pqueue"
+	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/function"
 )
 
@@ -60,10 +61,10 @@ type topKBuffer struct {
 // It panics if k <= 0 or less is nil.
 func NewTopKBuffer(k int, less function.LessFunc, data ...interface{}) TopKBuffer {
 	if k <= 0 {
-		panic(fmt.Sprintf("topkbuf: k: %d <= 0", k))
+		panic(errors.AutoMsg(fmt.Sprintf("k: %d <= 0", k)))
 	}
 	if less == nil {
-		panic("topkbuf: less is nil")
+		panic(errors.AutoMsg("less is nil"))
 	}
 	greater := less.Reverse()
 	tkb := &topKBuffer{
@@ -73,9 +74,9 @@ func NewTopKBuffer(k int, less function.LessFunc, data ...interface{}) TopKBuffe
 	if len(data) <= k {
 		tkb.PQ = pqueue.NewPriorityQueue(greater, data...)
 	} else {
-		tkb.PQ = pqueue.NewPriorityQueue(greater)
-		for _, x := range data {
-			tkb.Add(x)
+		tkb.PQ = pqueue.NewPriorityQueue(greater, data[:k]...)
+		for i := k; i < len(data); i++ {
+			tkb.Add(data[i])
 		}
 	}
 	return tkb

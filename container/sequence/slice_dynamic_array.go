@@ -18,7 +18,11 @@
 
 package sequence
 
-import "reflect"
+import (
+	"reflect"
+
+	"github.com/donyori/gogo/errors"
+)
 
 // An adapter for: go slice -> DynamicArray.
 // It is based on package reflect. If you concern the performance,
@@ -31,21 +35,21 @@ type SliceDynamicArray struct {
 
 // Make a SliceDynamicArray by given slicePtr: a pointer to a slice.
 // It panics if slicePtr isn't a pointer to a slice.
-func NewSliceDynamicArray(slicePtr interface{}) *SliceDynamicArray {
+func WrapSlice(slicePtr interface{}) *SliceDynamicArray {
 	if slicePtr == nil {
-		panic("sequence: slicePtr is nil")
+		panic(errors.AutoMsg("slicePtr is nil"))
 	}
 	sda := new(SliceDynamicArray)
 	sda.p = reflect.ValueOf(slicePtr)
 	if sda.p.Kind() != reflect.Ptr {
-		panic("sequence: slicePtr is NOT a pointer")
+		panic(errors.AutoMsg("slicePtr is NOT a pointer"))
 	}
 	sda.v = sda.p.Elem()
 	for sda.v.Kind() == reflect.Ptr || sda.v.Kind() == reflect.Interface {
 		sda.v = sda.v.Elem()
 	}
 	if sda.v.Kind() != reflect.Slice {
-		panic("sequence: slicePtr does NOT point to a slice")
+		panic(errors.AutoMsg("slicePtr does NOT point to a slice"))
 	}
 	return sda
 }
@@ -53,9 +57,9 @@ func NewSliceDynamicArray(slicePtr interface{}) *SliceDynamicArray {
 // Make a SliceDynamicArray with given itemType, length and capacity.
 // The underlying slice will be: make([]itemType, length, capacity).
 // It panics if itemType is nil, or length or capacity is illegal.
-func MakeSliceDynamicArray(itemType reflect.Type, length int, capacity int) *SliceDynamicArray {
+func NewSliceDynamicArray(itemType reflect.Type, length int, capacity int) *SliceDynamicArray {
 	if itemType == nil {
-		panic("sequence: itemType is nil")
+		panic(errors.AutoMsg("itemType is nil"))
 	}
 	s := reflect.MakeSlice(reflect.SliceOf(itemType), length, capacity).Interface()
 	sda := new(SliceDynamicArray)
@@ -362,12 +366,11 @@ func (sda *SliceDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 			n++
 		}
 	}
-	end := sda.v.Len()
-	if n == end {
+	if n == sda.v.Len() {
 		return
 	}
 	zero := reflect.Zero(sda.v.Type().Elem())
-	for i := n; i < end; i++ {
+	for i := n; i < sda.v.Len(); i++ {
 		sda.v.Index(i).Set(zero) // avoid memory leak
 	}
 	sda.v.Set(sda.v.Slice(0, n))
@@ -379,7 +382,7 @@ func (sda *SliceDynamicArray) valueOf(x interface{}) reflect.Value {
 	}
 	xV := reflect.Zero(sda.v.Type().Elem())
 	if xV.Interface() != x {
-		panic("sequence: x cannot be assigned to the item of the dynamic array.")
+		panic(errors.AutoMsg("x cannot be assigned to the item of the dynamic array."))
 	}
 	return xV
 }

@@ -23,6 +23,7 @@ import (
 
 	"github.com/donyori/gogo/adapter/containera/heapa"
 	"github.com/donyori/gogo/container/sequence"
+	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/function"
 )
 
@@ -110,7 +111,7 @@ func NewPriorityQueueMini(less function.LessFunc, data ...interface{}) PriorityQ
 // It panics if less is nil.
 func NewPriorityQueue(less function.LessFunc, data ...interface{}) PriorityQueue {
 	if less == nil {
-		panic("pqueue: less is nil")
+		panic(errors.AutoMsg("less is nil"))
 	}
 	gda := sequence.GeneralDynamicArray(append(data[:0:0], data...))
 	pq := &priorityQueue{
@@ -131,7 +132,7 @@ func (pq *priorityQueue) Enqueue(x interface{}) {
 
 func (pq *priorityQueue) Dequeue() interface{} {
 	if pq.Len() == 0 {
-		panic("pqueue: priority queue is nil or empty")
+		panic(errors.AutoMsg("priority queue is nil or empty"))
 	}
 	return heap.Pop((*heapa.DynamicArray)(pq))
 }
@@ -149,14 +150,14 @@ func (pq *priorityQueue) Clear() {
 
 func (pq *priorityQueue) Top() interface{} {
 	if pq.Len() == 0 {
-		panic("pqueue: priority queue is nil or empty")
+		panic(errors.AutoMsg("priority queue is nil or empty"))
 	}
 	return pq.Data.Front()
 }
 
 func (pq *priorityQueue) ReplaceTop(newX interface{}) {
 	if pq.Len() == 0 {
-		panic("pqueue: priority queue is nil or empty")
+		panic(errors.AutoMsg("priority queue is nil or empty"))
 	}
 	pq.Data.SetFront(newX)
 	heap.Fix((*heapa.DynamicArray)(pq), 0)
@@ -182,7 +183,7 @@ type priorityQueueEx struct {
 // equal can be nil. If equal is nil, it will be generated via less.
 func NewPriorityQueueEx(less function.LessFunc, equal function.EqualFunc, data ...interface{}) PriorityQueueEx {
 	if less == nil {
-		panic("pqueue: less is nil")
+		panic(errors.AutoMsg("less is nil"))
 	}
 	if equal == nil {
 		equal = function.GenerateEqualViaLess(less)

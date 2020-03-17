@@ -20,10 +20,11 @@ package time
 
 import (
 	"bytes"
-	"errors"
 	"regexp"
 	"strconv"
 	stdtime "time"
+
+	"github.com/donyori/gogo/errors"
 )
 
 const (
@@ -60,7 +61,7 @@ func (ts Timestamp) MarshalText() (text []byte, err error) {
 func (ts *Timestamp) UnmarshalText(text []byte) error {
 	t, err := timestampToTime(autoTimestamp, text)
 	if err != nil {
-		return err
+		return errors.AutoWrap(err)
 	}
 	*(*stdtime.Time)(ts) = t
 	return nil
@@ -73,7 +74,7 @@ func (ts Timestamp) MarshalJSON() ([]byte, error) {
 func (ts *Timestamp) UnmarshalJSON(b []byte) error {
 	t, err := timestampToTime(autoTimestamp, b)
 	if err != nil {
-		return err
+		return errors.AutoWrap(err)
 	}
 	*(*stdtime.Time)(ts) = t
 	return nil
@@ -93,7 +94,7 @@ func (ut UnixTimestamp) MarshalText() (text []byte, err error) {
 func (ut *UnixTimestamp) UnmarshalText(text []byte) error {
 	t, err := timestampToTime(unixTimestamp, text)
 	if err != nil {
-		return err
+		return errors.AutoWrap(err)
 	}
 	*(*stdtime.Time)(ut) = t
 	return nil
@@ -106,7 +107,7 @@ func (ut UnixTimestamp) MarshalJSON() ([]byte, error) {
 func (ut *UnixTimestamp) UnmarshalJSON(b []byte) error {
 	t, err := timestampToTime(unixTimestamp, b)
 	if err != nil {
-		return err
+		return errors.AutoWrap(err)
 	}
 	*(*stdtime.Time)(ut) = t
 	return nil
@@ -127,7 +128,7 @@ func (mt MilliTimestamp) MarshalText() (text []byte, err error) {
 func (mt *MilliTimestamp) UnmarshalText(text []byte) error {
 	t, err := timestampToTime(milliTimestamp, text)
 	if err != nil {
-		return err
+		return errors.AutoWrap(err)
 	}
 	*(*stdtime.Time)(mt) = t
 	return nil
@@ -140,7 +141,7 @@ func (mt MilliTimestamp) MarshalJSON() ([]byte, error) {
 func (mt *MilliTimestamp) UnmarshalJSON(b []byte) error {
 	t, err := timestampToTime(milliTimestamp, b)
 	if err != nil {
-		return err
+		return errors.AutoWrap(err)
 	}
 	*(*stdtime.Time)(mt) = t
 	return nil
@@ -160,7 +161,7 @@ func (ct MicroTimestamp) MarshalText() (text []byte, err error) {
 func (ct *MicroTimestamp) UnmarshalText(text []byte) error {
 	t, err := timestampToTime(microTimestamp, text)
 	if err != nil {
-		return err
+		return errors.AutoWrap(err)
 	}
 	*(*stdtime.Time)(ct) = t
 	return nil
@@ -173,7 +174,7 @@ func (ct MicroTimestamp) MarshalJSON() ([]byte, error) {
 func (ct *MicroTimestamp) UnmarshalJSON(b []byte) error {
 	t, err := timestampToTime(microTimestamp, b)
 	if err != nil {
-		return err
+		return errors.AutoWrap(err)
 	}
 	*(*stdtime.Time)(ct) = t
 	return nil
@@ -193,7 +194,7 @@ func (nt NanoTimestamp) MarshalText() (text []byte, err error) {
 func (nt *NanoTimestamp) UnmarshalText(text []byte) error {
 	t, err := timestampToTime(nanoTimestamp, text)
 	if err != nil {
-		return err
+		return errors.AutoWrap(err)
 	}
 	*(*stdtime.Time)(nt) = t
 	return nil
@@ -206,7 +207,7 @@ func (nt NanoTimestamp) MarshalJSON() ([]byte, error) {
 func (nt *NanoTimestamp) UnmarshalJSON(b []byte) error {
 	t, err := timestampToTime(nanoTimestamp, b)
 	if err != nil {
-		return err
+		return errors.AutoWrap(err)
 	}
 	*(*stdtime.Time)(nt) = t
 	return nil
@@ -244,11 +245,11 @@ var (
 
 func timestampToTime(tsType timestampType, ts []byte) (t stdtime.Time, err error) {
 	if len(ts) == 0 {
-		return stdtime.Time{}, errors.New("time: empty timestamp")
+		return stdtime.Time{}, errors.New("empty timestamp")
 	}
 	// Check tsType if this function is exported.
 	if ok := timestampRegExprMapping[tsType].Match(ts); !ok {
-		return stdtime.Time{}, errors.New("time: invalid timestamp")
+		return stdtime.Time{}, errors.New("invalid timestamp")
 	}
 	pointIdx := bytes.IndexRune(ts, '.')
 	tst := tsType
@@ -272,7 +273,7 @@ func timestampToTime(tsType timestampType, ts []byte) (t stdtime.Time, err error
 			tst = nanoTimestamp
 		}
 		if pointIdx >= 0 && len(ts)-pointIdx-1 > timestampFractionalLenMapping[tst] {
-			return stdtime.Time{}, errors.New("time: invalid timestamp")
+			return stdtime.Time{}, errors.New("invalid timestamp")
 		}
 	}
 	var s, ns []byte
@@ -285,12 +286,12 @@ func timestampToTime(tsType timestampType, ts []byte) (t stdtime.Time, err error
 	var sec, nsec int64
 	sec, err = strconv.ParseInt(string(s), 10, 64)
 	if err != nil {
-		return stdtime.Time{}, err
+		return
 	}
 	if ns != nil {
 		nsec, err = strconv.ParseInt(string(ns), 10, 64)
 		if err != nil {
-			return stdtime.Time{}, err
+			return
 		}
 		for i, end := len(ns), timestampFractionalLenMapping[tst]; i < end; i++ {
 			nsec *= 10

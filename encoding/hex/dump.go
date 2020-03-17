@@ -21,6 +21,8 @@ package hex
 import (
 	"io"
 	"strings"
+
+	"github.com/donyori/gogo/errors"
 )
 
 // Configuration for hexadecimal dumping.
@@ -50,7 +52,7 @@ func Dump(src []byte, cfg *DumpConfig) string {
 	var builder strings.Builder
 	_, err := DumpTo(&builder, src, cfg)
 	if err != nil { // It should not happen.
-		panic(err)
+		panic(errors.AutoWrap(err))
 	}
 	return builder.String()
 }
@@ -63,6 +65,9 @@ func DumpTo(w io.Writer, src []byte, cfg *DumpConfig) (n int, err error) {
 		closeErr := d.Close()
 		if err == nil {
 			err = closeErr
+		}
+		if err != nil {
+			err = errors.AutoWrapWithStrategy(err, errors.DefaultMessageStrategy(), 1) // skip = 1 to skip the inner function
 		}
 	}()
 	return d.Write(src)
@@ -88,7 +93,7 @@ type Dumper struct {
 // Dumper should be closed after use.
 func NewDumper(w io.Writer, cfg *DumpConfig) *Dumper {
 	if w == nil {
-		panic("hex: NewDumper: w is nil")
+		panic(errors.AutoMsg("w is nil"))
 	}
 	d := &Dumper{w: w}
 	if cfg != nil {
@@ -115,7 +120,11 @@ func NewDumper(w io.Writer, cfg *DumpConfig) *Dumper {
 }
 
 func (d *Dumper) Write(p []byte) (n int, err error) {
-	return d.write(getHexTable(d.cfg.Upper), p)
+	n, err = d.write(getHexTable(d.cfg.Upper), p)
+	if err != nil {
+		err = errors.AutoWrap(err)
+	}
+	return
 }
 
 // Flush the buffer.
@@ -124,7 +133,11 @@ func (d *Dumper) Flush() error {
 	if d == nil || d.w == nil {
 		return nil
 	}
-	return d.flush()
+	err := d.flush()
+	if err != nil {
+		err = errors.AutoWrap(err)
+	}
+	return err
 }
 
 // Flush the buffer.
@@ -135,7 +148,7 @@ func (d *Dumper) Close() error {
 	}
 	err := d.flush()
 	if err != nil {
-		return err
+		return errors.AutoWrap(err)
 	}
 	if !dumpCfgLineNotValid(&d.cfg) {
 		appendSuffix := false
@@ -148,7 +161,7 @@ func (d *Dumper) Close() error {
 				if len(prefix) > 0 {
 					_, err = d.w.Write(prefix)
 					if err != nil {
-						return err
+						return errors.AutoWrap(err)
 					}
 				}
 			}
@@ -159,13 +172,13 @@ func (d *Dumper) Close() error {
 				if len(suffix) > 0 {
 					_, err = d.w.Write(suffix)
 					if err != nil {
-						return err
+						return errors.AutoWrap(err)
 					}
 				}
 			}
 			_, err = d.w.Write([]byte(d.cfg.LineSep))
 			if err != nil {
-				return err
+				return errors.AutoWrap(err)
 			}
 		}
 	}
@@ -181,7 +194,11 @@ func (d *Dumper) Close() error {
 }
 
 func (d *Dumper) WriteByte(c byte) error {
-	return d.writeByte(getHexTable(d.cfg.Upper), c)
+	err := d.writeByte(getHexTable(d.cfg.Upper), c)
+	if err != nil {
+		err = errors.AutoWrap(err)
+	}
+	return err
 }
 
 func (d *Dumper) ReadFrom(r io.Reader) (n int64, err error) {
@@ -203,11 +220,11 @@ func (d *Dumper) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 		if readErr != nil {
 			if err != nil {
-				return n, err
+				return n, errors.AutoWrap(err)
 			}
-			return n, writeErr
+			return n, errors.AutoWrap(writeErr)
 		} else if writeErr != nil {
-			return n, writeErr
+			return n, errors.AutoWrap(writeErr)
 		}
 	}
 }
@@ -301,9 +318,9 @@ func (d *Dumper) write(ht string, p []byte) (n int, err error) {
 	for _, b := range p {
 		err = d.writeByte(ht, b)
 		if err != nil {
-			return n, err
+			return
 		}
 		n++
 	}
-	return n, nil
+	return
 }

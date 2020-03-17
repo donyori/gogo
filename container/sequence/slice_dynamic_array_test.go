@@ -26,7 +26,7 @@ import (
 func TestNewSliceDynamicArray(t *testing.T) {
 	s := []interface{}{1, 2, 3}
 	ptr := &s
-	sda := NewSliceDynamicArray(ptr)
+	sda := WrapSlice(ptr)
 	if p := sda.p.Interface(); p != ptr {
 		t.Errorf("sda.p: %v != &s: %p.", p, ptr)
 	}
@@ -34,14 +34,14 @@ func TestNewSliceDynamicArray(t *testing.T) {
 		t.Errorf("sda.v: %v != s: %v.", v, s)
 	}
 	itf := interface{}(s)
-	sda = NewSliceDynamicArray(&itf)
+	sda = WrapSlice(&itf)
 	if p := sda.p.Interface(); p != &itf {
 		t.Errorf("sda.p: %v != &s: %p.", p, &itf)
 	}
 	if v := sda.v.Interface().([]interface{}); sliceUnequal(v, s) {
 		t.Errorf("sda.v: %v != s: %v.", v, s)
 	}
-	sda = NewSliceDynamicArray(&ptr)
+	sda = WrapSlice(&ptr)
 	if p := sda.p.Interface(); p != &ptr {
 		t.Errorf("sda.p: %v != &s: %p.", p, &ptr)
 	}
@@ -52,7 +52,7 @@ func TestNewSliceDynamicArray(t *testing.T) {
 
 func TestMakeSliceDynamicArray(t *testing.T) {
 	var i int
-	sda := MakeSliceDynamicArray(reflect.TypeOf(i), 2, 5)
+	sda := NewSliceDynamicArray(reflect.TypeOf(i), 2, 5)
 	wanted := make([]int, 2, 5)
 	if v := sda.v.Interface(); !reflect.DeepEqual(v, wanted) {
 		t.Errorf("sda.v: %v, wanted: %v.", v, wanted)
@@ -69,7 +69,7 @@ func TestSliceDynamicArray_RetrieveSlicePtr(t *testing.T) {
 		t.Errorf("sda.RetrieveSlicePtr(): %v != nil when sda == nil.", slicePtr)
 	}
 	s := []interface{}{1, 2, 3}
-	sda = NewSliceDynamicArray(&s)
+	sda = WrapSlice(&s)
 	slicePtr = sda.RetrieveSlicePtr()
 	if slicePtr != &s {
 		t.Errorf("sda.RetrieveSlicePtr(): %v != &s: %p.", slicePtr, &s)
@@ -83,7 +83,7 @@ func TestSliceDynamicArray_RetrieveSlice(t *testing.T) {
 		t.Errorf("sda.RetrieveSlice(): %v != nil when sda == nil.", slice)
 	}
 	s := []interface{}{1, 2, 3}
-	sda = NewSliceDynamicArray(&s)
+	sda = WrapSlice(&s)
 	slice = sda.RetrieveSlice()
 	if sliceUnequal(slice.([]interface{}), s) {
 		t.Errorf("sda.RetrieveSlice(): %v != s: %v.", slice, s)
@@ -96,12 +96,12 @@ func TestSliceDynamicArray_Len(t *testing.T) {
 		t.Errorf("sda.Len(): %d != 0.", n)
 	}
 	s := []interface{}{}
-	sda = NewSliceDynamicArray(&s)
+	sda = WrapSlice(&s)
 	if n := sda.Len(); n != len(s) {
 		t.Errorf("sda.Len(): %d != len(s): %d.", n, len(s))
 	}
 	s = []interface{}{1}
-	sda = NewSliceDynamicArray(&s)
+	sda = WrapSlice(&s)
 	if n := sda.Len(); n != len(s) {
 		t.Errorf("sda.Len(): %d != len(s): %d.", n, len(s))
 	}
@@ -109,7 +109,7 @@ func TestSliceDynamicArray_Len(t *testing.T) {
 
 func TestSliceDynamicArray_Reverse(t *testing.T) {
 	s := []interface{}{1, 1, 2, 3, 4}
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	wanted := []interface{}{4, 3, 2, 1, 1}
 	sda.Reverse()
 	if sliceUnequal(s, wanted) {
@@ -119,7 +119,7 @@ func TestSliceDynamicArray_Reverse(t *testing.T) {
 
 func TestSliceDynamicArray_Scan(t *testing.T) {
 	s := []interface{}{1, 1, 2, 3}
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	s2 := make([]interface{}, 0, len(s))
 	sda.Scan(func(x interface{}) (cont bool) {
 		s2 = append(s2, x)
@@ -132,7 +132,7 @@ func TestSliceDynamicArray_Scan(t *testing.T) {
 
 func TestSliceDynamicArray_Get(t *testing.T) {
 	s := []interface{}{1, 1, 2, 3}
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	for i, x := range s {
 		item := sda.Get(i)
 		if item != x {
@@ -143,7 +143,7 @@ func TestSliceDynamicArray_Get(t *testing.T) {
 
 func TestSliceDynamicArray_Set(t *testing.T) {
 	s := []interface{}{1, 1, 2, 3}
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	wanted := []interface{}{1, 8, nil, 7.5}
 	for i := range s {
 		sda.Set(i, wanted[i])
@@ -155,7 +155,7 @@ func TestSliceDynamicArray_Set(t *testing.T) {
 
 func TestSliceDynamicArray_Swap(t *testing.T) {
 	s := []interface{}{1, 2, 3}
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	wanted := []interface{}{2, 1, 3}
 	sda.Swap(1, 0)
 	if sliceUnequal(s, wanted) {
@@ -165,7 +165,7 @@ func TestSliceDynamicArray_Swap(t *testing.T) {
 
 func TestSliceDynamicArray_Slice(t *testing.T) {
 	s := []interface{}{1, 2, 3, 4}
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	slice := sda.Slice(1, 3)
 	if n := slice.Len(); n != 2 {
 		t.Errorf("slice.Len(): %d != 2.", n)
@@ -208,12 +208,12 @@ func TestSliceDynamicArray_Cap(t *testing.T) {
 		t.Errorf("sda.Cap(): %d != 0.", c)
 	}
 	s := make([]interface{}, 0)
-	sda = NewSliceDynamicArray(&s)
+	sda = WrapSlice(&s)
 	if c := sda.Cap(); c != cap(s) {
 		t.Errorf("sda.Cap(): %d != cap(s): %d.", c, cap(s))
 	}
 	s = make([]interface{}, 2, 10)
-	sda = NewSliceDynamicArray(&s)
+	sda = WrapSlice(&s)
 	if c := sda.Cap(); c != cap(s) {
 		t.Errorf("sda.Cap(): %d != cap(s): %d.", c, cap(s))
 	}
@@ -221,7 +221,7 @@ func TestSliceDynamicArray_Cap(t *testing.T) {
 
 func TestSliceDynamicArray_Push(t *testing.T) {
 	var s []interface{}
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	wanted := []interface{}{1}
 	sda.Push(1)
 	if sliceUnequal(s, wanted) {
@@ -242,7 +242,7 @@ func TestSliceDynamicArray_Push(t *testing.T) {
 func TestSliceDynamicArray_Pop(t *testing.T) {
 	data := []interface{}{1, 2}
 	s := data
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	wanted := []interface{}{1}
 	x := sda.Pop()
 	if sliceUnequal(s, wanted) || x.(int) != 2 {
@@ -260,7 +260,7 @@ func TestSliceDynamicArray_Pop(t *testing.T) {
 
 func TestSliceDynamicArray_Append(t *testing.T) {
 	var s []interface{}
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	seq := GeneralDynamicArray{1, 2, 3}
 	wanted := []interface{}{1, 2, 3}
 	sda.Append(seq)
@@ -286,7 +286,7 @@ func TestSliceDynamicArray_Append(t *testing.T) {
 func TestSliceDynamicArray_Truncate(t *testing.T) {
 	data := []interface{}{1, 2, 2, 3, 4, 4}
 	s := data
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	wanted := []interface{}{1, 2, 2, 3}
 	sda.Truncate(4)
 	if sliceUnequal(s, wanted) {
@@ -309,7 +309,7 @@ func TestSliceDynamicArray_Truncate(t *testing.T) {
 
 func TestSliceDynamicArray_Insert(t *testing.T) {
 	var s []interface{}
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	wanted := []interface{}{1}
 	sda.Insert(0, 1)
 	if sliceUnequal(s, wanted) {
@@ -335,7 +335,7 @@ func TestSliceDynamicArray_Insert(t *testing.T) {
 func TestSliceDynamicArray_Remove(t *testing.T) {
 	data := []interface{}{1, 2, 2, 4}
 	s := data
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	wanted := []interface{}{1, 2, 4}
 	sda.Remove(2)
 	if sliceUnequal(s, wanted) {
@@ -364,7 +364,7 @@ func TestSliceDynamicArray_Remove(t *testing.T) {
 func TestSliceDynamicArray_RemoveWithoutOrder(t *testing.T) {
 	data := []interface{}{1, 2, 2, 4}
 	s := data
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	wanted := []interface{}{1, 2, 4}
 	sda.RemoveWithoutOrder(2)
 	if intItemSliceUnequalWithoutOrder(s, wanted) {
@@ -392,7 +392,7 @@ func TestSliceDynamicArray_RemoveWithoutOrder(t *testing.T) {
 
 func TestSliceDynamicArray_InsertSequence(t *testing.T) {
 	var s []interface{}
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	seq := GeneralDynamicArray{1, 2, 3}
 	wanted := []interface{}{1, 2, 3}
 	sda.InsertSequence(0, seq)
@@ -423,7 +423,7 @@ func TestSliceDynamicArray_InsertSequence(t *testing.T) {
 func TestSliceDynamicArray_Cut(t *testing.T) {
 	data := []interface{}{1, 2, 3, 3, 4, 5, 5}
 	s := data
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	wanted := []interface{}{1, 2, 3, 3, 4}
 	sda.Cut(5, 7)
 	if sliceUnequal(s, wanted) {
@@ -449,7 +449,7 @@ func TestSliceDynamicArray_Cut(t *testing.T) {
 	}
 	data = []interface{}{1, 2, 3, 4, 5, 6, 7, 8}
 	s = data
-	sda = NewSliceDynamicArray(&s)
+	sda = WrapSlice(&s)
 	wanted = []interface{}{1, 2, 7, 8}
 	sda.Cut(2, 6)
 	if sliceUnequal(s, wanted) {
@@ -463,7 +463,7 @@ func TestSliceDynamicArray_Cut(t *testing.T) {
 func TestSliceDynamicArray_CutWithoutOrder(t *testing.T) {
 	data := []interface{}{1, 2, 3, 3, 4, 5, 5}
 	s := data
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	wanted := []interface{}{1, 2, 3, 3, 4}
 	sda.CutWithoutOrder(5, 7)
 	if intItemSliceUnequalWithoutOrder(s, wanted) {
@@ -489,7 +489,7 @@ func TestSliceDynamicArray_CutWithoutOrder(t *testing.T) {
 	}
 	data = []interface{}{1, 2, 3, 4, 5, 6, 7, 8}
 	s = data
-	sda = NewSliceDynamicArray(&s)
+	sda = WrapSlice(&s)
 	wanted = []interface{}{1, 2, 7, 8}
 	sda.CutWithoutOrder(2, 6)
 	if intItemSliceUnequalWithoutOrder(s, wanted) {
@@ -502,7 +502,7 @@ func TestSliceDynamicArray_CutWithoutOrder(t *testing.T) {
 
 func TestSliceDynamicArray_Extend(t *testing.T) {
 	var s []interface{}
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	wanted := make([]interface{}, 3, 8)
 	sda.Extend(3)
 	if sliceUnequal(s, wanted) {
@@ -519,7 +519,7 @@ func TestSliceDynamicArray_Extend(t *testing.T) {
 		t.Errorf("After 3rd extend: %v, wanted: %v.", s, wanted)
 	}
 	s = []interface{}{1, 2}
-	sda = NewSliceDynamicArray(&s)
+	sda = WrapSlice(&s)
 	wanted = []interface{}{1, 2, nil, nil, nil}
 	sda.Extend(3)
 	if sliceUnequal(s, wanted) {
@@ -529,7 +529,7 @@ func TestSliceDynamicArray_Extend(t *testing.T) {
 
 func TestSliceDynamicArray_Expand(t *testing.T) {
 	var s []interface{}
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	wanted := make([]interface{}, 2, 5)
 	sda.Expand(0, 2)
 	if sliceUnequal(s, wanted) {
@@ -546,7 +546,7 @@ func TestSliceDynamicArray_Expand(t *testing.T) {
 		t.Errorf("After 3rd expand: %v, wanted: %v.", s, wanted)
 	}
 	s = []interface{}{1, 2, 3, 4, 5}
-	sda = NewSliceDynamicArray(&s)
+	sda = WrapSlice(&s)
 	wanted = []interface{}{1, 2, nil, nil, nil, 3, 4, 5}
 	sda.Expand(2, 3)
 	if sliceUnequal(s, wanted) {
@@ -556,7 +556,7 @@ func TestSliceDynamicArray_Expand(t *testing.T) {
 
 func TestSliceDynamicArray_Reserve(t *testing.T) {
 	s := make([]interface{}, 2, 5)
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	sda.Reserve(1)
 	if c := sda.Cap(); c < 1 {
 		t.Errorf("After 1st reserve, Cap(): %d < 1.", c)
@@ -574,7 +574,7 @@ func TestSliceDynamicArray_Reserve(t *testing.T) {
 func TestSliceDynamicArray_Shrink(t *testing.T) {
 	data := make([]interface{}, 3, 10)
 	s := data
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	sda.Shrink()
 	if n, c := sda.Len(), sda.Cap(); c != n {
 		t.Errorf("After shrink, Len(): %d, Cap(): %d.", n, c)
@@ -588,7 +588,7 @@ func TestSliceDynamicArray_Shrink(t *testing.T) {
 func TestSliceDynamicArray_Filter(t *testing.T) {
 	data := []interface{}{1, 2, 0, -1, -4, 1, 3, -5, 0}
 	s := data
-	sda := NewSliceDynamicArray(&s)
+	sda := WrapSlice(&s)
 	wanted := []interface{}{1, 2, 1, 3}
 	filter := func(x interface{}) (keep bool) {
 		return x.(int) > 0

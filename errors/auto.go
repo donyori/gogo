@@ -112,6 +112,7 @@ func AutoNewWithStrategy(msg string, ms ErrorMessageStrategy, skip int) error {
 // Wrap err with the default message strategy. It automatically adds
 // the package or function name of the caller before the error message of err.
 // Caller can specify its action by setting the default message strategy.
+// It returns nil if err is nil.
 func AutoWrap(err error) WrappingError {
 	return AutoWrapWithStrategy(err, defaultMessageStrategy, 1)
 }
@@ -120,6 +121,7 @@ func AutoWrap(err error) WrappingError {
 // with 0 identifying the caller of AutoWrapWithStrategy.
 // It automatically adds the package or function name of the caller before the
 // error message of err. Caller can specify its action by ms.
+// It returns nil if err is nil.
 func AutoWrapWithStrategy(err error, ms ErrorMessageStrategy, skip int) WrappingError {
 	ms.MustValid()
 	if err == nil {
@@ -129,7 +131,7 @@ func AutoWrapWithStrategy(err error, ms ErrorMessageStrategy, skip int) Wrapping
 	// Find the first error that isn't an autoWrappingError along the error chain.
 	tmpAwe := new(autoWrappingError)
 	tmpErr := err
-	for As(tmpErr, tmpAwe) {
+	for As(tmpErr, &tmpAwe) {
 		tmpErr = Unwrap(tmpErr)
 		if tmpErr == nil {
 			break

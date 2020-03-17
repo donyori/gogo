@@ -18,7 +18,11 @@
 
 package hex
 
-import "io"
+import (
+	"io"
+
+	"github.com/donyori/gogo/errors"
+)
 
 // Return the length of encoding of n source bytes, exactly n * 2.
 func EncodedLen(n int) int {
@@ -64,7 +68,7 @@ type Encoder struct {
 // upper indicates to use upper case in hexadecimal representation.
 func NewEncoder(w io.Writer, upper bool) *Encoder {
 	if w == nil {
-		panic("hex: NewEncoder: w is nil")
+		panic(errors.AutoMsg("w is nil"))
 	}
 	return &Encoder{
 		w:     w,
@@ -87,7 +91,10 @@ func (e *Encoder) Write(p []byte) (n int, err error) {
 		n += DecodedLen(written)
 		p = p[size:]
 	}
-	return n, err
+	if err != nil {
+		err = errors.AutoWrap(err)
+	}
+	return
 }
 
 func (e *Encoder) WriteByte(c byte) error {
@@ -97,6 +104,9 @@ func (e *Encoder) WriteByte(c byte) error {
 	buf[0] = c
 	encoded := Encode(buf[1:], buf[:1], e.upper)
 	_, err := e.w.Write(buf[1 : 1+encoded])
+	if err != nil {
+		err = errors.AutoWrap(err)
+	}
 	return err
 }
 
@@ -118,11 +128,11 @@ func (e *Encoder) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 		if readErr != nil {
 			if err != nil {
-				return n, err
+				return n, errors.AutoWrap(err)
 			}
-			return n, writeErr
+			return n, errors.AutoWrap(writeErr)
 		} else if writeErr != nil {
-			return n, writeErr
+			return n, errors.AutoWrap(writeErr)
 		}
 	}
 }
