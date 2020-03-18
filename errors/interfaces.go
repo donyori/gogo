@@ -18,6 +18,15 @@
 
 package errors
 
+// An error wrapper to wrap an error as another error with method Unwrap.
+// It is allowed to return the error itself directly if the error that will be
+// wrapped is in the exclusion list.
+type Wrapper interface {
+	// Wrap err as a new error. Or return err itself directly
+	// if err is in the exclusion list.
+	Wrap(err error) error
+}
+
 // Interfaces combining error and other methods supported since Go 1.13.
 
 // An error with method Unwrap, to simplify working with errors that

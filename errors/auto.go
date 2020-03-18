@@ -19,6 +19,7 @@
 package errors
 
 import (
+	"io"
 	"strings"
 
 	"github.com/donyori/gogo/runtime"
@@ -39,6 +40,7 @@ func DefaultMessageStrategy() ErrorMessageStrategy {
 func SetDefaultMessageStrategy(ms ErrorMessageStrategy) {
 	ms.MustValid()
 	defaultMessageStrategy = ms
+	defaultAutoWrapper.SetMessageStrategy(ms)
 }
 
 // Generate error message using msg and the default message strategy.
@@ -109,23 +111,86 @@ func AutoNewWithStrategy(msg string, ms ErrorMessageStrategy, skip int) error {
 	return New(AutoMsgWithStrategy(msg, ms, skip+1))
 }
 
-// Wrap err with the default message strategy. It automatically adds
-// the package or function name of the caller before the error message of err.
-// Caller can specify its action by setting the default message strategy.
-// It returns nil if err is nil.
-func AutoWrap(err error) WrappingError {
-	return AutoWrapWithStrategy(err, defaultMessageStrategy, 1)
+// An error wrapper that automatically adds the package or function name of
+// the caller before the error message of the wrapped error. Caller can specify
+// its action by setting the error message strategy.
+type AutoWrapper struct {
+	msgStrategy ErrorMessageStrategy
+	exclusions  map[string][]error
 }
 
-// Wrap err with ms. skip is the number of stack frames to ascend,
-// with 0 identifying the caller of AutoWrapWithStrategy.
-// It automatically adds the package or function name of the caller before the
-// error message of err. Caller can specify its action by ms.
-// It returns nil if err is nil.
-func AutoWrapWithStrategy(err error, ms ErrorMessageStrategy, skip int) WrappingError {
+// Create a AutoWrapper with ms and exclusions. It panics if ms is invalid.
+func NewAutoWrapper(ms ErrorMessageStrategy, exclusions ...error) *AutoWrapper {
+	aw := new(AutoWrapper)
+	aw.SetMessageStrategy(ms)
+	aw.Exclude(exclusions...)
+	return aw
+}
+
+// Return its error message strategy.
+func (aw *AutoWrapper) MessageStrategy() ErrorMessageStrategy {
+	if aw == nil {
+		return -1
+	}
+	return aw.msgStrategy
+}
+
+// Set its error message strategy to ms. It panics if ms is invalid.
+func (aw *AutoWrapper) SetMessageStrategy(ms ErrorMessageStrategy) {
 	ms.MustValid()
+	aw.msgStrategy = ms
+}
+
+// Return its exclusion list.
+func (aw *AutoWrapper) Exclusions() []error {
+	if aw == nil {
+		return nil
+	}
+	list := make([]error, 0, len(aw.exclusions))
+	for _, item := range aw.exclusions {
+		list = append(list, item...)
+	}
+	return list
+}
+
+// Exclude errors in exclusions, i.e., for every error in exclusions,
+// the wrapper won't wrap it and return itself directly.
+func (aw *AutoWrapper) Exclude(exclusions ...error) {
+	for _, err := range exclusions {
+		if err == nil {
+			continue
+		}
+		if aw.exclusions == nil {
+			aw.exclusions = make(map[string][]error)
+		}
+		errMsg := err.Error()
+		list := aw.exclusions[errMsg]
+		skip := false
+		for _, item := range list {
+			if Is(err, item) {
+				skip = true
+				break
+			}
+		}
+		if skip {
+			continue
+		}
+		aw.exclusions[errMsg] = append(list, err)
+	}
+}
+
+// Wrap err as a new error. Or return err itself directly if err is in the
+// exclusion list. skip is the number of stack frames to ascend,
+// with 0 identifying the caller of WrapSkip.
+func (aw *AutoWrapper) WrapSkip(err error, skip int) error {
 	if err == nil {
 		return nil
+	}
+	list := aw.exclusions[err.Error()]
+	for _, item := range list {
+		if Is(err, item) {
+			return err
+		}
 	}
 	awe := &autoWrappingError{err: err}
 	// Find the first error that isn't an autoWrappingError along the error chain.
@@ -138,8 +203,34 @@ func AutoWrapWithStrategy(err error, ms ErrorMessageStrategy, skip int) Wrapping
 		}
 		err = tmpErr
 	}
-	awe.msg = AutoMsgWithStrategy(err.Error(), ms, skip+1)
+	awe.msg = AutoMsgWithStrategy(err.Error(), aw.msgStrategy, skip+1)
 	return awe
+}
+
+func (aw *AutoWrapper) Wrap(err error) error {
+	return aw.WrapSkip(err, 1)
+}
+
+// Auto wrapper used by function AutoWrap.
+var defaultAutoWrapper = NewAutoWrapper(defaultMessageStrategy, io.EOF)
+
+// Return the exclusion list used by function AutoWrap.
+func AutoWrapExclusions() []error {
+	return defaultAutoWrapper.Exclusions()
+}
+
+// Exclude errors in exclusions to let function AutoWrap
+// return these errors directly.
+func AutoWrapExclude(exclusions ...error) {
+	defaultAutoWrapper.Exclude(exclusions...)
+}
+
+// Wrap err with the default message strategy. It automatically adds
+// the package or function name of the caller before the error message of err.
+// Caller can specify its action by setting the default message strategy.
+// It returns nil if err is nil.
+func AutoWrap(err error) error {
+	return defaultAutoWrapper.WrapSkip(err, 1)
 }
 
 type autoWrappingError struct {
