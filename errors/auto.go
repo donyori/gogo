@@ -99,7 +99,7 @@ func AutoMsgWithStrategy(msg string, ms ErrorMessageStrategy, skip int) string {
 // It automatically adds the package or function name of the caller before msg.
 // Caller can specify its action by setting the default message strategy.
 func AutoNew(msg string) error {
-	return AutoNewWithStrategy(msg, defaultMessageStrategy, 1)
+	return New(AutoMsgWithStrategy(msg, defaultMessageStrategy, 1))
 }
 
 // Create a new error using msg and ms. If ms is OriginalMsg, it performs
@@ -231,6 +231,15 @@ func AutoWrapExclude(exclusions ...error) {
 // It returns nil if err is nil.
 func AutoWrap(err error) error {
 	return defaultAutoWrapper.WrapSkip(err, 1)
+}
+
+// Wrap err with the default message strategy. It automatically adds
+// the package or function name of the caller before the error message of err.
+// Caller can specify its action by setting the default message strategy.
+// skip is the number of stack frames to ascend, with 0 identifying the caller
+// of AutoWrapSkip. It returns nil if err is nil.
+func AutoWrapSkip(err error, skip int) error {
+	return defaultAutoWrapper.WrapSkip(err, skip+1)
 }
 
 type autoWrappingError struct {
