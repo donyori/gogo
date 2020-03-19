@@ -23,13 +23,21 @@ import stderrors "errors"
 // Export functions from standard package errors for convenience.
 
 // Export standard errors.New.
-var New = stderrors.New
+func New(msg string) error {
+	return stderrors.New(msg)
+}
 
 // Export standard errors.Unwrap.
-var Unwrap = stderrors.Unwrap
+func Unwrap(err error) error {
+	return stderrors.Unwrap(err)
+}
 
 // Export standard errors.Is.
-var Is = stderrors.Is
+func Is(err, target error) bool {
+	return stderrors.Is(err, target)
+}
 
 // Export standard errors.As.
-var As = stderrors.As
+func As(err error, target interface{}) bool {
+	return stderrors.As(err, target)
+}
