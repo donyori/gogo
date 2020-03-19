@@ -91,10 +91,7 @@ func (e *Encoder) Write(p []byte) (n int, err error) {
 		n += DecodedLen(written)
 		p = p[size:]
 	}
-	if err != nil {
-		err = errors.AutoWrap(err)
-	}
-	return
+	return n, errors.AutoWrap(err)
 }
 
 func (e *Encoder) WriteByte(c byte) error {
@@ -104,10 +101,7 @@ func (e *Encoder) WriteByte(c byte) error {
 	buf[0] = c
 	encoded := Encode(buf[1:], buf[:1], e.upper)
 	_, err := e.w.Write(buf[1 : 1+encoded])
-	if err != nil {
-		err = errors.AutoWrap(err)
-	}
-	return err
+	return errors.AutoWrap(err)
 }
 
 func (e *Encoder) ReadFrom(r io.Reader) (n int64, err error) {

@@ -67,7 +67,7 @@ func DumpTo(w io.Writer, src []byte, cfg *DumpConfig) (n int, err error) {
 			err = closeErr
 		}
 		if err != nil {
-			err = errors.AutoWrapWithStrategy(err, errors.DefaultMessageStrategy(), 1) // skip = 1 to skip the inner function
+			err = errors.AutoWrapSkip(err, 1) // skip = 1 to skip the inner function
 		}
 	}()
 	return d.Write(src)
@@ -121,10 +121,7 @@ func NewDumper(w io.Writer, cfg *DumpConfig) *Dumper {
 
 func (d *Dumper) Write(p []byte) (n int, err error) {
 	n, err = d.write(getHexTable(d.cfg.Upper), p)
-	if err != nil {
-		err = errors.AutoWrap(err)
-	}
-	return
+	return n, errors.AutoWrap(err)
 }
 
 // Flush the buffer.
@@ -133,11 +130,7 @@ func (d *Dumper) Flush() error {
 	if d == nil || d.w == nil {
 		return nil
 	}
-	err := d.flush()
-	if err != nil {
-		err = errors.AutoWrap(err)
-	}
-	return err
+	return errors.AutoWrap(d.flush())
 }
 
 // Flush the buffer.
@@ -194,11 +187,7 @@ func (d *Dumper) Close() error {
 }
 
 func (d *Dumper) WriteByte(c byte) error {
-	err := d.writeByte(getHexTable(d.cfg.Upper), c)
-	if err != nil {
-		err = errors.AutoWrap(err)
-	}
-	return err
+	return errors.AutoWrap(d.writeByte(getHexTable(d.cfg.Upper), c))
 }
 
 func (d *Dumper) ReadFrom(r io.Reader) (n int64, err error) {

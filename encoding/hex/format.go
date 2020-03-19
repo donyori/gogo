@@ -105,10 +105,7 @@ func FormatTo(w io.Writer, src []byte, cfg *FormatConfig) (n int, err error) {
 	} else {
 		n = ParsedLen(n, cfg)
 	}
-	if err != nil {
-		err = errors.AutoWrap(err)
-	}
-	return
+	return n, errors.AutoWrap(err)
 }
 
 // A formatter to write hexadecimal characters with separators to w.
@@ -148,10 +145,7 @@ func (f *Formatter) Write(p []byte) (n int, err error) {
 		f.idx, f.written = 0, 0
 	}
 	n, err = f.write(getHexTable(f.cfg.Upper), p)
-	if err != nil {
-		err = errors.AutoWrap(err)
-	}
-	return
+	return n, errors.AutoWrap(err)
 }
 
 // Flush the buffer.
@@ -160,11 +154,7 @@ func (f *Formatter) Flush() error {
 	if f == nil || f.w == nil {
 		return nil
 	}
-	err := f.flush()
-	if err != nil {
-		err = errors.AutoWrap(err)
-	}
-	return err
+	return errors.AutoWrap(f.flush())
 }
 
 // Flush the buffer.
@@ -187,11 +177,7 @@ func (f *Formatter) WriteByte(c byte) error {
 		f.bufp = formatBufferPool.Get().(*[]byte)
 		f.idx, f.written = 0, 0
 	}
-	err := f.writeByte(getHexTable(f.cfg.Upper), c)
-	if err != nil {
-		err = errors.AutoWrap(err)
-	}
-	return err
+	return errors.AutoWrap(f.writeByte(getHexTable(f.cfg.Upper), c))
 }
 
 func (f *Formatter) ReadFrom(r io.Reader) (n int64, err error) {
