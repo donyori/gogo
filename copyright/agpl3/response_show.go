@@ -28,21 +28,26 @@ import (
 
 // Response the requests "show w" and "show c" to w, where "show w" means
 // showing the disclaimer of warranty and "show c" means showing the terms and
-// conditions. If w is nil, it will use os.Stdout instead. It returns a boolean
-// doResp to indicate whether the user input "show w" or "show c" (by checking
-// os.Args directly). It also returns any encountered error during writing to w.
+// conditions. If w is nil, it will use os.Stdout instead. input is the user's
+// input arguments. If input is nil, it will use os.Args[1:] instead (If user
+// inputs nothing, set input to []string{} but not nil). It returns a boolean
+// doResp to indicate whether the user input "show w" or "show c". It also
+// returns any encountered error during writing to w.
 // Note that err must be nil if doResp is false.
-func RespShowWC(w io.Writer) (doResp bool, err error) {
-	if len(os.Args) < 2 || len(os.Args) > 3 {
+func RespShowWC(w io.Writer, input []string) (doResp bool, err error) {
+	if input == nil {
+		input = os.Args[1:]
+	}
+	if len(input) < 1 || len(input) > 2 {
 		return
 	}
 	var toPrint string
-	switch os.Args[1] {
+	switch input[0] {
 	case "show":
-		if len(os.Args) != 3 {
+		if len(input) != 2 {
 			return
 		}
-		switch os.Args[2] {
+		switch input[1] {
 		case "w":
 			toPrint = DisclaimerOfWarranty
 		case "c":

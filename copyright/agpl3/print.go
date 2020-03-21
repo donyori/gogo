@@ -31,12 +31,12 @@ import (
 // Layout for formatting notice. The verbs in the first line stand for
 // <program>, <year>, and <name of author> respectively.
 const noticeLayout = "    %s  Copyright (C) %s  %s\n" +
-	"    This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.\n" +
+	"    This program comes with ABSOLUTELY NO WARRANTY; for details use `%[1]s show w'.\n" +
 	"    This is free software, and you are welcome to redistribute it\n" +
-	"    under certain conditions; type `show c' for details.\n"
+	"    under certain conditions; use `%[1]s show c' for details.\n"
 
 // Layout for formatting notice, with additional program source information.
-const noticeWithSourceLayout = noticeLayout + "    Program source: <%s>.\n"
+const noticeWithSourceLayout = noticeLayout + "    Program source: <%[4]s>.\n"
 
 var ErrAuthorMissing = errors.New("author name is missing")
 
