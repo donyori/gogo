@@ -32,11 +32,11 @@ type DumpConfig struct {
 	BlocksPerLine int    // The number of blocks per line, 0 and negative values for all blocks in one line.
 
 	// Function to generate a prefix of one line.
-	// Only valid when LineSep != "" && BlockLen > 0 && BlocksPerLine > 0.
+	// Only valid when BlockLen > 0 and BlocksPerLine > 0.
 	PrefixFn func() []byte
 	// Function to generate a suffix of one line.
 	// The input is the line before hexadecimal encoding.
-	// Only valid when LineSep != "" && BlockLen > 0 && BlocksPerLine > 0.
+	// Only valid when BlockLen > 0 and BlocksPerLine > 0.
 	SuffixFn func(line []byte) []byte
 
 	bytesPerLine int // If !dumpCfgLineNotValid(dc), = BlockLen * BlocksPerLine. Otherwise, = 0.
