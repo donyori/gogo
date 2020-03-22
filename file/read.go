@@ -36,8 +36,8 @@ func init() {
 // Options for function ReadFile.
 type ReadOption struct {
 	// Offset of the file to read, in bytes,
-	// relative to the origin of the file for positive value,
-	// and relative to the end of the file for negative value.
+	// relative to the origin of the file for positive values,
+	// and relative to the end of the file for negative values.
 	Offset int64
 
 	// Limit of the file to read, in bytes. Non-positive values for no limit.

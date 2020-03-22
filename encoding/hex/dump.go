@@ -125,7 +125,7 @@ func (d *Dumper) Write(p []byte) (n int, err error) {
 }
 
 // Flush the buffer.
-// It reports no error is formatter is nil.
+// It reports no error if dumper is nil.
 func (d *Dumper) Flush() error {
 	if d == nil || d.w == nil {
 		return nil
@@ -134,7 +134,7 @@ func (d *Dumper) Flush() error {
 }
 
 // Flush the buffer.
-// It reports no error is formatter is nil.
+// It reports no error if dumper is nil.
 func (d *Dumper) Close() error {
 	if d == nil || d.w == nil {
 		return nil

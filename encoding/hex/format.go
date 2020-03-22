@@ -158,7 +158,7 @@ func (f *Formatter) Flush() error {
 }
 
 // Flush the buffer.
-// It reports no error is formatter is nil.
+// It reports no error if formatter is nil.
 func (f *Formatter) Close() error {
 	if f == nil || f.w == nil {
 		return nil
