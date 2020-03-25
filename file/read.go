@@ -91,6 +91,12 @@ func ReadFile(name string, option *ReadOption) (r Reader, err error) {
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
+	defer func() {
+		if err != nil {
+			r = nil
+			f.Close()
+		}
+	}()
 	if option == nil {
 		option = new(ReadOption)
 	}
@@ -114,7 +120,8 @@ func ReadFile(name string, option *ReadOption) (r Reader, err error) {
 	if !option.Raw {
 		switch filepath.Ext(name) {
 		case ".gz":
-			gr, err := gzip.NewReader(fr.r)
+			var gr *gzip.Reader
+			gr, err = gzip.NewReader(fr.r)
 			if err != nil {
 				return nil, errors.AutoWrap(err)
 			}
