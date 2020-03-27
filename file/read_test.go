@@ -250,7 +250,7 @@ func TestReadFile_Tgz(t *testing.T) {
 	f.Close()   // ignore error
 	closed = true
 
-	reader, err := ReadFile(filename, nil)
+	reader, err := ReadFile(filename, &ReadOption{BufferWhenOpen: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -340,7 +340,7 @@ func TestReadFile_TarGz(t *testing.T) {
 	f.Close()   // ignore error
 	closed = true
 
-	reader, err := ReadFile(filename, nil)
+	reader, err := ReadFile(filename, &ReadOption{BufferWhenOpen: true})
 	if err != nil {
 		t.Fatal(err)
 	}
