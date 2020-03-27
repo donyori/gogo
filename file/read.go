@@ -138,8 +138,8 @@ func ReadFile(name string, option *ReadOption) (r Reader, err error) {
 		fr.r = io.LimitReader(fr.r, option.Limit)
 	}
 	if !option.Raw {
-		basename := strings.ToLower(filepath.Base(name))
-		ext := filepath.Ext(basename)
+		base := strings.ToLower(filepath.Base(name))
+		ext := filepath.Ext(base)
 		loop := true
 		for loop {
 			switch ext {
@@ -164,8 +164,8 @@ func ReadFile(name string, option *ReadOption) (r Reader, err error) {
 			default:
 				loop = false
 			}
-			basename = basename[:len(basename)-len(ext)]
-			ext = filepath.Ext(basename)
+			base = base[:len(base)-len(ext)]
+			ext = filepath.Ext(base)
 		}
 	}
 	fr.br, _ = fr.r.(myio.BufferedReader) // enable fr.br if fr.fr is BufferedReader
