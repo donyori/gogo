@@ -46,6 +46,7 @@ func SetDefaultMessageStrategy(ms ErrorMessageStrategy) {
 // Generate error message using msg and the default error message strategy.
 // It automatically adds the package or function name of the caller before msg.
 // Caller can specify its action by setting the default error message strategy.
+// If msg is empty, it will use "(no error message)" instead.
 func AutoMsg(msg string) string {
 	return AutoMsgWithStrategy(msg, defaultMessageStrategy, 1)
 }
