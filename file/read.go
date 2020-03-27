@@ -20,6 +20,7 @@ package file
 
 import (
 	"archive/tar"
+	"bufio"
 	"compress/bzip2"
 	"compress/gzip"
 	"io"
@@ -93,10 +94,10 @@ type Reader interface {
 type reader struct {
 	option  ReadOption
 	f       *os.File
-	r       io.Reader
-	t       *tar.Reader
+	ubr     io.Reader // unbuffered reader
+	br      myio.ResettableBufferedReader
+	tr      *tar.Reader
 	closers []io.Closer
-	br      myio.BufferedReader
 }
 
 // Open a file with given name for read. If the file is a symlink,
@@ -116,7 +117,7 @@ func ReadFile(name string, option *ReadOption) (r Reader, err error) {
 	}
 	fr := &reader{
 		f:       f,
-		r:       f,
+		ubr:     f,
 		closers: []io.Closer{f},
 		option:  *option,
 	}
@@ -135,7 +136,7 @@ func ReadFile(name string, option *ReadOption) (r Reader, err error) {
 		return nil, errors.AutoWrap(err)
 	}
 	if option.Limit > 0 {
-		fr.r = io.LimitReader(fr.r, option.Limit)
+		fr.ubr = io.LimitReader(fr.ubr, option.Limit)
 	}
 	if !option.Raw {
 		base := strings.ToLower(filepath.Base(name))
@@ -145,21 +146,21 @@ func ReadFile(name string, option *ReadOption) (r Reader, err error) {
 			switch ext {
 			case ".gz", ".tgz":
 				var gr *gzip.Reader
-				gr, err = gzip.NewReader(fr.r)
+				gr, err = gzip.NewReader(fr.ubr)
 				if err != nil {
 					return nil, errors.AutoWrap(err)
 				}
 				fr.closers = append(fr.closers, gr)
-				fr.r = gr
+				fr.ubr = gr
 				if ext == ".tgz" {
 					ext = ".tar"
 					continue
 				}
 			case ".bz2":
-				fr.r = bzip2.NewReader(fr.r)
+				fr.ubr = bzip2.NewReader(fr.ubr)
 			case ".tar":
-				fr.t = tar.NewReader(fr.r)
-				fr.r = fr.t
+				fr.tr = tar.NewReader(fr.ubr)
+				fr.ubr = fr.tr
 				loop = false
 			default:
 				loop = false
@@ -167,12 +168,6 @@ func ReadFile(name string, option *ReadOption) (r Reader, err error) {
 			base = base[:len(base)-len(ext)]
 			ext = filepath.Ext(base)
 		}
-	}
-	fr.br, _ = fr.r.(myio.BufferedReader) // enable fr.br if fr.fr is BufferedReader
-	if fr.br != nil && fr.br.Size() < option.BufferSize {
-		// Make sure that the buffer is large enough.
-		fr.br = myio.NewBufferedReaderSize(fr.r, option.BufferSize)
-		fr.r = fr.br
 	}
 	if option.BufferWhenOpen && fr.br == nil {
 		fr.createBr()
@@ -191,7 +186,13 @@ func (fr *reader) Close() error {
 }
 
 func (fr *reader) Read(p []byte) (n int, err error) {
-	n, err = fr.r.Read(p)
+	var r io.Reader
+	if fr.br != nil {
+		r = fr.br
+	} else {
+		r = fr.ubr
+	}
+	n, err = r.Read(p)
 	return n, errors.AutoWrap(err)
 }
 
@@ -200,7 +201,7 @@ func (fr *reader) ReadByte() (byte, error) {
 		n, err := fr.br.ReadByte()
 		return n, errors.AutoWrap(err)
 	}
-	if br, ok := fr.r.(io.ByteReader); ok {
+	if br, ok := fr.ubr.(io.ByteReader); ok {
 		n, err := br.ReadByte()
 		return n, errors.AutoWrap(err)
 	}
@@ -213,7 +214,7 @@ func (fr *reader) UnreadByte() error {
 	if fr.br != nil {
 		return errors.AutoWrap(fr.br.UnreadByte())
 	}
-	if br, ok := fr.r.(io.ByteScanner); ok {
+	if br, ok := fr.ubr.(io.ByteScanner); ok {
 		return errors.AutoWrap(br.UnreadByte())
 	}
 	fr.createBr()
@@ -225,7 +226,7 @@ func (fr *reader) ReadRune() (r rune, size int, err error) {
 		r, size, err = fr.br.ReadRune()
 		return r, size, errors.AutoWrap(err)
 	}
-	if br, ok := fr.r.(io.RuneReader); ok {
+	if br, ok := fr.ubr.(io.RuneReader); ok {
 		r, size, err = br.ReadRune()
 		return r, size, errors.AutoWrap(err)
 	}
@@ -238,7 +239,7 @@ func (fr *reader) UnreadRune() error {
 	if fr.br != nil {
 		return errors.AutoWrap(fr.br.UnreadRune())
 	}
-	if br, ok := fr.r.(io.RuneScanner); ok {
+	if br, ok := fr.ubr.(io.RuneScanner); ok {
 		return errors.AutoWrap(br.UnreadRune())
 	}
 	fr.createBr()
@@ -250,7 +251,7 @@ func (fr *reader) WriteTo(w io.Writer) (n int64, err error) {
 		n, err = fr.br.WriteTo(w)
 		return n, errors.AutoWrap(err)
 	}
-	if br, ok := fr.r.(io.WriterTo); ok {
+	if br, ok := fr.ubr.(io.WriterTo); ok {
 		n, err = br.WriteTo(w)
 		return n, errors.AutoWrap(err)
 	}
@@ -277,6 +278,9 @@ func (fr *reader) WriteLineTo(w io.Writer) (n int64, err error) {
 
 func (fr *reader) Size() int {
 	if fr.br == nil {
+		if br, ok := fr.ubr.(*bufio.Reader); ok {
+			return br.Size()
+		}
 		return 0
 	}
 	return fr.br.Size()
@@ -284,6 +288,9 @@ func (fr *reader) Size() int {
 
 func (fr *reader) Buffered() int {
 	if fr.br == nil {
+		if br, ok := fr.ubr.(*bufio.Reader); ok {
+			return br.Buffered()
+		}
 		return 0
 	}
 	return fr.br.Buffered()
@@ -306,16 +313,17 @@ func (fr *reader) Discard(n int) (discarded int, err error) {
 }
 
 func (fr *reader) TarEnabled() bool {
-	return fr != nil && fr.t != nil
+	return fr != nil && fr.tr != nil
 }
 
 func (fr *reader) TarNext() (header *tar.Header, err error) {
 	if !fr.TarEnabled() {
 		return nil, errors.AutoWrap(ErrNotTar)
 	}
-	header, err = fr.t.Next()
+	header, err = fr.tr.Next()
 	if fr.br != nil {
-		fr.br.Discard(fr.br.Buffered()) // discard all buffered data; ignore error
+		fr.ubr = fr.tr
+		fr.br.Reset(fr.ubr)
 	}
 	return header, errors.AutoWrap(err)
 }
@@ -340,9 +348,8 @@ func (fr *reader) Option() *ReadOption {
 // Caller should guarantee that reader.br == nil.
 func (fr *reader) createBr() {
 	if fr.option.BufferSize <= 0 {
-		fr.br = myio.NewBufferedReader(fr.r)
+		fr.br = myio.NewBufferedReader(fr.ubr)
 	} else {
-		fr.br = myio.NewBufferedReaderSize(fr.r, fr.option.BufferSize)
+		fr.br = myio.NewBufferedReaderSize(fr.ubr, fr.option.BufferSize)
 	}
-	fr.r = fr.br
 }

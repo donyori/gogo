@@ -57,41 +57,47 @@ type BufferedReader interface {
 	Discard(n int) (discarded int, err error)
 }
 
+// An interface combining BufferedReader and ReaderResetter.
+type ResettableBufferedReader interface {
+	BufferedReader
+	ReaderResetter
+}
+
 const defaultBufferSize = 4096
 
-type bufferedReader struct {
+type resettableBufferedReader struct {
 	*bufio.Reader
 }
 
 // Create a BufferedReader on r, whose buffer has at least the default size.
-func NewBufferedReader(r stdio.Reader) BufferedReader {
+func NewBufferedReader(r stdio.Reader) ResettableBufferedReader {
 	return NewBufferedReaderSize(r, defaultBufferSize)
 }
 
 // Create a BufferedReader on r, whose buffer has at least given size.
 // If r is a BufferedReader with large enough buffer, it returns r directly.
-func NewBufferedReaderSize(r stdio.Reader, size int) BufferedReader {
-	if br, ok := r.(BufferedReader); ok && br.Size() >= size {
+func NewBufferedReaderSize(r stdio.Reader, size int) ResettableBufferedReader {
+	if br, ok := r.(ResettableBufferedReader); ok && br.Size() >= size {
 		return br
 	}
-	if br, ok := r.(*bufferedReader); ok {
-		br = &bufferedReader{Reader: bufio.NewReaderSize(br.Reader, size)}
+	if br, ok := r.(*resettableBufferedReader); ok {
+		br = &resettableBufferedReader{Reader: bufio.NewReaderSize(br.Reader, size)}
 		return br
 	}
 	br, ok := r.(*bufio.Reader)
 	if !ok || br.Size() < size {
 		br = bufio.NewReaderSize(r, size)
 	}
-	return &bufferedReader{Reader: br}
+	return &resettableBufferedReader{Reader: br}
 }
 
-func (br *bufferedReader) WriteLineTo(w stdio.Writer) (n int64, err error) {
+func (r *resettableBufferedReader) WriteLineTo(w stdio.Writer) (n int64, err error) {
 	var line []byte
 	var written int
 	var errList errors.ErrorList
 	more := true
 	for more {
-		line, more, err = br.ReadLine()
+		line, more, err = r.ReadLine()
 		if err != nil {
 			errList.Append(err)
 		}
