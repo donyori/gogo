@@ -19,7 +19,10 @@
 package file
 
 import (
+	"archive/tar"
 	"compress/gzip"
+	"errors"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -76,12 +79,12 @@ func TestReadFile_Gzip(t *testing.T) {
 		}
 	}()
 	gzw := gzip.NewWriter(f)
-	_, err = gzw.Write(data)
 	defer func() {
 		if !closed {
-			gzw.Close()
+			gzw.Close() // ignore error
 		}
 	}()
+	_, err = gzw.Write(data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,5 +108,268 @@ func TestReadFile_Gzip(t *testing.T) {
 	}
 	if string(read) != string(data) {
 		t.Errorf("Got: %q != %q.", read, data)
+	}
+}
+
+func TestReadFile_Tar(t *testing.T) {
+	dir, err := ioutil.TempDir("", "gogo_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir) // ignore error
+	filename := filepath.Join(dir, "simple.tar")
+	f, err := os.Create(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var closed bool
+	defer func() {
+		if !closed {
+			f.Close() // ignore error
+		}
+	}()
+	tw := tar.NewWriter(f)
+	defer func() {
+		if !closed {
+			tw.Close() // ignore error
+		}
+	}()
+	files := []struct {
+		name, body string
+	}{
+		{"file1.txt", "This is file1."},
+		{"file2.txt", "This is file2."},
+		{"file3.txt", "This is file3."},
+	}
+	for i := range files {
+		hdr := &tar.Header{
+			Name: files[i].name,
+			Mode: 0600,
+			Size: int64(len(files[i].body)),
+		}
+		err = tw.WriteHeader(hdr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = tw.Write([]byte(files[i].body))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	tw.Close() // ignore error
+	f.Close()  // ignore error
+	closed = true
+
+	reader, err := ReadFile(filename, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err := reader.Close()
+		if err != nil {
+			t.Error(err)
+		}
+	}()
+	for i := 0; true; i++ {
+		hdr, err := reader.TarNext()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			t.Fatal(err)
+		}
+		if i >= len(files) {
+			t.Fatal("i:", i, ">= len(files):", len(files))
+		}
+		read, err := ioutil.ReadAll(reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if hdr.Name != files[i].name {
+			t.Errorf("hdr.Name: %q != %q.", hdr.Name, files[i].name)
+		}
+		if string(read) != files[i].body {
+			t.Errorf("Got: %q != %q.", read, files[i].body)
+		}
+	}
+}
+
+func TestReadFile_Tgz(t *testing.T) {
+	dir, err := ioutil.TempDir("", "gogo_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir) // ignore error
+	filename := filepath.Join(dir, "simple.tgz")
+	f, err := os.Create(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var closed bool
+	defer func() {
+		if !closed {
+			f.Close() // ignore error
+		}
+	}()
+	gzw := gzip.NewWriter(f)
+	defer func() {
+		if !closed {
+			gzw.Close() // ignore error
+		}
+	}()
+	tw := tar.NewWriter(gzw)
+	defer func() {
+		if !closed {
+			tw.Close() // ignore error
+		}
+	}()
+	files := []struct {
+		name, body string
+	}{
+		{"file1.txt", "This is file1."},
+		{"file2.txt", "This is file2."},
+		{"file3.txt", "This is file3."},
+	}
+	for i := range files {
+		hdr := &tar.Header{
+			Name: files[i].name,
+			Mode: 0600,
+			Size: int64(len(files[i].body)),
+		}
+		err = tw.WriteHeader(hdr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = tw.Write([]byte(files[i].body))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	tw.Close()  // ignore error
+	gzw.Close() // ignore error
+	f.Close()   // ignore error
+	closed = true
+
+	reader, err := ReadFile(filename, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err := reader.Close()
+		if err != nil {
+			t.Error(err)
+		}
+	}()
+	for i := 0; true; i++ {
+		hdr, err := reader.TarNext()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			t.Fatal(err)
+		}
+		if i >= len(files) {
+			t.Fatal("i:", i, ">= len(files):", len(files))
+		}
+		read, err := ioutil.ReadAll(reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if hdr.Name != files[i].name {
+			t.Errorf("hdr.Name: %q != %q.", hdr.Name, files[i].name)
+		}
+		if string(read) != files[i].body {
+			t.Errorf("Got: %q != %q.", read, files[i].body)
+		}
+	}
+}
+
+func TestReadFile_TarGz(t *testing.T) {
+	dir, err := ioutil.TempDir("", "gogo_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir) // ignore error
+	filename := filepath.Join(dir, "simple.tar.gz")
+	f, err := os.Create(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var closed bool
+	defer func() {
+		if !closed {
+			f.Close() // ignore error
+		}
+	}()
+	gzw := gzip.NewWriter(f)
+	defer func() {
+		if !closed {
+			gzw.Close() // ignore error
+		}
+	}()
+	tw := tar.NewWriter(gzw)
+	defer func() {
+		if !closed {
+			tw.Close() // ignore error
+		}
+	}()
+	files := []struct {
+		name, body string
+	}{
+		{"file1.txt", "This is file1."},
+		{"file2.txt", "This is file2."},
+		{"file3.txt", "This is file3."},
+	}
+	for i := range files {
+		hdr := &tar.Header{
+			Name: files[i].name,
+			Mode: 0600,
+			Size: int64(len(files[i].body)),
+		}
+		err = tw.WriteHeader(hdr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = tw.Write([]byte(files[i].body))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	tw.Close()  // ignore error
+	gzw.Close() // ignore error
+	f.Close()   // ignore error
+	closed = true
+
+	reader, err := ReadFile(filename, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err := reader.Close()
+		if err != nil {
+			t.Error(err)
+		}
+	}()
+	for i := 0; true; i++ {
+		hdr, err := reader.TarNext()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			t.Fatal(err)
+		}
+		if i >= len(files) {
+			t.Fatal("i:", i, ">= len(files):", len(files))
+		}
+		read, err := ioutil.ReadAll(reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if hdr.Name != files[i].name {
+			t.Errorf("hdr.Name: %q != %q.", hdr.Name, files[i].name)
+		}
+		if string(read) != files[i].body {
+			t.Errorf("Got: %q != %q.", read, files[i].body)
+		}
 	}
 }

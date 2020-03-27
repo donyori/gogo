@@ -19,15 +19,21 @@
 package file
 
 import (
+	"archive/tar"
 	"compress/bzip2"
 	"compress/gzip"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/donyori/gogo/errors"
 	myio "github.com/donyori/gogo/io"
 )
+
+// An error indicating that the file is not archived by tar, or is opened in
+// raw mode. Clients should use errors.Is to test whether an error is ErrNotTar.
+var ErrNotTar = errors.AutoNew("file is not archived by tar, or is opened in raw mode")
 
 func init() {
 	errors.AutoWrapExclude(io.EOF) // don't wrap io.EOF to avoid old codes going wrong
@@ -60,6 +66,19 @@ type Reader interface {
 	io.Closer
 	myio.BufferedReader
 
+	// Return true if the file is archived by tar (i.e., tape archive) and is
+	// not opened in raw mode.
+	TarEnabled() bool
+
+	// Advance to the next entry in the tar archive. The Header.Size determines
+	// how many bytes can be read for the next file. Any remaining data in
+	// current file is automatically discarded. io.EOF is returned at the end of
+	// the input.
+	//
+	// If the file is not archived by tar (i.e., tape archive), or the file is
+	// opened in raw mode, it does nothing but returns ErrNotTar.
+	TarNext() (header *tar.Header, err error)
+
 	// Return the target file, in order to retrieve information about the file.
 	// Caller should NOT read, seek, or do other operations that may change
 	// the state of the file to avoid breaking this reader.
@@ -75,6 +94,7 @@ type reader struct {
 	option  ReadOption
 	f       *os.File
 	r       io.Reader
+	t       *tar.Reader
 	closers []io.Closer
 	br      myio.BufferedReader
 }
@@ -91,12 +111,6 @@ func ReadFile(name string, option *ReadOption) (r Reader, err error) {
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
-	defer func() {
-		if err != nil {
-			r = nil
-			f.Close()
-		}
-	}()
 	if option == nil {
 		option = new(ReadOption)
 	}
@@ -106,6 +120,12 @@ func ReadFile(name string, option *ReadOption) (r Reader, err error) {
 		closers: []io.Closer{f},
 		option:  *option,
 	}
+	defer func() {
+		if err != nil {
+			r = nil
+			fr.Close()
+		}
+	}()
 	if option.Offset > 0 {
 		_, err = f.Seek(option.Offset, io.SeekStart)
 	} else if option.Offset < 0 {
@@ -118,17 +138,34 @@ func ReadFile(name string, option *ReadOption) (r Reader, err error) {
 		fr.r = io.LimitReader(fr.r, option.Limit)
 	}
 	if !option.Raw {
-		switch filepath.Ext(name) {
-		case ".gz":
-			var gr *gzip.Reader
-			gr, err = gzip.NewReader(fr.r)
-			if err != nil {
-				return nil, errors.AutoWrap(err)
+		basename := strings.ToLower(filepath.Base(name))
+		ext := filepath.Ext(basename)
+		loop := true
+		for loop {
+			switch ext {
+			case ".gz", ".tgz":
+				var gr *gzip.Reader
+				gr, err = gzip.NewReader(fr.r)
+				if err != nil {
+					return nil, errors.AutoWrap(err)
+				}
+				fr.closers = append(fr.closers, gr)
+				fr.r = gr
+				if ext == ".tgz" {
+					ext = ".tar"
+					continue
+				}
+			case ".bz2":
+				fr.r = bzip2.NewReader(fr.r)
+			case ".tar":
+				fr.t = tar.NewReader(fr.r)
+				fr.r = fr.t
+				loop = false
+			default:
+				loop = false
 			}
-			fr.closers = append(fr.closers, gr)
-			fr.r = gr
-		case ".bz2":
-			fr.r = bzip2.NewReader(fr.r)
+			basename = basename[:len(basename)-len(ext)]
+			ext = filepath.Ext(basename)
 		}
 	}
 	fr.br, _ = fr.r.(myio.BufferedReader) // enable fr.br if fr.fr is BufferedReader
@@ -266,6 +303,21 @@ func (fr *reader) Discard(n int) (discarded int, err error) {
 	}
 	discarded, err = fr.br.Discard(n)
 	return discarded, errors.AutoWrap(err)
+}
+
+func (fr *reader) TarEnabled() bool {
+	return fr != nil && fr.t != nil
+}
+
+func (fr *reader) TarNext() (header *tar.Header, err error) {
+	if !fr.TarEnabled() {
+		return nil, errors.AutoWrap(ErrNotTar)
+	}
+	header, err = fr.t.Next()
+	if fr.br != nil {
+		fr.br.Discard(fr.br.Buffered()) // discard all buffered data; ignore error
+	}
+	return header, errors.AutoWrap(err)
 }
 
 func (fr *reader) File() *os.File {
