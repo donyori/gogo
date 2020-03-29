@@ -184,10 +184,10 @@ func (aw *AutoWrapper) WrapSkip(err error, skip int) error {
 		}
 	}
 	ame := &autoMadeError{err: err}
-	// Find the first error that isn't an autoMadeError along the error chain.
-	tmpAme := new(autoMadeError)
+	// Find the first error that isn't an AutoMadeError along the error chain.
+	var tmpAme AutoMadeError
 	tmpErr := err
-	for As(tmpErr, &tmpAme) {
+	for As(tmpErr, &tmpAme) && tmpAme.IsGogoAutoMade() {
 		tmpErr = Unwrap(tmpErr)
 		if tmpErr == nil {
 			break
@@ -219,8 +219,8 @@ func AutoWrapExclude(exclusions ...error) {
 // Create a new error using msg and the default error message strategy.
 // It automatically adds the package or function name of the caller before msg.
 // Caller can specify its action by setting the default error message strategy.
-func AutoNew(msg string) error {
-	return defaultAutoWrapper.WrapSkip(New(msg), 1)
+func AutoNew(msg string) AutoMadeError {
+	return defaultAutoWrapper.WrapSkip(New(msg), 1).(AutoMadeError)
 }
 
 // Create a new error using msg and ms. skip is the number of stack frames to
@@ -228,12 +228,12 @@ func AutoNew(msg string) error {
 // It automatically adds the package or function name of the caller before msg.
 // Caller can specify its action by ms. If ms is invalid, it will use the
 // default error message strategy instead.
-func AutoNewWithStrategy(msg string, ms ErrorMessageStrategy, skip int) error {
+func AutoNewWithStrategy(msg string, ms ErrorMessageStrategy, skip int) AutoMadeError {
 	if !ms.Valid() {
 		ms = defaultMessageStrategy
 	}
 	wrapper := NewAutoWrapper(ms)
-	return wrapper.WrapSkip(New(msg), skip+1)
+	return wrapper.WrapSkip(New(msg), skip+1).(AutoMadeError)
 }
 
 // Wrap err with the default AutoWrapper. It automatically adds the package or
@@ -253,6 +253,22 @@ func AutoWrapSkip(err error, skip int) error {
 	return defaultAutoWrapper.WrapSkip(err, skip+1)
 }
 
+// An interface for auto-made errors.
+//
+// User can implement this interface to indicate that the error is made via
+// functions AutoXXX in this package, including AutoMsg, AutoNew, AutoWrap, etc.
+// Its implementations should return true in its method IsGogoAutoMade.
+//
+// For an AutoMadeError, AutoWrapper will use the message of its wrapped error
+// to generate new error message, other than using the message of itself.
+type AutoMadeError interface {
+	WrappingError
+
+	// Return true if this error is made via functions AutoXXX in this package,
+	// including AutoMsg, AutoNew, AutoWrap, etc.
+	IsGogoAutoMade() bool
+}
+
 type autoMadeError struct {
 	err error
 	msg string
@@ -270,4 +286,8 @@ func (ame *autoMadeError) Unwrap() error {
 		return nil
 	}
 	return ame.err
+}
+
+func (ame *autoMadeError) IsGogoAutoMade() bool {
+	return true
 }

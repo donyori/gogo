@@ -238,7 +238,7 @@ func TestAutoWrap(t *testing.T) {
 	}
 	for _, c := range cases {
 		SetDefaultMessageStrategy(c.ms)
-		err := AutoNew(c.msg)
+		var err error = AutoNew(c.msg)
 		err = AutoWrap(err)
 		if s := err.Error(); s != c.wanted {
 			t.Errorf("AutoWrap: %q != %q, msg: %q, ms: %v.", s, c.wanted, c.msg, c.ms)
@@ -292,7 +292,7 @@ func TestAutoWrapSkip(t *testing.T) {
 	func() {
 		for _, c := range cases {
 			SetDefaultMessageStrategy(c.ms)
-			err := AutoNew(c.msg)
+			var err error = AutoNew(c.msg)
 			err = AutoWrapSkip(err, c.skip)
 			if s := err.Error(); s != c.wanted {
 				t.Errorf("AutoWrapSkip: %q != %q, msg: %q, ms: %v, skip: %d.", s, c.wanted, c.msg, c.ms, c.skip)
