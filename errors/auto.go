@@ -187,7 +187,7 @@ func (aw *AutoWrapper) WrapSkip(err error, skip int) error {
 	// Find the first error that isn't an AutoMadeError along the error chain.
 	var tmpAme AutoMadeError
 	tmpErr := err
-	for As(tmpErr, &tmpAme) && tmpAme.IsGogoAutoMade() {
+	for As(tmpErr, &tmpAme) {
 		tmpErr = Unwrap(tmpErr)
 		if tmpErr == nil {
 			break
@@ -257,16 +257,16 @@ func AutoWrapSkip(err error, skip int) error {
 //
 // User can implement this interface to indicate that the error is made via
 // functions AutoXXX in this package, including AutoMsg, AutoNew, AutoWrap, etc.
-// Its implementations should return true in its method IsGogoAutoMade.
 //
 // For an AutoMadeError, AutoWrapper will use the message of its wrapped error
 // to generate new error message, other than using the message of itself.
 type AutoMadeError interface {
-	WrappingError
+	error
 
-	// Return true if this error is made via functions AutoXXX in this package,
+	// A dummy method. User can implement this method with an empty body to
+	// indicate that this error is made via functions AutoXXX in this package,
 	// including AutoMsg, AutoNew, AutoWrap, etc.
-	IsGogoAutoMade() bool
+	GogoAutoMade()
 }
 
 type autoMadeError struct {
@@ -288,6 +288,4 @@ func (ame *autoMadeError) Unwrap() error {
 	return ame.err
 }
 
-func (ame *autoMadeError) IsGogoAutoMade() bool {
-	return true
-}
+func (ame *autoMadeError) GogoAutoMade() {}
