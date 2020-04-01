@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/donyori/gogo/errors"
+	myio "github.com/donyori/gogo/io"
 )
 
 // Configuration for hexadecimal dumping.
@@ -78,6 +79,7 @@ func DumpTo(w io.Writer, src []byte, cfg *DumpConfig) (n int, err error) {
 type Dumper struct {
 	w       io.Writer
 	cfg     DumpConfig
+	err     error
 	line    []byte // Buffer to store current line, only valid when cfg.SuffixFn != nil && !dumpCfgLineNotValid(cfg).
 	buf     []byte // Buffer to write blocks in one line, exclude the line separator, prefix and suffix.
 	idx     int    // Index of unused buffer.
@@ -120,28 +122,40 @@ func NewDumper(w io.Writer, cfg *DumpConfig) *Dumper {
 }
 
 func (d *Dumper) Write(p []byte) (n int, err error) {
+	if d.err != nil {
+		return 0, d.err
+	}
 	n, err = d.write(getHexTable(d.cfg.Upper), p)
-	return n, errors.AutoWrap(err)
+	d.err = errors.AutoWrap(err)
+	return n, d.err
 }
 
 // Flush the buffer.
 // It reports no error if dumper is nil.
 func (d *Dumper) Flush() error {
-	if d == nil || d.w == nil {
+	if d == nil {
 		return nil
 	}
-	return errors.AutoWrap(d.flush())
+	if d.err != nil {
+		return d.err
+	}
+	d.err = errors.AutoWrap(d.flush())
+	return d.err
 }
 
 // Flush the buffer.
 // It reports no error if dumper is nil.
 func (d *Dumper) Close() error {
-	if d == nil || d.w == nil {
+	if d == nil || errors.Is(d.err, myio.ErrWriterClosed) {
 		return nil
+	}
+	if d.err != nil {
+		return d.err
 	}
 	err := d.flush()
 	if err != nil {
-		return errors.AutoWrap(err)
+		d.err = errors.AutoWrap(err)
+		return d.err
 	}
 	if !dumpCfgLineNotValid(&d.cfg) {
 		appendSuffix := false
@@ -154,7 +168,8 @@ func (d *Dumper) Close() error {
 				if len(prefix) > 0 {
 					_, err = d.w.Write(prefix)
 					if err != nil {
-						return errors.AutoWrap(err)
+						d.err = errors.AutoWrap(err)
+						return d.err
 					}
 				}
 			}
@@ -165,18 +180,21 @@ func (d *Dumper) Close() error {
 				if len(suffix) > 0 {
 					_, err = d.w.Write(suffix)
 					if err != nil {
-						return errors.AutoWrap(err)
+						d.err = errors.AutoWrap(err)
+						return d.err
 					}
 				}
 			}
 			_, err = d.w.Write([]byte(d.cfg.LineSep))
 			if err != nil {
-				return errors.AutoWrap(err)
+				d.err = errors.AutoWrap(err)
+				return d.err
 			}
 		}
 	}
 	d.w = nil
 	d.line = nil
+	d.err = errors.AutoWrap(myio.ErrWriterClosed)
 	d.buf = nil
 	d.idx = 0
 	d.written = 0
@@ -187,10 +205,17 @@ func (d *Dumper) Close() error {
 }
 
 func (d *Dumper) WriteByte(c byte) error {
-	return errors.AutoWrap(d.writeByte(getHexTable(d.cfg.Upper), c))
+	if d.err != nil {
+		return d.err
+	}
+	d.err = errors.AutoWrap(d.writeByte(getHexTable(d.cfg.Upper), c))
+	return d.err
 }
 
 func (d *Dumper) ReadFrom(r io.Reader) (n int64, err error) {
+	if d.err != nil {
+		return 0, d.err
+	}
 	ht := getHexTable(d.cfg.Upper)
 	bufp := chunkPool.Get().(*[]byte)
 	defer chunkPool.Put(bufp)
@@ -209,11 +234,13 @@ func (d *Dumper) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 		if readErr != nil {
 			if err != nil {
-				return n, errors.AutoWrap(err)
+				return n, errors.AutoWrap(err) // don't record a read error to d.err
 			}
-			return n, errors.AutoWrap(writeErr)
+			d.err = errors.AutoWrap(writeErr)
+			return n, d.err
 		} else if writeErr != nil {
-			return n, errors.AutoWrap(writeErr)
+			d.err = errors.AutoWrap(writeErr)
+			return n, d.err
 		}
 	}
 }

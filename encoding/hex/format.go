@@ -22,6 +22,7 @@ import (
 	"io"
 
 	"github.com/donyori/gogo/errors"
+	myio "github.com/donyori/gogo/io"
 )
 
 // Configuration for hexadecimal formatting.
@@ -113,6 +114,7 @@ func FormatTo(w io.Writer, src []byte, cfg *FormatConfig) (n int, err error) {
 type Formatter struct {
 	w       io.Writer
 	cfg     FormatConfig
+	err     error
 	bufp    *[]byte // Pointer of the buffer to store formatted characters.
 	idx     int     // Index of unused buffer.
 	written int     // Index of already written to w.
@@ -140,47 +142,67 @@ func NewFormatter(w io.Writer, cfg *FormatConfig) *Formatter {
 }
 
 func (f *Formatter) Write(p []byte) (n int, err error) {
+	if f.err != nil {
+		return 0, f.err
+	}
 	if f.bufp == nil {
 		f.bufp = formatBufferPool.Get().(*[]byte)
 		f.idx, f.written = 0, 0
 	}
 	n, err = f.write(getHexTable(f.cfg.Upper), p)
-	return n, errors.AutoWrap(err)
+	f.err = errors.AutoWrap(err)
+	return n, f.err
 }
 
 // Flush the buffer.
 // It reports no error if formatter is nil.
 func (f *Formatter) Flush() error {
-	if f == nil || f.w == nil {
+	if f == nil {
 		return nil
 	}
-	return errors.AutoWrap(f.flush())
+	if f.err != nil {
+		return f.err
+	}
+	f.err = errors.AutoWrap(f.flush())
+	return f.err
 }
 
 // Flush the buffer.
 // It reports no error if formatter is nil.
 func (f *Formatter) Close() error {
-	if f == nil || f.w == nil {
+	if f == nil || errors.Is(f.err, myio.ErrWriterClosed) {
 		return nil
+	}
+	if f.err != nil {
+		return f.err
 	}
 	err := f.flush()
 	if err != nil {
-		return errors.AutoWrap(err)
+		f.err = errors.AutoWrap(err)
+		return f.err
 	}
 	f.w = nil
+	f.err = errors.AutoWrap(myio.ErrWriterClosed)
 	f.sepCd = 0
 	return nil
 }
 
 func (f *Formatter) WriteByte(c byte) error {
+	if f.err != nil {
+		return f.err
+	}
 	if f.bufp == nil {
 		f.bufp = formatBufferPool.Get().(*[]byte)
 		f.idx, f.written = 0, 0
 	}
-	return errors.AutoWrap(f.writeByte(getHexTable(f.cfg.Upper), c))
+	f.err = errors.AutoWrap(f.writeByte(getHexTable(f.cfg.Upper), c))
+	return f.err
 }
 
 func (f *Formatter) ReadFrom(r io.Reader) (n int64, err error) {
+	if f.err != nil {
+		return 0, f.err
+	}
 	if f.bufp == nil {
 		f.bufp = formatBufferPool.Get().(*[]byte)
 		f.idx, f.written = 0, 0
@@ -203,11 +225,13 @@ func (f *Formatter) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 		if readErr != nil {
 			if err != nil {
-				return n, errors.AutoWrap(err)
+				return n, errors.AutoWrap(err) // don't record a read error to f.err
 			}
-			return n, errors.AutoWrap(writeErr)
+			f.err = errors.AutoWrap(writeErr)
+			return n, f.err
 		} else if writeErr != nil {
-			return n, errors.AutoWrap(writeErr)
+			f.err = errors.AutoWrap(writeErr)
+			return n, f.err
 		}
 	}
 }
