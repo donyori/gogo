@@ -29,7 +29,7 @@ import (
 	"testing"
 )
 
-func TestReadFile_Basic(t *testing.T) {
+func TestRead_Basic(t *testing.T) {
 	dir, err := ioutil.TempDir("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
@@ -41,7 +41,7 @@ func TestReadFile_Basic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reader, err := ReadFile(filename, nil)
+	reader, err := Read(filename, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +60,7 @@ func TestReadFile_Basic(t *testing.T) {
 	}
 }
 
-func TestReadFile_Gzip(t *testing.T) {
+func TestRead_Gzip(t *testing.T) {
 	dir, err := ioutil.TempDir("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +92,7 @@ func TestReadFile_Gzip(t *testing.T) {
 	f.Close()   // ignore error
 	closed = true
 
-	reader, err := ReadFile(filename, nil)
+	reader, err := Read(filename, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func TestReadFile_Gzip(t *testing.T) {
 	}
 }
 
-func TestReadFile_Tar(t *testing.T) {
+func TestRead_Tar(t *testing.T) {
 	dir, err := ioutil.TempDir("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
@@ -160,7 +160,7 @@ func TestReadFile_Tar(t *testing.T) {
 	f.Close()  // ignore error
 	closed = true
 
-	reader, err := ReadFile(filename, nil)
+	reader, err := Read(filename, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +194,7 @@ func TestReadFile_Tar(t *testing.T) {
 	}
 }
 
-func TestReadFile_Tgz(t *testing.T) {
+func TestRead_Tgz(t *testing.T) {
 	dir, err := ioutil.TempDir("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
@@ -250,7 +250,7 @@ func TestReadFile_Tgz(t *testing.T) {
 	f.Close()   // ignore error
 	closed = true
 
-	reader, err := ReadFile(filename, &ReadOption{BufferWhenOpen: true})
+	reader, err := Read(filename, &ReadOption{BufferWhenOpen: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -284,7 +284,7 @@ func TestReadFile_Tgz(t *testing.T) {
 	}
 }
 
-func TestReadFile_TarGz(t *testing.T) {
+func TestRead_TarGz(t *testing.T) {
 	dir, err := ioutil.TempDir("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
@@ -340,7 +340,7 @@ func TestReadFile_TarGz(t *testing.T) {
 	f.Close()   // ignore error
 	closed = true
 
-	reader, err := ReadFile(filename, &ReadOption{BufferWhenOpen: true})
+	reader, err := Read(filename, &ReadOption{BufferWhenOpen: true})
 	if err != nil {
 		t.Fatal(err)
 	}

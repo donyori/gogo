@@ -36,11 +36,7 @@ import (
 // raw mode. Clients should use errors.Is to test whether an error is ErrNotTar.
 var ErrNotTar = errors.AutoNew("file is not archived by tar, or is opened in raw mode")
 
-func init() {
-	errors.AutoWrapExclude(io.EOF) // don't wrap io.EOF to avoid old codes going wrong
-}
-
-// Options for function ReadFile.
+// Options for function Read.
 type ReadOption struct {
 	// Offset of the file to read, in bytes,
 	// relative to the origin of the file for positive values,
@@ -50,7 +46,8 @@ type ReadOption struct {
 	// Limit of the file to read, in bytes. Non-positive values for no limit.
 	Limit int64
 
-	// True if not required to decompress when the file is compressed by gzip or bzip2.
+	// True if not to decompress when the file is compressed by gzip or bzip2,
+	// and not to restore when the file is archived by tar (i.e., tape archive).
 	Raw bool
 
 	// Size of the buffer for reading the file at least. 0 and negative values
@@ -90,9 +87,10 @@ type Reader interface {
 }
 
 // A reader to read a file.
-// Use it with function ReadFile.
+// Use it with function Read.
 type reader struct {
 	option  ReadOption
+	err     error
 	f       *os.File
 	ubr     io.Reader // unbuffered reader
 	br      myio.ResettableBufferedReader
@@ -103,7 +101,7 @@ type reader struct {
 // Open a file with given name for read. If the file is a symlink,
 // it will be evaluated by filepath.EvalSymlinks. The file is opened by
 // os.Open; the associated file descriptor has mode O_RDONLY.
-func ReadFile(name string, option *ReadOption) (r Reader, err error) {
+func Read(name string, option *ReadOption) (r Reader, err error) {
 	name, err = filepath.EvalSymlinks(name)
 	if err != nil {
 		return nil, errors.AutoWrap(err)
@@ -177,15 +175,29 @@ func ReadFile(name string, option *ReadOption) (r Reader, err error) {
 
 // Close all closers used by this reader, including the file.
 func (fr *reader) Close() error {
+	if fr == nil || errors.Is(fr.err, myio.ErrReaderClosed) {
+		return nil
+	}
 	var errList errors.ErrorList
 	for i := len(fr.closers) - 1; i >= 0; i-- {
 		err := fr.closers[i].Close()
 		errList.Append(err)
 	}
-	return errors.AutoWrap(errList.ToError())
+	err := errors.AutoWrap(errList.ToError())
+	if fr.err == nil {
+		if err == nil {
+			fr.err = myio.ErrReaderClosed
+		} else {
+			fr.err = err
+		}
+	}
+	return err
 }
 
 func (fr *reader) Read(p []byte) (n int, err error) {
+	if fr.err != nil {
+		return 0, fr.err
+	}
 	var r io.Reader
 	if fr.br != nil {
 		r = fr.br
@@ -193,87 +205,126 @@ func (fr *reader) Read(p []byte) (n int, err error) {
 		r = fr.ubr
 	}
 	n, err = r.Read(p)
-	return n, errors.AutoWrap(err)
+	fr.err = errors.AutoWrap(err)
+	return n, fr.err
 }
 
 func (fr *reader) ReadByte() (byte, error) {
+	if fr.err != nil {
+		return 0, fr.err
+	}
 	if fr.br != nil {
 		n, err := fr.br.ReadByte()
-		return n, errors.AutoWrap(err)
+		fr.err = errors.AutoWrap(err)
+		return n, fr.err
 	}
 	if br, ok := fr.ubr.(io.ByteReader); ok {
 		n, err := br.ReadByte()
-		return n, errors.AutoWrap(err)
+		fr.err = errors.AutoWrap(err)
+		return n, fr.err
 	}
 	fr.createBr()
 	n, err := fr.br.ReadByte()
-	return n, errors.AutoWrap(err)
+	fr.err = errors.AutoWrap(err)
+	return n, fr.err
 }
 
 func (fr *reader) UnreadByte() error {
+	if fr.err != nil {
+		return fr.err
+	}
 	if fr.br != nil {
-		return errors.AutoWrap(fr.br.UnreadByte())
+		fr.err = errors.AutoWrap(fr.br.UnreadByte())
+		return fr.err
 	}
 	if br, ok := fr.ubr.(io.ByteScanner); ok {
-		return errors.AutoWrap(br.UnreadByte())
+		fr.err = errors.AutoWrap(br.UnreadByte())
+		return fr.err
 	}
 	fr.createBr()
-	return errors.AutoWrap(fr.br.UnreadByte())
+	fr.err = errors.AutoWrap(fr.br.UnreadByte())
+	return fr.err
 }
 
 func (fr *reader) ReadRune() (r rune, size int, err error) {
+	if fr.err != nil {
+		return 0, 0, fr.err
+	}
 	if fr.br != nil {
 		r, size, err = fr.br.ReadRune()
-		return r, size, errors.AutoWrap(err)
+		fr.err = errors.AutoWrap(err)
+		return r, size, fr.err
 	}
 	if br, ok := fr.ubr.(io.RuneReader); ok {
 		r, size, err = br.ReadRune()
-		return r, size, errors.AutoWrap(err)
+		fr.err = errors.AutoWrap(err)
+		return r, size, fr.err
 	}
 	fr.createBr()
 	r, size, err = fr.br.ReadRune()
-	return r, size, errors.AutoWrap(err)
+	fr.err = errors.AutoWrap(err)
+	return r, size, fr.err
 }
 
 func (fr *reader) UnreadRune() error {
+	if fr.err != nil {
+		return fr.err
+	}
 	if fr.br != nil {
-		return errors.AutoWrap(fr.br.UnreadRune())
+		fr.err = errors.AutoWrap(fr.br.UnreadRune())
+		return fr.err
 	}
 	if br, ok := fr.ubr.(io.RuneScanner); ok {
-		return errors.AutoWrap(br.UnreadRune())
+		fr.err = errors.AutoWrap(br.UnreadRune())
+		return fr.err
 	}
 	fr.createBr()
-	return errors.AutoWrap(fr.br.UnreadRune())
+	fr.err = errors.AutoWrap(fr.br.UnreadRune())
+	return fr.err
 }
 
 func (fr *reader) WriteTo(w io.Writer) (n int64, err error) {
+	if fr.err != nil {
+		return 0, fr.err
+	}
 	if fr.br != nil {
 		n, err = fr.br.WriteTo(w)
-		return n, errors.AutoWrap(err)
+		fr.err = errors.AutoWrap(err)
+		return n, fr.err
 	}
 	if br, ok := fr.ubr.(io.WriterTo); ok {
 		n, err = br.WriteTo(w)
-		return n, errors.AutoWrap(err)
+		fr.err = errors.AutoWrap(err)
+		return n, fr.err
 	}
 	fr.createBr()
 	n, err = fr.br.WriteTo(w)
-	return n, errors.AutoWrap(err)
+	fr.err = errors.AutoWrap(err)
+	return n, fr.err
 }
 
 func (fr *reader) ReadLine() (line []byte, more bool, err error) {
+	if fr.err != nil {
+		return nil, false, fr.err
+	}
 	if fr.br == nil {
 		fr.createBr()
 	}
 	line, more, err = fr.br.ReadLine()
-	return line, more, errors.AutoWrap(err)
+	fr.err = errors.AutoWrap(err)
+	return line, more, fr.err
 }
 
 func (fr *reader) WriteLineTo(w io.Writer) (n int64, err error) {
+	if fr.err != nil {
+		return 0, fr.err
+	}
 	if fr.br == nil {
 		fr.createBr()
 	}
 	n, err = fr.br.WriteLineTo(w)
-	return n, errors.AutoWrap(err)
+	fr.err = errors.AutoWrap(err)
+	return n, fr.err
 }
 
 func (fr *reader) Size() int {
@@ -297,19 +348,27 @@ func (fr *reader) Buffered() int {
 }
 
 func (fr *reader) Peek(n int) (data []byte, err error) {
+	if fr.err != nil {
+		return nil, fr.err
+	}
 	if fr.br == nil {
 		fr.createBr()
 	}
 	data, err = fr.br.Peek(n)
-	return data, errors.AutoWrap(err)
+	fr.err = errors.AutoWrap(err)
+	return data, fr.err
 }
 
 func (fr *reader) Discard(n int) (discarded int, err error) {
+	if fr.err != nil {
+		return 0, fr.err
+	}
 	if fr.br == nil {
 		fr.createBr()
 	}
 	discarded, err = fr.br.Discard(n)
-	return discarded, errors.AutoWrap(err)
+	fr.err = errors.AutoWrap(err)
+	return discarded, fr.err
 }
 
 func (fr *reader) TarEnabled() bool {
@@ -320,12 +379,16 @@ func (fr *reader) TarNext() (header *tar.Header, err error) {
 	if !fr.TarEnabled() {
 		return nil, errors.AutoWrap(ErrNotTar)
 	}
+	if errors.Is(fr.err, myio.ErrReaderClosed) {
+		return nil, fr.err
+	}
 	header, err = fr.tr.Next()
+	fr.err = nil
 	if fr.br != nil {
 		fr.ubr = fr.tr
 		fr.br.Reset(fr.ubr)
 	}
-	return header, errors.AutoWrap(err)
+	return header, errors.AutoWrap(err) // don't record Next error to fr.err
 }
 
 func (fr *reader) File() *os.File {
