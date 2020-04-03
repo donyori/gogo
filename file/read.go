@@ -122,7 +122,7 @@ func Read(name string, option *ReadOption) (r Reader, err error) {
 	defer func() {
 		if err != nil {
 			r = nil
-			fr.Close()
+			fr.Close() // ignore error
 		}
 	}()
 	if option.Offset > 0 {

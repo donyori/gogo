@@ -72,7 +72,7 @@ func TestRead_Gzip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var closed bool
+	closed := false
 	defer func() {
 		if !closed {
 			f.Close() // ignore error
@@ -122,7 +122,7 @@ func TestRead_Tar(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var closed bool
+	closed := false
 	defer func() {
 		if !closed {
 			f.Close() // ignore error
@@ -205,7 +205,7 @@ func TestRead_Tgz(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var closed bool
+	closed := false
 	defer func() {
 		if !closed {
 			f.Close() // ignore error
@@ -295,7 +295,7 @@ func TestRead_TarGz(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var closed bool
+	closed := false
 	defer func() {
 		if !closed {
 			f.Close() // ignore error
