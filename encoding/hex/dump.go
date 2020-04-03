@@ -30,7 +30,7 @@ import (
 type DumpConfig struct {
 	FormatConfig
 	LineSep       string // Line separator.
-	BlocksPerLine int    // The number of blocks per line, 0 and negative values for all blocks in one line.
+	BlocksPerLine int    // The number of blocks per line, non-positive values for all blocks in one line.
 
 	// Function to generate a prefix of one line.
 	// Only valid when BlockLen > 0 and BlocksPerLine > 0.

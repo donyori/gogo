@@ -31,7 +31,7 @@ type FormatConfig struct {
 	Sep   string // Separator.
 
 	// Block size, i.e., the number of bytes (before hexadecimal encoding)
-	// between every two separators. 0 and negative values for no separators.
+	// between every two separators. Non-positive values for no separators.
 	BlockLen int
 }
 
