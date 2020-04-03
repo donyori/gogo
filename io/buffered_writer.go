@@ -20,6 +20,10 @@ package io
 
 import stdio "io"
 
+// An interface for buffered writer.
+//
+// Note that after all data has been written, the client should call the method
+// Flush to guarantee all data has been forwarded to the underlying writer.
 type BufferedWriter interface {
 	stdio.Writer
 	stdio.ByteWriter
@@ -41,6 +45,7 @@ type BufferedWriter interface {
 	WriteRune(r rune) (size int, err error)
 }
 
+// An interface combining BufferedWriter and WriterResetter.
 type ResettableBufferedWriter interface {
 	BufferedWriter
 	WriterResetter
