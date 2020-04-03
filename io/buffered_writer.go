@@ -20,23 +20,28 @@ package io
 
 import stdio "io"
 
-// An interface that wraps method Reset,
-// which resets all states of its instance.
-type Resetter interface {
-	// Reset all states.
-	Reset()
+type BufferedWriter interface {
+	stdio.Writer
+	stdio.ByteWriter
+	stdio.StringWriter
+	stdio.ReaderFrom
+	Flusher
+
+	// Return the size of the underlying buffer in bytes.
+	Size() int
+
+	// Return the number of bytes that have been written into the current buffer.
+	Buffered() int
+
+	// Return the number of bytes unused in the current buffer.
+	Available() int
+
+	// Write a single Unicode code point.
+	// It returns the number of bytes written and any encountered error.
+	WriteRune(r rune) (size int, err error)
 }
 
-// An interface that wraps method Reset, which resets all states of
-// its instance and switches to read from the reader r.
-type ReaderResetter interface {
-	// Reset all states and switch to read from r.
-	Reset(r stdio.Reader)
-}
-
-// An interface that wraps method Reset, which discards any buffered data,
-// resets all states of its instance, and switches to write to the writer w.
-type WriterResetter interface {
-	// Discard any buffered data, reset all states, and switch to write to w.
-	Reset(w stdio.Writer)
+type ResettableBufferedWriter interface {
+	BufferedWriter
+	WriterResetter
 }
