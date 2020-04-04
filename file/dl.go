@@ -46,8 +46,10 @@ type Checksum struct {
 // A damaged file will be removed and ErrVerificationFail will be returned.
 func HttpDownload(url, filename string, perm os.FileMode, chksums ...Checksum) error {
 	var hashes []hash.Hash
+	var ws []io.Writer
 	if len(chksums) > 0 {
 		hashes = make([]hash.Hash, len(chksums))
+		ws = make([]io.Writer, len(chksums))
 		for i := range chksums {
 			if chksums[i].HashGen == nil {
 				return errors.AutoNew("given hash generator is nil")
@@ -56,6 +58,7 @@ func HttpDownload(url, filename string, perm os.FileMode, chksums ...Checksum) e
 				return errors.AutoNew("given expected checksum is empty")
 			}
 			hashes[i] = chksums[i].HashGen()
+			ws[i] = hashes[i]
 		}
 	}
 	resp, err := http.Get(url)
@@ -70,7 +73,7 @@ func HttpDownload(url, filename string, perm os.FileMode, chksums ...Checksum) e
 		}
 		return errors.AutoNew("response status is not OK when downloading " + url + ": " + errMsg)
 	}
-	fw, err := New(filename, perm, &WriteOption{
+	w, err := New(filename, perm, &WriteOption{
 		Raw:      true,
 		Backup:   true,
 		MakeDirs: true,
@@ -86,20 +89,11 @@ func HttpDownload(url, filename string, perm os.FileMode, chksums ...Checksum) e
 			}
 			return true
 		},
-	})
+	}, ws...)
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	defer fw.Close() // ignore error
-	var w io.Writer = fw
-	if len(hashes) > 0 {
-		ws := make([]io.Writer, 1+len(hashes))
-		ws[0] = w
-		for i := range hashes {
-			ws[i+1] = hashes[i]
-		}
-		w = io.MultiWriter(ws...)
-	}
+	defer w.Close() // ignore error
 	_, err = io.Copy(w, resp.Body)
 	return errors.AutoWrap(err)
 }

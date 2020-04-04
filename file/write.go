@@ -111,8 +111,16 @@ type writer struct {
 	closers  []io.Closer
 }
 
-// Create a file for writing.
-func New(name string, perm os.FileMode, option *WriteOption) (w Writer, err error) {
+// Create a file for writing, with given permission perm.
+//
+// Data ultimately written to the file will also be written to copies.
+// The client can use copies to monitor the data, such as calculating the
+// checksum to verify the file.
+// Note that: 1. The writer won't manage copies. It's the client's
+// responsibility to manage copies, including closing them when no longer
+// needed. 2. If an error occurred when writing to copies, other writing will
+// also stop and the writer will fall into the error state.
+func New(name string, perm os.FileMode, option *WriteOption, copies ...io.Writer) (w Writer, err error) {
 	if name == "" {
 		return nil, errors.AutoNew("name is empty")
 	}
@@ -146,6 +154,9 @@ func New(name string, perm os.FileMode, option *WriteOption) (w Writer, err erro
 			fw.Close() // ignore error
 		}
 	}()
+	if len(copies) > 0 {
+		fw.ubw = io.MultiWriter(append([]io.Writer{fw.ubw}, copies...)...)
+	}
 	if !option.Raw {
 		base = strings.ToLower(base)
 		ext := filepath.Ext(base)
@@ -184,6 +195,7 @@ func New(name string, perm os.FileMode, option *WriteOption) (w Writer, err erro
 
 // Close all closers used by this writer, verify the written file, and
 // process the temporary file if Backup enabled.
+// The written file will be removed if any error occurred during writing.
 func (fw *writer) Close() error {
 	if fw == nil || errors.Is(fw.err, myio.ErrWriterClosed) {
 		return nil
@@ -196,7 +208,7 @@ func (fw *writer) Close() error {
 	}()
 	var err error // err records the first error occurred during Close.
 	if fw.bw != nil {
-		err = fw.bw.Flush()
+		err = errors.AutoWrap(fw.bw.Flush())
 		if fw.err == nil {
 			fw.err = err
 		}
@@ -220,7 +232,7 @@ func (fw *writer) Close() error {
 	}
 	if fw.option.Backup {
 		if fw.err == nil {
-			fw.err = os.Rename(fw.f.Name(), fw.filename)
+			fw.err = errors.AutoWrap(os.Rename(fw.f.Name(), fw.filename))
 			if err == nil {
 				err = fw.err
 			}
@@ -228,10 +240,15 @@ func (fw *writer) Close() error {
 				os.Remove(fw.f.Name()) // ignore error
 			}
 		} else {
-			err1 := os.Remove(fw.f.Name())
+			err1 := errors.AutoWrap(os.Remove(fw.f.Name()))
 			if err == nil {
 				err = err1
 			}
+		}
+	} else if fw.err != nil {
+		err1 := errors.AutoWrap(os.Remove(fw.f.Name()))
+		if err == nil {
+			err = err1
 		}
 	}
 	rmDone = true
