@@ -91,11 +91,12 @@ func HttpDownload(url, filename string, perm os.FileMode, chksums ...Checksum) e
 
 // Update mode of HttpDownload.
 // It verifies the file with given filename using VerifyChecksum.
-// If the verification is passed, it does nothing and returns nil.
+// If the verification is passed, it does nothing and returns (false, nil).
 // Otherwise, it calls HttpDownload.
-func HttpUpdate(url, filename string, perm os.FileMode, chksums ...Checksum) error {
+func HttpUpdate(url, filename string, perm os.FileMode, chksums ...Checksum) (updated bool, err error) {
 	if VerifyChecksum(filename, chksums...) {
-		return nil
+		return
 	}
-	return HttpDownload(url, filename, perm, chksums...)
+	err = errors.AutoWrap(HttpDownload(url, filename, perm, chksums...))
+	return err == nil, err
 }

@@ -72,18 +72,24 @@ func TestHttpUpdate(t *testing.T) {
 		HashGen:   sha256.New,
 		HexExpSum: "49f806f66762077861b7de7081f586995940772d29d4c45068c134441a743fa2",
 	}
-	err = HttpUpdate(url, filename, 0600, chksum)
+	updated, err := HttpUpdate(url, filename, 0600, chksum)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !updated {
+		t.Error("updated is false for the first call.")
 	}
 	info, err := os.Lstat(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
 	modTime := info.ModTime()
-	err = HttpUpdate(url, filename, 0600, chksum)
+	updated, err = HttpUpdate(url, filename, 0600, chksum)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if updated {
+		t.Error("updated is true for the second call.")
 	}
 	info, err = os.Lstat(filename)
 	if err != nil {
@@ -92,9 +98,12 @@ func TestHttpUpdate(t *testing.T) {
 	if !modTime.Equal(info.ModTime()) {
 		t.Error("File has been modified.")
 	}
-	err = HttpUpdate(url, filename, 0600)
+	updated, err = HttpUpdate(url, filename, 0600)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if updated {
+		t.Error("updated is true for the third call.")
 	}
 	info, err = os.Lstat(filename)
 	if err != nil {
@@ -113,9 +122,12 @@ func TestHttpUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Now()
-	err = HttpUpdate(url, filename, 0600, chksum)
+	updated, err = HttpUpdate(url, filename, 0600, chksum)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !updated {
+		t.Error("updated is false for the fourth call (after damaging).")
 	}
 	info, err = os.Lstat(filename)
 	if err != nil {
