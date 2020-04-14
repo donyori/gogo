@@ -30,15 +30,6 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// A combination of a hash algorithm and an expected checksum.
-type Checksum struct {
-	// A function to generate a hasher. E.g. crypto/sha256.New.
-	HashGen func() hash.Hash
-
-	// Expected checksum, encoding to hexadecimal representation.
-	HexExpSum string
-}
-
 // Download a file via HTTP/HTTPS Get,
 // and save as the local file specified by filename, with given permission perm.
 //
@@ -96,4 +87,15 @@ func HttpDownload(url, filename string, perm os.FileMode, chksums ...Checksum) e
 	defer w.Close() // ignore error
 	_, err = io.Copy(w, resp.Body)
 	return errors.AutoWrap(err)
+}
+
+// Update mode of HttpDownload.
+// It verifies the file with given filename using VerifyChecksum.
+// If the verification is passed, it does nothing and returns nil.
+// Otherwise, it calls HttpDownload.
+func HttpUpdate(url, filename string, perm os.FileMode, chksums ...Checksum) error {
+	if VerifyChecksum(filename, chksums...) {
+		return nil
+	}
+	return HttpDownload(url, filename, perm, chksums...)
 }

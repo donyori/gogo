@@ -24,6 +24,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/donyori/gogo/errors"
 )
 
 // Create a new temporary file in the directory dir, with given permission perm
@@ -47,11 +49,11 @@ func Tmp(dir, pattern string, perm os.FileMode) (f *os.File, err error) {
 			prefix+strconv.FormatUint(uint64(r), 36)+suffix),
 			os.O_RDWR|os.O_CREATE|os.O_EXCL, perm)
 		if err == nil || !os.IsExist(err) {
-			return
+			return f, errors.AutoWrap(err)
 		}
 		r = r*1664525 + 1013904223 // constants from Numerical Recipes, for a linear congruential generator
 	}
-	return
+	return f, errors.AutoWrap(err)
 }
 
 // Create a new temporary directory in the directory dir, with given permission
@@ -71,24 +73,23 @@ func TmpDir(dir, pattern string, perm os.FileMode) (name string, err error) {
 	prefix, suffix := parseTmpPattern(pattern)
 	r := uint32(time.Now().UnixNano() + int64(os.Getpid())*1000)
 	for try := 0; try < 100; try++ {
-		tmpName := filepath.Join(dir, prefix+strconv.FormatUint(uint64(r), 36)+suffix)
-		err = os.Mkdir(tmpName, perm)
+		name = filepath.Join(dir, prefix+strconv.FormatUint(uint64(r), 36)+suffix)
+		err = os.Mkdir(name, perm)
 		if err == nil {
-			name = tmpName
-			return
+			return name, errors.AutoWrap(err)
 		}
 		if os.IsNotExist(err) {
 			// It may because dir doesn't exist. Try to report dir doesn't exist.
 			if _, err := os.Lstat(dir); os.IsNotExist(err) {
-				return "", err
+				return "", errors.AutoWrap(err)
 			}
 		}
 		if !os.IsExist(err) {
-			return
+			return "", errors.AutoWrap(err)
 		}
 		r = r*1664525 + 1013904223 // constants from Numerical Recipes, for a linear congruential generator
 	}
-	return
+	return "", errors.AutoWrap(err)
 }
 
 func parseTmpPattern(pattern string) (prefix, suffix string) {
