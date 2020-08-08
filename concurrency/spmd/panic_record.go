@@ -18,13 +18,27 @@
 
 package spmd
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 // Panic record, including the rank of the goroutine
 // and the panic content (i.e., the parameter passed to function panic).
 type PanicRec struct {
 	Rank    int         // The rank of the goroutine.
 	Content interface{} // The parameter passed to function panic.
+}
+
+func (pr PanicRec) String() string {
+	if pr.Content == nil {
+		return "no panic"
+	}
+	return fmt.Sprintf("panic on Goroutine %d: %v", pr.Rank, pr.Content)
+}
+
+func (pr PanicRec) Error() string {
+	return pr.String()
 }
 
 // Panic records.

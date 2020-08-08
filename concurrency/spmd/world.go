@@ -75,7 +75,6 @@ func New(n int, biz func(comm Communicator)) World {
 	w := &world{
 		QuitChan: make(chan struct{}),
 		Comms:    make([]*communicator, n),
-		n:        n,
 		biz:      biz,
 		pr:       new(panicRecords),
 	}
@@ -100,7 +99,6 @@ type world struct {
 	QuitChan chan struct{}   // A channel to broadcast the quit signal.
 	Comms    []*communicator // List of communicators.
 
-	n         int                     // The number of goroutines to process this job.
 	biz       func(comm Communicator) // Business function.
 	pr        *panicRecords           // Panic records.
 	wg        sync.WaitGroup          // A wait group for the main process.
@@ -110,8 +108,9 @@ type world struct {
 
 func (w *world) Start() {
 	w.startOnce.Do(func() {
-		w.wg.Add(w.n)
-		for i := 0; i < w.n; i++ {
+		n := len(w.Comms)
+		w.wg.Add(n)
+		for i := 0; i < n; i++ {
 			go func(rank int) {
 				defer func() {
 					if r := recover(); r != nil {
@@ -136,6 +135,7 @@ func (w *world) Quit() {
 }
 
 func (w *world) Wait() int {
+	defer w.Quit() // For cleanup possible daemon goroutines that wait for a quit signal to exit.
 	w.wg.Wait()
 	return w.pr.Len()
 }
@@ -146,7 +146,7 @@ func (w *world) Run() int {
 }
 
 func (w *world) NumGoroutine() int {
-	return w.n
+	return len(w.Comms)
 }
 
 func (w *world) PanicRecords() []PanicRec {
