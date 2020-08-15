@@ -18,28 +18,27 @@
 
 package spmd
 
-import (
-	"testing"
-	"time"
-)
+// Context of the communicators.
+// Each goroutine group has its own context.
+type context struct {
+	Id         string          // ID of the group.
+	Ctrl       *controller     // Controller.
+	Comms      []*communicator // List of communicators.
+	WorldRanks []int           // List of world ranks of the goroutines, corresponding to Comms.
+}
 
-func TestCommunicator_Barrier(t *testing.T) {
-	times := make([]time.Time, 4)
-	prs := Run(4, func(world Communicator, commMap map[string]Communicator) {
-		time.Sleep(time.Millisecond * 500 * time.Duration(world.Rank()))
-		world.Barrier()
-		times[world.Rank()] = time.Now()
-	}, nil)
-	if len(prs) > 0 {
-		t.Errorf("Panic: %v.", prs)
+// Create a new context.
+// Only for function New.
+func newContext(ctrl *controller, id string, worldRanks []int) *context {
+	n := len(worldRanks)
+	ctx := &context{
+		Id:         id,
+		Ctrl:       ctrl,
+		Comms:      make([]*communicator, n),
+		WorldRanks: worldRanks,
 	}
-	for i := 1; i < len(times); i++ {
-		diff := times[0].Sub(times[i])
-		if diff < 0 {
-			diff = -diff
-		}
-		if diff > time.Microsecond {
-			t.Errorf("Goroutine 0 and %d are %v apart.", i, diff)
-		}
+	for i := 0; i < n; i++ {
+		ctx.Comms[i] = newCommunicator(ctx, i)
 	}
+	return ctx
 }

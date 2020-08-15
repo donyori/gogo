@@ -21,10 +21,11 @@ package spmd
 // A communicator for goroutines to communicate with each other.
 type Communicator interface {
 	// Return the rank (from 0 to NumGoroutine()-1) of current goroutine
-	// for this job.
+	// in the goroutine group of this communicator.
 	Rank() int
 
-	// Return the number of goroutines to process this job.
+	// Return the number of goroutines in the goroutine group
+	// of this communicator.
 	NumGoroutine() int
 
 	// Return the channel for the quit signal.
@@ -50,17 +51,16 @@ type Communicator interface {
 
 // An implementation of interface Communicator.
 type communicator struct {
-	Ctx *world // Context of the job.
-
+	ctx  *context           // Context of the goroutine group.
 	rank int                // The rank of current goroutine.
 	bc   chan chan struct{} // A channel used for method Barrier.
 }
 
 // Create a new communicator.
-// Only for function New.
-func newCommunicator(w *world, rank int) *communicator {
+// Only for function newContext.
+func newCommunicator(ctx *context, rank int) *communicator {
 	comm := &communicator{
-		Ctx:  w,
+		ctx:  ctx,
 		rank: rank,
 	}
 	if rank > 0 {
@@ -74,16 +74,16 @@ func (comm *communicator) Rank() int {
 }
 
 func (comm *communicator) NumGoroutine() int {
-	return comm.Ctx.NumGoroutine()
+	return len(comm.ctx.Comms)
 }
 
 func (comm *communicator) QuitChan() <-chan struct{} {
-	return comm.Ctx.QuitChan
+	return comm.ctx.Ctrl.QuitChan
 }
 
 func (comm *communicator) IsQuit() bool {
 	select {
-	case <-comm.Ctx.QuitChan:
+	case <-comm.ctx.Ctrl.QuitChan:
 		return true
 	default:
 		return false
@@ -91,11 +91,11 @@ func (comm *communicator) IsQuit() bool {
 }
 
 func (comm *communicator) Quit() {
-	comm.Ctx.Quit()
+	comm.ctx.Ctrl.Quit()
 }
 
 func (comm *communicator) Barrier() bool {
-	n := comm.Ctx.NumGoroutine()
+	n := len(comm.ctx.Comms)
 	if n <= 1 {
 		return !comm.IsQuit()
 	}
@@ -106,9 +106,9 @@ func (comm *communicator) Barrier() bool {
 	} else {
 		// Other goroutines receive the signal channel from their respective previous goroutines.
 		select {
-		case <-comm.Ctx.QuitChan:
+		case <-comm.ctx.Ctrl.QuitChan:
 			return false
-		case c = <-comm.Ctx.Comms[comm.rank].bc: // Listen on its own channel, not the sender's!
+		case c = <-comm.ctx.Comms[comm.rank].bc: // Listen on its own channel, not the sender's!
 		}
 	}
 	if comm.rank == n-1 {
@@ -118,13 +118,13 @@ func (comm *communicator) Barrier() bool {
 	} else {
 		// Other goroutines send the signal channel to their respective next goroutines.
 		select {
-		case <-comm.Ctx.QuitChan:
+		case <-comm.ctx.Ctrl.QuitChan:
 			return false
-		case comm.Ctx.Comms[comm.rank+1].bc <- c: // Send it to the receiver's channel.
+		case comm.ctx.Comms[comm.rank+1].bc <- c: // Send it to the receiver's channel.
 		}
 		// Then listen on the signal channel.
 		select {
-		case <-comm.Ctx.QuitChan:
+		case <-comm.ctx.Ctrl.QuitChan:
 			return false
 		case <-c:
 		}
