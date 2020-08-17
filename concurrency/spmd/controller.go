@@ -28,17 +28,17 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// A controller to start, quit and wait for the job.
+// A controller to launch, quit and wait for the job.
 type Controller interface {
-	// Start the job.
+	// Launch the job.
 	//
 	// This method will NOT wait until the job ends.
 	// Use method Wait if you want to wait for that.
 	//
-	// Note that Start can affect only once.
+	// Note that Launch can affect only once.
 	// To do the same job again, create a new Controller
 	// with the same parameters.
-	Start()
+	Launch()
 
 	// Quit the job.
 	//
@@ -50,7 +50,7 @@ type Controller interface {
 	// It returns the number of panic goroutines.
 	Wait() int
 
-	// Start the job and wait for it.
+	// Launch the job and wait for it.
 	// It returns the number of panic goroutines.
 	Run() int
 
@@ -72,7 +72,8 @@ type Controller interface {
 // If there is no custom group, commMap is nil.
 type BusinessFunc func(world Communicator, commMap map[string]Communicator)
 
-var mapIdPattern = regexp.MustCompile(`[A-Za-z0-9][A-Za-z0-9_]*`)
+// Regexp pattern for verifying group ID.
+var groupIdPattern = regexp.MustCompile(`[A-Za-z0-9][A-Za-z0-9_]*`)
 
 // Create a Controller for a new job.
 //
@@ -104,10 +105,9 @@ func New(n int, biz BusinessFunc, groupMap map[string][]int) Controller {
 		n = runtime.NumCPU()
 	}
 	ctrl := &controller{
-		QuitChan: make(chan struct{}),
-		CtxMap:   make(map[string]*context),
-		biz:      biz,
-		pr:       new(panicRecords),
+		QuitChan:     make(chan struct{}),
+		biz:          biz,
+		lnchCommMaps: make([]map[string]Communicator, n),
 	}
 	worldRanks := make([]int, n)
 	for i := range worldRanks {
@@ -117,9 +117,10 @@ func New(n int, biz BusinessFunc, groupMap map[string][]int) Controller {
 	var (
 		set map[int]bool
 		g   sequence.IntDynamicArray
+		ctx *context
 	)
 	for id, group := range groupMap {
-		if !mapIdPattern.MatchString(id) {
+		if !groupIdPattern.MatchString(id) {
 			panic(errors.AutoMsg("group ID is illegal: " + id))
 		}
 		if len(group) == 0 {
@@ -138,8 +139,13 @@ func New(n int, biz BusinessFunc, groupMap map[string][]int) Controller {
 			set[i] = true
 			return true
 		})
-		g.Shrink()
-		ctrl.CtxMap[id] = newContext(ctrl, id, g)
+		ctx = newContext(ctrl, id, g)
+		for r, wr := range ctx.WorldRanks {
+			if ctrl.lnchCommMaps[wr] == nil {
+				ctrl.lnchCommMaps[wr] = make(map[string]Communicator)
+			}
+			ctrl.lnchCommMaps[wr][id] = ctx.Comms[r]
+		}
 	}
 	return ctrl
 }
@@ -156,29 +162,23 @@ func Run(n int, biz BusinessFunc, groupMap map[string][]int) []PanicRec {
 
 // An implementation of interface Controller.
 type controller struct {
-	QuitChan chan struct{}       // A channel to broadcast the quit signal.
-	World    *context            // World context.
-	CtxMap   map[string]*context // Map of contexts of custom groups.
+	QuitChan chan struct{} // A channel to broadcast the quit signal.
+	World    *context      // World context.
 
-	biz       BusinessFunc   // Business function.
-	pr        *panicRecords  // Panic records.
-	wg        sync.WaitGroup // A wait group for the main process.
-	startOnce sync.Once      // For starting the job.
-	quitOnce  sync.Once      // For closing QuitChan.
+	biz      BusinessFunc   // Business function.
+	pr       panicRecords   // Panic records.
+	wg       sync.WaitGroup // A wait group for the main process.
+	lnchOnce sync.Once      // For launching the job.
+	quitOnce sync.Once      // For closing QuitChan.
+	// List of commMap used by method Launch,
+	// will be nil after calling Launch.
+	lnchCommMaps []map[string]Communicator
 }
 
-func (ctrl *controller) Start() {
-	ctrl.startOnce.Do(func() {
+func (ctrl *controller) Launch() {
+	ctrl.lnchOnce.Do(func() {
 		n := len(ctrl.World.Comms)
-		commMaps := make([]map[string]Communicator, n)
-		for id, ctx := range ctrl.CtxMap {
-			for r, wr := range ctx.WorldRanks {
-				if commMaps[wr] == nil {
-					commMaps[wr] = make(map[string]Communicator)
-				}
-				commMaps[wr][id] = ctx.Comms[r]
-			}
-		}
+		commMaps := ctrl.lnchCommMaps
 		ctrl.wg.Add(n)
 		for i := 0; i < n; i++ {
 			go func(rank int) {
@@ -195,6 +195,7 @@ func (ctrl *controller) Start() {
 				ctrl.biz(ctrl.World.Comms[rank], commMaps[rank])
 			}(i)
 		}
+		ctrl.lnchCommMaps = nil
 	})
 }
 
@@ -211,7 +212,7 @@ func (ctrl *controller) Wait() int {
 }
 
 func (ctrl *controller) Run() int {
-	ctrl.Start()
+	ctrl.Launch()
 	return ctrl.Wait()
 }
 

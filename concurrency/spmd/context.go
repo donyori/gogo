@@ -35,8 +35,9 @@ func newContext(ctrl *controller, id string, worldRanks []int) *context {
 		Id:         id,
 		Ctrl:       ctrl,
 		Comms:      make([]*communicator, n),
-		WorldRanks: worldRanks,
+		WorldRanks: make([]int, n),
 	}
+	copy(ctx.WorldRanks, worldRanks) // Keep a copy to avoid unexpected modifications.
 	for i := 0; i < n; i++ {
 		ctx.Comms[i] = newCommunicator(ctx, i)
 	}

@@ -18,13 +18,9 @@
 
 package spmd
 
-import (
-	"testing"
+import "testing"
 
-	"github.com/donyori/gogo/container/sequence"
-)
-
-func TestController_Start(t *testing.T) {
+func TestNew_lnchCommMaps(t *testing.T) {
 	n := 8
 	groupMap := map[string][]int{
 		"g1": {0, 1, 2, 3},
@@ -33,39 +29,35 @@ func TestController_Start(t *testing.T) {
 		"g4": {0, 1, 2, 3, 7, 6, 5, 4},
 		"g5": {4, 1, 1, 1},
 	}
-	prs := Run(n, func(world Communicator, commMap map[string]Communicator) {
-		wr := world.Rank()
+	ctrl := New(n, func(world Communicator, commMap map[string]Communicator) {
+		// Empty function body.
+	}, groupMap).(*controller)
+	// Verify that all commMaps are consistent with groupMap.
+	for wr, commMap := range ctrl.lnchCommMaps {
 		for id, comm := range commMap {
 			if comm == nil {
 				t.Errorf("Goroutine %d, group %q: comm is nil.", wr, id)
-				continue
-			}
-			if r := comm.Rank(); wr != groupMap[id][r] {
+			} else if r := comm.Rank(); wr != groupMap[id][r] {
 				t.Errorf("Goroutine %d, group %q: comm.Rank(): %d, groupMap[%[2]q][%[1]d]: %[4]d.", wr, id, r, groupMap[id][wr])
 			}
 		}
-		ctrl := world.(*communicator).ctx.Ctrl
-		for id, group := range groupMap {
-			g := sequence.IntDynamicArray(group)
-			set := make(map[int]bool)
-			g.Filter(func(x interface{}) (keep bool) {
-				i := x.(int)
-				if set[i] {
-					return false
-				}
-				set[i] = true
-				return true
-			})
-			for r, worldRank := range g {
-				if wr == worldRank {
-					if commMap[id] != ctrl.CtxMap[id].Comms[r] {
-						t.Errorf("Goroutine %d, group %q, rank %d: communicators does not match.", wr, id, r)
-					}
-				}
+	}
+	// Verify that all items in groupMap have corresponding communicators.
+	for id, group := range groupMap {
+		set := make(map[int]bool)
+		r := 0
+		for _, wr := range group {
+			if set[wr] {
+				continue
 			}
+			set[wr] = true
+			comm := ctrl.lnchCommMaps[wr][id]
+			if comm == nil {
+				t.Errorf("Goroutine %d, group %q: comm is nil.", wr, id)
+			} else if rank := comm.Rank(); rank != r {
+				t.Errorf("Goroutine %d, group %q: comm.Rank(): %d, groupMap[%[2]q][%[1]d]: %[4]d.", wr, id, rank, r)
+			}
+			r++
 		}
-	}, groupMap)
-	if len(prs) > 0 {
-		t.Errorf("Panic: %v.", prs)
 	}
 }
