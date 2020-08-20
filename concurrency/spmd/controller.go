@@ -57,6 +57,9 @@ type Controller interface {
 	// Return the number of goroutines to process this job.
 	NumGoroutine() int
 
+	// Return the channel for the quit signal.
+	QuitChan() <-chan struct{}
+
 	// Return the panic records.
 	PanicRecords() []PanicRec
 }
@@ -105,7 +108,8 @@ func New(n int, biz BusinessFunc, groupMap map[string][]int) Controller {
 		n = runtime.NumCPU()
 	}
 	ctrl := &controller{
-		QuitChan:     make(chan struct{}),
+		QuitC:        make(chan struct{}),
+		Cd:           newChanDispr(),
 		biz:          biz,
 		lnchCommMaps: make([]map[string]Communicator, n),
 	}
@@ -162,14 +166,15 @@ func Run(n int, biz BusinessFunc, groupMap map[string][]int) []PanicRec {
 
 // An implementation of interface Controller.
 type controller struct {
-	QuitChan chan struct{} // A channel to broadcast the quit signal.
-	World    *context      // World context.
+	QuitC chan struct{} // A channel to broadcast the quit signal.
+	World *context      // World context.
+	Cd    *chanDispr    // Channel dispatcher.
 
 	biz      BusinessFunc   // Business function.
 	pr       panicRecords   // Panic records.
 	wg       sync.WaitGroup // A wait group for the main process.
 	lnchOnce sync.Once      // For launching the job.
-	quitOnce sync.Once      // For closing QuitChan.
+	quitOnce sync.Once      // For closing QuitC.
 	// List of commMap used by method Launch,
 	// will be nil after calling Launch.
 	lnchCommMaps []map[string]Communicator
@@ -179,6 +184,7 @@ func (ctrl *controller) Launch() {
 	ctrl.lnchOnce.Do(func() {
 		n := len(ctrl.World.Comms)
 		commMaps := ctrl.lnchCommMaps
+		go ctrl.Cd.Run(ctrl.QuitC)
 		ctrl.wg.Add(n)
 		for i := 0; i < n; i++ {
 			go func(rank int) {
@@ -201,7 +207,7 @@ func (ctrl *controller) Launch() {
 
 func (ctrl *controller) Quit() {
 	ctrl.quitOnce.Do(func() {
-		close(ctrl.QuitChan)
+		close(ctrl.QuitC)
 	})
 }
 
@@ -218,6 +224,10 @@ func (ctrl *controller) Run() int {
 
 func (ctrl *controller) NumGoroutine() int {
 	return len(ctrl.World.Comms)
+}
+
+func (ctrl *controller) QuitChan() <-chan struct{} {
+	return ctrl.QuitC
 }
 
 func (ctrl *controller) PanicRecords() []PanicRec {

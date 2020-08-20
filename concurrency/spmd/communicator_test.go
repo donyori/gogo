@@ -19,6 +19,7 @@
 package spmd
 
 import (
+	"math/rand"
 	"testing"
 	"time"
 )
@@ -26,9 +27,10 @@ import (
 func TestCommunicator_Barrier(t *testing.T) {
 	times := make([]time.Time, 4)
 	prs := Run(4, func(world Communicator, commMap map[string]Communicator) {
-		time.Sleep(time.Millisecond * 500 * time.Duration(world.Rank()))
+		r := world.Rank()
+		time.Sleep(time.Millisecond * time.Duration(r))
 		world.Barrier()
-		times[world.Rank()] = time.Now()
+		times[r] = time.Now()
 	}, nil)
 	if len(prs) > 0 {
 		t.Errorf("Panic: %v.", prs)
@@ -42,4 +44,45 @@ func TestCommunicator_Barrier(t *testing.T) {
 			t.Errorf("Goroutine 0 and %d are %v apart.", i, diff)
 		}
 	}
+}
+
+func TestCommunicator_Broadcast(t *testing.T) {
+	data := [][4]interface{}{
+		{1, nil, nil, nil},
+		{2, 0.3, 4, 5},
+		{nil, nil, "Hello", nil},
+		{nil, nil, nil, complex(1, -1)},
+		{},
+	}
+	finishTimes := make([][4]time.Time, len(data))
+	rand.Seed(time.Now().UnixNano())
+	prs := Run(4, func(world Communicator, commMap map[string]Communicator) {
+		for i, array := range data {
+			r := world.Rank()
+			time.Sleep(time.Microsecond * time.Duration(rand.Int63n(1000)+100)) // Random delay.
+			msg, ok := world.Broadcast(i%4, array[r])
+			finishTimes[i][r] = time.Now()
+			if !ok {
+				t.Error("An unexpected quit signal was detected.")
+			}
+			if msg != array[i%4] {
+				t.Errorf("msg: %v != root msg: %v.", msg, array[i%4])
+			}
+		}
+	}, nil)
+	if len(prs) > 0 {
+		t.Errorf("Panic: %v.", prs)
+	}
+	for _, times := range finishTimes {
+		for i := 1; i < 4; i++ {
+			diff := times[0].Sub(times[i])
+			if diff < 0 {
+				diff = -diff
+			}
+			if diff > time.Microsecond {
+				return
+			}
+		}
+	}
+	t.Error("All broadcasts finished at the same time. Maybe an unexpected blocking exists.")
 }

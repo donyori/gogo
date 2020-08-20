@@ -25,6 +25,10 @@ type context struct {
 	Ctrl       *controller     // Controller.
 	Comms      []*communicator // List of communicators.
 	WorldRanks []int           // List of world ranks of the goroutines, corresponding to Comms.
+
+	// List of channel maps for cluster communication.
+	// Only for chanDispr.
+	ChanMaps [numCOp]map[int64]*chanCntr
 }
 
 // Create a new context.
