@@ -19,7 +19,6 @@
 package spmd
 
 import (
-	"math/rand"
 	"testing"
 	"time"
 )
@@ -48,18 +47,18 @@ func TestCommunicator_Barrier(t *testing.T) {
 
 func TestCommunicator_Broadcast(t *testing.T) {
 	data := [][4]interface{}{
-		{1, nil, nil, nil},
+		{1},
 		{2, 0.3, 4, 5},
-		{nil, nil, "Hello", nil},
+		{nil, nil, "Hello"},
 		{nil, nil, nil, complex(1, -1)},
 		{},
 	}
 	finishTimes := make([][4]time.Time, len(data))
-	rand.Seed(time.Now().UnixNano())
-	prs := Run(4, func(world Communicator, commMap map[string]Communicator) {
+	ctrl := New(4, func(world Communicator, commMap map[string]Communicator) {
 		for i, array := range data {
+			world.Barrier()
 			r := world.Rank()
-			time.Sleep(time.Microsecond * time.Duration(rand.Int63n(1000)+100)) // Random delay.
+			time.Sleep(time.Millisecond * 10 * time.Duration((r-i%4+4)%4)) // Make goroutines asynchronous, and let the sender go first.
 			msg, ok := world.Broadcast(i%4, array[r])
 			finishTimes[i][r] = time.Now()
 			if !ok {
@@ -69,20 +68,28 @@ func TestCommunicator_Broadcast(t *testing.T) {
 				t.Errorf("msg: %v != root msg: %v.", msg, array[i%4])
 			}
 		}
-	}, nil)
-	if len(prs) > 0 {
+	}, nil).(*controller)
+	ctrl.Run()
+	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("Panic: %v.", prs)
 	}
+	for i, m := range ctrl.World.ChanMaps {
+		if n := len(m); n > 0 {
+			t.Errorf("Channel map %d is NOT clean. %d element(s) remained.", i, n)
+		}
+	}
 	for _, times := range finishTimes {
-		for i := 1; i < 4; i++ {
-			diff := times[0].Sub(times[i])
-			if diff < 0 {
-				diff = -diff
-			}
-			if diff > time.Microsecond {
-				return
+		for i := 0; i < 3; i++ {
+			for j := i + 1; j < 4; j++ {
+				diff := times[j].Sub(times[i])
+				if diff < 0 {
+					diff = -diff
+				}
+				if diff < time.Microsecond {
+					t.Error("Two broadcasts finished at the same time. Maybe an unexpected blocking exists.")
+					return
+				}
 			}
 		}
 	}
-	t.Error("All broadcasts finished at the same time. Maybe an unexpected blocking exists.")
 }

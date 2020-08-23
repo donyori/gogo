@@ -21,6 +21,7 @@ package spmd
 import (
 	"fmt"
 
+	"github.com/donyori/gogo/container/sequence"
 	"github.com/donyori/gogo/errors"
 )
 
@@ -55,6 +56,7 @@ type Communicator interface {
 	Barrier() bool
 
 	// Broadcast the message x from the root to others in this group.
+	//
 	// The method will not wait for all goroutines to finish the broadcast.
 	// To synchronize all goroutines, use method Barrier.
 	//
@@ -67,6 +69,24 @@ type Communicator interface {
 	// It returns the message to be broadcast (equals to x of the root) and
 	// an indicator ok. ok is false iff a quit signal is detected.
 	Broadcast(root int, x interface{}) (msg interface{}, ok bool)
+
+	// Equally divide the message x of the root into n parts,
+	// where n = NumGoroutine(), and then scatter them
+	// to all goroutines (including the root) in this group
+	// in turn according to their ranks.
+	//
+	// The method will not wait for all goroutines to finish the scattering.
+	// To synchronize all goroutines, use method Barrier.
+	//
+	// root is the rank of the sender goroutine in this group.
+	// It will panic if root is out of range.
+	//
+	// For the root, x is the message to be scattered.
+	// For others, x can be anything (including nil) and will be ignored.
+	//
+	// It returns the received message and an indicator ok.
+	// ok is false iff a quit signal is detected.
+	Scatter(root int, x sequence.Sequence) (msg sequence.Array, ok bool)
 }
 
 // Constants representing cluster communication operations of Communicator.
@@ -81,8 +101,8 @@ const (
 
 // An implementation of interface Communicator.
 type communicator struct {
-	Ctx *context              // Context of the goroutine group.
-	Cdc chan chan interface{} // Channel for receiving channel form the channel dispatcher.
+	Ctx *context         // Context of the goroutine group.
+	Cdc chan interface{} // Channel for receiving channels form the channel dispatcher.
 	// Counters for cluster communication operations.
 	// Only for method chanDispr.Run.
 	COpCntrs [numCOp]int64
@@ -96,7 +116,7 @@ type communicator struct {
 func newCommunicator(ctx *context, rank int) *communicator {
 	comm := &communicator{
 		Ctx:  ctx,
-		Cdc:  make(chan chan interface{}),
+		Cdc:  make(chan interface{}, 1),
 		rank: rank,
 	}
 	if rank > 0 {
@@ -176,10 +196,11 @@ func (comm *communicator) Broadcast(root int, x interface{}) (msg interface{}, o
 	if n <= 1 {
 		return x, !comm.IsQuit()
 	}
-	c, ok := comm.queryChannel(cOpBcast)
+	chanItf, ok := comm.queryChannels(cOpBcast)
 	if !ok {
 		return
 	}
+	c := chanItf.(chan interface{})
 	if comm.rank != root {
 		select {
 		case <-comm.Ctx.Ctrl.QuitC:
@@ -199,7 +220,15 @@ func (comm *communicator) Broadcast(root int, x interface{}) (msg interface{}, o
 	return
 }
 
-func (comm *communicator) queryChannel(op int) (c chan interface{}, ok bool) {
+func (comm *communicator) Scatter(root int, x sequence.Sequence) (msg sequence.Array, ok bool) {
+	panic("implement me")
+}
+
+// Query channels from the channel dispatcher.
+//
+// It returns the channel, or list of channels, as interface{},
+// and an indicator ok. ok is false iff a quit signal is detected.
+func (comm *communicator) queryChannels(op int) (chanItf interface{}, ok bool) {
 	select {
 	case <-comm.Ctx.Ctrl.QuitC:
 		return
@@ -207,7 +236,7 @@ func (comm *communicator) queryChannel(op int) (c chan interface{}, ok bool) {
 	}
 	select {
 	case <-comm.Ctx.Ctrl.QuitC:
-	case c = <-comm.Cdc:
+	case chanItf = <-comm.Cdc:
 		ok = true
 	}
 	return

@@ -18,9 +18,9 @@
 
 package spmd
 
-// Combination of channel and counter.
+// Combination of channel or list of channels, and counter.
 type chanCntr struct {
-	Chan chan interface{}
+	Chan interface{}
 	Cntr int
 }
 
@@ -49,6 +49,7 @@ func (cd *chanDispr) Run(quitChan <-chan struct{}) {
 		ctx   *context
 		m     map[int64]*chanCntr
 		cc    *chanCntr
+		cs    []chan interface{}
 	)
 	for {
 		select {
@@ -76,9 +77,15 @@ func (cd *chanDispr) Run(quitChan <-chan struct{}) {
 		if cc == nil {
 			n = len(ctx.Comms) - 1
 			if n > 0 {
-				cc = &chanCntr{
-					Chan: make(chan interface{}, n),
-					Cntr: n,
+				cc = &chanCntr{Cntr: n}
+				if op != cOpScatter {
+					cc.Chan = make(chan interface{}, n)
+				} else {
+					cs = make([]chan interface{}, n)
+					for i := range cs {
+						cs[i] = make(chan interface{}, 1)
+					}
+					cc.Chan, cs = cs, nil
 				}
 				m[cntr] = cc
 			} else {
@@ -96,5 +103,6 @@ func (cd *chanDispr) Run(quitChan <-chan struct{}) {
 			return
 		case comm.Cdc <- cc.Chan:
 		}
+		comm, ctx, m, cc = nil, nil, nil, nil // Reset variables to enable GC to clear contexts that are no longer used.
 	}
 }
