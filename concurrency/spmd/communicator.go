@@ -189,11 +189,7 @@ func (comm *communicator) Barrier() bool {
 }
 
 func (comm *communicator) Broadcast(root int, x interface{}) (msg interface{}, ok bool) {
-	n := len(comm.Ctx.Comms)
-	if root < 0 || root >= n {
-		panic(errors.AutoMsg(fmt.Sprintf("root %d is out of range (n: %d)", root, n)))
-	}
-	if n <= 1 {
+	if comm.checkRootAndN(root) {
 		return x, !comm.IsQuit()
 	}
 	chanItf, ok := comm.queryChannels(cOpBcast)
@@ -208,7 +204,11 @@ func (comm *communicator) Broadcast(root int, x interface{}) (msg interface{}, o
 		case msg = <-c:
 		}
 	} else {
-		for i := 1; i < n; i++ {
+		if x == nil {
+			close(c)
+			return
+		}
+		for i, n := 1, len(comm.Ctx.Comms); i < n; i++ {
 			select {
 			case <-comm.Ctx.Ctrl.QuitC:
 				return nil, false
@@ -221,7 +221,83 @@ func (comm *communicator) Broadcast(root int, x interface{}) (msg interface{}, o
 }
 
 func (comm *communicator) Scatter(root int, x sequence.Sequence) (msg sequence.Array, ok bool) {
-	panic("implement me")
+	if comm.checkRootAndN(root) {
+		if x != nil {
+			if a, b := x.(sequence.Array); b {
+				msg = a
+			} else {
+				da := sequence.NewGeneralDynamicArray(x.Len())
+				da.Append(x)
+				msg = da
+			}
+		}
+		return msg, !comm.IsQuit()
+	}
+	chanItf, ok := comm.queryChannels(cOpScatter)
+	if !ok {
+		return
+	}
+	cs := chanItf.([]chan interface{})
+	if comm.rank != root {
+		idx := comm.rank
+		if idx > root {
+			idx--
+		}
+		select {
+		case <-comm.Ctx.Ctrl.QuitC:
+			return nil, false
+		case itf := <-cs[idx]:
+			if itf != nil {
+				msg = itf.(sequence.Array)
+			}
+		}
+	} else {
+		if x == nil || x.Len() <= 0 {
+			for _, c := range cs {
+				close(c)
+			}
+			return
+		}
+		size := x.Len()
+		a, b := x.(sequence.Array)
+		if !b {
+			da := sequence.NewGeneralDynamicArray(size)
+			da.Append(x)
+			a = da
+		}
+		n, idx, cIdx := len(comm.Ctx.Comms), 0, 0
+		q, r := size/n, size%n
+		inc := q + 1
+		var chunk sequence.Array
+		for i := 0; i < n; i++ {
+			if i == r {
+				inc--
+			}
+			chunk = a.Slice(idx, idx+inc)
+			idx += inc
+			if i != root {
+				select {
+				case <-comm.Ctx.Ctrl.QuitC:
+					return nil, false
+				case cs[cIdx] <- chunk:
+					cIdx++
+				}
+			} else {
+				msg = chunk
+			}
+		}
+	}
+	return
+}
+
+// It panics if root is out of range.
+// It returns true iff comm.NumGoroutine() <= 1.
+func (comm *communicator) checkRootAndN(root int) bool {
+	n := len(comm.Ctx.Comms)
+	if root < 0 || root >= n {
+		panic(errors.AutoMsgWithStrategy(fmt.Sprintf("root %d is out of range (n: %d)", root, n), -1, 1))
+	}
+	return n <= 1
 }
 
 // Query channels from the channel dispatcher.

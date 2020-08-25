@@ -21,6 +21,8 @@ package spmd
 import (
 	"testing"
 	"time"
+
+	"github.com/donyori/gogo/container/sequence"
 )
 
 func TestCommunicator_Barrier(t *testing.T) {
@@ -55,17 +57,87 @@ func TestCommunicator_Broadcast(t *testing.T) {
 	}
 	finishTimes := make([][4]time.Time, len(data))
 	ctrl := New(4, func(world Communicator, commMap map[string]Communicator) {
-		for i, array := range data {
+		for i, a := range data {
 			world.Barrier()
 			r := world.Rank()
 			time.Sleep(time.Millisecond * 10 * time.Duration((r-i%4+4)%4)) // Make goroutines asynchronous, and let the sender go first.
-			msg, ok := world.Broadcast(i%4, array[r])
+			msg, ok := world.Broadcast(i%4, a[r])
 			finishTimes[i][r] = time.Now()
 			if !ok {
-				t.Error("An unexpected quit signal was detected.")
+				t.Errorf("Goroutine %d: An unexpected quit signal was detected.", r)
 			}
-			if msg != array[i%4] {
-				t.Errorf("msg: %v != root msg: %v.", msg, array[i%4])
+			if msg != a[i%4] {
+				t.Errorf("Goroutine %d: msg: %v != root msg: %v.", r, msg, a[i%4])
+			}
+		}
+	}, nil).(*controller)
+	ctrl.Run()
+	if prs := ctrl.PanicRecords(); len(prs) > 0 {
+		t.Errorf("Panic: %v.", prs)
+	}
+	for i, m := range ctrl.World.ChanMaps {
+		if n := len(m); n > 0 {
+			t.Errorf("Channel map %d is NOT clean. %d element(s) remained.", i, n)
+		}
+	}
+	for _, times := range finishTimes {
+		for i := 0; i < 3; i++ {
+			for j := i + 1; j < 4; j++ {
+				diff := times[j].Sub(times[i])
+				if diff < 0 {
+					diff = -diff
+				}
+				if diff < time.Microsecond {
+					t.Error("Two broadcasts finished at the same time. Maybe an unexpected blocking exists.")
+					return
+				}
+			}
+		}
+	}
+}
+
+func TestCommunicator_Scatter(t *testing.T) {
+	array := sequence.IntDynamicArray{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+	wanted := [4]sequence.IntDynamicArray{
+		{1, 2, 3},
+		{4, 5, 6},
+		{7, 8},
+		{9, 10},
+	}
+	data := [][4]sequence.IntDynamicArray{
+		{array},
+		{nil, array},
+		{nil, nil, array},
+		{nil, nil, nil, array},
+		{},
+	}
+	finishTimes := make([][4]time.Time, len(data))
+	ctrl := New(4, func(world Communicator, commMap map[string]Communicator) {
+		for i, a := range data {
+			world.Barrier()
+			r := world.Rank()
+			time.Sleep(time.Millisecond * 10 * time.Duration((r-i%4+4)%4)) // Make goroutines asynchronous, and let the sender go first.
+			msg, ok := world.Scatter(i%4, a[r])
+			finishTimes[i][r] = time.Now()
+			if !ok {
+				t.Errorf("Goroutine %d: An unexpected quit signal was detected.", r)
+			}
+			if msg == nil {
+				if i < 4 {
+					t.Errorf("Goroutine %d: msg is nil but should be %v.", r, wanted[r])
+				}
+				continue
+			}
+			ints := msg.(sequence.IntDynamicArray)
+			if ints.Len() != wanted[r].Len() {
+				t.Errorf("Goroutine %d: msg: %v != %v.", r, ints, wanted[r])
+				continue
+			}
+			for i := range ints {
+				if ints[i] != wanted[r][i] {
+					t.Errorf("Goroutine %d: msg: %v != %v.", r, ints, wanted[r])
+					break
+				}
 			}
 		}
 	}, nil).(*controller)
