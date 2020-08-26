@@ -55,14 +55,11 @@ func TestCommunicator_Broadcast(t *testing.T) {
 		{nil, nil, nil, complex(1, -1)},
 		{},
 	}
-	finishTimes := make([][4]time.Time, len(data))
 	ctrl := New(4, func(world Communicator, commMap map[string]Communicator) {
 		for i, a := range data {
 			world.Barrier()
 			r := world.Rank()
-			time.Sleep(time.Millisecond * 10 * time.Duration((r-i%4+4)%4)) // Make goroutines asynchronous, and let the sender go first.
 			msg, ok := world.Broadcast(i%4, a[r])
-			finishTimes[i][r] = time.Now()
 			if !ok {
 				t.Errorf("Goroutine %d: An unexpected quit signal was detected.", r)
 			}
@@ -78,20 +75,6 @@ func TestCommunicator_Broadcast(t *testing.T) {
 	for i, m := range ctrl.World.ChanMaps {
 		if n := len(m); n > 0 {
 			t.Errorf("Channel map %d is NOT clean. %d element(s) remained.", i, n)
-		}
-	}
-	for _, times := range finishTimes {
-		for i := 0; i < 3; i++ {
-			for j := i + 1; j < 4; j++ {
-				diff := times[j].Sub(times[i])
-				if diff < 0 {
-					diff = -diff
-				}
-				if diff < time.Microsecond {
-					t.Error("Two broadcasts finished at the same time. Maybe an unexpected blocking exists.")
-					return
-				}
-			}
 		}
 	}
 }
@@ -111,14 +94,11 @@ func TestCommunicator_Scatter(t *testing.T) {
 		{nil, nil, nil, array},
 		{},
 	}
-	finishTimes := make([][4]time.Time, len(data))
 	ctrl := New(4, func(world Communicator, commMap map[string]Communicator) {
 		for i, a := range data {
 			world.Barrier()
 			r := world.Rank()
-			time.Sleep(time.Millisecond * 10 * time.Duration((r-i%4+4)%4)) // Make goroutines asynchronous, and let the sender go first.
 			msg, ok := world.Scatter(i%4, a[r])
-			finishTimes[i][r] = time.Now()
 			if !ok {
 				t.Errorf("Goroutine %d: An unexpected quit signal was detected.", r)
 			}
@@ -148,20 +128,6 @@ func TestCommunicator_Scatter(t *testing.T) {
 	for i, m := range ctrl.World.ChanMaps {
 		if n := len(m); n > 0 {
 			t.Errorf("Channel map %d is NOT clean. %d element(s) remained.", i, n)
-		}
-	}
-	for _, times := range finishTimes {
-		for i := 0; i < 3; i++ {
-			for j := i + 1; j < 4; j++ {
-				diff := times[j].Sub(times[i])
-				if diff < 0 {
-					diff = -diff
-				}
-				if diff < time.Microsecond {
-					t.Error("Two broadcasts finished at the same time. Maybe an unexpected blocking exists.")
-					return
-				}
-			}
 		}
 	}
 }
