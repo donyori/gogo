@@ -56,15 +56,14 @@ func TestCommunicator_Broadcast(t *testing.T) {
 		{},
 	}
 	ctrl := New(4, func(world Communicator, commMap map[string]Communicator) {
+		r := world.Rank()
 		for i, a := range data {
-			world.Barrier()
-			r := world.Rank()
 			msg, ok := world.Broadcast(i%4, a[r])
 			if !ok {
-				t.Errorf("Goroutine %d: An unexpected quit signal was detected.", r)
+				t.Errorf("Goroutine %d, root %d: An unexpected quit signal was detected.", r, i%4)
 			}
 			if msg != a[i%4] {
-				t.Errorf("Goroutine %d: msg: %v != root msg: %v.", r, msg, a[i%4])
+				t.Errorf("Goroutine %d, root %d: msg: %v != root msg: %v.", r, i%4, msg, a[i%4])
 			}
 		}
 	}, nil).(*controller)
@@ -95,28 +94,70 @@ func TestCommunicator_Scatter(t *testing.T) {
 		{},
 	}
 	ctrl := New(4, func(world Communicator, commMap map[string]Communicator) {
+		r := world.Rank()
 		for i, a := range data {
-			world.Barrier()
-			r := world.Rank()
 			msg, ok := world.Scatter(i%4, a[r])
 			if !ok {
-				t.Errorf("Goroutine %d: An unexpected quit signal was detected.", r)
+				t.Errorf("Goroutine %d, root %d: An unexpected quit signal was detected.", r, i%4)
 			}
 			if msg == nil {
 				if i < 4 {
-					t.Errorf("Goroutine %d: msg is nil but should be %v.", r, wanted[r])
+					t.Errorf("Goroutine %d, root %d: msg is nil but should be %v.", r, i%4, wanted[r])
 				}
 				continue
 			}
 			ints := msg.(sequence.IntDynamicArray)
 			if ints.Len() != wanted[r].Len() {
-				t.Errorf("Goroutine %d: msg: %v != %v.", r, ints, wanted[r])
+				t.Errorf("Goroutine %d, root %d: msg: %v != %v.", r, i%4, ints, wanted[r])
 				continue
 			}
-			for i := range ints {
-				if ints[i] != wanted[r][i] {
-					t.Errorf("Goroutine %d: msg: %v != %v.", r, ints, wanted[r])
+			for k := range ints {
+				if ints[k] != wanted[r][k] {
+					t.Errorf("Goroutine %d, root %d: msg: %v != %v.", r, i%4, ints, wanted[r])
 					break
+				}
+			}
+		}
+	}, nil).(*controller)
+	ctrl.Run()
+	if prs := ctrl.PanicRecords(); len(prs) > 0 {
+		t.Errorf("Panic: %v.", prs)
+	}
+	for i, m := range ctrl.World.ChanMaps {
+		if n := len(m); n > 0 {
+			t.Errorf("Channel map %d is NOT clean. %d element(s) remained.", i, n)
+		}
+	}
+}
+
+func TestCommunicator_Gather(t *testing.T) {
+	data := [][4]interface{}{
+		{4, 3, 2, 1},
+		{1, nil, nil, 4},
+		{nil, 2, 3},
+		{},
+	}
+	ctrl := New(4, func(world Communicator, commMap map[string]Communicator) {
+		r := world.Rank()
+		for _, a := range data {
+			for root := 0; root < 4; root++ {
+				x, ok := world.Gather(root, a[r])
+				if !ok {
+					t.Errorf("Goroutine %d, root %d: An unexpected quit signal was detected.", r, root)
+				}
+				if r == root {
+					if len(x) != len(a) {
+						t.Errorf("Goroutine %d, root %d: x: %v != %v.", r, root, x, a)
+						continue
+					}
+					for k := range x {
+						if x[k] != a[k] {
+							t.Errorf("Goroutine %d, root %d: x: %v != %v.", r, root, x, a)
+							break
+						}
+					}
+				} else if x != nil {
+					t.Errorf("Goroutine %d, root %d: x != nil.", r, root)
 				}
 			}
 		}

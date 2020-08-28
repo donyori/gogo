@@ -52,6 +52,7 @@ func (cd *chanDispr) Run(quitChan <-chan struct{}) {
 		cs    []chan interface{}
 	)
 	for {
+		comm, ctx, m, cc = nil, nil, nil, nil // Reset variables to enable GC to clear contexts that are no longer used.
 		select {
 		case <-quitChan:
 			return
@@ -78,14 +79,19 @@ func (cd *chanDispr) Run(quitChan <-chan struct{}) {
 			n = len(ctx.Comms) - 1
 			if n > 0 {
 				cc = &chanCntr{Cntr: n}
-				if op != cOpScatter {
+				switch op {
+				case cOpBcast:
 					cc.Chan = make(chan interface{}, n)
-				} else {
+				case cOpScatter:
 					cs = make([]chan interface{}, n)
 					for i := range cs {
 						cs[i] = make(chan interface{}, 1)
 					}
 					cc.Chan, cs = cs, nil
+				case cOpGather:
+					cc.Chan = make(chan *sndrMsg, n)
+				default:
+					continue // Ignore invalid operation.
 				}
 				m[cntr] = cc
 			} else {
@@ -103,6 +109,5 @@ func (cd *chanDispr) Run(quitChan <-chan struct{}) {
 			return
 		case comm.Cdc <- cc.Chan:
 		}
-		comm, ctx, m, cc = nil, nil, nil, nil // Reset variables to enable GC to clear contexts that are no longer used.
 	}
 }

@@ -87,6 +87,24 @@ type Communicator interface {
 	// It returns the received message and an indicator ok.
 	// ok is false iff a quit signal is detected.
 	Scatter(root int, x sequence.Sequence) (msg sequence.Array, ok bool)
+
+	// Gather messages from all goroutines (including the root) in this group
+	// to the root.
+	//
+	// The method will not wait for all goroutines to finish the gathering.
+	// To synchronize all goroutines, use method Barrier.
+	//
+	// root is the rank of the receiver goroutine in this group.
+	// It will panic if root is out of range.
+	//
+	// msg is the message to be sent to the root.
+	//
+	// It returns the gathered messages as a list x, and an indicator ok.
+	// For the root, x is the list of messages ordered by
+	// the ranks of sender goroutines.
+	// For others, x is nil.
+	// ok is false iff a quit signal is detected.
+	Gather(root int, msg interface{}) (x []interface{}, ok bool)
 }
 
 // Constants representing cluster communication operations of Communicator.
@@ -109,6 +127,12 @@ type communicator struct {
 
 	rank int                // The rank of current goroutine.
 	bc   chan chan struct{} // A channel used for method Barrier.
+}
+
+// Combination of sender's rank and message.
+type sndrMsg struct {
+	Sndr int         // Rank of the sender.
+	Msg  interface{} // Message content.
 }
 
 // Create a new communicator.
@@ -284,6 +308,39 @@ func (comm *communicator) Scatter(root int, x sequence.Sequence) (msg sequence.A
 				}
 			} else {
 				msg = chunk
+			}
+		}
+	}
+	return
+}
+
+func (comm *communicator) Gather(root int, msg interface{}) (x []interface{}, ok bool) {
+	if comm.checkRootAndN(root) {
+		return []interface{}{msg}, !comm.IsQuit()
+	}
+	chanItf, ok := comm.queryChannels(cOpGather)
+	if !ok {
+		return
+	}
+	c := chanItf.(chan *sndrMsg)
+	if comm.rank != root {
+		select {
+		case <-comm.Ctx.Ctrl.QuitC:
+			return nil, false
+		case c <- &sndrMsg{
+			Sndr: comm.rank,
+			Msg:  msg,
+		}:
+		}
+	} else {
+		x = make([]interface{}, len(comm.Ctx.Comms))
+		x[comm.rank] = msg
+		for i, n := 1, len(x); i < n; i++ {
+			select {
+			case <-comm.Ctx.Ctrl.QuitC:
+				return nil, false
+			case m := <-c:
+				x[m.Sndr] = m.Msg
 			}
 		}
 	}
