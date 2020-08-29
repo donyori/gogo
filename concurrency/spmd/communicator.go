@@ -45,11 +45,35 @@ type Communicator interface {
 	// Broadcast a quit signal to quit the job.
 	Quit()
 
+	// Send the message msg to another goroutine.
+	// The method will block until the destination goroutine receives
+	// the message successfully, or a quit signal is detected.
+	// It will panic if the destination goroutine is the sender itself.
+	//
+	// dest is the rank of the destination goroutine.
+	// msg is the message to be sent.
+	//
+	// It returns true if the communication succeeds,
+	// otherwise (e.g., a quit signal is detected), false.
+	Send(dest int, msg interface{}) bool
+
+	// Receive the message from another goroutine.
+	// The method will block until it receives the message from
+	// the source goroutine successfully, or a quit signal is detected.
+	// It will panic if the source goroutine is the receiver itself.
+	//
+	// src is the rank of the source goroutine.
+	//
+	// It returns the message received from the source, and an indicator ok.
+	// ok is true if the communication succeeds,
+	// otherwise (e.g., a quit signal is detected), false.
+	Receive(src int) (msg interface{}, ok bool)
+
 	// Block until all other goroutines in this group call method Barrier
 	// of their own communicators, or a quit signal is detected.
 	//
 	// It returns true if all other goroutines call methods Barrier
-	// successfully, otherwise (a quit signal is detected), false.
+	// successfully, otherwise (e.g., a quit signal is detected), false.
 	//
 	// It is used to make all goroutines synchronous,
 	// i.e., consistent in the execution progress.
@@ -126,7 +150,8 @@ type communicator struct {
 	COpCntrs [numCOp]int64
 
 	rank int                // The rank of current goroutine.
-	bc   chan chan struct{} // A channel used for method Barrier.
+	pcs  []chan interface{} // List of channels for point-to-point communication.
+	bc   chan chan struct{} // Channel for method Barrier.
 }
 
 // Combination of sender's rank and message.
@@ -142,9 +167,13 @@ func newCommunicator(ctx *context, rank int) *communicator {
 		Ctx:  ctx,
 		Cdc:  make(chan interface{}, 1),
 		rank: rank,
+		pcs:  make([]chan interface{}, len(ctx.WorldRanks)-1),
 	}
 	if rank > 0 {
 		comm.bc = make(chan chan struct{})
+	}
+	for i := range comm.pcs {
+		comm.pcs[i] = make(chan interface{})
 	}
 	return comm
 }
@@ -172,6 +201,38 @@ func (comm *communicator) IsQuit() bool {
 
 func (comm *communicator) Quit() {
 	comm.Ctx.Ctrl.Quit()
+}
+
+func (comm *communicator) Send(dest int, msg interface{}) bool {
+	if comm.rank == dest {
+		panic(errors.AutoMsg("dest is the sender itself"))
+	}
+	idx := comm.rank
+	if idx > dest {
+		idx--
+	}
+	select {
+	case <-comm.Ctx.Ctrl.QuitC:
+		return false
+	case comm.Ctx.Comms[dest].pcs[idx] <- msg:
+		return true
+	}
+}
+
+func (comm *communicator) Receive(src int) (msg interface{}, ok bool) {
+	if comm.rank == src {
+		panic(errors.AutoMsg("src is the receiver itself"))
+	}
+	idx := src
+	if idx > comm.rank {
+		idx--
+	}
+	select {
+	case <-comm.Ctx.Ctrl.QuitC:
+	case msg = <-comm.pcs[idx]:
+		ok = true
+	}
+	return
 }
 
 func (comm *communicator) Barrier() bool {
@@ -214,7 +275,11 @@ func (comm *communicator) Barrier() bool {
 
 func (comm *communicator) Broadcast(root int, x interface{}) (msg interface{}, ok bool) {
 	if comm.checkRootAndN(root) {
-		return x, !comm.IsQuit()
+		ok = !comm.IsQuit()
+		if ok {
+			msg = x
+		}
+		return
 	}
 	chanItf, ok := comm.queryChannels(cOpBcast)
 	if !ok {
@@ -246,7 +311,8 @@ func (comm *communicator) Broadcast(root int, x interface{}) (msg interface{}, o
 
 func (comm *communicator) Scatter(root int, x sequence.Sequence) (msg sequence.Array, ok bool) {
 	if comm.checkRootAndN(root) {
-		if x != nil {
+		ok = !comm.IsQuit()
+		if ok && x != nil {
 			if a, b := x.(sequence.Array); b {
 				msg = a
 			} else {
@@ -255,7 +321,7 @@ func (comm *communicator) Scatter(root int, x sequence.Sequence) (msg sequence.A
 				msg = da
 			}
 		}
-		return msg, !comm.IsQuit()
+		return
 	}
 	chanItf, ok := comm.queryChannels(cOpScatter)
 	if !ok {
@@ -316,7 +382,11 @@ func (comm *communicator) Scatter(root int, x sequence.Sequence) (msg sequence.A
 
 func (comm *communicator) Gather(root int, msg interface{}) (x []interface{}, ok bool) {
 	if comm.checkRootAndN(root) {
-		return []interface{}{msg}, !comm.IsQuit()
+		ok = !comm.IsQuit()
+		if ok {
+			x = []interface{}{msg}
+		}
+		return
 	}
 	chanItf, ok := comm.queryChannels(cOpGather)
 	if !ok {

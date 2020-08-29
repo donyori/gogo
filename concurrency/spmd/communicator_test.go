@@ -25,6 +25,70 @@ import (
 	"github.com/donyori/gogo/container/sequence"
 )
 
+func TestCommunicator_Send_Receive(t *testing.T) {
+	dataFn := func(src, dest int) int {
+		return src*10 + dest
+	}
+	prs := Run(4, func(world Communicator, commMap map[string]Communicator) {
+		r := world.Rank()
+		var src, dest int
+		sendTest := func() {
+			if !world.Send(dest, dataFn(r, dest)) {
+				t.Errorf("Goroutine %d, dest %d: Send returns false.", r, dest)
+			}
+		}
+		recvTest := func() {
+			msg, ok := world.Receive(src)
+			if !ok {
+				t.Errorf("Goroutine %d, src %d: Receive returns false as ok.", r, src)
+			} else if wanted := dataFn(src, r); msg != wanted {
+				t.Errorf("Goroutine %d, src %d: Receive msg: %v != %d.", r, src, msg, wanted)
+			}
+		}
+		switch r {
+		case 0:
+			for _, dest = range []int{2, 3, 1} {
+				sendTest()
+			}
+			for _, src = range []int{1, 2, 3} {
+				recvTest()
+			}
+		case 1:
+			for _, dest = range []int{3, 2} {
+				sendTest()
+			}
+			src = 0
+			recvTest()
+			dest = 0
+			sendTest()
+			for _, src = range []int{3, 2} {
+				recvTest()
+			}
+		case 2:
+			for _, src = range []int{0, 1} {
+				recvTest()
+			}
+			dest = 3
+			sendTest()
+			src = 3
+			recvTest()
+			for _, dest = range []int{0, 1} {
+				sendTest()
+			}
+		case 3:
+			for _, src = range []int{1, 0, 2} {
+				recvTest()
+			}
+			for _, dest = range []int{2, 1, 0} {
+				sendTest()
+			}
+		}
+	}, nil)
+	if len(prs) > 0 {
+		t.Errorf("Panic: %v.", prs)
+	}
+}
+
 func TestCommunicator_Barrier(t *testing.T) {
 	times := make([]time.Time, 4)
 	prs := Run(4, func(world Communicator, commMap map[string]Communicator) {
