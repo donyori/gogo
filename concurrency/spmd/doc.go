@@ -18,4 +18,14 @@
 
 // Package spmd provides a basic framework for SPMD
 // (single program, multiple data) style programming.
+//
+// To use this framework, you should start with the function New to create
+// a controller and custom your business function biz.
+// And then call the Launch method to run the job.
+// Finally, call the Wait method to wait for the job to finish.
+// Or simply, you can start with the function Run, which combines New, Launch,
+// and Wait together.
+//
+// In the business function biz,
+// you can communicate with other goroutines via Communicator.
 package spmd
