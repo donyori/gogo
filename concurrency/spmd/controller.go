@@ -35,7 +35,7 @@ type Controller interface {
 	// This method will NOT wait until the job ends.
 	// Use method Wait if you want to wait for that.
 	//
-	// Note that Launch can affect only once.
+	// Note that Launch can take effect only once.
 	// To do the same job again, create a new Controller
 	// with the same parameters.
 	Launch()
@@ -175,6 +175,7 @@ type controller struct {
 	wg       sync.WaitGroup // A wait group for the main process.
 	lnchOnce sync.Once      // For launching the job.
 	quitOnce sync.Once      // For closing QuitC.
+	cdOnce   sync.Once      // For launching the channel dispatcher.
 	// List of commMap used by method Launch,
 	// will be nil after calling Launch.
 	lnchCommMaps []map[string]Communicator
@@ -184,7 +185,6 @@ func (ctrl *controller) Launch() {
 	ctrl.lnchOnce.Do(func() {
 		n := len(ctrl.World.Comms)
 		commMaps := ctrl.lnchCommMaps
-		go ctrl.Cd.Run(ctrl.QuitC)
 		ctrl.wg.Add(n)
 		for i := 0; i < n; i++ {
 			go func(rank int) {
@@ -232,4 +232,12 @@ func (ctrl *controller) QuitChan() <-chan struct{} {
 
 func (ctrl *controller) PanicRecords() []PanicRec {
 	return ctrl.pr.List()
+}
+
+// Launch channel dispatcher in a daemon goroutine.
+// This method takes effect only once.
+func (ctrl *controller) launchChannelDispatcher() {
+	ctrl.cdOnce.Do(func() {
+		go ctrl.Cd.Run(ctrl.QuitC)
+	})
 }

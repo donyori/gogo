@@ -432,6 +432,7 @@ func (comm *communicator) checkRootAndN(root int) bool {
 // It returns the channel, or list of channels, as interface{},
 // and an indicator ok. ok is false iff a quit signal is detected.
 func (comm *communicator) queryChannels(op int) (chanItf interface{}, ok bool) {
+	comm.Ctx.Ctrl.launchChannelDispatcher()
 	select {
 	case <-comm.Ctx.Ctrl.QuitC:
 		return
