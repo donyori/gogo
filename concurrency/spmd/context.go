@@ -21,10 +21,11 @@ package spmd
 // Context of the communicators.
 // Each goroutine group has its own context.
 type context struct {
-	Id         string          // ID of the group.
-	Ctrl       *controller     // Controller.
-	Comms      []*communicator // List of communicators.
-	WorldRanks []int           // List of world ranks of the goroutines, corresponding to Comms.
+	Id         string           // ID of the group.
+	Ctrl       *controller      // Controller.
+	Comms      []*communicator  // List of communicators.
+	WorldRanks []int            // List of world ranks of the goroutines, corresponding to Comms.
+	PubC       chan *sndrMsgRxc // Public channel for SendToAny, ReceiveFromAny, and ReceiveOnlyAny.
 
 	// List of channel maps for cluster communication.
 	// Only for chanDispr.
@@ -40,6 +41,7 @@ func newContext(ctrl *controller, id string, worldRanks []int) *context {
 		Ctrl:       ctrl,
 		Comms:      make([]*communicator, n),
 		WorldRanks: make([]int, n),
+		PubC:       make(chan *sndrMsgRxc),
 	}
 	copy(ctx.WorldRanks, worldRanks) // Keep a copy to avoid unexpected modifications.
 	for i := 0; i < n; i++ {

@@ -46,6 +46,7 @@ type Communicator interface {
 	Quit()
 
 	// Send the message msg to another goroutine.
+	//
 	// The method will block until the destination goroutine receives
 	// the message successfully, or a quit signal is detected.
 	// It will panic if the destination goroutine is the sender itself.
@@ -57,7 +58,8 @@ type Communicator interface {
 	// otherwise (e.g., a quit signal is detected), false.
 	Send(dest int, msg interface{}) bool
 
-	// Receive the message from another goroutine.
+	// Receive a message from another goroutine.
+	//
 	// The method will block until it receives the message from
 	// the source goroutine successfully, or a quit signal is detected.
 	// It will panic if the source goroutine is the receiver itself.
@@ -68,6 +70,38 @@ type Communicator interface {
 	// ok is true if the communication succeeds,
 	// otherwise (e.g., a quit signal is detected), false.
 	Receive(src int) (msg interface{}, ok bool)
+
+	// Send the message msg to any other goroutine.
+	// The destination goroutine is unspecified.
+	// It will send the message to the first one ready for receiving it.
+	//
+	// The method will block until a goroutine receives the message
+	// successfully, or a quit signal is detected.
+	// It will panic if there is only one goroutine in this group.
+	//
+	// It returns the rank of the receiver.
+	// If a quit signal is detected, it returns -1.
+	SendToAny(msg interface{}) int
+
+	// Receive a message from any other goroutine.
+	// It can receive the message sent by both the method Send and SendToAny.
+	// Note that when there are two or more messages sent to this goroutine,
+	// this method does not guarantee that the first message will be received
+	// first. Which message will be received depends on the implementation.
+	//
+	// The method will block until a message is received successfully,
+	// or a quit signal is detected.
+	// It will panic if there is only one goroutine in this group.
+	//
+	// It returns the rank of the sender and the received message.
+	// If a quit signal is detected, it returns src to -1 and msg to nil.
+	ReceiveFromAny() (src int, msg interface{})
+
+	// Perform similar to the method ReceiveFromAny.
+	// But it can only receive the message sent by the method SendToAny.
+	// The returned values, and other matters, are all the same as
+	// that of the method ReceiveFromAny.
+	ReceiveOnlyAny() (src int, msg interface{})
 
 	// Block until all other goroutines in this group call method Barrier
 	// of their own communicators, or a quit signal is detected.
@@ -160,6 +194,13 @@ type sndrMsg struct {
 	Msg  interface{} // Message content.
 }
 
+// Combination of sender's rank, message, and a channel for
+// reporting the receiver's rank.
+type sndrMsgRxc struct {
+	sndrMsg
+	RxC chan int
+}
+
 // Create a new communicator.
 // Only for function newContext.
 func newCommunicator(ctx *context, rank int) *communicator {
@@ -233,6 +274,76 @@ func (comm *communicator) Receive(src int) (msg interface{}, ok bool) {
 		ok = true
 	}
 	return
+}
+
+func (comm *communicator) SendToAny(msg interface{}) int {
+	if len(comm.Ctx.Comms) == 1 {
+		panic(errors.AutoMsg("only one goroutine in this group"))
+	}
+	rxC := make(chan int)
+	m := &sndrMsgRxc{
+		sndrMsg: sndrMsg{
+			Sndr: comm.rank,
+			Msg:  msg,
+		},
+		RxC: rxC,
+	}
+	select {
+	case <-comm.Ctx.Ctrl.QuitC:
+		return -1
+	case comm.Ctx.PubC <- m:
+	}
+	select {
+	case <-comm.Ctx.Ctrl.QuitC:
+		return -1
+	case dest := <-rxC:
+		return dest
+	}
+}
+
+func (comm *communicator) ReceiveFromAny() (src int, msg interface{}) {
+	if len(comm.Ctx.Comms) == 1 {
+		panic(errors.AutoMsg("only one goroutine in this group"))
+	}
+	i, n := 0, len(comm.pcs)
+	for {
+		select {
+		case <-comm.Ctx.Ctrl.QuitC:
+			return -1, nil
+		case m := <-comm.Ctx.PubC:
+			select {
+			case <-comm.Ctx.Ctrl.QuitC:
+				return -1, nil
+			case m.RxC <- comm.rank:
+				return m.Sndr, m.Msg
+			}
+		case msg = <-comm.pcs[i]:
+			src = i
+			if i >= comm.rank {
+				src++
+			}
+			return
+		default:
+			i = (i + 1) % n
+		}
+	}
+}
+
+func (comm *communicator) ReceiveOnlyAny() (src int, msg interface{}) {
+	if len(comm.Ctx.Comms) == 1 {
+		panic(errors.AutoMsg("only one goroutine in this group"))
+	}
+	select {
+	case <-comm.Ctx.Ctrl.QuitC:
+		return -1, nil
+	case m := <-comm.Ctx.PubC:
+		select {
+		case <-comm.Ctx.Ctrl.QuitC:
+			return -1, nil
+		case m.RxC <- comm.rank:
+			return m.Sndr, m.Msg
+		}
+	}
 }
 
 func (comm *communicator) Barrier() bool {
