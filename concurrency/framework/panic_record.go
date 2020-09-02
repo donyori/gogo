@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package spmd
+package framework
 
 import (
 	"fmt"
@@ -41,26 +41,33 @@ func (pr PanicRec) Error() string {
 	return pr.String()
 }
 
-// Panic records.
+// Panic records, used by the framework codes.
 // It is safe for concurrent use by multiple goroutines.
-type panicRecords struct {
+type PanicRecords struct {
 	recs []PanicRec   // List of panic records.
 	lock sync.RWMutex // Lock for concurrent use.
 }
 
-func (pr *panicRecords) Len() int {
+// Return the number of records.
+func (pr *PanicRecords) Len() int {
 	pr.lock.RLock()
 	defer pr.lock.RUnlock()
 	return len(pr.recs)
 }
 
-func (pr *panicRecords) List() []PanicRec {
+// Output the panic records as a slice of PanicRec.
+// It returns nil if there is no panic record.
+func (pr *PanicRecords) List() []PanicRec {
 	pr.lock.RLock()
 	defer pr.lock.RUnlock()
 	return append(pr.recs[:0:0], pr.recs...) // Return a copy of pr.recs.
 }
 
-func (pr *panicRecords) Append(panicRecs ...PanicRec) {
+// Append new panic records to the back of its panic record list.
+func (pr *PanicRecords) Append(panicRecs ...PanicRec) {
+	if len(panicRecs) == 0 {
+		return
+	}
 	pr.lock.Lock()
 	defer pr.lock.Unlock()
 	pr.recs = append(pr.recs, panicRecs...)

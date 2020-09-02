@@ -24,45 +24,10 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/donyori/gogo/concurrency/framework"
 	"github.com/donyori/gogo/container/sequence"
 	"github.com/donyori/gogo/errors"
 )
-
-// A controller to launch, quit and wait for the job.
-type Controller interface {
-	// Launch the job.
-	//
-	// This method will NOT wait until the job ends.
-	// Use method Wait if you want to wait for that.
-	//
-	// Note that Launch can take effect only once.
-	// To do the same job again, create a new Controller
-	// with the same parameters.
-	Launch()
-
-	// Quit the job.
-	//
-	// This method will NOT wait until the job ends.
-	// Use method Wait if you want to wait for that.
-	Quit()
-
-	// Wait for the job to finish or quit.
-	// It returns the number of panic goroutines.
-	Wait() int
-
-	// Launch the job and wait for it.
-	// It returns the number of panic goroutines.
-	Run() int
-
-	// Return the number of goroutines to process this job.
-	NumGoroutine() int
-
-	// Return the channel for the quit signal.
-	QuitChan() <-chan struct{}
-
-	// Return the panic records.
-	PanicRecords() []PanicRec
-}
 
 // Business handler.
 //
@@ -100,7 +65,7 @@ var groupIdPattern = regexp.MustCompile(`[A-Za-z0-9][A-Za-z0-9_]*`)
 // in the list.
 // The client can get the communicators of custom groups via argument commMap
 // of the business function biz.
-func New(n int, biz BusinessFunc, groupMap map[string][]int) Controller {
+func New(n int, biz BusinessFunc, groupMap map[string][]int) framework.Controller {
 	if biz == nil {
 		panic(errors.AutoMsg("biz is nil"))
 	}
@@ -158,7 +123,7 @@ func New(n int, biz BusinessFunc, groupMap map[string][]int) Controller {
 // It returns the panic records of the Controller.
 //
 // The arguments n, biz, and groupMap are the same as those of function New.
-func Run(n int, biz BusinessFunc, groupMap map[string][]int) []PanicRec {
+func Run(n int, biz BusinessFunc, groupMap map[string][]int) []framework.PanicRec {
 	ctrl := New(n, biz, groupMap)
 	ctrl.Run()
 	return ctrl.PanicRecords()
@@ -170,12 +135,12 @@ type controller struct {
 	World *context      // World context.
 	Cd    *chanDispr    // Channel dispatcher.
 
-	biz      BusinessFunc   // Business function.
-	pr       panicRecords   // Panic records.
-	wg       sync.WaitGroup // A wait group for the main process.
-	lnchOnce sync.Once      // For launching the job.
-	quitOnce sync.Once      // For closing QuitC.
-	cdOnce   sync.Once      // For launching the channel dispatcher.
+	biz      BusinessFunc           // Business function.
+	pr       framework.PanicRecords // Panic records.
+	wg       sync.WaitGroup         // A wait group for the main process.
+	lnchOnce sync.Once              // For launching the job.
+	quitOnce sync.Once              // For closing QuitC.
+	cdOnce   sync.Once              // For launching the channel dispatcher.
 	// List of commMap used by method Launch,
 	// will be nil after calling Launch.
 	lnchCommMaps []map[string]Communicator
@@ -191,7 +156,7 @@ func (ctrl *controller) Launch() {
 				defer func() {
 					if r := recover(); r != nil {
 						ctrl.Quit()
-						ctrl.pr.Append(PanicRec{
+						ctrl.pr.Append(framework.PanicRec{
 							Rank:    rank,
 							Content: r,
 						})
@@ -230,7 +195,7 @@ func (ctrl *controller) QuitChan() <-chan struct{} {
 	return ctrl.QuitC
 }
 
-func (ctrl *controller) PanicRecords() []PanicRec {
+func (ctrl *controller) PanicRecords() []framework.PanicRec {
 	return ctrl.pr.List()
 }
 
