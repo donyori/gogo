@@ -25,7 +25,7 @@ type context struct {
 	Ctrl       *controller      // Controller.
 	Comms      []*communicator  // List of communicators.
 	WorldRanks []int            // List of world ranks of the goroutines, corresponding to Comms.
-	PubC       chan *sndrMsgRxc // Public channel for SendToAny, ReceiveFromAny, and ReceiveOnlyAny.
+	PubC       chan *sndrMsgRxc // Public channel used by communicators.
 
 	// List of channel maps for cluster communication.
 	// Only for chanDispr.

@@ -102,64 +102,101 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 	dataFn := func(src, dest int) int {
 		return src*10 + dest
 	}
-	prs := Run(6, func(world Communicator, commMap map[string]Communicator) {
-		r := world.Rank()
-		switch r {
-		case 0, 3:
-			for _, d := range []int{2, 5} {
-				dest := world.SendToAny(dataFn(r, d))
-				if dest < 0 {
-					t.Errorf("Goroutine %d, dest %d: An unexpected quit signal was detected.", r, d)
+	prs := Run(7, func(world Communicator, commMap map[string]Communicator) {
+		if world.Rank() == 6 {
+			timer := time.AfterFunc(time.Second, func() {
+				t.Error("Timeout!")
+				world.Quit()
+			})
+			defer timer.Stop()
+			// Goroutine 6 is a progress monitor.
+			var i int
+			for i = 1; i <= 4; i++ {
+				t.Logf("Part %d starts at %v.", i, time.Now())
+				if i < 4 && !world.Barrier() {
 					return
 				}
-				if dest != d {
-					t.Errorf("Goroutine %d: dest: %d != %d.", r, dest, d)
-				}
-				if d == 2 {
+			}
+			return
+		}
+		comm := commMap["tester"]
+		r := comm.Rank()
+		var src, dest int
+		var msg interface{}
+		checkD := func(d int) {
+			if d < 0 {
+				t.Errorf("Goroutine %d, dest %d: An unexpected quit signal was detected.", r, dest)
+			} else if d != dest {
+				t.Errorf("Goroutine %d: dest: %d != %d.", r, d, dest)
+			}
+		}
+		checkSrcMsg := func() {
+			if src < 0 {
+				t.Errorf("Goroutine %d: An unexpected quit signal was detected.", r)
+			} else if wanted := dataFn(src, r); msg != wanted {
+				t.Errorf("Goroutine %d, src %d: Receive msg: %v != %d.", r, src, msg, wanted)
+			}
+		}
+		switch r {
+		case 0, 4:
+			for _, dest = range []int{2, 3, 3} {
+				checkD(comm.SendAny(dataFn(r, dest)))
+				world.Barrier()
+			}
+			if comm.Send(3, dataFn(r, 3)) {
+				t.Errorf("Goroutine %d, dest 3: Send should return false but got true.", r)
+			}
+		case 1, 5:
+			if !comm.Send(2, dataFn(r, 2)) {
+				t.Errorf("Goroutine %d, dest 2: Send returns false.", r)
+			}
+			for _, dest = range []int{2, 3} {
+				checkD(comm.SendPublic(dataFn(r, dest)))
+				world.Barrier()
+				if dest == 2 {
 					world.Barrier()
 				}
 			}
-		case 1, 4:
-			if !world.Send(2, dataFn(r, 2)) {
-				t.Errorf("Goroutine %d, dest 2: Send returns false.", r)
-			}
-			world.Barrier()
-			if world.Send(5, dataFn(r, 5)) {
-				t.Errorf("Goroutine %d, dest 5: Send should return false but got true.", r)
+			if comm.Send(3, dataFn(r, 3)) {
+				t.Errorf("Goroutine %d, dest 3: Send should return false but got true.", r)
 			}
 		case 2:
+			for i := 0; i < 6; i++ {
+				src, msg = comm.ReceiveAny()
+				checkSrcMsg()
+				// t.Logf("Goroutine %d: ReceiveAny() - src: %d, msg: %v.", r, src, msg)
+			}
+			world.Barrier()
+			world.Barrier()
+			world.Barrier()
+			if comm.Send(3, dataFn(r, 3)) {
+				t.Errorf("Goroutine %d, dest 3: Send should return false but got true.", r)
+			}
+		case 3:
+			world.Barrier()
+			for _, src = range []int{0, 4} {
+				msg, ok := comm.Receive(src)
+				if !ok {
+					t.Errorf("Goroutine %d: An unexpected quit signal was detected.", r)
+				} else if wanted := dataFn(src, r); msg != wanted {
+					t.Errorf("Goroutine %d, src %d: Receive msg: %v != %d.", r, src, msg, wanted)
+				}
+			}
+			world.Barrier()
 			for i := 0; i < 4; i++ {
-				src, msg := world.ReceiveFromAny()
-				if src < 0 {
-					t.Errorf("Goroutine %d: An unexpected quit signal was detected.", r)
-					return
-				}
-				if wanted := dataFn(src, r); msg != wanted {
-					t.Errorf("Goroutine %d, src %d: Receive msg: %v != %d.", r, src, msg, wanted)
-				}
+				src, msg = comm.ReceivePublic()
+				checkSrcMsg()
 			}
 			world.Barrier()
-		case 5:
-			world.Barrier()
-			for i := 0; i < 2; i++ {
-				src, msg := world.ReceiveOnlyAny()
-				if src < 0 {
-					t.Errorf("Goroutine %d: An unexpected quit signal was detected.", r)
-					return
-				}
-				if wanted := dataFn(src, r); msg != wanted {
-					t.Errorf("Goroutine %d, src %d: Receive msg: %v != %d.", r, src, msg, wanted)
-				}
-			}
 			time.AfterFunc(time.Microsecond, func() {
-				world.Quit() // Quit the job to let Goroutine 1, Goroutine 4, and Goroutine 5 exit.
+				comm.Quit() // Quit the job to let other goroutines exit.
 			})
-			src, msg := world.ReceiveOnlyAny()
+			src, msg = comm.ReceivePublic()
 			if src >= 0 {
-				t.Errorf("Goroutine %d: ReceiveOnlyAny should get nothing but src: %d, msg: %v.", r, src, msg)
+				t.Errorf("Goroutine %d: ReceivePublic should get nothing but src: %d, msg: %v.", r, src, msg)
 			}
 		}
-	}, nil)
+	}, map[string][]int{"tester": {0, 1, 2, 3, 4, 5}})
 	if len(prs) > 0 {
 		t.Errorf("Panic: %v.", prs)
 	}

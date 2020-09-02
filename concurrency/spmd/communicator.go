@@ -20,6 +20,7 @@ package spmd
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/donyori/gogo/container/sequence"
 	"github.com/donyori/gogo/errors"
@@ -71,37 +72,74 @@ type Communicator interface {
 	// otherwise (e.g., a quit signal is detected), false.
 	Receive(src int) (msg interface{}, ok bool)
 
-	// Send the message msg to any other goroutine.
-	// The destination goroutine is unspecified.
-	// It will send the message to the first one ready for receiving it.
+	// Send the message msg to the public channel of this group.
+	// All other goroutines can get this message from the public channel.
 	//
-	// The method will block until a goroutine receives the message
+	// The method will block until a goroutine receives this message
 	// successfully, or a quit signal is detected.
 	// It will panic if there is only one goroutine in this group.
 	//
 	// It returns the rank of the receiver.
 	// If a quit signal is detected, it returns -1.
-	SendToAny(msg interface{}) int
+	SendPublic(msg interface{}) int
 
-	// Receive a message from any other goroutine.
-	// It can receive the message sent by both the method Send and SendToAny.
-	// Note that when there are two or more messages sent to this goroutine,
-	// this method does not guarantee that the first message will be received
-	// first. Which message will be received depends on the implementation.
+	// Receive a message from the public channel of this group.
 	//
-	// The method will block until a message is received successfully,
+	// The method will block until it receives a message successfully,
 	// or a quit signal is detected.
 	// It will panic if there is only one goroutine in this group.
 	//
 	// It returns the rank of the sender and the received message.
 	// If a quit signal is detected, it returns src to -1 and msg to nil.
-	ReceiveFromAny() (src int, msg interface{})
+	ReceivePublic() (src int, msg interface{})
 
-	// Perform similar to the method ReceiveFromAny.
-	// But it can only receive the message sent by the method SendToAny.
-	// The returned values, and other matters, are all the same as
-	// that of the method ReceiveFromAny.
-	ReceiveOnlyAny() (src int, msg interface{})
+	// Send the message msg to any other goroutines.
+	// The destination goroutine is unspecified.
+	// All other goroutines can receive this message from their own channels or
+	// the public channel of this group.
+	// Note that when there are two or more goroutines ready for receiving this
+	// message, this method cannot guarantee that the first ready goroutine
+	// will receive the message first.
+	// Which message will receive it depends on the implementation.
+	//
+	// The method will block until a goroutine receives this message
+	// successfully, or a quit signal is detected.
+	// It will panic if there is only one goroutine in this group.
+	//
+	// It returns the rank of the receiver.
+	// If a quit signal is detected, it returns -1.
+	//
+	// To get higher performance, you should try to avoid using this method.
+	// If you know which goroutine will receive the message,
+	// use the method Send instead.
+	// If you just want to send the message to another goroutine and
+	// you are sure that the receiver won't wait for this message through
+	// the method Receive, use the method SendPublic instead.
+	SendAny(msg interface{}) int
+
+	// Receive a message from any other goroutines.
+	// The source goroutine is unspecified.
+	// It can receive a message from its own channel or
+	// the public channel of this group.
+	// Note that when there are two or more messages sent to this goroutine or
+	// the public channel, this method cannot guarantee that the first message
+	// will be received first.
+	// Which message will be received depends on the implementation.
+	//
+	// The method will block until it receives a message successfully,
+	// or a quit signal is detected.
+	// It will panic if there is only one goroutine in this group.
+	//
+	// It returns the rank of the sender and the received message.
+	// If a quit signal is detected, it returns src to -1 and msg to nil.
+	//
+	// To get higher performance, you should try to avoid using this method.
+	// If you know which goroutine will send the message,
+	// use the method Receive instead.
+	// If you just want to receive a message from another goroutine and
+	// you are sure that the sender won't send the message through
+	// the method Send, use the method ReceivePublic instead.
+	ReceiveAny() (src int, msg interface{})
 
 	// Block until all other goroutines in this group call method Barrier
 	// of their own communicators, or a quit signal is detected.
@@ -276,7 +314,7 @@ func (comm *communicator) Receive(src int) (msg interface{}, ok bool) {
 	return
 }
 
-func (comm *communicator) SendToAny(msg interface{}) int {
+func (comm *communicator) SendPublic(msg interface{}) int {
 	if len(comm.Ctx.Comms) == 1 {
 		panic(errors.AutoMsg("only one goroutine in this group"))
 	}
@@ -301,7 +339,91 @@ func (comm *communicator) SendToAny(msg interface{}) int {
 	}
 }
 
-func (comm *communicator) ReceiveFromAny() (src int, msg interface{}) {
+func (comm *communicator) ReceivePublic() (src int, msg interface{}) {
+	if len(comm.Ctx.Comms) == 1 {
+		panic(errors.AutoMsg("only one goroutine in this group"))
+	}
+	select {
+	case <-comm.Ctx.Ctrl.QuitC:
+		return -1, nil
+	case m := <-comm.Ctx.PubC:
+		select {
+		case <-comm.Ctx.Ctrl.QuitC:
+			return -1, nil
+		case m.RxC <- comm.rank:
+			return m.Sndr, m.Msg
+		}
+	}
+}
+
+func (comm *communicator) SendAny(msg interface{}) int {
+	if len(comm.Ctx.Comms) == 1 {
+		panic(errors.AutoMsg("only one goroutine in this group"))
+	}
+	rxC := make(chan int)
+	m := &sndrMsgRxc{
+		sndrMsg: sndrMsg{
+			Sndr: comm.rank,
+			Msg:  msg,
+		},
+		RxC: rxC,
+	}
+	n := len(comm.Ctx.Comms)
+	var dest, idx int
+	poll := func() int {
+		for dest = 0; dest < n; dest++ {
+			if dest == comm.rank {
+				dest++
+			}
+			if comm.rank > dest {
+				idx = comm.rank - 1
+			} else {
+				idx = comm.rank
+			}
+			select {
+			case <-comm.Ctx.Ctrl.QuitC:
+				return -1
+			case comm.Ctx.PubC <- m:
+				select {
+				case <-comm.Ctx.Ctrl.QuitC:
+					return -1
+				case dest := <-rxC:
+					return dest
+				}
+			case comm.Ctx.Comms[dest].pcs[idx] <- msg:
+				return dest
+			default:
+			}
+		}
+		return -2
+	}
+	pollR := poll()
+	if pollR > -2 {
+		return pollR
+	}
+	ticker := time.NewTicker(time.Duration(n-1)*50 + 100)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-comm.Ctx.Ctrl.QuitC:
+			return -1
+		case comm.Ctx.PubC <- m:
+			select {
+			case <-comm.Ctx.Ctrl.QuitC:
+				return -1
+			case dest := <-rxC:
+				return dest
+			}
+		case <-ticker.C:
+			pollR = poll()
+			if pollR > -2 {
+				return pollR
+			}
+		}
+	}
+}
+
+func (comm *communicator) ReceiveAny() (src int, msg interface{}) {
 	if len(comm.Ctx.Comms) == 1 {
 		panic(errors.AutoMsg("only one goroutine in this group"))
 	}
@@ -325,23 +447,6 @@ func (comm *communicator) ReceiveFromAny() (src int, msg interface{}) {
 			return
 		default:
 			i = (i + 1) % n
-		}
-	}
-}
-
-func (comm *communicator) ReceiveOnlyAny() (src int, msg interface{}) {
-	if len(comm.Ctx.Comms) == 1 {
-		panic(errors.AutoMsg("only one goroutine in this group"))
-	}
-	select {
-	case <-comm.Ctx.Ctrl.QuitC:
-		return -1, nil
-	case m := <-comm.Ctx.PubC:
-		select {
-		case <-comm.Ctx.Ctrl.QuitC:
-			return -1, nil
-		case m.RxC <- comm.rank:
-			return m.Sndr, m.Msg
 		}
 	}
 }
