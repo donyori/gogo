@@ -29,19 +29,17 @@ import (
 // Buffer for saving the first K smallest items.
 type TopKBuffer interface {
 	// Return the parameter K.
-	// It returns 0 if the buffer is nil.
 	K() int
 
 	// Return the number of items in the buffer.
-	// It returns 0 if the buffer is nil.
 	Len() int
 
-	// Add an item, x, into the buffer.
-	// Time complexity: O(log n), where n = b.Len().
-	Add(x interface{})
+	// Add items x into the buffer.
+	// Time complexity: O(m log(m + n)), where m = len(x), n = tkb.Len().
+	Add(x ...interface{})
 
 	// Pop all items and return in ascending order.
-	// Time complexity: O(n log n), where n = b.Len().
+	// Time complexity: O(n log n), where n = tkb.Len().
 	Drain() []interface{}
 
 	// Discard all items and release the memory.
@@ -53,7 +51,7 @@ type TopKBuffer interface {
 type topKBuffer struct {
 	ParamK    int
 	GreaterFn function.LessFunc
-	PQ        pqueue.PriorityQueue
+	Pq        pqueue.PriorityQueue
 }
 
 // Create a new TopKBuffer.
@@ -72,9 +70,9 @@ func NewTopKBuffer(k int, less function.LessFunc, data ...interface{}) TopKBuffe
 		GreaterFn: greater,
 	}
 	if len(data) <= k {
-		tkb.PQ = pqueue.NewPriorityQueue(greater, data...)
+		tkb.Pq = pqueue.NewPriorityQueue(greater, data...)
 	} else {
-		tkb.PQ = pqueue.NewPriorityQueue(greater, data[:k]...)
+		tkb.Pq = pqueue.NewPriorityQueue(greater, data[:k]...)
 		for i := k; i < len(data); i++ {
 			tkb.Add(data[i])
 		}
@@ -93,16 +91,22 @@ func (tkb *topKBuffer) Len() int {
 	if tkb == nil {
 		return 0
 	}
-	return tkb.PQ.Len()
+	return tkb.Pq.Len()
 }
 
-func (tkb *topKBuffer) Add(x interface{}) {
-	if tkb.Len() < tkb.ParamK {
-		tkb.PQ.Enqueue(x)
+func (tkb *topKBuffer) Add(x ...interface{}) {
+	r := tkb.ParamK - tkb.Len()
+	if len(x) <= r {
+		tkb.Pq.Enqueue(x...)
 		return
 	}
-	if top := tkb.PQ.Top(); tkb.GreaterFn(top, x) {
-		tkb.PQ.ReplaceTop(x)
+	if r > 0 {
+		tkb.Pq.Enqueue(x[:r]...)
+	}
+	for _, item := range x[r:] {
+		if top := tkb.Pq.Top(); tkb.GreaterFn(top, item) {
+			tkb.Pq.ReplaceTop(item)
+		}
 	}
 }
 
@@ -113,7 +117,7 @@ func (tkb *topKBuffer) Drain() []interface{} {
 	}
 	result := make([]interface{}, n)
 	for i := n - 1; i >= 0; i-- {
-		result[i] = tkb.PQ.Dequeue()
+		result[i] = tkb.Pq.Dequeue()
 	}
 	return result
 }
@@ -122,5 +126,5 @@ func (tkb *topKBuffer) Clear() {
 	if tkb == nil {
 		return
 	}
-	tkb.PQ.Clear()
+	tkb.Pq.Clear()
 }

@@ -27,7 +27,6 @@ import (
 // It is the same as sort.Interface.
 type Interface interface {
 	// Return the number of items in the permutation.
-	// It returns 0 if the permutation is nil.
 	Len() int
 
 	// Test whether the i-th item is less than j-th item of the permutation.

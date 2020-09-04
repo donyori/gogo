@@ -55,7 +55,7 @@ func TestNewTopKBuffer(t *testing.T) {
 
 func TestTopKBuffer(t *testing.T) {
 	k := 5
-	samples := []int{3, 2, 5, 1, 0, 7, 9, 0, 3}
+	samples := []interface{}{3, 2, 5, 1, 0, 7, 9, 0, 3}
 	tkb := NewTopKBuffer(k, function.IntLess)
 	if x := tkb.K(); x != k {
 		t.Errorf("tkb.K(): %d != %d", x, k)
@@ -63,19 +63,16 @@ func TestTopKBuffer(t *testing.T) {
 	if n := tkb.Len(); n != 0 {
 		t.Errorf("After create an empty TopKBuffer: tkb.Len(): %d != 0", n)
 	}
-	for i, sample := range samples {
-		tkb.Add(sample)
-		wantedLen := k
-		if i < k {
-			wantedLen = i + 1
-		}
-		if n := tkb.Len(); n != wantedLen {
-			t.Errorf("After add samples[%d]: tkb.Len(): %d != %d", i, n, wantedLen)
-		}
+	tkb.Add(samples...)
+	if n := tkb.Len(); n > k {
+		t.Errorf("After add samples: tkb.Len(): %d > k: %d.", n, k)
 	}
 	output := tkb.Drain()
 	if n := len(output); n == k {
-		sortedSamples := append(samples[:0:0], samples...)
+		sortedSamples := make([]int, len(samples))
+		for i := range samples {
+			sortedSamples[i] = samples[i].(int)
+		}
 		sort.Ints(sortedSamples)
 		for i := 0; i < n; i++ {
 			if output[i] != sortedSamples[i] {
@@ -88,9 +85,7 @@ func TestTopKBuffer(t *testing.T) {
 	if n := tkb.Len(); n != 0 {
 		t.Errorf("After drain: tkb.Len(): %d != 0", n)
 	}
-	for _, sample := range samples {
-		tkb.Add(sample)
-	}
+	tkb.Add(samples...)
 	if n := tkb.Len(); n != k {
 		t.Errorf("After add samples again: tkb.Len(): %d != %d", n, k)
 	}

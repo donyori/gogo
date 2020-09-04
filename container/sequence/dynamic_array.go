@@ -23,7 +23,6 @@ type DynamicArray interface {
 	Array
 
 	// Return the capacity of the dynamic array.
-	// It returns 0 if the dynamic array is nil.
 	Cap() int
 
 	// Add x to the back of the dynamic array.

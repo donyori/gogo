@@ -30,12 +30,11 @@ import (
 // Priority queue, mini version.
 type PriorityQueueMini interface {
 	// Return the number of items in the queue.
-	// It returns 0 if the queue is nil.
 	Len() int
 
-	// Add an item, x, into the queue.
-	// Time complexity: O(log n), where n = pq.Len().
-	Enqueue(x interface{})
+	// Add items x into the queue.
+	// Time complexity: O(m log(m + n)), where m = len(x), n = pq.Len().
+	Enqueue(x ...interface{})
 
 	// Pop the minimum item in the queue.
 	// It panics if the queue is nil or empty.
@@ -48,7 +47,6 @@ type PriorityQueue interface {
 	PriorityQueueMini
 
 	// Return the capacity of the queue.
-	// It returns 0 if the queue is nil.
 	Cap() int
 
 	// Discard all items in the queue and release the memory.
@@ -70,7 +68,7 @@ type PriorityQueue interface {
 	Maintain()
 }
 
-// Priority queue, ex version.
+// Priority queue, extra version.
 type PriorityQueueEx interface {
 	PriorityQueue
 
@@ -126,8 +124,10 @@ func (pq *priorityQueue) Len() int {
 	return (*heapa.DynamicArray)(pq).Len()
 }
 
-func (pq *priorityQueue) Enqueue(x interface{}) {
-	heap.Push((*heapa.DynamicArray)(pq), x)
+func (pq *priorityQueue) Enqueue(x ...interface{}) {
+	for _, item := range x {
+		heap.Push((*heapa.DynamicArray)(pq), item)
+	}
 }
 
 func (pq *priorityQueue) Dequeue() interface{} {
@@ -177,7 +177,7 @@ type priorityQueueEx struct {
 	EqualFn function.EqualFunc
 }
 
-// Create a new priority queue (ex version).
+// Create a new priority queue (extra version).
 // data is the initial items in the queue.
 // It panics if less is nil.
 // equal can be nil. If equal is nil, it will be generated via less.
@@ -230,6 +230,8 @@ func (pqx *priorityQueueEx) ScanWithoutOrder(handler func(x interface{}) (cont b
 	pqx.Data.Scan(handler)
 }
 
+// Find item x in the priority queue, and return its index.
+// If x is not found, it returns -1.
 func (pqx *priorityQueueEx) find(x interface{}) int {
 	if pqx.Len() == 0 {
 		return -1

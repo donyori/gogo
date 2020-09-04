@@ -27,7 +27,6 @@ import (
 // used in binary search algorithm.
 type BinarySearchInterface interface {
 	// Return the number of items in the sequence.
-	// It returns 0 if the sequence is nil.
 	Len() int
 
 	// Test whether i-th item of the sequence equals to x.

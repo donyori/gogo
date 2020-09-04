@@ -21,7 +21,6 @@ package sequence
 // General sequence interface.
 type Sequence interface {
 	// Return the number of items in the sequence.
-	// It returns 0 if the sequence is nil.
 	Len() int
 
 	// Return the first item of the sequence.

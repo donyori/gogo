@@ -19,5 +19,5 @@
 // Package pqueue provides OOP-style priority queues.
 // There are three priority queue versions in this package:
 // mini version (PriorityQueueMini), standard version (PriorityQueue),
-// and ex version (PriorityQueueEx).
+// and extra version (PriorityQueueEx).
 package pqueue
