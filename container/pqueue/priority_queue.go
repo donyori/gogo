@@ -68,7 +68,7 @@ type PriorityQueue interface {
 	Maintain()
 }
 
-// Priority queue, extra version.
+// Priority queue, extended version.
 type PriorityQueueEx interface {
 	PriorityQueue
 
@@ -177,7 +177,7 @@ type priorityQueueEx struct {
 	EqualFn function.EqualFunc
 }
 
-// Create a new priority queue (extra version).
+// Create a new priority queue (extended version).
 // data is the initial items in the queue.
 // It panics if less is nil.
 // equal can be nil. If equal is nil, it will be generated via less.
