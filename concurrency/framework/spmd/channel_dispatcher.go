@@ -18,6 +18,8 @@
 
 package spmd
 
+import "github.com/donyori/gogo/concurrency/framework"
+
 // Combination of channel or list of channels, and counter.
 type chanCntr struct {
 	Chan interface{}
@@ -25,23 +27,34 @@ type chanCntr struct {
 }
 
 // Channel dispatcher.
-type chanDispr struct {
-	QueryChans [numCOp]chan *communicator // List of channels for receiving the channel dispatch query.
-}
+//
+// Its underlying type is an array of channels for
+// receiving the channel dispatch query.
+type chanDispr [numCOp]chan *communicator
 
 // Create a new channel dispatcher.
 // Only for function New.
 func newChanDispr() *chanDispr {
 	cd := new(chanDispr)
-	for i := range cd.QueryChans {
-		cd.QueryChans[i] = make(chan *communicator)
+	for i := range cd {
+		cd[i] = make(chan *communicator)
 	}
 	return cd
 }
 
 // Launch the channel dispatcher on current goroutine.
-// The parameter quitChan should be obtained from Controller.
-func (cd *chanDispr) Run(quitChan <-chan struct{}) {
+//
+// quitDevice is the device to receive a quit signal.
+// It should be obtained from Controller.
+// The function will panic if quitDevice is nil.
+//
+// finChan is a channel to broadcast a finish signal by closing the channel.
+// It will be closed at the end of this function.
+// finChan will be ignored if it is nil.
+func (cd *chanDispr) Run(quitDevice framework.QuitDevice, finChan chan<- struct{}) {
+	if finChan != nil {
+		defer close(finChan)
+	}
 	var (
 		comm  *communicator
 		op, n int
@@ -51,16 +64,17 @@ func (cd *chanDispr) Run(quitChan <-chan struct{}) {
 		cc    *chanCntr
 		cs    []chan interface{}
 	)
+	quitChan := quitDevice.QuitChan()
 	for {
 		comm, ctx, m, cc = nil, nil, nil, nil // Reset variables to enable GC to clear contexts that are no longer used.
 		select {
 		case <-quitChan:
 			return
-		case comm = <-cd.QueryChans[cOpBcast]:
+		case comm = <-cd[cOpBcast]:
 			op = cOpBcast
-		case comm = <-cd.QueryChans[cOpScatter]:
+		case comm = <-cd[cOpScatter]:
 			op = cOpScatter
-		case comm = <-cd.QueryChans[cOpGather]:
+		case comm = <-cd[cOpGather]:
 			op = cOpGather
 		}
 		if comm == nil {

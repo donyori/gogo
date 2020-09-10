@@ -24,7 +24,9 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/donyori/gogo/concurrency"
 	"github.com/donyori/gogo/concurrency/framework"
+	"github.com/donyori/gogo/concurrency/framework/internal"
 	"github.com/donyori/gogo/container/sequence"
 	"github.com/donyori/gogo/errors"
 )
@@ -73,9 +75,11 @@ func New(n int, biz BusinessFunc, groupMap map[string][]int) framework.Controlle
 		n = runtime.NumCPU()
 	}
 	ctrl := &controller{
-		QuitC:        make(chan struct{}),
+		Qd:           internal.NewQuitDevice(),
 		Cd:           newChanDispr(),
 		biz:          biz,
+		lnchOi:       concurrency.NewOnceIndicator(),
+		cdOi:         concurrency.NewOnceIndicator(),
 		lnchCommMaps: make([]map[string]Communicator, n),
 	}
 	worldRanks := make([]int, n)
@@ -131,23 +135,36 @@ func Run(n int, biz BusinessFunc, groupMap map[string][]int) []framework.PanicRe
 
 // An implementation of interface Controller.
 type controller struct {
-	QuitC chan struct{} // A channel to broadcast the quit signal.
-	World *context      // World context.
-	Cd    *chanDispr    // Channel dispatcher.
+	Qd    framework.QuitDevice // Quit device.
+	World *context             // World context.
+	Cd    *chanDispr           // Channel dispatcher.
 
-	biz      BusinessFunc           // Business function.
-	pr       framework.PanicRecords // Panic records.
-	wg       sync.WaitGroup         // A wait group for the main process.
-	lnchOnce sync.Once              // For launching the job.
-	quitOnce sync.Once              // For closing QuitC.
-	cdOnce   sync.Once              // For launching the channel dispatcher.
+	biz    BusinessFunc              // Business function.
+	pr     framework.PanicRecords    // Panic records.
+	wg     sync.WaitGroup            // Wait group for the main process.
+	lnchOi concurrency.OnceIndicator // For launching the job.
+	cdOi   concurrency.OnceIndicator // For launching the channel dispatcher.
+	cdFinC chan struct{}             // Channel for the finish signal of the channel dispatcher.
+
 	// List of commMap used by method Launch,
 	// will be nil after calling Launch.
 	lnchCommMaps []map[string]Communicator
 }
 
+func (ctrl *controller) QuitChan() <-chan struct{} {
+	return ctrl.Qd.QuitChan()
+}
+
+func (ctrl *controller) IsQuit() bool {
+	return ctrl.Qd.IsQuit()
+}
+
+func (ctrl *controller) Quit() {
+	ctrl.Qd.Quit()
+}
+
 func (ctrl *controller) Launch() {
-	ctrl.lnchOnce.Do(func() {
+	ctrl.lnchOi.Do(func() {
 		n := len(ctrl.World.Comms)
 		commMaps := ctrl.lnchCommMaps
 		ctrl.wg.Add(n)
@@ -155,7 +172,7 @@ func (ctrl *controller) Launch() {
 			go func(rank int) {
 				defer func() {
 					if r := recover(); r != nil {
-						ctrl.Quit()
+						ctrl.Qd.Quit()
 						ctrl.pr.Append(framework.PanicRec{
 							Rank:    rank,
 							Content: r,
@@ -170,14 +187,16 @@ func (ctrl *controller) Launch() {
 	})
 }
 
-func (ctrl *controller) Quit() {
-	ctrl.quitOnce.Do(func() {
-		close(ctrl.QuitC)
-	})
-}
-
 func (ctrl *controller) Wait() int {
-	defer ctrl.Quit() // For cleanup possible daemon goroutines that wait for a quit signal to exit.
+	if !ctrl.lnchOi.Test() {
+		return -1
+	}
+	defer func() {
+		ctrl.Qd.Quit() // For cleanup possible daemon goroutines that wait for a quit signal to exit.
+		if ctrl.cdOi.Test() {
+			<-ctrl.cdFinC // Wait for the channel dispatcher to finish.
+		}
+	}()
 	ctrl.wg.Wait()
 	return ctrl.pr.Len()
 }
@@ -191,10 +210,6 @@ func (ctrl *controller) NumGoroutine() int {
 	return len(ctrl.World.Comms)
 }
 
-func (ctrl *controller) QuitChan() <-chan struct{} {
-	return ctrl.QuitC
-}
-
 func (ctrl *controller) PanicRecords() []framework.PanicRec {
 	return ctrl.pr.List()
 }
@@ -202,7 +217,8 @@ func (ctrl *controller) PanicRecords() []framework.PanicRec {
 // Launch channel dispatcher in a daemon goroutine.
 // This method takes effect only once.
 func (ctrl *controller) launchChannelDispatcher() {
-	ctrl.cdOnce.Do(func() {
-		go ctrl.Cd.Run(ctrl.QuitC)
+	ctrl.cdOi.Do(func() {
+		ctrl.cdFinC = make(chan struct{})
+		go ctrl.Cd.Run(ctrl.Qd, ctrl.cdFinC)
 	})
 }

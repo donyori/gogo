@@ -18,11 +18,31 @@
 
 package framework
 
+// A device to acquire the channel for the quit signal, detect the quit signal,
+// and broadcast a quit signal to quit the job.
+type QuitDevice interface {
+	// Return the channel for the quit signal.
+	// When the job is finished or quit, this channel will be closed
+	// to broadcast the quit signal.
+	QuitChan() <-chan struct{}
+
+	// Detect the quit signal on the quit channel.
+	// It returns true if a quit signal is detected, and false otherwise.
+	IsQuit() bool
+
+	// Broadcast a quit signal to quit the job.
+	//
+	// This method will NOT wait until the job ends.
+	Quit()
+}
+
 // A controller to launch, quit, and wait for the job.
 //
 // The use of all the frameworks under this package starts with creating
 // a controller through their own New function.
 type Controller interface {
+	QuitDevice
+
 	// Launch the job.
 	//
 	// This method will NOT wait until the job ends.
@@ -33,14 +53,11 @@ type Controller interface {
 	// with the same parameters.
 	Launch()
 
-	// Quit the job.
-	//
-	// This method will NOT wait until the job ends.
-	// Use method Wait if you want to wait for that.
-	Quit()
-
 	// Wait for the job to finish or quit.
 	// It returns the number of panic goroutines.
+	//
+	// In a special case, if the job was not launched,
+	// it does nothing and returns -1.
 	Wait() int
 
 	// Launch the job and wait for it.
@@ -50,14 +67,10 @@ type Controller interface {
 	// Return the number of goroutines to process this job.
 	//
 	// Note that it only includes the main goroutines to process the job.
-	// Any possible daemon goroutines, auxiliary goroutines, or the goroutines
-	// launched in the client's business functions are all excluded.
+	// Any possible control goroutines, daemon goroutines, auxiliary goroutines,
+	// or the goroutines launched in the client's business functions
+	// are all excluded.
 	NumGoroutine() int
-
-	// Return the channel for the quit signal.
-	// When the job is finished or quit, this channel will be closed
-	// to broadcast the quit signal.
-	QuitChan() <-chan struct{}
 
 	// Return the panic records.
 	PanicRecords() []PanicRec

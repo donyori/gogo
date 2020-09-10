@@ -22,12 +22,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/donyori/gogo/concurrency/framework"
 	"github.com/donyori/gogo/container/sequence"
 	"github.com/donyori/gogo/errors"
 )
 
 // A communicator for goroutines to communicate with each other.
 type Communicator interface {
+	framework.QuitDevice
+
 	// Return the rank (from 0 to NumGoroutine()-1) of current goroutine
 	// in the goroutine group of this communicator.
 	Rank() int
@@ -35,16 +38,6 @@ type Communicator interface {
 	// Return the number of goroutines in the goroutine group
 	// of this communicator.
 	NumGoroutine() int
-
-	// Return the channel for the quit signal.
-	QuitChan() <-chan struct{}
-
-	// Detect the quit signal on the quit channel.
-	// It returns true if a quit signal is detected, and false otherwise.
-	IsQuit() bool
-
-	// Broadcast a quit signal to quit the job.
-	Quit()
 
 	// Send the message msg to another goroutine.
 	//
@@ -257,29 +250,24 @@ func newCommunicator(ctx *context, rank int) *communicator {
 	return comm
 }
 
+func (comm *communicator) QuitChan() <-chan struct{} {
+	return comm.Ctx.Ctrl.Qd.QuitChan()
+}
+
+func (comm *communicator) IsQuit() bool {
+	return comm.Ctx.Ctrl.Qd.IsQuit()
+}
+
+func (comm *communicator) Quit() {
+	comm.Ctx.Ctrl.Qd.Quit()
+}
+
 func (comm *communicator) Rank() int {
 	return comm.rank
 }
 
 func (comm *communicator) NumGoroutine() int {
 	return len(comm.Ctx.Comms)
-}
-
-func (comm *communicator) QuitChan() <-chan struct{} {
-	return comm.Ctx.Ctrl.QuitC
-}
-
-func (comm *communicator) IsQuit() bool {
-	select {
-	case <-comm.Ctx.Ctrl.QuitC:
-		return true
-	default:
-		return false
-	}
-}
-
-func (comm *communicator) Quit() {
-	comm.Ctx.Ctrl.Quit()
 }
 
 func (comm *communicator) Send(dest int, msg interface{}) bool {
@@ -291,7 +279,7 @@ func (comm *communicator) Send(dest int, msg interface{}) bool {
 		idx--
 	}
 	select {
-	case <-comm.Ctx.Ctrl.QuitC:
+	case <-comm.Ctx.Ctrl.Qd.QuitChan():
 		return false
 	case comm.Ctx.Comms[dest].pcs[idx] <- msg:
 		return true
@@ -307,7 +295,7 @@ func (comm *communicator) Receive(src int) (msg interface{}, ok bool) {
 		idx--
 	}
 	select {
-	case <-comm.Ctx.Ctrl.QuitC:
+	case <-comm.Ctx.Ctrl.Qd.QuitChan():
 	case msg = <-comm.pcs[idx]:
 		ok = true
 	}
@@ -326,13 +314,14 @@ func (comm *communicator) SendPublic(msg interface{}) int {
 		},
 		RxC: rxC,
 	}
+	quitChan := comm.Ctx.Ctrl.Qd.QuitChan()
 	select {
-	case <-comm.Ctx.Ctrl.QuitC:
+	case <-quitChan:
 		return -1
 	case comm.Ctx.PubC <- m:
 	}
 	select {
-	case <-comm.Ctx.Ctrl.QuitC:
+	case <-quitChan:
 		return -1
 	case dest := <-rxC:
 		return dest
@@ -343,12 +332,13 @@ func (comm *communicator) ReceivePublic() (src int, msg interface{}) {
 	if len(comm.Ctx.Comms) == 1 {
 		panic(errors.AutoMsg("only one goroutine in this group"))
 	}
+	quitChan := comm.Ctx.Ctrl.Qd.QuitChan()
 	select {
-	case <-comm.Ctx.Ctrl.QuitC:
+	case <-quitChan:
 		return -1, nil
 	case m := <-comm.Ctx.PubC:
 		select {
-		case <-comm.Ctx.Ctrl.QuitC:
+		case <-quitChan:
 			return -1, nil
 		case m.RxC <- comm.rank:
 			return m.Sndr, m.Msg
@@ -369,6 +359,7 @@ func (comm *communicator) SendAny(msg interface{}) int {
 		RxC: rxC,
 	}
 	n := len(comm.Ctx.Comms)
+	quitChan := comm.Ctx.Ctrl.Qd.QuitChan()
 	var dest, idx int
 	poll := func() int {
 		for dest = 0; dest < n; dest++ {
@@ -381,11 +372,11 @@ func (comm *communicator) SendAny(msg interface{}) int {
 				idx = comm.rank
 			}
 			select {
-			case <-comm.Ctx.Ctrl.QuitC:
+			case <-quitChan:
 				return -1
 			case comm.Ctx.PubC <- m:
 				select {
-				case <-comm.Ctx.Ctrl.QuitC:
+				case <-quitChan:
 					return -1
 				case dest := <-rxC:
 					return dest
@@ -405,11 +396,11 @@ func (comm *communicator) SendAny(msg interface{}) int {
 	defer ticker.Stop()
 	for {
 		select {
-		case <-comm.Ctx.Ctrl.QuitC:
+		case <-quitChan:
 			return -1
 		case comm.Ctx.PubC <- m:
 			select {
-			case <-comm.Ctx.Ctrl.QuitC:
+			case <-quitChan:
 				return -1
 			case dest := <-rxC:
 				return dest
@@ -428,13 +419,14 @@ func (comm *communicator) ReceiveAny() (src int, msg interface{}) {
 		panic(errors.AutoMsg("only one goroutine in this group"))
 	}
 	i, n := 0, len(comm.pcs)
+	quitChan := comm.Ctx.Ctrl.Qd.QuitChan()
 	for {
 		select {
-		case <-comm.Ctx.Ctrl.QuitC:
+		case <-quitChan:
 			return -1, nil
 		case m := <-comm.Ctx.PubC:
 			select {
-			case <-comm.Ctx.Ctrl.QuitC:
+			case <-quitChan:
 				return -1, nil
 			case m.RxC <- comm.rank:
 				return m.Sndr, m.Msg
@@ -454,16 +446,17 @@ func (comm *communicator) ReceiveAny() (src int, msg interface{}) {
 func (comm *communicator) Barrier() bool {
 	n := len(comm.Ctx.Comms)
 	if n <= 1 {
-		return !comm.IsQuit()
+		return !comm.Ctx.Ctrl.Qd.IsQuit()
 	}
 	var c chan struct{}
+	quitChan := comm.Ctx.Ctrl.Qd.QuitChan()
 	if comm.rank == 0 {
 		// The first goroutine makes the signal channel.
 		c = make(chan struct{})
 	} else {
 		// Other goroutines receive the signal channel from their respective previous goroutines.
 		select {
-		case <-comm.Ctx.Ctrl.QuitC:
+		case <-quitChan:
 			return false
 		case c = <-comm.Ctx.Comms[comm.rank].bc: // Listen on its own channel, not the sender's!
 		}
@@ -475,13 +468,13 @@ func (comm *communicator) Barrier() bool {
 	} else {
 		// Other goroutines send the signal channel to their respective next goroutines.
 		select {
-		case <-comm.Ctx.Ctrl.QuitC:
+		case <-quitChan:
 			return false
 		case comm.Ctx.Comms[comm.rank+1].bc <- c: // Send it to the receiver's channel.
 		}
 		// Then listen on the signal channel.
 		select {
-		case <-comm.Ctx.Ctrl.QuitC:
+		case <-quitChan:
 			return false
 		case <-c:
 		}
@@ -491,7 +484,7 @@ func (comm *communicator) Barrier() bool {
 
 func (comm *communicator) Broadcast(root int, x interface{}) (msg interface{}, ok bool) {
 	if comm.checkRootAndN(root) {
-		ok = !comm.IsQuit()
+		ok = !comm.Ctx.Ctrl.Qd.IsQuit()
 		if ok {
 			msg = x
 		}
@@ -502,9 +495,10 @@ func (comm *communicator) Broadcast(root int, x interface{}) (msg interface{}, o
 		return
 	}
 	c := chanItf.(chan interface{})
+	quitChan := comm.Ctx.Ctrl.Qd.QuitChan()
 	if comm.rank != root {
 		select {
-		case <-comm.Ctx.Ctrl.QuitC:
+		case <-quitChan:
 			return nil, false
 		case msg = <-c:
 		}
@@ -515,7 +509,7 @@ func (comm *communicator) Broadcast(root int, x interface{}) (msg interface{}, o
 		}
 		for i, n := 1, len(comm.Ctx.Comms); i < n; i++ {
 			select {
-			case <-comm.Ctx.Ctrl.QuitC:
+			case <-quitChan:
 				return nil, false
 			case c <- x:
 			}
@@ -527,7 +521,7 @@ func (comm *communicator) Broadcast(root int, x interface{}) (msg interface{}, o
 
 func (comm *communicator) Scatter(root int, x sequence.Sequence) (msg sequence.Array, ok bool) {
 	if comm.checkRootAndN(root) {
-		ok = !comm.IsQuit()
+		ok = !comm.Ctx.Ctrl.Qd.IsQuit()
 		if ok && x != nil {
 			if a, b := x.(sequence.Array); b {
 				msg = a
@@ -544,13 +538,14 @@ func (comm *communicator) Scatter(root int, x sequence.Sequence) (msg sequence.A
 		return
 	}
 	cs := chanItf.([]chan interface{})
+	quitChan := comm.Ctx.Ctrl.Qd.QuitChan()
 	if comm.rank != root {
 		idx := comm.rank
 		if idx > root {
 			idx--
 		}
 		select {
-		case <-comm.Ctx.Ctrl.QuitC:
+		case <-quitChan:
 			return nil, false
 		case itf := <-cs[idx]:
 			if itf != nil {
@@ -583,7 +578,7 @@ func (comm *communicator) Scatter(root int, x sequence.Sequence) (msg sequence.A
 			idx += inc
 			if i != root {
 				select {
-				case <-comm.Ctx.Ctrl.QuitC:
+				case <-quitChan:
 					return nil, false
 				case cs[cIdx] <- chunk:
 					cIdx++
@@ -598,7 +593,7 @@ func (comm *communicator) Scatter(root int, x sequence.Sequence) (msg sequence.A
 
 func (comm *communicator) Gather(root int, msg interface{}) (x []interface{}, ok bool) {
 	if comm.checkRootAndN(root) {
-		ok = !comm.IsQuit()
+		ok = !comm.Ctx.Ctrl.Qd.IsQuit()
 		if ok {
 			x = []interface{}{msg}
 		}
@@ -609,9 +604,10 @@ func (comm *communicator) Gather(root int, msg interface{}) (x []interface{}, ok
 		return
 	}
 	c := chanItf.(chan *sndrMsg)
+	quitChan := comm.Ctx.Ctrl.Qd.QuitChan()
 	if comm.rank != root {
 		select {
-		case <-comm.Ctx.Ctrl.QuitC:
+		case <-quitChan:
 			return nil, false
 		case c <- &sndrMsg{
 			Sndr: comm.rank,
@@ -623,7 +619,7 @@ func (comm *communicator) Gather(root int, msg interface{}) (x []interface{}, ok
 		x[comm.rank] = msg
 		for i, n := 1, len(x); i < n; i++ {
 			select {
-			case <-comm.Ctx.Ctrl.QuitC:
+			case <-quitChan:
 				return nil, false
 			case m := <-c:
 				x[m.Sndr] = m.Msg
@@ -649,13 +645,14 @@ func (comm *communicator) checkRootAndN(root int) bool {
 // and an indicator ok. ok is false iff a quit signal is detected.
 func (comm *communicator) queryChannels(op int) (chanItf interface{}, ok bool) {
 	comm.Ctx.Ctrl.launchChannelDispatcher()
+	quitChan := comm.Ctx.Ctrl.Qd.QuitChan()
 	select {
-	case <-comm.Ctx.Ctrl.QuitC:
+	case <-quitChan:
 		return
-	case comm.Ctx.Ctrl.Cd.QueryChans[op] <- comm:
+	case comm.Ctx.Ctrl.Cd[op] <- comm:
 	}
 	select {
-	case <-comm.Ctx.Ctrl.QuitC:
+	case <-quitChan:
 	case chanItf = <-comm.Cdc:
 		ok = true
 	}

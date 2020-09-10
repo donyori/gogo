@@ -78,6 +78,12 @@ func TestOnceIndicator_Do_Panic(t *testing.T) {
 	oi.Do(func() {
 		t.Fatal("OnceIndicator.Do called twice.")
 	})
+
+	select {
+	case <-oi.C():
+	default:
+		t.Error("OnceIndicator.Do did NOT trigger the channel after calling Do.")
+	}
 }
 
 func TestOnceIndicator_Do_NilF(t *testing.T) {
@@ -85,6 +91,7 @@ func TestOnceIndicator_Do_NilF(t *testing.T) {
 	if !oi.Do(nil) {
 		t.Error("OnceIndicator.Do returns false on the first call.")
 	}
+
 	select {
 	case <-oi.C():
 	default:
