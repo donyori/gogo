@@ -23,7 +23,7 @@ import "github.com/donyori/gogo/concurrency"
 // An implementation of
 // github.com/donyori/gogo/concurrency/framework.QuitDevice.
 type QuitDevice struct {
-	Oi concurrency.OnceIndicator // QuitChan() ~ Oi.C(), IsQuit() ~ Oi.Test(), Quit() ~ Oi.Do(nil)
+	oi concurrency.OnceIndicator // QuitChan() ~ oi.C(), IsQuit() ~ oi.Test(), Quit() ~ oi.Do(nil)
 }
 
 // Create a new quit device.
@@ -32,13 +32,13 @@ func NewQuitDevice() *QuitDevice {
 }
 
 func (qd *QuitDevice) QuitChan() <-chan struct{} {
-	return qd.Oi.C()
+	return qd.oi.C()
 }
 
 func (qd *QuitDevice) IsQuit() bool {
-	return qd.Oi.Test()
+	return qd.oi.Test()
 }
 
 func (qd *QuitDevice) Quit() {
-	qd.Oi.Do(nil)
+	qd.oi.Do(nil)
 }

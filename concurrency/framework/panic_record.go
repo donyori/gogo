@@ -23,10 +23,10 @@ import (
 	"sync"
 )
 
-// Panic record, including the rank of the goroutine
+// Panic record, including the name of the goroutine
 // and the panic content (i.e., the parameter passed to function panic).
 type PanicRec struct {
-	Rank    int         // The rank of the goroutine.
+	Name    string      // Name of the goroutine.
 	Content interface{} // The parameter passed to function panic.
 }
 
@@ -34,7 +34,7 @@ func (pr PanicRec) String() string {
 	if pr.Content == nil {
 		return "no panic"
 	}
-	return fmt.Sprintf("panic on Goroutine %d: %v", pr.Rank, pr.Content)
+	return fmt.Sprintf("panic on Goroutine %s: %v", pr.Name, pr.Content)
 }
 
 func (pr PanicRec) Error() string {

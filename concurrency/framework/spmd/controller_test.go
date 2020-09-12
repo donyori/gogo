@@ -18,10 +18,7 @@
 
 package spmd
 
-import (
-	"testing"
-	"time"
-)
+import "testing"
 
 func TestNew_lnchCommMaps(t *testing.T) {
 	n := 8
@@ -69,10 +66,6 @@ func TestController_Wait_BeforeLaunch(t *testing.T) {
 	ctrl := New(0, func(world Communicator, commMap map[string]Communicator) {
 		// Do nothing.
 	}, nil)
-	timer := time.AfterFunc(time.Second, func() {
-		t.Fatal("Block on ctrl.Wait before calling Launch.")
-	})
-	defer timer.Stop()
 	if r := ctrl.Wait(); r != -1 {
 		t.Errorf("ctrl.Wait returns %d (not -1) before calling Launch.", r)
 	}

@@ -94,7 +94,7 @@ func TestCommunicator_Send_Receive(t *testing.T) {
 		}
 	}, nil)
 	if len(prs) > 0 {
-		t.Errorf("Panic: %v.", prs)
+		t.Errorf("Panic: %q.", prs)
 	}
 }
 
@@ -198,7 +198,7 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 		}
 	}, map[string][]int{"tester": {0, 1, 2, 3, 4, 5}})
 	if len(prs) > 0 {
-		t.Errorf("Panic: %v.", prs)
+		t.Errorf("Panic: %q.", prs)
 	}
 }
 
@@ -211,7 +211,7 @@ func TestCommunicator_Barrier(t *testing.T) {
 		times[r] = time.Now()
 	}, nil)
 	if len(prs) > 0 {
-		t.Errorf("Panic: %v.", prs)
+		t.Errorf("Panic: %q.", prs)
 	}
 	for i := 1; i < len(times); i++ {
 		diff := times[0].Sub(times[i])
@@ -246,7 +246,7 @@ func TestCommunicator_Broadcast(t *testing.T) {
 	}, nil).(*controller)
 	ctrl.Run()
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
-		t.Errorf("Panic: %v.", prs)
+		t.Errorf("Panic: %q.", prs)
 	}
 	for i, m := range ctrl.World.ChanMaps {
 		if n := len(m); n > 0 {
@@ -298,7 +298,7 @@ func TestCommunicator_Scatter(t *testing.T) {
 	}, nil).(*controller)
 	ctrl.Run()
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
-		t.Errorf("Panic: %v.", prs)
+		t.Errorf("Panic: %q.", prs)
 	}
 	for i, m := range ctrl.World.ChanMaps {
 		if n := len(m); n > 0 {
@@ -341,7 +341,7 @@ func TestCommunicator_Gather(t *testing.T) {
 	}, nil).(*controller)
 	ctrl.Run()
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
-		t.Errorf("Panic: %v.", prs)
+		t.Errorf("Panic: %q.", prs)
 	}
 	for i, m := range ctrl.World.ChanMaps {
 		if n := len(m); n > 0 {

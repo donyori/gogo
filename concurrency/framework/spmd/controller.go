@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"regexp"
 	"runtime"
+	"strconv"
 	"sync"
 
 	"github.com/donyori/gogo/concurrency"
@@ -43,7 +44,7 @@ import (
 type BusinessFunc func(world Communicator, commMap map[string]Communicator)
 
 // Regexp pattern for verifying group ID.
-var groupIdPattern = regexp.MustCompile(`[A-Za-z0-9][A-Za-z0-9_]*`)
+var groupIdPattern = regexp.MustCompile(`[a-z0-9][a-z0-9_]*`)
 
 // Create a Controller for a new job.
 //
@@ -54,9 +55,10 @@ var groupIdPattern = regexp.MustCompile(`[A-Za-z0-9][A-Za-z0-9_]*`)
 // It will panic if biz is nil.
 //
 // groupMap is the map of custom groups.
-// The key is the ID of the group, which consists of English letters, numbers,
-// and underscores, and cannot be empty or start with an underscore
-// (in regular expression: [A-Za-z0-9][A-Za-z0-9_]*).
+// The key is the ID of the group, which consists of lowercase English letters,
+// numbers, and underscores, and cannot be empty.
+// For custom groups, the ID cannot start with an underscore.
+// (i.e., in regular expression: [a-z0-9][a-z0-9_]*).
 // An illegal ID will cause a panic.
 // The value is a list of the world ranks of goroutines.
 // Duplicated numbers will be ignored.
@@ -123,10 +125,10 @@ func New(n int, biz BusinessFunc, groupMap map[string][]int) framework.Controlle
 	return ctrl
 }
 
-// Create a Controller with n, biz, and groupMap, and then run it.
+// Create a Controller with given parameters, and then run it.
 // It returns the panic records of the Controller.
 //
-// The arguments n, biz, and groupMap are the same as those of function New.
+// The arguments are the same as those of function New.
 func Run(n int, biz BusinessFunc, groupMap map[string][]int) []framework.PanicRec {
 	ctrl := New(n, biz, groupMap)
 	ctrl.Run()
@@ -174,7 +176,7 @@ func (ctrl *controller) Launch() {
 					if r := recover(); r != nil {
 						ctrl.Qd.Quit()
 						ctrl.pr.Append(framework.PanicRec{
-							Rank:    rank,
+							Name:    strconv.Itoa(rank),
 							Content: r,
 						})
 					}
@@ -219,6 +221,17 @@ func (ctrl *controller) PanicRecords() []framework.PanicRec {
 func (ctrl *controller) launchChannelDispatcher() {
 	ctrl.cdOi.Do(func() {
 		ctrl.cdFinC = make(chan struct{})
-		go ctrl.Cd.Run(ctrl.Qd, ctrl.cdFinC)
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					ctrl.Qd.Quit()
+					ctrl.pr.Append(framework.PanicRec{
+						Name:    "channel_dispatcher",
+						Content: r,
+					})
+				}
+			}()
+			ctrl.Cd.Run(ctrl.Qd, ctrl.cdFinC)
+		}()
 	})
 }

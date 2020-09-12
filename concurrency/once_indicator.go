@@ -32,8 +32,8 @@ type OnceIndicator interface {
 	// Otherwise, it does nothing but waits for the first call of f to finish,
 	// and then returns false.
 	//
-	// In a special case, if the client wants to do nothing but trigger
-	// this indicator, just set f to nil.
+	// If the client wants to do nothing but trigger this indicator,
+	// just set f to nil (no panic will happen).
 	Do(f func()) bool
 
 	// Return a channel that will be closed after calling the method Do
@@ -79,10 +79,7 @@ func (oi *onceIndicator) C() <-chan struct{} {
 }
 
 func (oi *onceIndicator) Wait() {
-	select {
-	case <-oi.c:
-		// Do nothing.
-	}
+	<-oi.c
 }
 
 func (oi *onceIndicator) Test() bool {
