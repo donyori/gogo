@@ -125,6 +125,11 @@ func (pq *priorityQueue) Len() int {
 }
 
 func (pq *priorityQueue) Enqueue(x ...interface{}) {
+	if pq.Len() == 0 {
+		pq.Data.Append(sequence.GeneralDynamicArray(x))
+		pq.Maintain()
+		return
+	}
 	for _, item := range x {
 		heap.Push((*heapa.DynamicArray)(pq), item)
 	}
