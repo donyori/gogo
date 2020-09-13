@@ -67,8 +67,8 @@ type JobQueueMaker func(n int) JobQueue
 
 // Threshold used by the default job queue to calculate the priority of jobs.
 // It is slightly smaller than the positive solution of the equation:
-//  1.2^(x/4) = x + 1
-const threshold float64 = 101.596383011308744
+//  1.025^x - x - 1 = 0
+const threshold float64 = 218.302152071367373
 
 // Default job queue maker.
 func defaultJobQueueMaker(n int) JobQueue {
@@ -127,8 +127,8 @@ func (jq *jobQueue) Dequeue() interface{} {
 func (jq *jobQueue) jobLess(a, b interface{}) bool {
 	ja := a.(*Job)
 	jb := b.(*Job)
-	pa := jq.calcPriority(ja)
-	pb := jq.calcPriority(jb)
+	pa := jq.calculatePriority(ja)
+	pb := jq.calculatePriority(jb)
 	if math.Abs(pa-pb) > 1e-3 {
 		return pa > pb
 	}
@@ -141,15 +141,15 @@ func (jq *jobQueue) jobLess(a, b interface{}) bool {
 // to avoid the starvation problem.
 //
 // The ultimate priority (p_u) is calculated as follows:
-//  p_u = (p+1) * min(1+t/n, 1.2^(t/4n))
+//  p_u = (p+1) * min(1+t/n, 1.025^(t/n))
 // where p is the priority given by the user,
 // t is a measure of the waiting time of the job, equal to the number of
 // calls to the method Dequeue since the job was added to this queue,
 // and n is the number of goroutines to process jobs.
-func (jq *jobQueue) calcPriority(job *Job) float64 {
+func (jq *jobQueue) calculatePriority(job *Job) float64 {
 	x := jq.t - job.CustAttr.(float64) // = t/n.
 	if x < threshold {
-		x = math.Pow(1.2, x/4) // = 1.2^(t/4n).
+		x = math.Pow(1.025, x) // = 1.025^(t/n).
 	} else {
 		x++ // = 1+t/n.
 	}
