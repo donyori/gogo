@@ -22,6 +22,7 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/donyori/gogo/concurrency"
 	"github.com/donyori/gogo/concurrency/framework"
@@ -37,6 +38,11 @@ type Controller interface {
 	framework.Controller
 
 	// Input new jobs.
+	//
+	// If an item in jobs is nil, it will be treated as a Job with Data to nil,
+	// Pri to 0, Ct to time.Now(), and CustAttr to nil.
+	// If an item in jobs has the Ct field with a zero value, its Ct field will
+	// be set to time.Now().
 	//
 	// The client can input new jobs before the effective first all of
 	// the method Wait (i.e., the call after invoking the method Launch).
@@ -56,7 +62,11 @@ type Controller interface {
 // detect the quit signal, and broadcast a quit signal to quit the job.
 //
 // It returns a list of new jobs generated during or after processing
-// the current job.
+// the current job, called newJobs.
+// If an item in newJobs is nil, it will be treated as a Job with Data to nil,
+// Pri to 0, Ct to time.Now(), and CustAttr to nil.
+// If an item in newJobs has the Ct field with a zero value, its Ct field will
+// be set to time.Now().
 type JobHandler func(jobData interface{}, quitDevice framework.QuitDevice) (newJobs []*Job)
 
 // Create a new Controller.
@@ -205,6 +215,19 @@ func (ctrl *controller) Input(jobs ...*Job) bool {
 	if ctrl.wsoi.Test() {
 		return false
 	}
+	var now time.Time
+	for i, job := range jobs {
+		if job == nil {
+			job = new(Job)
+			jobs[i] = job
+		}
+		if job.Ct.IsZero() {
+			if now.IsZero() {
+				now = time.Now()
+			}
+			job.Ct = now
+		}
+	}
 	if !ctrl.loi.Test() && ctrl.inputBeforeLaunch(jobs) {
 		return true
 	}
@@ -278,8 +301,9 @@ func (ctrl *controller) allocatorProc() {
 // Worker main process, without panic checking and wg.Done().
 func (ctrl *controller) workerProc() {
 	var jobData interface{}
-	var ok bool
+	var ok, needUpdateNow bool
 	var jobs []*Job
+	var now time.Time
 	quitChan := ctrl.qd.QuitChan()
 	for {
 		select {
@@ -290,6 +314,20 @@ func (ctrl *controller) workerProc() {
 				return
 			}
 			jobs = ctrl.h(jobData, ctrl.qd)
+			needUpdateNow = true
+			for i, job := range jobs {
+				if job == nil {
+					job = new(Job)
+					jobs[i] = job
+				}
+				if job.Ct.IsZero() {
+					if needUpdateNow {
+						now = time.Now()
+						needUpdateNow = false
+					}
+					job.Ct = now
+				}
+			}
 		}
 
 		// Always send jobs to the allocator,

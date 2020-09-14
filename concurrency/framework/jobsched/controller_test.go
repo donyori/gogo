@@ -41,7 +41,7 @@ func TestController_Input_BeforeLaunch(t *testing.T) {
 		atomic.AddInt32(&x, 1)
 		return
 	}, nil)
-	if !ctrl.Input(new(Job), new(Job), new(Job)) {
+	if !ctrl.Input(nil, nil, nil) {
 		t.Fatal("Input returns false before calling Launch.")
 	}
 	ctrl.Run()
@@ -64,7 +64,7 @@ func TestController_Input_DuringLaunch(t *testing.T) {
 		ctrl.Launch()
 		close(c)
 	}()
-	if !ctrl.Input(new(Job), new(Job), new(Job)) {
+	if !ctrl.Input(nil, nil, nil) {
 		t.Fatal("Input returns false during calling Launch.")
 	}
 	<-c
@@ -84,7 +84,7 @@ func TestController_Input_AfterLaunch(t *testing.T) {
 		return
 	}, nil)
 	ctrl.Launch()
-	if !ctrl.Input(new(Job), new(Job), new(Job)) {
+	if !ctrl.Input(nil, nil, nil) {
 		t.Fatal("Input returns false after calling Launch.")
 	}
 	ctrl.Wait()
@@ -107,7 +107,7 @@ func TestController_Input_DuringWait(t *testing.T) {
 	ctrl.Launch()
 	go ctrl.Wait()
 	time.Sleep(time.Millisecond)
-	if ctrl.Input(new(Job), new(Job), new(Job)) {
+	if ctrl.Input(nil, nil, nil) {
 		t.Fatal("Input returns true during waiting.")
 	}
 	close(c)
@@ -126,7 +126,7 @@ func TestController_Input_AfterWait(t *testing.T) {
 		return
 	}, nil)
 	ctrl.Run()
-	if ctrl.Input(new(Job), new(Job), new(Job)) {
+	if ctrl.Input(nil, nil, nil) {
 		t.Fatal("Input returns true after Wait.")
 	}
 	if v := atomic.LoadInt32(&x); v != 0 {
@@ -144,7 +144,7 @@ func TestController_Input_AfterIneffectiveWait(t *testing.T) {
 		return
 	}, nil)
 	ctrl.Wait()
-	if !ctrl.Input(new(Job), new(Job), new(Job)) {
+	if !ctrl.Input(nil, nil, nil) {
 		t.Fatal("Input returns false after calling Wait ineffectively.")
 	}
 	ctrl.Run()

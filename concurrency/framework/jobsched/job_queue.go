@@ -32,8 +32,17 @@ type Job struct {
 	// Other fields will only be used for the job scheduling.
 	Data interface{}
 
-	Pri uint      // Priority, a non-negative integer.
-	Ct  time.Time // Creation time.
+	// Priority, a non-negative integer.
+	//
+	// The bigger the value, the higher the priority.
+	// The default Pri (0) corresponds to the lowest priority.
+	Pri uint
+
+	// Creation time.
+	//
+	// A zero-value Ct field will be set to time.Now() before adding to
+	// the job queue by the framework.
+	Ct time.Time
 
 	// Custom attribute used to customize job scheduling algorithm.
 	// It is available in the method Enqueue of JobQueue,
@@ -53,6 +62,9 @@ type JobQueue interface {
 	Len() int
 
 	// Add jobs into the job queue.
+	//
+	// The framework guarantees that all items in jobs are never nil and
+	// have a non-zero Ct field.
 	Enqueue(jobs ...*Job)
 
 	// Pop a job in the queue and return its data (i.e., the Data field of Job).
@@ -98,20 +110,10 @@ func (jq *jobQueue) Enqueue(jobs ...*Job) {
 	if len(jobs) == 0 {
 		return
 	}
-	var now time.Time
-	a := make([]interface{}, 0, len(jobs))
-	for _, job := range jobs {
-		if job == nil {
-			continue
-		}
-		if job.Ct.IsZero() {
-			if now.IsZero() {
-				now = time.Now()
-			}
-			job.Ct = now
-		}
-		job.CustAttr = jq.t
-		a = append(a, job)
+	a := make([]interface{}, len(jobs))
+	for i := range jobs {
+		jobs[i].CustAttr = jq.t
+		a[i] = jobs[i]
 	}
 	jq.pq.Enqueue(a...)
 }
