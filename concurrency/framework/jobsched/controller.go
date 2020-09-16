@@ -91,7 +91,7 @@ func New(n int, handler JobHandler, jobQueueMaker JobQueueMaker, jobs ...*Job) C
 		n = runtime.NumCPU()
 	}
 	if jobQueueMaker == nil {
-		jobQueueMaker = defaultJobQueueMaker
+		jobQueueMaker = DefaultJobQueueMaker
 	}
 	jq := jobQueueMaker(n)
 	jq.Enqueue(jobs...)

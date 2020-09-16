@@ -18,38 +18,36 @@
 
 package jobsched
 
-import "testing"
-
-type testJobQueueMonitor struct {
-	jq           JobQueue
-	tb           testing.TB
-	numEq, numDq int64
+// FCFS (first come, first served) job queue maker.
+//
+// The FCFS job queue implements a simplest scheduling algorithm that
+// queues jobs in the order that they arrive.
+// All the properties (such as the creation time and the priority) of jobs
+// will be ignored.
+func FcfsJobQueueMaker(n int) JobQueue {
+	return new(fcfsJobQueue)
 }
 
-func newTestJobQueueMonitor(jq JobQueue, tb testing.TB) JobQueue {
-	return &testJobQueueMonitor{
-		jq: jq,
-		tb: tb,
+// FCFS (first come, first served) job queue.
+type fcfsJobQueue []interface{}
+
+func (fjq fcfsJobQueue) Len() int {
+	return len(fjq)
+}
+
+func (fjq *fcfsJobQueue) Enqueue(jobs ...*Job) {
+	if len(jobs) == 0 {
+		return
 	}
-}
-
-func (tjq *testJobQueueMonitor) Len() int {
-	return tjq.jq.Len()
-}
-
-func (tjq *testJobQueueMonitor) Enqueue(jobs ...*Job) {
-	tjq.jq.Enqueue(jobs...)
-	jobDataList := make([]interface{}, len(jobs))
+	data := make([]interface{}, len(jobs))
 	for i := range jobs {
-		jobDataList[i] = jobs[i].Data
+		data[i] = jobs[i].Data
 	}
-	tjq.tb.Logf("++ Enqueue %d: %v.", tjq.numEq, jobDataList)
-	tjq.numEq++
+	*fjq = append(*fjq, data...)
 }
 
-func (tjq *testJobQueueMonitor) Dequeue() interface{} {
-	jobData := tjq.jq.Dequeue()
-	tjq.tb.Logf("-- Dequeue %d: %v.", tjq.numDq, jobData)
-	tjq.numDq++
-	return jobData
+func (fjq *fcfsJobQueue) Dequeue() interface{} {
+	var r interface{}
+	*fjq, r = (*fjq)[1:], (*fjq)[0]
+	return r
 }

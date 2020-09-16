@@ -20,36 +20,26 @@ package jobsched
 
 import "testing"
 
-type testJobQueueMonitor struct {
-	jq           JobQueue
-	tb           testing.TB
-	numEq, numDq int64
-}
-
-func newTestJobQueueMonitor(jq JobQueue, tb testing.TB) JobQueue {
-	return &testJobQueueMonitor{
-		jq: jq,
-		tb: tb,
-	}
-}
-
-func (tjq *testJobQueueMonitor) Len() int {
-	return tjq.jq.Len()
-}
-
-func (tjq *testJobQueueMonitor) Enqueue(jobs ...*Job) {
-	tjq.jq.Enqueue(jobs...)
-	jobDataList := make([]interface{}, len(jobs))
+func TestFcfsJobQueue(t *testing.T) {
+	const N = 10
+	jobs := make([]*Job, N)
+	dqs := [N]interface{}{}
+	wanted := [N]interface{}{}
 	for i := range jobs {
-		jobDataList[i] = jobs[i].Data
+		jobs[i] = &Job{Data: i}
+		wanted[i] = i
 	}
-	tjq.tb.Logf("++ Enqueue %d: %v.", tjq.numEq, jobDataList)
-	tjq.numEq++
-}
-
-func (tjq *testJobQueueMonitor) Dequeue() interface{} {
-	jobData := tjq.jq.Dequeue()
-	tjq.tb.Logf("-- Dequeue %d: %v.", tjq.numDq, jobData)
-	tjq.numDq++
-	return jobData
+	fjq := FcfsJobQueueMaker(1)
+	fjq.Enqueue(jobs[0])
+	fjq.Enqueue(jobs[1:5]...)
+	fjq.Enqueue(jobs[5:]...)
+	for i := range dqs {
+		dqs[i] = fjq.Dequeue()
+	}
+	if fjq.Len() > 0 {
+		t.Errorf("FCFS job queue has more than %d items.", N)
+	}
+	if dqs != wanted {
+		t.Errorf("Dequeued: %v, wanted:= %v", dqs, wanted)
+	}
 }

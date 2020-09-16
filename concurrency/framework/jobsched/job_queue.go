@@ -18,12 +18,7 @@
 
 package jobsched
 
-import (
-	"math"
-	"time"
-
-	"github.com/donyori/gogo/container/pqueue"
-)
+import "time"
 
 // A unit representing a job.
 type Job struct {
@@ -76,84 +71,3 @@ type JobQueue interface {
 //
 // n is the number of goroutines to process jobs, passed by the function New.
 type JobQueueMaker func(n int) JobQueue
-
-// Threshold used by the default job queue to calculate the priority of jobs.
-// It is slightly smaller than the positive solution of the equation:
-//  1.025^x - x - 1 = 0
-const threshold float64 = 218.302152071367373
-
-// Default job queue maker.
-func defaultJobQueueMaker(n int) JobQueue {
-	jq := &jobQueue{rn: 1 / float64(n)}
-	jq.pq = pqueue.NewPriorityQueueMini(jq.jobLess)
-	return jq
-}
-
-// A default implementation of interface JobQueue.
-type jobQueue struct {
-	// Priority queue to manage jobs.
-	pq pqueue.PriorityQueueMini
-
-	// A parameter for calculating the priority of jobs,
-	// equals rn by the product of the number of calls to the method Dequeue.
-	t float64
-
-	// Reciprocal of the number of goroutines to process jobs.
-	rn float64
-}
-
-func (jq *jobQueue) Len() int {
-	return jq.pq.Len()
-}
-
-func (jq *jobQueue) Enqueue(jobs ...*Job) {
-	if len(jobs) == 0 {
-		return
-	}
-	a := make([]interface{}, len(jobs))
-	for i := range jobs {
-		jobs[i].CustAttr = jq.t
-		a[i] = jobs[i]
-	}
-	jq.pq.Enqueue(a...)
-}
-
-func (jq *jobQueue) Dequeue() interface{} {
-	job := jq.pq.Dequeue().(*Job)
-	jq.t += jq.rn
-	return job.Data
-}
-
-// Less function for the priority queue jq.pq.
-// A job with a higher priority is "less" than a job with a lower priority.
-func (jq *jobQueue) jobLess(a, b interface{}) bool {
-	ja := a.(*Job)
-	jb := b.(*Job)
-	pa := jq.calculatePriority(ja)
-	pb := jq.calculatePriority(jb)
-	if math.Abs(pa-pb) > 1e-3 {
-		return pa > pb
-	}
-	return ja.Ct.Before(jb.Ct)
-}
-
-// Calculate the ultimate priority of the job.
-//
-// The ultimate priority provides a chance for low-priority jobs
-// to avoid the starvation problem.
-//
-// The ultimate priority (p_u) is calculated as follows:
-//  p_u = (p+1) * min(1+t/n, 1.025^(t/n))
-// where p is the priority given by the user,
-// t is a measure of the waiting time of the job, equal to the number of
-// calls to the method Dequeue since the job was added to this queue,
-// and n is the number of goroutines to process jobs.
-func (jq *jobQueue) calculatePriority(job *Job) float64 {
-	x := jq.t - job.CustAttr.(float64) // = t/n.
-	if x < threshold {
-		x = math.Pow(1.025, x) // = 1.025^(t/n).
-	} else {
-		x++ // = 1+t/n.
-	}
-	return (float64(job.Pri) + 1) * x
-}
