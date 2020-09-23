@@ -23,8 +23,7 @@ import "testing"
 func TestFcfsJobQueue(t *testing.T) {
 	const N = 10
 	jobs := make([]*Job, N)
-	dqs := [N]interface{}{}
-	wanted := [N]interface{}{}
+	var wanted, dqs [N]interface{}
 	for i := range jobs {
 		jobs[i] = &Job{Data: i}
 		wanted[i] = i
@@ -36,10 +35,10 @@ func TestFcfsJobQueue(t *testing.T) {
 	for i := range dqs {
 		dqs[i] = fjq.Dequeue()
 	}
-	if fjq.Len() > 0 {
-		t.Errorf("FCFS job queue has more than %d items.", N)
+	if n := fjq.Len(); n > 0 {
+		t.Errorf("fjq.Len(): %d != 0.", n)
 	}
 	if dqs != wanted {
-		t.Errorf("Dequeued: %v, wanted:= %v", dqs, wanted)
+		t.Errorf("Dequeued: %v, wanted: %v.", dqs, wanted)
 	}
 }
