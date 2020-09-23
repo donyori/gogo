@@ -26,13 +26,6 @@ type testJobQueueMonitor struct {
 	numEq, numDq int64
 }
 
-func newTestJobQueueMonitor(jq JobQueue, tb testing.TB) JobQueue {
-	return &testJobQueueMonitor{
-		jq: jq,
-		tb: tb,
-	}
-}
-
 func (tjq *testJobQueueMonitor) Len() int {
 	return tjq.jq.Len()
 }
@@ -52,4 +45,16 @@ func (tjq *testJobQueueMonitor) Dequeue() interface{} {
 	tjq.tb.Logf("-- Dequeue %d: %v.", tjq.numDq, jobData)
 	tjq.numDq++
 	return jobData
+}
+
+type testJobQueueMonitorMaker struct {
+	Maker JobQueueMaker
+	Tb    testing.TB
+}
+
+func (m *testJobQueueMonitorMaker) New() JobQueue {
+	return &testJobQueueMonitor{
+		jq: m.Maker.New(),
+		tb: m.Tb,
+	}
 }

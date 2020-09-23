@@ -20,6 +20,7 @@ package jobsched
 
 import (
 	"math"
+	"runtime"
 
 	"github.com/donyori/gogo/container/pqueue"
 )
@@ -29,10 +30,19 @@ import (
 //  1.025^x - x - 1 = 0
 const threshold float64 = 218.302152071367373
 
-// Default job queue maker.
-//
-// The default job queue implements a starvation-free scheduling algorithm.
-func DefaultJobQueueMaker(n int) JobQueue {
+// A maker for creating a job queue with the default job scheduling algorithm,
+// which is starvation-free.
+type DefaultJobQueueMaker struct {
+	// The number of goroutines to process jobs.
+	// If non-positive, runtime.NumCPU() will be used instead.
+	N int
+}
+
+func (m *DefaultJobQueueMaker) New() JobQueue {
+	n := m.N
+	if n <= 0 {
+		n = runtime.NumCPU()
+	}
 	jq := &defaultJobQueue{rn: 1 / float64(n)}
 	jq.pq = pqueue.NewPriorityQueueMini(jq.jobLess)
 	return jq
@@ -73,7 +83,7 @@ func (djq *defaultJobQueue) Dequeue() interface{} {
 	return job.Data
 }
 
-// Less function for the priority queue jq.pq.
+// Less function for the priority queue djq.pq.
 // A job with a higher priority is "less" than a job with a lower priority.
 func (djq *defaultJobQueue) jobLess(a, b interface{}) bool {
 	ja := a.(*Job)

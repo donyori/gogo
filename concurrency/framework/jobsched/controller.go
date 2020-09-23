@@ -71,18 +71,18 @@ type JobHandler func(jobData interface{}, quitDevice framework.QuitDevice) (newJ
 
 // Create a new Controller.
 //
-// n is the number to process jobs.
+// n is the number of goroutines to process jobs.
 // If n is non-positive, runtime.NumCPU() will be used instead.
 //
 // handler is the job handler.
 // It will panic if handler is nil.
 //
-// jobQueueMaker is a function to create a new job queue.
+// jobQueueMaker is a maker to create a new job queue.
 // It enables the client to make custom JobQueue.
 // If jobQueueMaker is nil, a default job queue maker will be used.
 // The default job queue implements a starvation-free scheduling algorithm.
 //
-// The last argument jobs is initial jobs to process.
+// The rest arguments are initial jobs to process.
 func New(n int, handler JobHandler, jobQueueMaker JobQueueMaker, jobs ...*Job) Controller {
 	if handler == nil {
 		panic(errors.AutoMsg("handler is nil"))
@@ -91,9 +91,9 @@ func New(n int, handler JobHandler, jobQueueMaker JobQueueMaker, jobs ...*Job) C
 		n = runtime.NumCPU()
 	}
 	if jobQueueMaker == nil {
-		jobQueueMaker = DefaultJobQueueMaker
+		jobQueueMaker = &DefaultJobQueueMaker{n}
 	}
-	jq := jobQueueMaker(n)
+	jq := jobQueueMaker.New()
 	jq.Enqueue(jobs...)
 	return &controller{
 		n:    n,

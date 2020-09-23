@@ -29,7 +29,7 @@ func TestFcfsJobQueue(t *testing.T) {
 		jobs[i] = &Job{Data: i}
 		wanted[i] = i
 	}
-	fjq := FcfsJobQueueMaker(1)
+	fjq := new(FcfsJobQueueMaker).New()
 	fjq.Enqueue(jobs[0])
 	fjq.Enqueue(jobs[1:5]...)
 	fjq.Enqueue(jobs[5:]...)

@@ -67,7 +67,12 @@ type JobQueue interface {
 	Dequeue() interface{}
 }
 
-// A function to create a new job queue.
+// A maker for creating a job queue.
 //
-// n is the number of goroutines to process jobs, passed by the function New.
-type JobQueueMaker func(n int) JobQueue
+// It has a method New, with no argument.
+// The client should set parameters about creating a job queue
+// in the instance of this interface.
+type JobQueueMaker interface {
+	// Create a new job queue.
+	New() JobQueue
+}

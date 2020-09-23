@@ -18,13 +18,16 @@
 
 package jobsched
 
-// FCFS (first come, first served) job queue maker.
+// A maker for creating a job queue with
+// FCFS (first come, first served) scheduling algorithm.
 //
 // The FCFS job queue implements a simplest scheduling algorithm that
 // queues jobs in the order that they arrive.
 // All the properties (such as the creation time and the priority) of jobs
 // will be ignored.
-func FcfsJobQueueMaker(n int) JobQueue {
+type FcfsJobQueueMaker struct{}
+
+func (m *FcfsJobQueueMaker) New() JobQueue {
 	return new(fcfsJobQueue)
 }
 
