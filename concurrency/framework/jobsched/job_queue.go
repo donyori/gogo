@@ -35,8 +35,8 @@ type Job struct {
 
 	// Creation time.
 	//
-	// A zero-value Ct field will be set to time.Now() before adding to
-	// the job queue by the framework.
+	// A zero-value Ct field will be set to time.Now() by the framework
+	// before adding to the job queue.
 	Ct time.Time
 
 	// Custom attribute used to customize job scheduling algorithm.

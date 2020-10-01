@@ -86,10 +86,8 @@ func (djq *defaultJobQueue) Dequeue() interface{} {
 // Less function for the priority queue djq.pq.
 // A job with a higher priority is "less" than a job with a lower priority.
 func (djq *defaultJobQueue) jobLess(a, b interface{}) bool {
-	ja := a.(*Job)
-	jb := b.(*Job)
-	pa := djq.calculatePriority(ja)
-	pb := djq.calculatePriority(jb)
+	ja, jb := a.(*Job), b.(*Job)
+	pa, pb := djq.calculatePriority(ja), djq.calculatePriority(jb)
 	if math.Abs(pa-pb) > 1e-3 {
 		return pa > pb
 	}
