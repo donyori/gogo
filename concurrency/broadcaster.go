@@ -100,7 +100,7 @@ func NewBroadcaster(dfltBufSize int) Broadcaster {
 	return &broadcaster{
 		cm:  make(map[<-chan interface{}]chan<- interface{}),
 		coi: NewOnceIndicator(),
-		k:   NewLock(),
+		m:   NewMutex(),
 		dbs: dfltBufSize,
 	}
 }
@@ -112,7 +112,7 @@ type broadcaster struct {
 	cm map[<-chan interface{}]chan<- interface{}
 
 	coi OnceIndicator // For closing the broadcaster.
-	k   Lock          // Lock for cm.
+	m   Mutex         // Lock for cm.
 	bi  int32         // Broadcast indicator.
 	dbs int           // Default buffer size.
 }
@@ -125,14 +125,14 @@ func (b *broadcaster) Closed() bool {
 	}
 	// Acquire the lock first to avoid the case that the method Close
 	// is executing but not finished, and b.coi.Test() returns false.
-	b.k.Lock()
-	defer b.k.Unlock()
+	b.m.Lock()
+	defer b.m.Unlock()
 	return b.coi.Test()
 }
 
 func (b *broadcaster) Broadcast(x interface{}) {
-	b.k.Lock()
-	defer b.k.Unlock()
+	b.m.Lock()
+	defer b.m.Unlock()
 	if b.coi.Test() {
 		panic(errors.AutoMsg("broadcaster is closed"))
 	}
@@ -178,8 +178,8 @@ func (b *broadcaster) Broadcast(x interface{}) {
 
 func (b *broadcaster) Close() {
 	b.coi.Do(func() {
-		b.k.Lock()
-		defer b.k.Unlock()
+		b.m.Lock()
+		defer b.m.Unlock()
 		for _, c := range b.cm {
 			close(c)
 		}
@@ -191,8 +191,8 @@ func (b *broadcaster) Subscribe(bufSize int) <-chan interface{} {
 	if bufSize < 0 {
 		bufSize = b.dbs
 	}
-	b.k.Lock()
-	defer b.k.Unlock()
+	b.m.Lock()
+	defer b.m.Unlock()
 	if b.coi.Test() {
 		return nil
 	}
@@ -212,7 +212,7 @@ func (b *broadcaster) Unsubscribe(c <-chan interface{}) []interface{} {
 	unlocked := true
 	for unlocked {
 		select {
-		case <-b.k.C():
+		case <-b.m.C():
 			unlocked = false
 		case msg, ok := <-inC:
 			if !ok {
@@ -222,7 +222,7 @@ func (b *broadcaster) Unsubscribe(c <-chan interface{}) []interface{} {
 			r = append(r, msg)
 		}
 	}
-	defer b.k.Unlock()
+	defer b.m.Unlock()
 	if b.coi.Test() {
 		return r
 	}

@@ -35,47 +35,47 @@ import (
 // It does not support reentry.
 // And it will panic if the client calls the method Unlock
 // when the lock has been released.
-type Lock interface {
+type Mutex interface {
 	sync.Locker
 
 	// Return the channel for acquiring the lock.
 	//
 	// The client can acquire the lock by receiving a signal on this channel,
 	// which has the same effect as calling the method Lock, i.e.,
-	//  <-lock.C()
+	//  <-m.C()
 	// is equivalent to
-	//  lock.Lock()
+	//  m.Lock()
 	C() <-chan struct{}
 
-	// Return true if the lock is locked, otherwise, false.
+	// Return true if the mutex is locked, otherwise, false.
 	Locked() bool
 }
 
-// Create a new instance of Lock.
-func NewLock() Lock {
-	k := make(lockChannel, 1)
-	k <- struct{}{}
-	return k
+// Create a new instance of Mutex.
+func NewMutex() Mutex {
+	m := make(mutex, 1)
+	m <- struct{}{}
+	return m
 }
 
-// An implementation of interface Lock.
-type lockChannel chan struct{}
+// An implementation of interface Mutex.
+type mutex chan struct{}
 
-func (k lockChannel) Lock() {
-	<-k
+func (m mutex) Lock() {
+	<-m
 }
 
-func (k lockChannel) Unlock() {
-	if len(k) > 0 {
-		panic(errors.AutoMsg("unlock of an unlocked lock"))
+func (m mutex) Unlock() {
+	if len(m) > 0 {
+		panic(errors.AutoMsg("unlock of an unlocked mutex"))
 	}
-	k <- struct{}{}
+	m <- struct{}{}
 }
 
-func (k lockChannel) C() <-chan struct{} {
-	return k
+func (m mutex) C() <-chan struct{} {
+	return m
 }
 
-func (k lockChannel) Locked() bool {
-	return len(k) == 0
+func (m mutex) Locked() bool {
+	return len(m) == 0
 }

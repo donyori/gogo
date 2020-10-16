@@ -23,71 +23,71 @@ import (
 	"time"
 )
 
-func TestLock_Lock(t *testing.T) {
-	k := NewLock()
+func TestMutex_Lock(t *testing.T) {
+	m := NewMutex()
 
 	start := time.Now()
 	go func() {
-		k.Lock()
-		defer k.Unlock()
+		m.Lock()
+		defer m.Unlock()
 		time.Sleep(time.Millisecond)
 	}()
 	time.Sleep(time.Microsecond)
-	k.Lock()
+	m.Lock()
 	if time.Since(start) < time.Millisecond {
-		t.Error("k.Lock() is not working.")
+		t.Error("m.Mutex() is not working.")
 	}
-	k.Unlock()
+	m.Unlock()
 
 	start = time.Now()
 	go func() {
-		<-k.C()
-		defer k.Unlock()
+		<-m.C()
+		defer m.Unlock()
 		time.Sleep(time.Millisecond)
 	}()
 	time.Sleep(time.Microsecond)
-	k.Lock()
+	m.Lock()
 	if time.Since(start) < time.Millisecond {
-		t.Error("<-k.C() is not working.")
+		t.Error("<-m.C() is not working.")
 	}
 }
 
-func TestLock_Locked(t *testing.T) {
-	k := NewLock()
-	if k.Locked() {
-		t.Error("k.Locked() = true on a new lock.")
+func TestMutex_Locked(t *testing.T) {
+	m := NewMutex()
+	if m.Locked() {
+		t.Error("m.Locked() = true on a new lock.")
 	}
-	k.Lock()
-	if !k.Locked() {
-		t.Error("k.Locked() = false after calling Lock.")
+	m.Lock()
+	if !m.Locked() {
+		t.Error("m.Locked() = false after calling Mutex.")
 	}
-	k.Unlock()
-	if k.Locked() {
-		t.Error("k.Locked() = true after releasing the lock.")
+	m.Unlock()
+	if m.Locked() {
+		t.Error("m.Locked() = true after releasing the lock.")
 	}
-	<-k.C()
-	if !k.Locked() {
-		t.Error("k.Locked() = false after receiving on k.C().")
+	<-m.C()
+	if !m.Locked() {
+		t.Error("m.Locked() = false after receiving on m.C().")
 	}
 }
 
-func TestLock_UnlockOfUnlockedLock(t *testing.T) {
+func TestMutex_C_UnlockOfUnlockedLock(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
 			t.Error("No panic when calling Unlock of an unlocked lock.")
 		}
 	}()
-	NewLock().Unlock()
+	NewMutex().Unlock()
 }
 
-func TestLock_UnlockTwice(t *testing.T) {
+func TestMutex_C_UnlockTwice(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
 			t.Error("No panic when calling Unlock twice.")
 		}
 	}()
-	k := NewLock()
-	k.Lock()
-	k.Unlock()
-	k.Unlock()
+	m := NewMutex()
+	m.Lock()
+	m.Unlock()
+	m.Unlock()
 }
