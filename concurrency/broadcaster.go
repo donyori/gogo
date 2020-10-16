@@ -113,12 +113,12 @@ type broadcaster struct {
 
 	coi OnceIndicator // For closing the broadcaster.
 	m   Mutex         // Lock for cm.
-	bi  int32         // Broadcast indicator.
+	bs  int32         // Broadcast semaphore.
 	dbs int           // Default buffer size.
 }
 
 func (b *broadcaster) Closed() bool {
-	if atomic.LoadInt32(&b.bi) == 1 {
+	if atomic.LoadInt32(&b.bs) > 0 {
 		// The broadcaster is executing the method Broadcast,
 		// which means it is not closed.
 		return false
@@ -136,8 +136,8 @@ func (b *broadcaster) Broadcast(x interface{}) {
 	if b.coi.Test() {
 		panic(errors.AutoMsg("broadcaster is closed"))
 	}
-	atomic.StoreInt32(&b.bi, 1)
-	defer atomic.StoreInt32(&b.bi, 0)
+	atomic.AddInt32(&b.bs, 1)
+	defer atomic.AddInt32(&b.bs, -1)
 	var unsent []chan<- interface{}
 	for _, c := range b.cm {
 		select {
