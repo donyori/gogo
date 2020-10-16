@@ -158,7 +158,7 @@ func (d *Dumper) Close() error {
 		return d.err
 	}
 	if !dumpCfgLineNotValid(&d.cfg) {
-		appendSuffix := false
+		var appendSuffix bool
 		if d.used {
 			appendSuffix = d.lineCd < d.cfg.bytesPerLine
 		} else {
