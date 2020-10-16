@@ -38,7 +38,8 @@ const noticeLayout = "    %s  Copyright (C) %s  %s\n" +
 // Layout for formatting notice, with additional program source information.
 const noticeWithSourceLayout = noticeLayout + "    Program source: <%[4]s>.\n"
 
-var ErrAuthorMissing = errors.New("author name is missing")
+// An error for that the author is missing.
+var ErrAuthorMissing = errors.New("author is missing")
 
 // Print a short notice to w, typically in the terminal interaction. program is
 // the name of the program. year is the publish year of your software. author

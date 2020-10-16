@@ -23,6 +23,7 @@ import "strconv"
 // Strategy for auto generating error message.
 type ErrorMessageStrategy int8
 
+// Enumeration of supported error message strategies.
 const (
 	OriginalMsg          ErrorMessageStrategy = iota // OriginalMessage
 	PrefixFullPkgName                                // PrefixFullPackageName
