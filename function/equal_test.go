@@ -71,3 +71,233 @@ func TestGenerateEqualViaLess(t *testing.T) {
 		}
 	}
 }
+
+func TestIntsEqual(t *testing.T) {
+	equalPairs := [][2][]int{
+		{{}, {}},                           // Empty.
+		{nil, nil},                         // Nil.
+		{{1, 2, 3, 4}, {1, 2, 3, 4}},       // Even length.
+		{{1, 2, 3, 4, 5}, {1, 2, 3, 4, 5}}, // Odd length.
+	}
+	unequalPairs := [][2][]int{
+		{nil, {}},                                // Nil - empty.
+		{{}, nil},                                // Empty - nil.
+		{{1, 2, 3}, {1, 2, 3, 4}},                // Different length.
+		{{1, 2, 3, 4, 5}, {1, 2, 5, 4, 5}},       // Odd length.
+		{{1, 2, 3, 4, 5, 6}, {1, 2, 3, 3, 5, 6}}, // Even length.
+	}
+	for i, pair := range equalPairs {
+		if r := IntsEqual(pair[0], pair[1]); !r {
+			t.Errorf("equalPairs Case %d: IntsEqual(a, b): false. a: %#v, b: %#v.", i, pair[0], pair[1])
+		}
+	}
+	for i, pair := range unequalPairs {
+		if r := IntsEqual(pair[0], pair[1]); r {
+			t.Errorf("unequalPairs Case %d: IntsEqual(a, b): true. a: %#v, b: %#v.", i, pair[0], pair[1])
+		}
+	}
+}
+
+func TestFloat64sEqual(t *testing.T) {
+	equalPairs := [][2][]float64{
+		{{}, {}},                           // Empty.
+		{nil, nil},                         // Nil.
+		{{1, 2, 3, 4}, {1, 2, 3, 4}},       // Even length.
+		{{1, 2, 3, 4, 5}, {1, 2, 3, 4, 5}}, // Odd length.
+	}
+	unequalPairs := [][2][]float64{
+		{nil, {}},                                // Nil - empty.
+		{{}, nil},                                // Empty - nil.
+		{{1, 2, 3}, {1, 2, 3, 4}},                // Different length.
+		{{1, 2, 3, 4, 5}, {1, 2, 5, 4, 5}},       // Odd length.
+		{{1, 2, 3, 4, 5, 6}, {1, 2, 3, 3, 5, 6}}, // Even length.
+	}
+	for i, pair := range equalPairs {
+		if r := Float64sEqual(pair[0], pair[1]); !r {
+			t.Errorf("equalPairs Case %d: Float64sEqual(a, b): false. a: %#v, b: %#v.", i, pair[0], pair[1])
+		}
+	}
+	for i, pair := range unequalPairs {
+		if r := Float64sEqual(pair[0], pair[1]); r {
+			t.Errorf("unequalPairs Case %d: Float64sEqual(a, b): true. a: %#v, b: %#v.", i, pair[0], pair[1])
+		}
+	}
+}
+
+func TestStringsEqual(t *testing.T) {
+	equalPairs := [][2][]string{
+		{{}, {}},   // Empty.
+		{nil, nil}, // Nil.
+		{{"1", "2", "3", "4"}, {"1", "2", "3", "4"}},           // Even length.
+		{{"1", "2", "3", "4", "5"}, {"1", "2", "3", "4", "5"}}, // Odd length.
+	}
+	unequalPairs := [][2][]string{
+		{nil, {}},                               // Nil - empty.
+		{{}, nil},                               // Empty - nil.
+		{{"1", "2", "3"}, {"1", "2", "3", "4"}}, // Different length.
+		{{"1", "2", "3", "4", "5"}, {"1", "2", "5", "4", "5"}},           // Odd length.
+		{{"1", "2", "3", "4", "5", "6"}, {"1", "2", "3", "3", "5", "6"}}, // Even length.
+	}
+	for i, pair := range equalPairs {
+		if r := StringsEqual(pair[0], pair[1]); !r {
+			t.Errorf("equalPairs Case %d: StringsEqual(a, b): false. a: %#v, b: %#v.", i, pair[0], pair[1])
+		}
+	}
+	for i, pair := range unequalPairs {
+		if r := StringsEqual(pair[0], pair[1]); r {
+			t.Errorf("unequalPairs Case %d: StringsEqual(a, b): true. a: %#v, b: %#v.", i, pair[0], pair[1])
+		}
+	}
+}
+
+func TestGeneralSliceEqual(t *testing.T) {
+	equalPairs := [][2][]interface{}{
+		{{}, {}},                           // Empty.
+		{nil, nil},                         // Nil.
+		{{1, 2, 3, 4}, {1, 2, 3, 4}},       // Even length.
+		{{1, 2, 3, 4, 5}, {1, 2, 3, 4, 5}}, // Odd length.
+	}
+	unequalPairs := [][2][]interface{}{
+		{nil, {}},                                // Nil - empty.
+		{{}, nil},                                // Empty - nil.
+		{{1, 2, 3}, {1, 2, 3, 4}},                // Different length.
+		{{1, 2, 3, 4, 5}, {1, 2, 5, 4, 5}},       // Odd length.
+		{{1, 2, 3, 4, 5, 6}, {1, 2, 3, 3, 5, 6}}, // Even length.
+	}
+	panicPair := [2][]interface{}{
+		{[]int{1, 2, 3}},
+		{[]int{1, 2, 3}},
+	}
+	for i, pair := range equalPairs {
+		if r := GeneralSliceEqual(pair[0], pair[1]); !r {
+			t.Errorf("equalPairs Case %d: GeneralSliceEqual(a, b): false. a: %#v, b: %#v.", i, pair[0], pair[1])
+		}
+	}
+	for i, pair := range unequalPairs {
+		if r := GeneralSliceEqual(pair[0], pair[1]); r {
+			t.Errorf("unequalPairs Case %d: GeneralSliceEqual(a, b): true. a: %#v, b: %#v.", i, pair[0], pair[1])
+		}
+	}
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("No panic when calling GeneralSliceEqual on %#v.", panicPair)
+		}
+	}()
+	GeneralSliceEqual(panicPair[0], panicPair[1])
+}
+
+func TestSliceEqual(t *testing.T) {
+	// Cases from other slice EqualFunc prefab tests.
+	iEqualPairs := [][2][]int{
+		{{}, {}},                           // Empty.
+		{nil, nil},                         // Nil.
+		{{1, 2, 3, 4}, {1, 2, 3, 4}},       // Even length.
+		{{1, 2, 3, 4, 5}, {1, 2, 3, 4, 5}}, // Odd length.
+	}
+	iUnequalPairs := [][2][]int{
+		{nil, {}},                                // Nil - empty.
+		{{}, nil},                                // Empty - nil.
+		{{1, 2, 3}, {1, 2, 3, 4}},                // Different length.
+		{{1, 2, 3, 4, 5}, {1, 2, 5, 4, 5}},       // Odd length.
+		{{1, 2, 3, 4, 5, 6}, {1, 2, 3, 3, 5, 6}}, // Even length.
+	}
+	fEqualPairs := [][2][]float64{
+		{{}, {}},                           // Empty.
+		{nil, nil},                         // Nil.
+		{{1, 2, 3, 4}, {1, 2, 3, 4}},       // Even length.
+		{{1, 2, 3, 4, 5}, {1, 2, 3, 4, 5}}, // Odd length.
+	}
+	fUnequalPairs := [][2][]float64{
+		{nil, {}},                                // Nil - empty.
+		{{}, nil},                                // Empty - nil.
+		{{1, 2, 3}, {1, 2, 3, 4}},                // Different length.
+		{{1, 2, 3, 4, 5}, {1, 2, 5, 4, 5}},       // Odd length.
+		{{1, 2, 3, 4, 5, 6}, {1, 2, 3, 3, 5, 6}}, // Even length.
+	}
+	sEqualPairs := [][2][]string{
+		{{}, {}},   // Empty.
+		{nil, nil}, // Nil.
+		{{"1", "2", "3", "4"}, {"1", "2", "3", "4"}},           // Even length.
+		{{"1", "2", "3", "4", "5"}, {"1", "2", "3", "4", "5"}}, // Odd length.
+	}
+	sUnequalPairs := [][2][]string{
+		{nil, {}},                               // Nil - empty.
+		{{}, nil},                               // Empty - nil.
+		{{"1", "2", "3"}, {"1", "2", "3", "4"}}, // Different length.
+		{{"1", "2", "3", "4", "5"}, {"1", "2", "5", "4", "5"}},           // Odd length.
+		{{"1", "2", "3", "4", "5", "6"}, {"1", "2", "3", "3", "5", "6"}}, // Even length.
+	}
+	gEqualPairs := [][2][]interface{}{
+		{{}, {}},                           // Empty.
+		{nil, nil},                         // Nil.
+		{{1, 2, 3, 4}, {1, 2, 3, 4}},       // Even length.
+		{{1, 2, 3, 4, 5}, {1, 2, 3, 4, 5}}, // Odd length.
+	}
+	gUnequalPairs := [][2][]interface{}{
+		{nil, {}},                                // Nil - empty.
+		{{}, nil},                                // Empty - nil.
+		{{1, 2, 3}, {1, 2, 3, 4}},                // Different length.
+		{{1, 2, 3, 4, 5}, {1, 2, 5, 4, 5}},       // Odd length.
+		{{1, 2, 3, 4, 5, 6}, {1, 2, 3, 3, 5, 6}}, // Even length.
+	}
+
+	// Cases for SliceEqual only.
+	equalPairs := [][2]interface{}{
+		{nil, nil},                // Nil interface{}.
+		{nil, []interface{}(nil)}, // Nil - nil interface{}.
+		{[]interface{}(nil), nil}, // Nil interface{} - nil.
+	}
+	unequalPairs := [][2]interface{}{
+		{nil, []interface{}{}},             // Nil - empty.
+		{[]interface{}{}, nil},             // Empty - nil.
+		{[]interface{}{}, []int{}},         // Different element types, empty.
+		{[]interface{}{1, 2}, []int{1, 2}}, // Different element types, non-empty, same underlying values.
+	}
+	panicPair := [2]interface{}{
+		[]interface{}{[]int{1, 2, 3}},
+		[]interface{}{[]int{1, 2, 3}},
+	}
+
+	// Append cases from other slice EqualFunc prefab tests.
+	for _, pair := range iEqualPairs {
+		equalPairs = append(equalPairs, [2]interface{}{pair[0], pair[1]})
+	}
+	for _, pair := range iUnequalPairs {
+		unequalPairs = append(unequalPairs, [2]interface{}{pair[0], pair[1]})
+	}
+	for _, pair := range fEqualPairs {
+		equalPairs = append(equalPairs, [2]interface{}{pair[0], pair[1]})
+	}
+	for _, pair := range fUnequalPairs {
+		unequalPairs = append(unequalPairs, [2]interface{}{pair[0], pair[1]})
+	}
+	for _, pair := range sEqualPairs {
+		equalPairs = append(equalPairs, [2]interface{}{pair[0], pair[1]})
+	}
+	for _, pair := range sUnequalPairs {
+		unequalPairs = append(unequalPairs, [2]interface{}{pair[0], pair[1]})
+	}
+	for _, pair := range gEqualPairs {
+		equalPairs = append(equalPairs, [2]interface{}{pair[0], pair[1]})
+	}
+	for _, pair := range gUnequalPairs {
+		unequalPairs = append(unequalPairs, [2]interface{}{pair[0], pair[1]})
+	}
+
+	for i, pair := range equalPairs {
+		if r := SliceEqual(pair[0], pair[1]); !r {
+			t.Errorf("equalPairs Case %d: SliceEqual(a, b): false. a: %#v, b: %#v.", i, pair[0], pair[1])
+		}
+	}
+	for i, pair := range unequalPairs {
+		if r := SliceEqual(pair[0], pair[1]); r {
+			t.Errorf("unequalPairs Case %d: SliceEqual(a, b): true. a: %#v, b: %#v.", i, pair[0], pair[1])
+		}
+	}
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("No panic when calling SliceEqual on %#v.", panicPair)
+		}
+	}()
+	SliceEqual(panicPair[0], panicPair[1])
+}
