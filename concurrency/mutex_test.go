@@ -35,7 +35,7 @@ func TestMutex_Lock(t *testing.T) {
 	time.Sleep(time.Microsecond)
 	m.Lock()
 	if time.Since(start) < time.Millisecond {
-		t.Error("m.Mutex() is not working.")
+		t.Error("m.Lock() is not working.")
 	}
 	m.Unlock()
 
@@ -55,15 +55,15 @@ func TestMutex_Lock(t *testing.T) {
 func TestMutex_Locked(t *testing.T) {
 	m := NewMutex()
 	if m.Locked() {
-		t.Error("m.Locked() = true on a new lock.")
+		t.Error("m.Locked() = true on a new mutex.")
 	}
 	m.Lock()
 	if !m.Locked() {
-		t.Error("m.Locked() = false after calling Mutex.")
+		t.Error("m.Locked() = false after calling Lock.")
 	}
 	m.Unlock()
 	if m.Locked() {
-		t.Error("m.Locked() = true after releasing the lock.")
+		t.Error("m.Locked() = true after calling Unlock.")
 	}
 	<-m.C()
 	if !m.Locked() {
@@ -74,7 +74,7 @@ func TestMutex_Locked(t *testing.T) {
 func TestMutex_C_UnlockOfUnlockedLock(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
-			t.Error("No panic when calling Unlock of an unlocked lock.")
+			t.Error("No panic when calling Unlock of an unlocked mutex.")
 		}
 	}()
 	NewMutex().Unlock()
