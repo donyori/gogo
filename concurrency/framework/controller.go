@@ -18,32 +18,32 @@
 
 package framework
 
-// A device to acquire the channel for the quit signal, detect the quit signal,
-// and broadcast a quit signal to quit the job.
+// QuitDevice is a device to acquire the channel for the quit signal,
+// detect the quit signal, and broadcast a quit signal to quit the job.
 type QuitDevice interface {
-	// Return the channel for the quit signal.
+	// QuitChan returns the channel for the quit signal.
 	// When the job is finished or quit, this channel will be closed
 	// to broadcast the quit signal.
 	QuitChan() <-chan struct{}
 
-	// Detect the quit signal on the quit channel.
+	// IsQuit detects the quit signal on the quit channel.
 	// It returns true if a quit signal is detected, and false otherwise.
 	IsQuit() bool
 
-	// Broadcast a quit signal to quit the job.
+	// Quit broadcasts a quit signal to quit the job.
 	//
 	// This method will NOT wait until the job ends.
 	Quit()
 }
 
-// A controller to launch, quit, and wait for the job.
+// Controller is a device to launch, quit, and wait for the job.
 //
 // The use of all the frameworks under this package starts with creating
 // a controller through their own New function.
 type Controller interface {
 	QuitDevice
 
-	// Launch the job.
+	// Launch starts the job.
 	//
 	// This method will NOT wait until the job ends.
 	// Use method Wait if you want to wait for that.
@@ -53,17 +53,17 @@ type Controller interface {
 	// with the same parameters.
 	Launch()
 
-	// Wait for the job to finish or quit.
+	// Wait waits for the job to finish or quit.
 	// It returns the number of panic goroutines.
 	//
 	// If the job was not launched, it does nothing and returns -1.
 	Wait() int
 
-	// Launch the job and wait for it.
+	// Run launches the job and waits for it.
 	// It returns the number of panic goroutines.
 	Run() int
 
-	// Return the number of goroutines to process this job.
+	// NumGoroutine returns the number of goroutines to process this job.
 	//
 	// Note that it only includes the main goroutines to process the job.
 	// Any possible control goroutines, daemon goroutines, auxiliary goroutines,
@@ -71,6 +71,6 @@ type Controller interface {
 	// are all excluded.
 	NumGoroutine() int
 
-	// Return the panic records.
+	// PanicRecords returns the panic records.
 	PanicRecords() []PanicRec
 }

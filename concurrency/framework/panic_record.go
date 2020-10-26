@@ -23,13 +23,14 @@ import (
 	"sync"
 )
 
-// Panic record, including the name of the goroutine
+// PanicRec is a panic record, including the name of the goroutine
 // and the panic content (i.e., the parameter passed to function panic).
 type PanicRec struct {
 	Name    string      // Name of the goroutine.
 	Content interface{} // The parameter passed to function panic.
 }
 
+// String formats the panic record into a string.
 func (pr PanicRec) String() string {
 	if pr.Content == nil {
 		return "no panic"
@@ -37,25 +38,26 @@ func (pr PanicRec) String() string {
 	return fmt.Sprintf("panic on Goroutine %s: %v", pr.Name, pr.Content)
 }
 
+// Error implements the built-in interface error.
 func (pr PanicRec) Error() string {
 	return pr.String()
 }
 
-// Panic records, used by the framework codes.
+// PanicRecords is a list of panic records, used by the framework codes.
 // It is safe for concurrent use by multiple goroutines.
 type PanicRecords struct {
 	recs []PanicRec   // List of panic records.
 	lock sync.RWMutex // Lock for concurrent use.
 }
 
-// Return the number of records.
+// Len returns the number of records.
 func (pr *PanicRecords) Len() int {
 	pr.lock.RLock()
 	defer pr.lock.RUnlock()
 	return len(pr.recs)
 }
 
-// Output the panic records as a slice of PanicRec.
+// List outputs the panic records as a slice of PanicRec.
 // It returns nil if there is no panic record.
 func (pr *PanicRecords) List() []PanicRec {
 	pr.lock.RLock()
@@ -63,7 +65,7 @@ func (pr *PanicRecords) List() []PanicRec {
 	return append(pr.recs[:0:0], pr.recs...) // Return a copy of pr.recs.
 }
 
-// Append new panic records to the back of its panic record list.
+// Append adds new panic records to the back of its panic record list.
 func (pr *PanicRecords) Append(panicRecs ...PanicRec) {
 	if len(panicRecs) == 0 {
 		return

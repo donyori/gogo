@@ -23,26 +23,27 @@ import (
 	"github.com/donyori/gogo/function"
 )
 
-// A type standing for an integer-indexed sequence
-// used in binary search algorithm.
+// BinarySearchInterface represents an integer-indexed sequence
+// used in the binary search algorithm.
 type BinarySearchInterface interface {
-	// Return the number of items in the sequence.
+	// Len returns the number of items in the sequence.
 	Len() int
 
-	// Test whether i-th item of the sequence equals to x.
+	// Equal reports whether i-th item of the sequence equals to x.
 	// It panics if i is out of range.
 	Equal(i int, x interface{}) bool
 
-	// Test whether i-th item is less than x.
+	// Less reports whether i-th item is less than x.
 	// It panics if i is out of range.
 	Less(i int, x interface{}) bool
 
-	// Test whether i-th item is greater than x.
+	// Greater reports whether i-th item is greater than x.
 	// It panics if i is out of range.
 	Greater(i int, x interface{}) bool
 }
 
-// Find target in data using binary search algorithm.
+// BinarySearch finds target in data using binary search algorithm,
+// and returns its index.
 //
 // data must be sorted in ascending order!
 // (If data is in descending order, you can exchange the behavior
@@ -92,8 +93,8 @@ func BinarySearch(data BinarySearchInterface, target interface{}) int {
 	return -1
 }
 
-// Find the maximum item less than target in data
-// using binary search algorithm.
+// BinarySearchMaxLess finds the maximum item less than target in data
+// using binary search algorithm, and returns its index.
 //
 // data must be sorted in ascending order!
 // (If data is in descending order, you can exchange the behavior
@@ -108,7 +109,7 @@ func BinarySearch(data BinarySearchInterface, target interface{}) int {
 // It returns -1 if no such item in data.
 //
 // Only Len() and Less() are used in this function,
-// and it's OK to leave Equal() and Greater() as empty functions.
+// and it's OK to leave Equal() and Greater() as empty methods.
 //
 // target is only used to call the method Less() of data (BinarySearchInterface).
 // It's OK to handle target in your implementation of BinarySearchInterface,
@@ -139,8 +140,8 @@ func BinarySearchMaxLess(data BinarySearchInterface, target interface{}) int {
 	return low
 }
 
-// Find the minimum item greater than target in data
-// using binary search algorithm.
+// BinarySearchMinGreater finds the minimum item greater than target in data
+// using binary search algorithm, and returns its index.
 //
 // data must be sorted in ascending order!
 // (If data is in descending order, you can exchange the behavior
@@ -155,7 +156,7 @@ func BinarySearchMaxLess(data BinarySearchInterface, target interface{}) int {
 // It returns -1 if no such item in data.
 //
 // Only Len() and Greater() are used in this function,
-// and it's OK to leave Equal() and Less() as empty functions.
+// and it's OK to leave Equal() and Less() as empty methods.
 //
 // target is only used to call the method Greater() of data (BinarySearchInterface).
 // It's OK to handle target in your implementation of BinarySearchInterface,
@@ -186,13 +187,15 @@ func BinarySearchMinGreater(data BinarySearchInterface, target interface{}) int 
 	return high
 }
 
-// An adapter for: Array + EqualFunc + LessFunc -> BinarySearchInterface.
+// BinarySearchArrayAdapter is an adapter for:
+// sequence.Array + function.EqualFunc + function.LessFunc -> BinarySearchInterface.
 type BinarySearchArrayAdapter struct {
 	Data    sequence.Array
 	EqualFn function.EqualFunc
 	LessFn  function.LessFunc
 }
 
+// Len returns the number of items in the sequence.
 func (bsad *BinarySearchArrayAdapter) Len() int {
 	if bsad == nil || bsad.Data == nil {
 		return 0
@@ -200,6 +203,8 @@ func (bsad *BinarySearchArrayAdapter) Len() int {
 	return bsad.Data.Len()
 }
 
+// Equal reports whether i-th item of the sequence equals to x.
+// It panics if i is out of range.
 func (bsad *BinarySearchArrayAdapter) Equal(i int, x interface{}) bool {
 	if bsad.EqualFn == nil && bsad.LessFn != nil {
 		bsad.EqualFn = function.GenerateEqualViaLess(bsad.LessFn)
@@ -207,10 +212,14 @@ func (bsad *BinarySearchArrayAdapter) Equal(i int, x interface{}) bool {
 	return bsad.EqualFn(bsad.Data.Get(i), x)
 }
 
+// Less reports whether i-th item is less than x.
+// It panics if i is out of range.
 func (bsad *BinarySearchArrayAdapter) Less(i int, x interface{}) bool {
 	return bsad.LessFn(bsad.Data.Get(i), x)
 }
 
+// Greater reports whether i-th item is greater than x.
+// It panics if i is out of range.
 func (bsad *BinarySearchArrayAdapter) Greater(i int, x interface{}) bool {
 	return bsad.LessFn(x, bsad.Data.Get(i))
 }

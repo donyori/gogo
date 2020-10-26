@@ -23,12 +23,14 @@ import (
 	"github.com/donyori/gogo/function"
 )
 
-// An adapter for: DynamicArray + LessFunc -> container/heap.Interface.
+// DynamicArray is an adapter for:
+// sequence.DynamicArray + function.LessFunc -> container/heap.Interface.
 type DynamicArray struct {
 	Data   sequence.DynamicArray
 	LessFn function.LessFunc
 }
 
+// Len returns the number of items in the dynamic array.
 func (da *DynamicArray) Len() int {
 	if da == nil || da.Data == nil {
 		return 0
@@ -36,18 +38,23 @@ func (da *DynamicArray) Len() int {
 	return da.Data.Len()
 }
 
+// Less reports whether the item with
+// index i should sort before the item with index j.
 func (da *DynamicArray) Less(i, j int) bool {
 	return da.LessFn(da.Data.Get(i), da.Data.Get(j))
 }
 
+// Swap swaps the items with indexes i and j.
 func (da *DynamicArray) Swap(i, j int) {
 	da.Data.Swap(i, j)
 }
 
+// Push adds x as the last item of the dynamic array.
 func (da *DynamicArray) Push(x interface{}) {
 	da.Data.Push(x)
 }
 
+// Pop removes and returns the last item of the dynamic array.
 func (da *DynamicArray) Pop() interface{} {
 	return da.Data.Pop()
 }

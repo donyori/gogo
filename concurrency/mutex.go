@@ -24,7 +24,7 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// A lock based on Golang channel.
+// Mutex is a mutual exclusion lock based on Golang channel.
 //
 // It can be used similarly to sync.Mutex.
 // Moreover, it enables the client to acquire the lock while listening to
@@ -38,7 +38,7 @@ import (
 type Mutex interface {
 	sync.Locker
 
-	// Return the channel for acquiring the lock.
+	// C returns the channel for acquiring the lock.
 	//
 	// The client can acquire the lock by receiving a signal on this channel,
 	// which has the same effect as calling the method Lock, i.e.,
@@ -47,18 +47,18 @@ type Mutex interface {
 	//  m.Lock()
 	C() <-chan struct{}
 
-	// Return true if the mutex is locked, otherwise, false.
+	// Locked reports whether the mutex is locked.
 	Locked() bool
 }
 
-// Create a new instance of Mutex.
+// NewMutex creates a new instance of Mutex.
 func NewMutex() Mutex {
 	m := make(mutex, 1)
 	m <- struct{}{}
 	return m
 }
 
-// An implementation of interface Mutex.
+// mutex is an implementation of interface Mutex.
 type mutex chan struct{}
 
 func (m mutex) Lock() {

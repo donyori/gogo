@@ -18,30 +18,33 @@
 
 package sequence
 
-// General sequence interface.
+// Sequence is an interface representing a general sequence.
 type Sequence interface {
-	// Return the number of items in the sequence.
+	// Len returns the number of items in the sequence.
 	Len() int
 
-	// Return the first item of the sequence.
+	// Front returns the first item of the sequence.
 	// It panics if the sequence is nil or empty.
 	Front() interface{}
 
-	// Set the first item to x.
+	// SetFront sets the first item to x.
 	// It panics if the sequence is nil or empty.
 	SetFront(x interface{})
 
-	// Return the last item of the sequence.
+	// Back returns the last item of the sequence.
 	// It panics if the sequence is nil or empty.
 	Back() interface{}
 
-	// Set the last item to x.
+	// SetBack sets the last item to x.
 	// It panics if the sequence is nil or empty.
 	SetBack(x interface{})
 
-	// Reverse items of the sequence.
+	// Reverse turns the other way round items of the sequence.
 	Reverse()
 
-	// Scan the items in the sequence from the first to the last.
+	// Scan browses the items in the sequence from the first to the last.
+	//
+	// Its argument handler is a function to deal with the item x in the
+	// sequence and report whether to continue to check the next item or not.
 	Scan(handler func(x interface{}) (cont bool))
 }

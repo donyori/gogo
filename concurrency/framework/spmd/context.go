@@ -18,7 +18,7 @@
 
 package spmd
 
-// Context of the communicators.
+// context is the environment of the communicators.
 // Each goroutine group has its own context.
 type context struct {
 	Id         string           // ID of the group.
@@ -32,7 +32,7 @@ type context struct {
 	ChanMaps [numCOp]map[int64]*chanCntr
 }
 
-// Create a new context.
+// newContext creates a new context.
 // Only for function New.
 func newContext(ctrl *controller, id string, worldRanks []int) *context {
 	n := len(worldRanks)

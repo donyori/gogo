@@ -18,7 +18,7 @@
 
 package jobsched
 
-// A maker for creating a job queue with
+// FcfsJobQueueMaker is a maker for creating a job queue with
 // FCFS (first come, first served) scheduling algorithm.
 //
 // The FCFS job queue implements a simplest scheduling algorithm that
@@ -27,11 +27,12 @@ package jobsched
 // will be ignored.
 type FcfsJobQueueMaker struct{}
 
+// New creates a new FCFS (first come, first served) job queue.
 func (m *FcfsJobQueueMaker) New() JobQueue {
 	return new(fcfsJobQueue)
 }
 
-// FCFS (first come, first served) job queue.
+// fcfsJobQueue is an FCFS (first come, first served) job queue.
 type fcfsJobQueue []interface{}
 
 func (fjq fcfsJobQueue) Len() int {

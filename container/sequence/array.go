@@ -18,23 +18,23 @@
 
 package sequence
 
-// Array, i.e., fixed-length direct-access sequence.
+// Array is an interface representing a fixed-length direct-access sequence.
 type Array interface {
 	Sequence
 
-	// Return the i-th item of the array.
+	// Get returns the i-th item of the array.
 	// It panics if i is out of range.
 	Get(i int) interface{}
 
-	// Set the i-th item to x.
+	// Set sets the i-th item to x.
 	// It panics if i is out of range.
 	Set(i int, x interface{})
 
-	// Swap the i-th and j-th items.
+	// Swap exchanges the i-th and j-th items.
 	// It panics if i or j is out of range.
 	Swap(i, j int)
 
-	// Return a slice from argument begin (inclusive) to
+	// Slice returns a slice from argument begin (inclusive) to
 	// argument end (exclusive) of the array, as an Array.
 	// It panics if begin or end is out of range, or begin > end.
 	Slice(begin, end int) Array

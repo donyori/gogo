@@ -23,7 +23,7 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// Transform data to its next permutation in lexical order.
+// NextPermutation transforms data to its next permutation in lexical order.
 // It returns false if data.Len() == 0 or the permutations are exhausted,
 // and true otherwise.
 // Time complexity: O(n), where n = data.Len().
@@ -52,6 +52,8 @@ func NextPermutation(data Interface) bool {
 	return true
 }
 
+// nextPermutationBinarySearchInterface is an implementation of
+// interface BinarySearchInterface.
 type nextPermutationBinarySearchInterface struct {
 	Data   Interface
 	Target int

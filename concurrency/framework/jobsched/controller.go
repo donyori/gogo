@@ -30,14 +30,14 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// A controller for this jobsched framework.
+// Controller is a controller for this jobsched framework.
 //
 // It is used to launch, quit, and wait for the job.
 // And it is also used to input new jobs.
 type Controller interface {
 	framework.Controller
 
-	// Input new jobs.
+	// Input inputs new jobs.
 	//
 	// If an item in jobs is nil, it will be treated as a Job with Data to nil,
 	// Pri to 0, Ct to time.Now(), and CustAttr to nil.
@@ -54,7 +54,7 @@ type Controller interface {
 	Input(jobs ...*Job) bool
 }
 
-// Job handler.
+// JobHandler is a function to process a job.
 //
 // The first argument jobData is the data of the job.
 //
@@ -69,7 +69,7 @@ type Controller interface {
 // be set to time.Now().
 type JobHandler func(jobData interface{}, quitDevice framework.QuitDevice) (newJobs []*Job)
 
-// Create a new Controller.
+// New creates a new Controller.
 //
 // n is the number of goroutines to process jobs.
 // If n is non-positive, runtime.NumCPU() will be used instead.
@@ -108,7 +108,7 @@ func New(n int, handler JobHandler, jobQueueMaker JobQueueMaker, jobs ...*Job) C
 	}
 }
 
-// Create a Controller with given parameters, and then run it.
+// Run creates a Controller with given parameters, and then run it.
 // It returns the panic records of the Controller.
 //
 // The arguments are the same as those of function New.
@@ -118,7 +118,7 @@ func Run(n int, handler JobHandler, jobQueueMaker JobQueueMaker, jobs ...*Job) [
 	return ctrl.PanicRecords()
 }
 
-// An implementation of interface Controller.
+// controller is an implementation of interface Controller.
 type controller struct {
 	n int        // The number of goroutines to process jobs.
 	h JobHandler // Job handler.
@@ -239,7 +239,7 @@ func (ctrl *controller) Input(jobs ...*Job) bool {
 	}
 }
 
-// Input new jobs before the first call of the method Launch.
+// inputBeforeLaunch inputs new jobs before the first call of the method Launch.
 //
 // It returns true if jobs are put into the job queue successfully.
 // When it returns false, the caller should then send jobs to ctrl.ic.
@@ -253,7 +253,8 @@ func (ctrl *controller) inputBeforeLaunch(jobs []*Job) bool {
 	return true
 }
 
-// Allocator main process, without panic checking and wg.Done().
+// allocatorProc is the allocator main process,
+// without panic checking and wg.Done().
 func (ctrl *controller) allocatorProc() {
 	defer close(ctrl.dqc)
 	var dqc chan<- interface{} // Disable dqc at the beginning.
@@ -298,7 +299,7 @@ func (ctrl *controller) allocatorProc() {
 	}
 }
 
-// Worker main process, without panic checking and wg.Done().
+// workerProc is the worker main process, without panic checking and wg.Done().
 func (ctrl *controller) workerProc() {
 	var jobData interface{}
 	var ok, needUpdateNow bool

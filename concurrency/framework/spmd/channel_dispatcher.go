@@ -20,19 +20,19 @@ package spmd
 
 import "github.com/donyori/gogo/concurrency/framework"
 
-// Combination of channel or list of channels, and counter.
+// chanCntr is a combination of channel or list of channels, and counter.
 type chanCntr struct {
 	Chan interface{}
 	Cntr int
 }
 
-// Channel dispatcher.
+// chanDispr is a channel dispatcher.
 //
 // Its underlying type is an array of channels for
 // receiving the channel dispatch query.
 type chanDispr [numCOp]chan *communicator
 
-// Create a new channel dispatcher.
+// newChanDispr creates a new channel dispatcher.
 // Only for function New.
 func newChanDispr() *chanDispr {
 	cd := new(chanDispr)
@@ -42,7 +42,7 @@ func newChanDispr() *chanDispr {
 	return cd
 }
 
-// Launch the channel dispatcher on current goroutine.
+// Run launches the channel dispatcher on current goroutine.
 //
 // quitDevice is the device to receive a quit signal.
 // It should be obtained from Controller.
@@ -101,7 +101,7 @@ func (cd *chanDispr) Run(quitDevice framework.QuitDevice, finChan chan<- struct{
 					for i := range cs {
 						cs[i] = make(chan interface{}, 1)
 					}
-					cc.Chan, cs = cs, nil
+					cc.Chan, cs = cs, nil // Reset cs to enable GC to clear contexts that are no longer used.
 				case cOpGather:
 					cc.Chan = make(chan *sndrMsg, n)
 				default:

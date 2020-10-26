@@ -20,7 +20,7 @@ package jobsched
 
 import "github.com/donyori/gogo/container/pqueue"
 
-// A maker for creating a job queue that schedules jobs
+// CtJobQueueMaker is a maker for creating a job queue that schedules jobs
 // according to their creation time, and then priority.
 //
 // A job with an earlier creation time (corresponding to Ct field)
@@ -29,6 +29,7 @@ import "github.com/donyori/gogo/container/pqueue"
 // their priority. The higher the priority, the earlier dequeued.
 type CtJobQueueMaker struct{}
 
+// New creates a new creation time job queue.
 func (m *CtJobQueueMaker) New() JobQueue {
 	return &ctJobQueue{pqueue.NewPriorityQueueMini(func(a, b interface{}) bool {
 		ja, jb := a.(*Job), b.(*Job)
@@ -39,7 +40,7 @@ func (m *CtJobQueueMaker) New() JobQueue {
 	})}
 }
 
-// A job queue scheduling jobs according to their creation time,
+// ctJobQueue is a job queue scheduling jobs according to their creation time,
 // and then priority.
 type ctJobQueue struct {
 	pq pqueue.PriorityQueueMini // Priority queue to manage jobs.

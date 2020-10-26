@@ -20,7 +20,7 @@ package jobsched
 
 import "time"
 
-// A unit representing a job.
+// Job is a unit representing a job or task.
 type Job struct {
 	// Data for the job handler.
 	// Note that only Data will be passed to the job handler.
@@ -45,7 +45,7 @@ type Job struct {
 	CustAttr interface{}
 }
 
-// A job queue for the job scheduling.
+// JobQueue is a queue for the job scheduling.
 // The client can customize the job scheduling algorithm
 // by implementing this interface.
 //
@@ -53,26 +53,27 @@ type Job struct {
 // Don't worry about multiple access problems such as race condition
 // when implementing this interface.
 type JobQueue interface {
-	// Return the number of jobs in the queue.
+	// Len returns the number of jobs in the queue.
 	Len() int
 
-	// Add jobs into the job queue.
+	// Enqueue adds jobs into the job queue.
 	//
 	// The framework guarantees that all items in jobs are never nil and
 	// have a non-zero Ct field.
 	Enqueue(jobs ...*Job)
 
-	// Pop a job in the queue and return its data (i.e., the Data field of Job).
+	// Dequeue pops a job in the queue and returns its data
+	// (i.e., the Data field of Job).
 	// It panics if the queue is nil or empty.
 	Dequeue() interface{}
 }
 
-// A maker for creating a job queue.
+// JobQueueMaker is a maker for creating a job queue.
 //
 // It has a method New, with no argument.
 // The client should set parameters about creating a job queue
 // in the instance of this interface.
 type JobQueueMaker interface {
-	// Create a new job queue.
+	// New creates a new job queue.
 	New() JobQueue
 }

@@ -20,11 +20,11 @@ package concurrency
 
 import "sync"
 
-// An object that performs exactly one action, just like sync.Once.
+// OnceIndicator is an object that performs exactly one action, like sync.Once.
 // Moreover, it can indicate whether the action has been performed or not,
 // and enable the client on another goroutine to wait for the action to finish.
 type OnceIndicator interface {
-	// Perform the same as the method Do of sync.Once, and indicate whether
+	// Do performs the same as the method Do of sync.Once, and indicate whether
 	// the function f is called in this invocation.
 	//
 	// In detail, it calls the function f and returns true iff the method Do
@@ -36,27 +36,27 @@ type OnceIndicator interface {
 	// just set f to nil (no panic will happen).
 	Do(f func()) bool
 
-	// Return a channel that will be closed after calling the method Do
+	// C returns a channel that will be closed after calling the method Do
 	// for the first time for this instance of OnceIndicator.
 	C() <-chan struct{}
 
-	// Wait for the first call of the method Do for this instance
+	// Wait waits for the first call of the method Do for this instance
 	// on another goroutine to finish.
 	Wait()
 
-	// Test whether the method Do for this instance is called or not.
+	// Test reports whether the method Do for this instance is called or not.
 	//
 	// It returns true iff the first call of the method Do
 	// for this instance has finished.
 	Test() bool
 }
 
-// Create a new instance of OnceIndicator.
+// NewOnceIndicator creates a new instance of OnceIndicator.
 func NewOnceIndicator() OnceIndicator {
 	return &onceIndicator{c: make(chan struct{})}
 }
 
-// An implementation of interface OnceIndicator.
+// onceIndicator is an implementation of interface OnceIndicator.
 type onceIndicator struct {
 	once sync.Once     // Once object.
 	c    chan struct{} // Channel to broadcast the finish signal.

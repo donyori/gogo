@@ -23,12 +23,14 @@ import (
 	"github.com/donyori/gogo/function"
 )
 
-// An adapter for: Array + LessFunc -> sort.Interface.
+// Array is an adapter for:
+// sequence.Array + function.LessFunc -> sort.Interface.
 type Array struct {
 	Data   sequence.Array
 	LessFn function.LessFunc
 }
 
+// Len returns the number of items in the array.
 func (a *Array) Len() int {
 	if a == nil || a.Data == nil {
 		return 0
@@ -36,10 +38,13 @@ func (a *Array) Len() int {
 	return a.Data.Len()
 }
 
+// Less reports whether the item with
+// index i should sort before the item with index j.
 func (a *Array) Less(i, j int) bool {
 	return a.LessFn(a.Data.Get(i), a.Data.Get(j))
 }
 
+// Swap swaps the items with indexes i and j.
 func (a *Array) Swap(i, j int) {
 	a.Data.Swap(i, j)
 }

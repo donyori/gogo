@@ -18,77 +18,88 @@
 
 package sequence
 
-// Dynamic array.
+// DynamicArray is an interface representing a dynamic array.
 type DynamicArray interface {
 	Array
 
-	// Return the capacity of the dynamic array.
+	// Cap returns the current capacity of the dynamic array.
 	Cap() int
 
-	// Add x to the back of the dynamic array.
+	// Push adds x to the back of the dynamic array.
 	Push(x interface{})
 
-	// Remove and return the last item of the dynamic array.
+	// Pop removes and returns the last item of the dynamic array.
 	// It panics if the dynamic array is nil or empty.
 	Pop() interface{}
 
-	// Append s to the back of the dynamic array.
+	// Append adds s to the back of the dynamic array.
 	// s shouldn't be modified during calling this method,
 	// otherwise, unknown error may occur.
 	Append(s Sequence)
 
-	// Remove the i-th and all subsequent items of the dynamic array.
+	// Truncate removes the i-th and all subsequent items in the dynamic array.
 	// It does nothing if i is out of range.
 	Truncate(i int)
 
-	// Insert x as the i-th item of the dynamic array.
+	// Insert adds x as the i-th item in the dynamic array.
 	// It panics if i is out of range, i.e., i < 0 or i > Len().
 	Insert(i int, x interface{})
 
-	// Remove and return the i-th item of the dynamic array.
+	// Remove removes and returns the i-th item in the dynamic array.
 	// It panics if i is out of range, i.e., i < 0 or i >= Len().
 	Remove(i int) interface{}
 
-	// Remove and return the i-th item of the dynamic array, without preserving order.
+	// RemoveWithoutOrder removes and returns the i-th item in
+	// the dynamic array, without preserving order.
 	// It panics if i is out of range, i.e., i < 0 or i >= Len().
 	RemoveWithoutOrder(i int) interface{}
 
-	// Insert s to the front of the i-th item of the dynamic array.
+	// InsertSequence inserts s to the front of the i-th item
+	// in the dynamic array.
 	// It panics if i is out of range, i.e., i < 0 or i > Len().
 	// s shouldn't be modified during calling this method,
 	// otherwise, unknown error may occur.
 	InsertSequence(i int, s Sequence)
 
-	// Remove items from argument begin (inclusive) to
+	// Cut removes items from argument begin (inclusive) to
 	// argument end (exclusive) of the dynamic array.
 	// It panics if begin or end is out of range, or begin > end.
 	Cut(begin, end int)
 
-	// Remove items from argument begin (inclusive) to
+	// CutWithoutOrder removes items from argument begin (inclusive) to
 	// argument end (exclusive) of the dynamic array, without preserving order.
 	// It panics if begin or end is out of range, or begin > end.
 	CutWithoutOrder(begin, end int)
 
-	// Append n zero-value items to the back of the dynamic array.
+	// Extend adds n zero-value items to the back of the dynamic array.
 	// It panics if n < 0.
 	Extend(n int)
 
-	// Insert n zero-value items to the front of the i-th item of the dynamic array.
+	// Expand inserts n zero-value items to the front of the i-th item
+	// in the dynamic array.
 	// It panics if i is out of range, i.e., i < 0 or i > Len(), or n < 0.
 	Expand(i, n int)
 
-	// Request the capacity of the dynamic array is at least the given capacity.
+	// Reserve requests that the capacity of the dynamic array
+	// is at least the given capacity.
 	// It does nothing if capacity <= Cap().
 	Reserve(capacity int)
 
-	// Shrink the dynamic array to fit, i.e., request Cap() equals to Len().
-	// Note that it isn't equivalent to operations on slice as s[:len(s):len(s)],
-	// because it will allocate a new array and copy the content if Cap() > Len().
+	// Shrink reduces the dynamic array to fit, i.e.,
+	// requests Cap() equals to Len().
+	// Note that it isn't equivalent to operations on slice
+	// like s[:len(s):len(s)],
+	// because it will allocate a new array and copy the content
+	// if Cap() > Len().
 	Shrink()
 
-	// Remove all items of the dynamic array and release the memory.
+	// Clear removes all items in the dynamic array and
+	// asks to release the memory.
 	Clear()
 
-	// Filter items of the dynamic array (in place).
+	// Filter refines items in the dynamic array (in place).
+	//
+	// Its argument filter is a function to report
+	// whether to keep the item x or not.
 	Filter(filter func(x interface{}) (keep bool))
 }

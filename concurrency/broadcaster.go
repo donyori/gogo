@@ -24,7 +24,7 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// A broadcaster to broadcast messages to its subscriber.
+// Broadcaster is a device to broadcast messages to its subscriber.
 // It is used to send messages from one sender to multiple receivers.
 //
 // The sender should call the method Broadcast to send a message to
@@ -38,10 +38,10 @@ import (
 // Finally, when the receiver no longer needs to get messages from this
 // broadcaster, it can call the method Unsubscribe.
 type Broadcaster interface {
-	// Return true if the broadcaster is closed, otherwise, false.
+	// Closed reports whether the broadcaster is closed.
 	Closed() bool
 
-	// Broadcast the message x to all subscribers.
+	// Broadcast sends the message x to all subscribers.
 	//
 	// The method will block until all subscribers receive
 	// or buffer the message.
@@ -49,7 +49,7 @@ type Broadcaster interface {
 	// It will panic if the broadcaster is closed.
 	Broadcast(x interface{})
 
-	// Close the broadcaster.
+	// Close closes the broadcaster.
 	//
 	// All channels assigned by the broadcaster will be closed to notify
 	// its subscribers that there are no more messages.
@@ -63,7 +63,7 @@ type Broadcaster interface {
 	// This method should only be used by the sender.
 	Close()
 
-	// Subscribe the broadcaster to get messages from the sender.
+	// Subscribe subscribes the broadcaster to get messages from the sender.
 	//
 	// bufSize is the buffer size of the returned channel.
 	// 0 for no buffer.
@@ -73,7 +73,7 @@ type Broadcaster interface {
 	// If the broadcaster is closed, it returns nil.
 	Subscribe(bufSize int) <-chan interface{}
 
-	// Unsubscribe the broadcaster to stop receiving messages.
+	// Unsubscribe unsubscribes the broadcaster to stop receiving messages.
 	//
 	// c is the channel acquired by the method Subscribe.
 	// It will panic if c is not gotten from the method Subscribe,
@@ -89,7 +89,7 @@ type Broadcaster interface {
 	Unsubscribe(c <-chan interface{}) []interface{}
 }
 
-// Create a new instance of interface Broadcaster.
+// NewBroadcaster creates a new instance of interface Broadcaster.
 //
 // dfltBufSize is the default buffer size for the new broadcaster.
 // Non-positive values for no buffer.
@@ -105,7 +105,7 @@ func NewBroadcaster(dfltBufSize int) Broadcaster {
 	}
 }
 
-// An implementation of interface Broadcaster.
+// broadcaster is an implementation of interface Broadcaster.
 type broadcaster struct {
 	// Map from receive-only channels to send-only channels,
 	// for sending messages to subscribers.

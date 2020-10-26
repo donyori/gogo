@@ -19,31 +19,24 @@
 package permutation
 
 import (
+	"sort"
+
 	"github.com/donyori/gogo/container/sequence"
 	"github.com/donyori/gogo/function"
 )
 
-// A type standing for an integer-indexed permutation.
+// Interface represents an integer-indexed permutation.
 // It is the same as sort.Interface.
-type Interface interface {
-	// Return the number of items in the permutation.
-	Len() int
+type Interface = sort.Interface
 
-	// Test whether the i-th item is less than j-th item of the permutation.
-	// It panics if i or j is out of range.
-	Less(i, j int) bool
-
-	// Swap the i-th and j-th items.
-	// It panics if i or j is out of range.
-	Swap(i, j int)
-}
-
-// An adapter for: Array + LessFunc -> Interface.
+// ArrayAdapter is an adapter for:
+// sequence.Array + function.LessFunc -> Interface.
 type ArrayAdapter struct {
 	Data   sequence.Array
 	LessFn function.LessFunc
 }
 
+// Len returns the number of items in the array.
 func (ad *ArrayAdapter) Len() int {
 	if ad == nil || ad.Data == nil {
 		return 0
@@ -51,10 +44,13 @@ func (ad *ArrayAdapter) Len() int {
 	return ad.Data.Len()
 }
 
+// Less reports whether the item with
+// index i should sort before the item with index j.
 func (ad *ArrayAdapter) Less(i, j int) bool {
 	return ad.LessFn(ad.Data.Get(i), ad.Data.Get(j))
 }
 
+// Swap swaps the items with indexes i and j.
 func (ad *ArrayAdapter) Swap(i, j int) {
 	ad.Data.Swap(i, j)
 }

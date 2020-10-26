@@ -27,19 +27,19 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// A communicator for goroutines to communicate with each other.
+// Communicator is a device for goroutines to communicate with each other.
 type Communicator interface {
 	framework.QuitDevice
 
-	// Return the rank (from 0 to NumGoroutine()-1) of current goroutine
+	// Rank returns the rank (from 0 to NumGoroutine()-1) of current goroutine
 	// in the goroutine group of this communicator.
 	Rank() int
 
-	// Return the number of goroutines in the goroutine group
+	// NumGoroutine returns the number of goroutines in the goroutine group
 	// of this communicator.
 	NumGoroutine() int
 
-	// Send the message msg to another goroutine.
+	// Send sends the message msg to another goroutine.
 	//
 	// The method will block until the destination goroutine receives
 	// the message successfully, or a quit signal is detected.
@@ -52,7 +52,7 @@ type Communicator interface {
 	// otherwise (e.g., a quit signal is detected), false.
 	Send(dest int, msg interface{}) bool
 
-	// Receive a message from another goroutine.
+	// Receive receives a message from another goroutine.
 	//
 	// The method will block until it receives the message from
 	// the source goroutine successfully, or a quit signal is detected.
@@ -65,7 +65,7 @@ type Communicator interface {
 	// otherwise (e.g., a quit signal is detected), false.
 	Receive(src int) (msg interface{}, ok bool)
 
-	// Send the message msg to the public channel of this group.
+	// SendPublic sends the message msg to the public channel of this group.
 	// All other goroutines can get this message from the public channel.
 	//
 	// The method will block until a goroutine receives this message
@@ -76,7 +76,7 @@ type Communicator interface {
 	// If a quit signal is detected, it returns -1.
 	SendPublic(msg interface{}) int
 
-	// Receive a message from the public channel of this group.
+	// ReceivePublic receives a message from the public channel of this group.
 	//
 	// The method will block until it receives a message successfully,
 	// or a quit signal is detected.
@@ -86,7 +86,7 @@ type Communicator interface {
 	// If a quit signal is detected, it returns src to -1 and msg to nil.
 	ReceivePublic() (src int, msg interface{})
 
-	// Send the message msg to any other goroutines.
+	// SendAny sends the message msg to any other goroutines.
 	// The destination goroutine is unspecified.
 	// All other goroutines can receive this message from their own channels or
 	// the public channel of this group.
@@ -110,7 +110,7 @@ type Communicator interface {
 	// the method Receive, use the method SendPublic instead.
 	SendAny(msg interface{}) int
 
-	// Receive a message from any other goroutines.
+	// ReceiveAny receives a message from any other goroutines.
 	// The source goroutine is unspecified.
 	// It can receive a message from its own channel or
 	// the public channel of this group.
@@ -134,8 +134,8 @@ type Communicator interface {
 	// the method Send, use the method ReceivePublic instead.
 	ReceiveAny() (src int, msg interface{})
 
-	// Block until all other goroutines in this group call method Barrier
-	// of their own communicators, or a quit signal is detected.
+	// Barrier blocks until all other goroutines in this group call
+	// method Barrier of their own communicators, or a quit signal is detected.
 	//
 	// It returns true if all other goroutines call methods Barrier
 	// successfully, otherwise (e.g., a quit signal is detected), false.
@@ -144,7 +144,7 @@ type Communicator interface {
 	// i.e., consistent in the execution progress.
 	Barrier() bool
 
-	// Broadcast the message x from the root to others in this group.
+	// Broadcast sends the message x from the root to others in this group.
 	//
 	// The method will not wait for all goroutines to finish the broadcast.
 	// To synchronize all goroutines, use method Barrier.
@@ -159,8 +159,8 @@ type Communicator interface {
 	// an indicator ok. ok is false iff a quit signal is detected.
 	Broadcast(root int, x interface{}) (msg interface{}, ok bool)
 
-	// Equally divide the message x of the root into n parts,
-	// where n = NumGoroutine(), and then scatter them
+	// Scatter equally divides the message x of the root into n parts,
+	// where n = NumGoroutine(), and then scatters them
 	// to all goroutines (including the root) in this group
 	// in turn according to their ranks.
 	//
@@ -177,8 +177,8 @@ type Communicator interface {
 	// ok is false iff a quit signal is detected.
 	Scatter(root int, x sequence.Sequence) (msg sequence.Array, ok bool)
 
-	// Gather messages from all goroutines (including the root) in this group
-	// to the root.
+	// Gather collects messages from all goroutines (including the root)
+	// in this group to the root.
 	//
 	// The method will not wait for all goroutines to finish the gathering.
 	// To synchronize all goroutines, use method Barrier.
@@ -206,7 +206,7 @@ const (
 	numCOp
 )
 
-// An implementation of interface Communicator.
+// communicator is an implementation of interface Communicator.
 type communicator struct {
 	Ctx *context         // Context of the goroutine group.
 	Cdc chan interface{} // Channel for receiving channels form the channel dispatcher.
@@ -219,20 +219,20 @@ type communicator struct {
 	bc   chan chan struct{} // Channel for method Barrier.
 }
 
-// Combination of sender's rank and message.
+// sndrMsg is a combination of the sender's rank and message.
 type sndrMsg struct {
 	Sndr int         // Rank of the sender.
 	Msg  interface{} // Message content.
 }
 
-// Combination of sender's rank, message, and a channel for
-// reporting the receiver's rank.
+// sndrMsgRxc is a combination of the sender's rank, message, and a channel
+// for reporting the receiver's rank.
 type sndrMsgRxc struct {
 	sndrMsg
 	RxC chan int
 }
 
-// Create a new communicator.
+// newCommunicator creates a new communicator.
 // Only for function newContext.
 func newCommunicator(ctx *context, rank int) *communicator {
 	comm := &communicator{
@@ -629,7 +629,7 @@ func (comm *communicator) Gather(root int, msg interface{}) (x []interface{}, ok
 	return
 }
 
-// It panics if root is out of range.
+// checkRootAndN panics if root is out of range.
 // It returns true iff comm.NumGoroutine() <= 1.
 func (comm *communicator) checkRootAndN(root int) bool {
 	n := len(comm.Ctx.Comms)
@@ -639,7 +639,7 @@ func (comm *communicator) checkRootAndN(root int) bool {
 	return n <= 1
 }
 
-// Query channels from the channel dispatcher.
+// queryChannels acquires channels from the channel dispatcher.
 //
 // It returns the channel, or list of channels, as interface{},
 // and an indicator ok. ok is false iff a quit signal is detected.

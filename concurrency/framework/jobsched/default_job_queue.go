@@ -25,19 +25,20 @@ import (
 	"github.com/donyori/gogo/container/pqueue"
 )
 
-// Threshold used by the default job queue to calculate the priority of jobs.
+// threshold is used by the default job queue to calculate the priority of jobs.
 // It is slightly smaller than the positive solution of the equation:
 //  1.025^x - x - 1 = 0
 const threshold float64 = 218.302152071367373
 
-// A maker for creating a job queue with the default job scheduling algorithm,
-// which is starvation-free.
+// DefaultJobQueueMaker is a maker for creating a job queue with
+// the default job scheduling algorithm, which is starvation-free.
 type DefaultJobQueueMaker struct {
 	// The number of goroutines to process jobs.
 	// If non-positive, runtime.NumCPU() will be used instead.
 	N int
 }
 
+// New creates a new job queue with the default job scheduling algorithm.
 func (m *DefaultJobQueueMaker) New() JobQueue {
 	n := m.N
 	if n <= 0 {
@@ -48,7 +49,8 @@ func (m *DefaultJobQueueMaker) New() JobQueue {
 	return jq
 }
 
-// A default implementation of interface JobQueue.
+// defaultJobQueue is a implementation of interface JobQueue
+// with the default job scheduling algorithm.
 type defaultJobQueue struct {
 	// Priority queue to manage jobs.
 	pq pqueue.PriorityQueueMini
@@ -83,7 +85,7 @@ func (djq *defaultJobQueue) Dequeue() interface{} {
 	return job.Data
 }
 
-// Less function for the priority queue djq.pq.
+// jobLess is a function for the priority queue djq.pq.
 // A job with a higher priority is "less" than a job with a lower priority.
 func (djq *defaultJobQueue) jobLess(a, b interface{}) bool {
 	ja, jb := a.(*Job), b.(*Job)
@@ -94,7 +96,7 @@ func (djq *defaultJobQueue) jobLess(a, b interface{}) bool {
 	return ja.Ct.Before(jb.Ct)
 }
 
-// Calculate the ultimate priority of the job.
+// calculatePriority calculates the ultimate priority of the job.
 //
 // The ultimate priority provides a chance for low-priority jobs
 // to avoid the starvation problem.

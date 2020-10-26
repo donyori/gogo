@@ -20,8 +20,8 @@ package jobsched
 
 import "github.com/donyori/gogo/container/pqueue"
 
-// A maker for creating a job queue that schedules jobs
-// according to their priority.
+// PriorityJobQueueMaker is a maker for creating a job queue
+// that schedules jobs according to their priority.
 //
 // A job with a higher priority (bigger Pri field) will be dequeued earlier.
 // The jobs with the same priority will be managed in one sub-queue.
@@ -35,6 +35,7 @@ type PriorityJobQueueMaker struct {
 	Maker JobQueueMaker
 }
 
+// New creates a new priority job queue.
 func (m *PriorityJobQueueMaker) New() JobQueue {
 	jq := &priorityJobQueue{
 		pq: pqueue.NewPriorityQueue(func(a, b interface{}) bool {
@@ -49,7 +50,7 @@ func (m *PriorityJobQueueMaker) New() JobQueue {
 	return jq
 }
 
-// A job queue scheduling jobs according to their priority.
+// priorityJobQueue is a job queue scheduling jobs according to their priority.
 type priorityJobQueue struct {
 	numJob int                  // The number of jobs in the queue.
 	pq     pqueue.PriorityQueue // Priority queue to manage sub-queues.

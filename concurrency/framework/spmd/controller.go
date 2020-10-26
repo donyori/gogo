@@ -32,7 +32,7 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// Business handler.
+// BusinessFunc is a function to achieve the user business.
 //
 // The first argument is the communicator of the group World,
 // which is the default group and contains all goroutines to process the job.
@@ -43,10 +43,10 @@ import (
 // If there is no custom group, commMap is nil.
 type BusinessFunc func(world Communicator, commMap map[string]Communicator)
 
-// Regexp pattern for verifying group ID.
+// groupIdPattern is a regular expression pattern for verifying group ID.
 var groupIdPattern = regexp.MustCompile(`[a-z0-9][a-z0-9_]*`)
 
-// Create a Controller for a new job.
+// New creates a Controller for a new job.
 //
 // n is the number of goroutines to process the job.
 // If n is non-positive, runtime.NumCPU() will be used instead.
@@ -125,7 +125,7 @@ func New(n int, biz BusinessFunc, groupMap map[string][]int) framework.Controlle
 	return ctrl
 }
 
-// Create a Controller with given parameters, and then run it.
+// Run creates a Controller with given parameters, and then run it.
 // It returns the panic records of the Controller.
 //
 // The arguments are the same as those of function New.
@@ -135,7 +135,7 @@ func Run(n int, biz BusinessFunc, groupMap map[string][]int) []framework.PanicRe
 	return ctrl.PanicRecords()
 }
 
-// An implementation of interface Controller.
+// controller is an implementation of interface Controller.
 type controller struct {
 	Qd    framework.QuitDevice // Quit device.
 	World *context             // World context.
@@ -216,7 +216,7 @@ func (ctrl *controller) PanicRecords() []framework.PanicRec {
 	return ctrl.pr.List()
 }
 
-// Launch channel dispatcher in a daemon goroutine.
+// launchChannelDispatcher launches a channel dispatcher in a daemon goroutine.
 // This method takes effect only once.
 func (ctrl *controller) launchChannelDispatcher() {
 	ctrl.cdOi.Do(func() {

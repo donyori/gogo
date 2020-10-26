@@ -27,84 +27,100 @@ import (
 	"github.com/donyori/gogo/function"
 )
 
-// Priority queue, mini version.
+// PriorityQueueMini is an interface representing a basic priority queue.
+// It is called a mini version priority queue.
 type PriorityQueueMini interface {
-	// Return the number of items in the queue.
+	// Len returns the number of items in the queue.
 	Len() int
 
-	// Add items x into the queue.
+	// Enqueue adds items x into the queue.
+	//
 	// Time complexity: O(m log(m + n)), where m = len(x), n = pq.Len().
 	Enqueue(x ...interface{})
 
-	// Pop the minimum item in the queue.
+	// Dequeue pops the minimum item in the queue.
 	// It panics if the queue is nil or empty.
+	//
 	// Time complexity: O(log n), where n = pq.Len().
 	Dequeue() interface{}
 }
 
-// Priority queue (standard version).
+// PriorityQueue is an interface representing a standard priority queue.
 type PriorityQueue interface {
 	PriorityQueueMini
 
-	// Return the capacity of the queue.
+	// Cap returns the current capacity of the queue.
 	Cap() int
 
-	// Discard all items in the queue and release the memory.
+	// Clear discards all items in the queue and asks to release the memory.
 	Clear()
 
-	// Return the minimum item in the queue, without popping it.
+	// Top returns the minimum item in the queue, without popping it.
 	// It panics if the queue is nil or empty.
+	//
 	// Time complexity: O(1).
 	Top() interface{}
 
-	// Replace the minimum item with newX.
+	// ReplaceTop replaces the minimum item with newX.
 	// It panics if the queue is nil or empty.
+	//
 	// Time complexity: O(log n), where n = pq.Len().
 	ReplaceTop(newX interface{})
 
-	// Maintain the priority queue to keep its underlying structure valid.
+	// Maintain safeguards the underlying structure of the priority queue valid.
 	// It is idempotent with respect to the priority queue.
+	//
 	// Time complexity: O(n), where n = pq.Len().
 	Maintain()
 }
 
-// Priority queue, extended version.
+// PriorityQueueEx is an interface representing an extended priority queue.
 type PriorityQueueEx interface {
 	PriorityQueue
 
-	// Returns true if x is in the queue, otherwise false.
+	// Contain reports whether x is in the queue or not.
+	//
 	// Time complexity: O(n), where n = pq.Len().
 	Contain(x interface{}) bool
 
-	// Remove the item x in the queue.
-	// If x is in the queue and has been removed successfully, it returns true, otherwise false.
-	// If there are multiple items equals to x in the queue, it removes one of them.
+	// Remove removes the item x in the queue.
+	// If x is in the queue and has been removed successfully,
+	// it returns true, otherwise false.
+	// If there are multiple items equals to x in the queue,
+	// it removes one of them.
+	// (Which one will be removed depends on the implementation.)
+	//
 	// Time complexity: O(n), where n = pq.Len().
 	Remove(x interface{}) (ok bool)
 
-	// Replace oldX in the queue with newX.
-	// If oldX is in the queue and has been replaced successfully, it returns true, otherwise false.
-	// If there are multiple items equals to oldX in the queue, it replaces one of them.
+	// Replace exchanges oldX in the queue to newX.
+	// If oldX is in the queue and has been replaced successfully,
+	// it returns true, otherwise false.
+	// If there are multiple items equals to oldX in the queue,
+	// it replaces one of them.
+	// (Which one will be replaced depends on the implementation.)
+	//
 	// Time complexity: O(n), where n = pq.Len().
 	Replace(oldX, newX interface{}) (ok bool)
 
-	// Scan the items in the queue as fast as possible.
+	// ScanWithoutOrder browses the items in the queue as fast as possible.
+	//
 	// Time complexity: O(n), where n = pq.Len().
 	ScanWithoutOrder(handler func(x interface{}) (cont bool))
 }
 
-// An implementation of PriorityQueueMini and PriorityQueue,
+// priorityQueue is an implementation of PriorityQueueMini and PriorityQueue,
 // based on container/heap.
 type priorityQueue heapa.DynamicArray
 
-// Create a new priority queue (mini version).
+// NewPriorityQueueMini creates a new mini version priority queue.
 // data is the initial items in the queue.
 // It panics if less is nil.
 func NewPriorityQueueMini(less function.LessFunc, data ...interface{}) PriorityQueueMini {
 	return PriorityQueueMini(NewPriorityQueue(less, data...))
 }
 
-// Create a new priority queue (standard version).
+// NewPriorityQueue creates a new standard priority queue.
 // data is the initial items in the queue.
 // It panics if less is nil.
 func NewPriorityQueue(less function.LessFunc, data ...interface{}) PriorityQueue {
@@ -175,14 +191,14 @@ func (pq *priorityQueue) Maintain() {
 	heap.Init((*heapa.DynamicArray)(pq))
 }
 
-// An implementation of PriorityQueueEx,
+// priorityQueueEx is an implementation of PriorityQueueEx,
 // based on container/heap.
 type priorityQueueEx struct {
 	priorityQueue
 	EqualFn function.EqualFunc
 }
 
-// Create a new priority queue (extended version).
+// NewPriorityQueueEx creates a new extended priority queue.
 // data is the initial items in the queue.
 // It panics if less is nil.
 // equal can be nil. If equal is nil, it will be generated via less.
@@ -235,7 +251,7 @@ func (pqx *priorityQueueEx) ScanWithoutOrder(handler func(x interface{}) (cont b
 	pqx.Data.Scan(handler)
 }
 
-// Find item x in the priority queue, and return its index.
+// find searches item x in the priority queue, and returns its index.
 // If x is not found, it returns -1.
 func (pqx *priorityQueueEx) find(x interface{}) int {
 	if pqx.Len() == 0 {
