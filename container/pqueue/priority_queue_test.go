@@ -36,7 +36,7 @@ func TestPriorityQueueMini(t *testing.T) {
 	for _, x := range samples {
 		pq.Enqueue(x)
 	}
-	t.Log("Data:", pq.(*priorityQueue).Data)
+	t.Log("Data:", pq.(*priorityQueueMini).Heap.Data)
 	sort.Ints(samples)
 	for _, x := range samples {
 		item := pq.Dequeue()
@@ -47,13 +47,8 @@ func TestPriorityQueueMini(t *testing.T) {
 }
 
 func TestPriorityQueue_Len(t *testing.T) {
-	var intlPQ *priorityQueue
-	n := intlPQ.Len()
-	if n != 0 {
-		t.Errorf("pq.Len(): %d != 0 when pq == nil.", n)
-	}
 	pq := NewPriorityQueue(function.IntLess)
-	n = pq.Len()
+	n := pq.Len()
 	if n != 0 {
 		t.Errorf("pq.Len(): %d != 0 when pq is empty.", n)
 	}
@@ -74,14 +69,14 @@ func TestPriorityQueue_Len(t *testing.T) {
 func TestPriorityQueue_ReplaceTop(t *testing.T) {
 	samples := []interface{}{1, 2, 3}
 	pq := NewPriorityQueue(function.IntLess, samples...)
-	t.Log("Data:", pq.(*priorityQueue).Data)
+	t.Log("Data:", pq.(*priorityQueue).Heap.Data)
 	pq.ReplaceTop(0)
-	t.Log("Data after replace top to 0:", pq.(*priorityQueue).Data)
+	t.Log("Data after replace top to 0:", pq.(*priorityQueue).Heap.Data)
 	if x := pq.Top(); x != 0 {
 		t.Errorf("Top(): %v != 0.", x)
 	}
 	pq.ReplaceTop(4)
-	t.Log("Data after replace top to 4:", pq.(*priorityQueue).Data)
+	t.Log("Data after replace top to 4:", pq.(*priorityQueue).Heap.Data)
 	if x := pq.Top(); x != 2 {
 		t.Errorf("Top(): %v != 2.", x)
 	}
@@ -104,10 +99,18 @@ func TestPriorityQueueEx_Contain(t *testing.T) {
 		})
 	}
 	pq := NewPriorityQueueEx(function.IntLess, nil, positiveSamples...)
-	t.Log("Data:", pq.(*priorityQueueEx).Data)
+	t.Log("Data:", pq.(*priorityQueueEx).Heap.Data)
 	for _, c := range cs {
 		if pq.Contain(c.X) != c.Result {
 			t.Errorf("pqueue.Contain(%v) != %t", c.X, c.Result)
 		}
+	}
+}
+
+func TestPriorityQueueMini_CannotToStandard(t *testing.T) {
+	mini := NewPriorityQueueMini(function.IntLess)
+	_, ok := mini.(PriorityQueue)
+	if ok {
+		t.Error("PriorityQueueMini can be converted to PriorityQueue via type assertion, which should not happen.")
 	}
 }

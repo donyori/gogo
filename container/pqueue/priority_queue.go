@@ -109,15 +109,56 @@ type PriorityQueueEx interface {
 	ScanWithoutOrder(handler func(x interface{}) (cont bool))
 }
 
-// priorityQueue is an implementation of PriorityQueueMini and PriorityQueue,
+// priorityQueueMini is an implementation of interface PriorityQueueMini,
 // based on container/heap.
-type priorityQueue heapa.DynamicArray
+type priorityQueueMini struct {
+	Heap heapa.DynamicArray
+}
 
 // NewPriorityQueueMini creates a new mini version priority queue.
 // data is the initial items in the queue.
 // It panics if less is nil.
 func NewPriorityQueueMini(less function.LessFunc, data ...interface{}) PriorityQueueMini {
-	return PriorityQueueMini(NewPriorityQueue(less, data...))
+	if less == nil {
+		panic(errors.AutoMsg("less is nil"))
+	}
+	gda := sequence.GeneralDynamicArray(append(data[:0:0], data...))
+	pqm := &priorityQueueMini{
+		heapa.DynamicArray{
+			Data:   &gda,
+			LessFn: less,
+		},
+	}
+	heap.Init(&pqm.Heap)
+	return pqm
+}
+
+func (pqm *priorityQueueMini) Len() int {
+	return pqm.Heap.Len()
+}
+
+func (pqm *priorityQueueMini) Enqueue(x ...interface{}) {
+	if pqm.Len() < len(x) {
+		pqm.Heap.Data.Append(sequence.GeneralDynamicArray(x))
+		heap.Init(&pqm.Heap)
+	} else {
+		for _, item := range x {
+			heap.Push(&pqm.Heap, item)
+		}
+	}
+}
+
+func (pqm *priorityQueueMini) Dequeue() interface{} {
+	if pqm.Len() == 0 {
+		panic(errors.AutoMsg("priority queue is nil or empty"))
+	}
+	return heap.Pop(&pqm.Heap)
+}
+
+// priorityQueue is an implementation of interface PriorityQueue,
+// based on container/heap.
+type priorityQueue struct {
+	priorityQueueMini
 }
 
 // NewPriorityQueue creates a new standard priority queue.
@@ -128,70 +169,47 @@ func NewPriorityQueue(less function.LessFunc, data ...interface{}) PriorityQueue
 		panic(errors.AutoMsg("less is nil"))
 	}
 	gda := sequence.GeneralDynamicArray(append(data[:0:0], data...))
-	pq := &priorityQueue{
-		Data:   &gda,
-		LessFn: less,
-	}
+	pq := &priorityQueue{priorityQueueMini{
+		heapa.DynamicArray{
+			Data:   &gda,
+			LessFn: less,
+		},
+	}}
 	pq.Maintain()
 	return pq
 }
 
-func (pq *priorityQueue) Len() int {
-	return (*heapa.DynamicArray)(pq).Len()
-}
-
-func (pq *priorityQueue) Enqueue(x ...interface{}) {
-	if pq.Len() < len(x) {
-		pq.Data.Append(sequence.GeneralDynamicArray(x))
-		pq.Maintain()
-	} else {
-		for _, item := range x {
-			heap.Push((*heapa.DynamicArray)(pq), item)
-		}
-	}
-}
-
-func (pq *priorityQueue) Dequeue() interface{} {
-	if pq.Len() == 0 {
-		panic(errors.AutoMsg("priority queue is nil or empty"))
-	}
-	return heap.Pop((*heapa.DynamicArray)(pq))
-}
-
 func (pq *priorityQueue) Cap() int {
-	if pq == nil || pq.Data == nil {
-		return 0
-	}
-	return pq.Data.Cap()
+	return pq.Heap.Data.Cap()
 }
 
 func (pq *priorityQueue) Clear() {
-	pq.Data.Clear()
+	pq.Heap.Data.Clear()
 }
 
 func (pq *priorityQueue) Top() interface{} {
 	if pq.Len() == 0 {
 		panic(errors.AutoMsg("priority queue is nil or empty"))
 	}
-	return pq.Data.Front()
+	return pq.Heap.Data.Front()
 }
 
 func (pq *priorityQueue) ReplaceTop(newX interface{}) {
 	if pq.Len() == 0 {
 		panic(errors.AutoMsg("priority queue is nil or empty"))
 	}
-	pq.Data.SetFront(newX)
-	heap.Fix((*heapa.DynamicArray)(pq), 0)
+	pq.Heap.Data.SetFront(newX)
+	heap.Fix(&pq.Heap, 0)
 }
 
 func (pq *priorityQueue) Maintain() {
 	if pq.Len() == 0 {
 		return
 	}
-	heap.Init((*heapa.DynamicArray)(pq))
+	heap.Init(&pq.Heap)
 }
 
-// priorityQueueEx is an implementation of PriorityQueueEx,
+// priorityQueueEx is an implementation of interface PriorityQueueEx,
 // based on container/heap.
 type priorityQueueEx struct {
 	priorityQueue
@@ -212,8 +230,10 @@ func NewPriorityQueueEx(less function.LessFunc, equal function.EqualFunc, data .
 	gda := sequence.GeneralDynamicArray(append(data[:0:0], data...))
 	pq := &priorityQueueEx{
 		priorityQueue: priorityQueue{
-			Data:   &gda,
-			LessFn: less,
+			priorityQueueMini{heapa.DynamicArray{
+				Data:   &gda,
+				LessFn: less,
+			}},
 		},
 		EqualFn: equal,
 	}
@@ -230,7 +250,7 @@ func (pqx *priorityQueueEx) Remove(x interface{}) (ok bool) {
 	if idx < 0 {
 		return false
 	}
-	heap.Remove((*heapa.DynamicArray)(&pqx.priorityQueue), idx)
+	heap.Remove(&pqx.Heap, idx)
 	return true
 }
 
@@ -239,8 +259,8 @@ func (pqx *priorityQueueEx) Replace(oldX, newX interface{}) (ok bool) {
 	if idx < 0 {
 		return false
 	}
-	pqx.Data.Set(idx, newX)
-	heap.Fix((*heapa.DynamicArray)(&pqx.priorityQueue), idx)
+	pqx.Heap.Data.Set(idx, newX)
+	heap.Fix(&pqx.Heap, idx)
 	return true
 }
 
@@ -248,7 +268,7 @@ func (pqx *priorityQueueEx) ScanWithoutOrder(handler func(x interface{}) (cont b
 	if handler == nil || pqx.Len() == 0 {
 		return
 	}
-	pqx.Data.Scan(handler)
+	pqx.Heap.Data.Scan(handler)
 }
 
 // find searches item x in the priority queue, and returns its index.
@@ -257,10 +277,10 @@ func (pqx *priorityQueueEx) find(x interface{}) int {
 	if pqx.Len() == 0 {
 		return -1
 	}
-	if pqx.EqualFn(x, pqx.Data.Front()) {
+	if pqx.EqualFn(x, pqx.Heap.Data.Front()) {
 		return 0
 	}
-	if pqx.LessFn(x, pqx.Data.Front()) {
+	if pqx.Heap.LessFn(x, pqx.Heap.Data.Front()) {
 		return -1
 	}
 	jmpMap := make(map[int]int)
@@ -273,16 +293,17 @@ func (pqx *priorityQueueEx) find(x interface{}) int {
 		} else if to < 0 { // if int overflow
 			return -1
 		}
-		if pqx.EqualFn(x, pqx.Data.Get(i)) {
+		if pqx.EqualFn(x, pqx.Heap.Data.Get(i)) {
 			return i
 		}
-		if pqx.LessFn(x, pqx.Data.Get(i)) {
+		if pqx.Heap.LessFn(x, pqx.Heap.Data.Get(i)) {
 			maintainJumpMap(jmpMap, i, i)
 		}
 	}
 	return -1
 }
 
+// maintainJumpMap maintains the map for jumping offset, used by method find.
 func maintainJumpMap(jmpMap map[int]int, from, to int) {
 	delete(jmpMap, from)
 	i, j := from*2+1, to*2+2
