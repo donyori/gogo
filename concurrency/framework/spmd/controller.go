@@ -153,18 +153,34 @@ type controller struct {
 	lnchCommMaps []map[string]Communicator
 }
 
+// QuitChan returns the channel for the quit signal.
+// When the job is finished or quit, this channel will be closed
+// to broadcast the quit signal.
 func (ctrl *controller) QuitChan() <-chan struct{} {
 	return ctrl.Qd.QuitChan()
 }
 
+// IsQuit detects the quit signal on the quit channel.
+// It returns true if a quit signal is detected, and false otherwise.
 func (ctrl *controller) IsQuit() bool {
 	return ctrl.Qd.IsQuit()
 }
 
+// Quit broadcasts a quit signal to quit the job.
+//
+// This method will NOT wait until the job ends.
 func (ctrl *controller) Quit() {
 	ctrl.Qd.Quit()
 }
 
+// Launch starts the job.
+//
+// This method will NOT wait until the job ends.
+// Use method Wait if you want to wait for that.
+//
+// Note that Launch can take effect only once.
+// To do the same job again, create a new Controller
+// with the same parameters.
 func (ctrl *controller) Launch() {
 	ctrl.lnchOi.Do(func() {
 		n := len(ctrl.World.Comms)
@@ -189,6 +205,10 @@ func (ctrl *controller) Launch() {
 	})
 }
 
+// Wait waits for the job to finish or quit.
+// It returns the number of panic goroutines.
+//
+// If the job was not launched, it does nothing and returns -1.
 func (ctrl *controller) Wait() int {
 	if !ctrl.lnchOi.Test() {
 		return -1
@@ -203,15 +223,24 @@ func (ctrl *controller) Wait() int {
 	return ctrl.pr.Len()
 }
 
+// Run launches the job and waits for it.
+// It returns the number of panic goroutines.
 func (ctrl *controller) Run() int {
 	ctrl.Launch()
 	return ctrl.Wait()
 }
 
+// NumGoroutine returns the number of goroutines to process this job.
+//
+// Note that it only includes the main goroutines to process the job.
+// Any possible control goroutines, daemon goroutines, auxiliary goroutines,
+// or the goroutines launched in the client's business functions
+// are all excluded.
 func (ctrl *controller) NumGoroutine() int {
 	return len(ctrl.World.Comms)
 }
 
+// PanicRecords returns the panic records.
 func (ctrl *controller) PanicRecords() []framework.PanicRec {
 	return ctrl.pr.List()
 }

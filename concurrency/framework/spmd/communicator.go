@@ -250,26 +250,49 @@ func newCommunicator(ctx *context, rank int) *communicator {
 	return comm
 }
 
+// QuitChan returns the channel for the quit signal.
+// When the job is finished or quit, this channel will be closed
+// to broadcast the quit signal.
 func (comm *communicator) QuitChan() <-chan struct{} {
 	return comm.Ctx.Ctrl.Qd.QuitChan()
 }
 
+// IsQuit detects the quit signal on the quit channel.
+// It returns true if a quit signal is detected, and false otherwise.
 func (comm *communicator) IsQuit() bool {
 	return comm.Ctx.Ctrl.Qd.IsQuit()
 }
 
+// Quit broadcasts a quit signal to quit the job.
+//
+// This method will NOT wait until the job ends.
 func (comm *communicator) Quit() {
 	comm.Ctx.Ctrl.Qd.Quit()
 }
 
+// Rank returns the rank (from 0 to NumGoroutine()-1) of current goroutine
+// in the goroutine group of this communicator.
 func (comm *communicator) Rank() int {
 	return comm.rank
 }
 
+// NumGoroutine returns the number of goroutines in the goroutine group
+// of this communicator.
 func (comm *communicator) NumGoroutine() int {
 	return len(comm.Ctx.Comms)
 }
 
+// Send sends the message msg to another goroutine.
+//
+// The method will block until the destination goroutine receives
+// the message successfully, or a quit signal is detected.
+// It will panic if the destination goroutine is the sender itself.
+//
+// dest is the rank of the destination goroutine.
+// msg is the message to be sent.
+//
+// It returns true if the communication succeeds,
+// otherwise (e.g., a quit signal is detected), false.
 func (comm *communicator) Send(dest int, msg interface{}) bool {
 	if comm.rank == dest {
 		panic(errors.AutoMsg("dest is the sender itself"))
@@ -286,6 +309,17 @@ func (comm *communicator) Send(dest int, msg interface{}) bool {
 	}
 }
 
+// Receive receives a message from another goroutine.
+//
+// The method will block until it receives the message from
+// the source goroutine successfully, or a quit signal is detected.
+// It will panic if the source goroutine is the receiver itself.
+//
+// src is the rank of the source goroutine.
+//
+// It returns the message received from the source, and an indicator ok.
+// ok is true if the communication succeeds,
+// otherwise (e.g., a quit signal is detected), false.
 func (comm *communicator) Receive(src int) (msg interface{}, ok bool) {
 	if comm.rank == src {
 		panic(errors.AutoMsg("src is the receiver itself"))
@@ -302,6 +336,15 @@ func (comm *communicator) Receive(src int) (msg interface{}, ok bool) {
 	return
 }
 
+// SendPublic sends the message msg to the public channel of this group.
+// All other goroutines can get this message from the public channel.
+//
+// The method will block until a goroutine receives this message
+// successfully, or a quit signal is detected.
+// It will panic if there is only one goroutine in this group.
+//
+// It returns the rank of the receiver.
+// If a quit signal is detected, it returns -1.
 func (comm *communicator) SendPublic(msg interface{}) int {
 	if len(comm.Ctx.Comms) == 1 {
 		panic(errors.AutoMsg("only one goroutine in this group"))
@@ -328,6 +371,14 @@ func (comm *communicator) SendPublic(msg interface{}) int {
 	}
 }
 
+// ReceivePublic receives a message from the public channel of this group.
+//
+// The method will block until it receives a message successfully,
+// or a quit signal is detected.
+// It will panic if there is only one goroutine in this group.
+//
+// It returns the rank of the sender and the received message.
+// If a quit signal is detected, it returns src to -1 and msg to nil.
 func (comm *communicator) ReceivePublic() (src int, msg interface{}) {
 	if len(comm.Ctx.Comms) == 1 {
 		panic(errors.AutoMsg("only one goroutine in this group"))
@@ -346,6 +397,28 @@ func (comm *communicator) ReceivePublic() (src int, msg interface{}) {
 	}
 }
 
+// SendAny sends the message msg to any other goroutines.
+// The destination goroutine is unspecified.
+// All other goroutines can receive this message from their own channels or
+// the public channel of this group.
+// Note that when there are two or more goroutines ready for receiving this
+// message, this method cannot guarantee that the first ready goroutine
+// will receive the message first.
+// Which message will receive it depends on the implementation.
+//
+// The method will block until a goroutine receives this message
+// successfully, or a quit signal is detected.
+// It will panic if there is only one goroutine in this group.
+//
+// It returns the rank of the receiver.
+// If a quit signal is detected, it returns -1.
+//
+// To get higher performance, you should try to avoid using this method.
+// If you know which goroutine will receive the message,
+// use the method Send instead.
+// If you just want to send the message to another goroutine and
+// you are sure that the receiver won't wait for this message through
+// the method Receive, use the method SendPublic instead.
 func (comm *communicator) SendAny(msg interface{}) int {
 	if len(comm.Ctx.Comms) == 1 {
 		panic(errors.AutoMsg("only one goroutine in this group"))
@@ -414,6 +487,28 @@ func (comm *communicator) SendAny(msg interface{}) int {
 	}
 }
 
+// ReceiveAny receives a message from any other goroutines.
+// The source goroutine is unspecified.
+// It can receive a message from its own channel or
+// the public channel of this group.
+// Note that when there are two or more messages sent to this goroutine or
+// the public channel, this method cannot guarantee that the first message
+// will be received first.
+// Which message will be received depends on the implementation.
+//
+// The method will block until it receives a message successfully,
+// or a quit signal is detected.
+// It will panic if there is only one goroutine in this group.
+//
+// It returns the rank of the sender and the received message.
+// If a quit signal is detected, it returns src to -1 and msg to nil.
+//
+// To get higher performance, you should try to avoid using this method.
+// If you know which goroutine will send the message,
+// use the method Receive instead.
+// If you just want to receive a message from another goroutine and
+// you are sure that the sender won't send the message through
+// the method Send, use the method ReceivePublic instead.
 func (comm *communicator) ReceiveAny() (src int, msg interface{}) {
 	if len(comm.Ctx.Comms) == 1 {
 		panic(errors.AutoMsg("only one goroutine in this group"))
@@ -443,6 +538,14 @@ func (comm *communicator) ReceiveAny() (src int, msg interface{}) {
 	}
 }
 
+// Barrier blocks until all other goroutines in this group call
+// method Barrier of their own communicators, or a quit signal is detected.
+//
+// It returns true if all other goroutines call methods Barrier
+// successfully, otherwise (e.g., a quit signal is detected), false.
+//
+// It is used to make all goroutines synchronous,
+// i.e., consistent in the execution progress.
 func (comm *communicator) Barrier() bool {
 	n := len(comm.Ctx.Comms)
 	if n <= 1 {
@@ -482,6 +585,19 @@ func (comm *communicator) Barrier() bool {
 	return true
 }
 
+// Broadcast sends the message x from the root to others in this group.
+//
+// The method will not wait for all goroutines to finish the broadcast.
+// To synchronize all goroutines, use method Barrier.
+//
+// root is the rank of the sender goroutine in this group.
+// It will panic if root is out of range.
+//
+// For the root, x is the message to be broadcast.
+// For others, x can be anything (including nil) and will be ignored.
+//
+// It returns the message to be broadcast (equals to x of the root) and
+// an indicator ok. ok is false iff a quit signal is detected.
 func (comm *communicator) Broadcast(root int, x interface{}) (msg interface{}, ok bool) {
 	if comm.checkRootAndN(root) {
 		ok = !comm.Ctx.Ctrl.Qd.IsQuit()
@@ -519,6 +635,22 @@ func (comm *communicator) Broadcast(root int, x interface{}) (msg interface{}, o
 	return
 }
 
+// Scatter equally divides the message x of the root into n parts,
+// where n = NumGoroutine(), and then scatters them
+// to all goroutines (including the root) in this group
+// in turn according to their ranks.
+//
+// The method will not wait for all goroutines to finish the scattering.
+// To synchronize all goroutines, use method Barrier.
+//
+// root is the rank of the sender goroutine in this group.
+// It will panic if root is out of range.
+//
+// For the root, x is the message to be scattered.
+// For others, x can be anything (including nil) and will be ignored.
+//
+// It returns the received message and an indicator ok.
+// ok is false iff a quit signal is detected.
 func (comm *communicator) Scatter(root int, x sequence.Sequence) (msg sequence.Array, ok bool) {
 	if comm.checkRootAndN(root) {
 		ok = !comm.Ctx.Ctrl.Qd.IsQuit()
@@ -591,6 +723,22 @@ func (comm *communicator) Scatter(root int, x sequence.Sequence) (msg sequence.A
 	return
 }
 
+// Gather collects messages from all goroutines (including the root)
+// in this group to the root.
+//
+// The method will not wait for all goroutines to finish the gathering.
+// To synchronize all goroutines, use method Barrier.
+//
+// root is the rank of the receiver goroutine in this group.
+// It will panic if root is out of range.
+//
+// msg is the message to be sent to the root.
+//
+// It returns the gathered messages as a list x, and an indicator ok.
+// For the root, x is the list of messages ordered by
+// the ranks of sender goroutines.
+// For others, x is nil.
+// ok is false iff a quit signal is detected.
 func (comm *communicator) Gather(root int, msg interface{}) (x []interface{}, ok bool) {
 	if comm.checkRootAndN(root) {
 		ok = !comm.Ctx.Ctrl.Qd.IsQuit()

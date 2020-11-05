@@ -20,8 +20,7 @@ package internal
 
 import "github.com/donyori/gogo/concurrency"
 
-// QuitDevice is an implementation of
-// github.com/donyori/gogo/concurrency/framework.QuitDevice.
+// QuitDevice is an implementation of interface framework.QuitDevice.
 type QuitDevice struct {
 	oi concurrency.OnceIndicator // QuitChan() ~ oi.C(), IsQuit() ~ oi.Test(), Quit() ~ oi.Do(nil)
 }

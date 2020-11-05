@@ -35,10 +35,15 @@ func (m *FcfsJobQueueMaker) New() JobQueue {
 // fcfsJobQueue is an FCFS (first come, first served) job queue.
 type fcfsJobQueue []interface{}
 
+// Len returns the number of jobs in the queue.
 func (fjq fcfsJobQueue) Len() int {
 	return len(fjq)
 }
 
+// Enqueue adds jobs into the job queue.
+//
+// The framework guarantees that all items in jobs are never nil and
+// have a non-zero Ct field.
 func (fjq *fcfsJobQueue) Enqueue(jobs ...*Job) {
 	if len(jobs) == 0 {
 		return
@@ -50,6 +55,9 @@ func (fjq *fcfsJobQueue) Enqueue(jobs ...*Job) {
 	*fjq = append(*fjq, data...)
 }
 
+// Dequeue pops a job in the queue and returns its data
+// (i.e., the Data field of Job).
+// It panics if the queue is nil or empty.
 func (fjq *fcfsJobQueue) Dequeue() interface{} {
 	var r interface{}
 	*fjq, r = (*fjq)[1:], (*fjq)[0]

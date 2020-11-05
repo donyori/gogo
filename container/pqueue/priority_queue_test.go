@@ -25,7 +25,7 @@ import (
 	"github.com/donyori/gogo/function"
 )
 
-type XBoolCase struct {
+type xBoolCase struct {
 	X      interface{}
 	Result bool
 }
@@ -85,15 +85,15 @@ func TestPriorityQueue_ReplaceTop(t *testing.T) {
 func TestPriorityQueueEx_Contain(t *testing.T) {
 	positiveSamples := []interface{}{5, 1, 1, 2, 7, 2, 0, 1, 8, 7}
 	negativeSamples := []interface{}{-1, -2, 3, 4, 6, 9, 10}
-	var cs []XBoolCase
+	var cs []xBoolCase
 	for _, x := range positiveSamples {
-		cs = append(cs, XBoolCase{
+		cs = append(cs, xBoolCase{
 			X:      x,
 			Result: true,
 		})
 	}
 	for _, x := range negativeSamples {
-		cs = append(cs, XBoolCase{
+		cs = append(cs, xBoolCase{
 			X:      x,
 			Result: false,
 		})

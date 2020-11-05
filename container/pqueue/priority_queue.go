@@ -133,10 +133,14 @@ func NewPriorityQueueMini(less function.LessFunc, data ...interface{}) PriorityQ
 	return pqm
 }
 
+// Len returns the number of items in the queue.
 func (pqm *priorityQueueMini) Len() int {
 	return pqm.Heap.Len()
 }
 
+// Enqueue adds items x into the queue.
+//
+// Time complexity: O(m log(m + n)), where m = len(x), n = pq.Len().
 func (pqm *priorityQueueMini) Enqueue(x ...interface{}) {
 	if pqm.Len() < len(x) {
 		pqm.Heap.Data.Append(sequence.GeneralDynamicArray(x))
@@ -148,6 +152,10 @@ func (pqm *priorityQueueMini) Enqueue(x ...interface{}) {
 	}
 }
 
+// Dequeue pops the minimum item in the queue.
+// It panics if the queue is nil or empty.
+//
+// Time complexity: O(log n), where n = pq.Len().
 func (pqm *priorityQueueMini) Dequeue() interface{} {
 	if pqm.Len() == 0 {
 		panic(errors.AutoMsg("priority queue is nil or empty"))
@@ -179,14 +187,20 @@ func NewPriorityQueue(less function.LessFunc, data ...interface{}) PriorityQueue
 	return pq
 }
 
+// Cap returns the current capacity of the queue.
 func (pq *priorityQueue) Cap() int {
 	return pq.Heap.Data.Cap()
 }
 
+// Clear discards all items in the queue and asks to release the memory.
 func (pq *priorityQueue) Clear() {
 	pq.Heap.Data.Clear()
 }
 
+// Top returns the minimum item in the queue, without popping it.
+// It panics if the queue is nil or empty.
+//
+// Time complexity: O(1).
 func (pq *priorityQueue) Top() interface{} {
 	if pq.Len() == 0 {
 		panic(errors.AutoMsg("priority queue is nil or empty"))
@@ -194,6 +208,10 @@ func (pq *priorityQueue) Top() interface{} {
 	return pq.Heap.Data.Front()
 }
 
+// ReplaceTop replaces the minimum item with newX.
+// It panics if the queue is nil or empty.
+//
+// Time complexity: O(log n), where n = pq.Len().
 func (pq *priorityQueue) ReplaceTop(newX interface{}) {
 	if pq.Len() == 0 {
 		panic(errors.AutoMsg("priority queue is nil or empty"))
@@ -202,6 +220,10 @@ func (pq *priorityQueue) ReplaceTop(newX interface{}) {
 	heap.Fix(&pq.Heap, 0)
 }
 
+// Maintain safeguards the underlying structure of the priority queue valid.
+// It is idempotent with respect to the priority queue.
+//
+// Time complexity: O(n), where n = pq.Len().
 func (pq *priorityQueue) Maintain() {
 	if pq.Len() == 0 {
 		return
@@ -241,10 +263,21 @@ func NewPriorityQueueEx(less function.LessFunc, equal function.EqualFunc, data .
 	return pq
 }
 
+// Contain reports whether x is in the queue or not.
+//
+// Time complexity: O(n), where n = pq.Len().
 func (pqx *priorityQueueEx) Contain(x interface{}) bool {
 	return pqx.find(x) >= 0
 }
 
+// Remove removes the item x in the queue.
+// If x is in the queue and has been removed successfully,
+// it returns true, otherwise false.
+// If there are multiple items equals to x in the queue,
+// it removes one of them.
+// (Which one will be removed depends on the implementation.)
+//
+// Time complexity: O(n), where n = pq.Len().
 func (pqx *priorityQueueEx) Remove(x interface{}) (ok bool) {
 	idx := pqx.find(x)
 	if idx < 0 {
@@ -254,6 +287,14 @@ func (pqx *priorityQueueEx) Remove(x interface{}) (ok bool) {
 	return true
 }
 
+// Replace exchanges oldX in the queue to newX.
+// If oldX is in the queue and has been replaced successfully,
+// it returns true, otherwise false.
+// If there are multiple items equals to oldX in the queue,
+// it replaces one of them.
+// (Which one will be replaced depends on the implementation.)
+//
+// Time complexity: O(n), where n = pq.Len().
 func (pqx *priorityQueueEx) Replace(oldX, newX interface{}) (ok bool) {
 	idx := pqx.find(oldX)
 	if idx < 0 {
@@ -264,6 +305,9 @@ func (pqx *priorityQueueEx) Replace(oldX, newX interface{}) (ok bool) {
 	return true
 }
 
+// ScanWithoutOrder browses the items in the queue as fast as possible.
+//
+// Time complexity: O(n), where n = pq.Len().
 func (pqx *priorityQueueEx) ScanWithoutOrder(handler func(x interface{}) (cont bool)) {
 	if handler == nil || pqx.Len() == 0 {
 		return

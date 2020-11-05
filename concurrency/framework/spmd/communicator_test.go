@@ -32,12 +32,12 @@ func TestCommunicator_Send_Receive(t *testing.T) {
 
 	// Point-to-point communication test.
 	//
-	// 1st round: 0 -> 2, 1 -> 3
-	// 2nd round: 0 -> 3, 1 -> 2
-	// 3rd round: 0 -> 1, 2 -> 3
-	// 4th round: 1 -> 0, 3 -> 2
-	// 5th round: 2 -> 0, 3 -> 1
-	// 6th round: 3 -> 0, 2 -> 1
+	// Round 1: 0 -> 2, 1 -> 3
+	// Round 2: 0 -> 3, 1 -> 2
+	// Round 3: 0 -> 1, 2 -> 3
+	// Round 4: 1 -> 0, 3 -> 2
+	// Round 5: 2 -> 0, 3 -> 1
+	// Round 6: 3 -> 0, 2 -> 1
 	prs := Run(4, func(world Communicator, commMap map[string]Communicator) {
 		r := world.Rank()
 		var src, dest int

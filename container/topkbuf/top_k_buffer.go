@@ -80,6 +80,7 @@ func NewTopKBuffer(k int, less function.LessFunc, data ...interface{}) TopKBuffe
 	return tkb
 }
 
+// Return the parameter K.
 func (tkb *topKBuffer) K() int {
 	if tkb == nil {
 		return 0
@@ -87,6 +88,7 @@ func (tkb *topKBuffer) K() int {
 	return tkb.ParamK
 }
 
+// Return the number of items in the buffer.
 func (tkb *topKBuffer) Len() int {
 	if tkb == nil {
 		return 0
@@ -94,6 +96,8 @@ func (tkb *topKBuffer) Len() int {
 	return tkb.Pq.Len()
 }
 
+// Add items x into the buffer.
+// Time complexity: O(m log(m + n)), where m = len(x), n = tkb.Len().
 func (tkb *topKBuffer) Add(x ...interface{}) {
 	r := tkb.ParamK - tkb.Len()
 	if len(x) <= r {
@@ -110,6 +114,8 @@ func (tkb *topKBuffer) Add(x ...interface{}) {
 	}
 }
 
+// Pop all items and return in ascending order.
+// Time complexity: O(n log n), where n = tkb.Len().
 func (tkb *topKBuffer) Drain() []interface{} {
 	n := tkb.Len()
 	if n == 0 {
@@ -122,6 +128,7 @@ func (tkb *topKBuffer) Drain() []interface{} {
 	return result
 }
 
+// Discard all items and release the memory.
 func (tkb *topKBuffer) Clear() {
 	if tkb == nil {
 		return

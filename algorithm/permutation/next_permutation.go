@@ -61,6 +61,7 @@ type nextPermutationBinarySearchInterface struct {
 	End    int
 }
 
+// Len returns the number of items in the sequence.
 func (npbsi *nextPermutationBinarySearchInterface) Len() int {
 	if npbsi == nil || npbsi.Data == nil {
 		return 0
@@ -68,16 +69,21 @@ func (npbsi *nextPermutationBinarySearchInterface) Len() int {
 	return npbsi.End - npbsi.Begin
 }
 
+// Equal is not implemented for this struct. Do NOT call it!
 func (npbsi *nextPermutationBinarySearchInterface) Equal(i int, x interface{}) bool {
 	panic(errors.AutoMsg("method Equal not implement"))
 }
 
+// Less reports whether i-th item is less than x.
+// It panics if i is out of range.
+//
 // Here, x is just a dummy argument.
 // This method should act as a Greater() because the Data is in descending order.
 func (npbsi *nextPermutationBinarySearchInterface) Less(i int, x interface{}) bool {
 	return npbsi.Data.Less(npbsi.Target, i+npbsi.Begin)
 }
 
+// Greater is not implemented for this struct. Do NOT call it!
 func (npbsi *nextPermutationBinarySearchInterface) Greater(i int, x interface{}) bool {
 	panic(errors.AutoMsg("method Greater not implement"))
 }

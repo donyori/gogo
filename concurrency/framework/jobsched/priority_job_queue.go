@@ -58,10 +58,15 @@ type priorityJobQueue struct {
 	maker  JobQueueMaker        // Job queue maker to create new sub-queues.
 }
 
+// Len returns the number of jobs in the queue.
 func (pjq *priorityJobQueue) Len() int {
 	return pjq.numJob
 }
 
+// Enqueue adds jobs into the job queue.
+//
+// The framework guarantees that all items in jobs are never nil and
+// have a non-zero Ct field.
 func (pjq *priorityJobQueue) Enqueue(jobs ...*Job) {
 	for _, job := range jobs {
 		q, ok := pjq.sqm[job.Pri]
@@ -77,6 +82,9 @@ func (pjq *priorityJobQueue) Enqueue(jobs ...*Job) {
 	}
 }
 
+// Dequeue pops a job in the queue and returns its data
+// (i.e., the Data field of Job).
+// It panics if the queue is nil or empty.
 func (pjq *priorityJobQueue) Dequeue() interface{} {
 	top := pjq.sqm[pjq.pq.Top().(uint)]
 	data := top.Dequeue()

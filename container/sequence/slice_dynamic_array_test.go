@@ -95,7 +95,7 @@ func TestSliceDynamicArray_Len(t *testing.T) {
 	if n := sda.Len(); n != 0 {
 		t.Errorf("sda.Len(): %d != 0.", n)
 	}
-	s := []interface{}{}
+	var s []interface{}
 	sda = WrapSlice(&s)
 	if n := sda.Len(); n != len(s) {
 		t.Errorf("sda.Len(): %d != len(s): %d.", n, len(s))

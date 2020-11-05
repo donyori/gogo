@@ -62,6 +62,16 @@ type onceIndicator struct {
 	c    chan struct{} // Channel to broadcast the finish signal.
 }
 
+// Do performs the same as the method Do of sync.Once, and indicate whether
+// the function f is called in this invocation.
+//
+// In detail, it calls the function f and returns true iff the method Do
+// is being called for the first time for this instance of OnceIndicator.
+// Otherwise, it does nothing but waits for the first call of f to finish,
+// and then returns false.
+//
+// If the client wants to do nothing but trigger this indicator,
+// just set f to nil (no panic will happen).
 func (oi *onceIndicator) Do(f func()) bool {
 	r := false
 	oi.once.Do(func() {
@@ -74,14 +84,22 @@ func (oi *onceIndicator) Do(f func()) bool {
 	return r
 }
 
+// C returns a channel that will be closed after calling the method Do
+// for the first time for this instance of OnceIndicator.
 func (oi *onceIndicator) C() <-chan struct{} {
 	return oi.c
 }
 
+// Wait waits for the first call of the method Do for this instance
+// on another goroutine to finish.
 func (oi *onceIndicator) Wait() {
 	<-oi.c
 }
 
+// Test reports whether the method Do for this instance is called or not.
+//
+// It returns true iff the first call of the method Do
+// for this instance has finished.
 func (oi *onceIndicator) Test() bool {
 	select {
 	case <-oi.c:

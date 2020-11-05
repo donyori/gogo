@@ -63,10 +63,15 @@ type defaultJobQueue struct {
 	rn float64
 }
 
+// Len returns the number of jobs in the queue.
 func (djq *defaultJobQueue) Len() int {
 	return djq.pq.Len()
 }
 
+// Enqueue adds jobs into the job queue.
+//
+// The framework guarantees that all items in jobs are never nil and
+// have a non-zero Ct field.
 func (djq *defaultJobQueue) Enqueue(jobs ...*Job) {
 	if len(jobs) == 0 {
 		return
@@ -79,6 +84,9 @@ func (djq *defaultJobQueue) Enqueue(jobs ...*Job) {
 	djq.pq.Enqueue(a...)
 }
 
+// Dequeue pops a job in the queue and returns its data
+// (i.e., the Data field of Job).
+// It panics if the queue is nil or empty.
 func (djq *defaultJobQueue) Dequeue() interface{} {
 	job := djq.pq.Dequeue().(*Job)
 	djq.t += djq.rn

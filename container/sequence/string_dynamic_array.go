@@ -18,41 +18,55 @@
 
 package sequence
 
-// A prefab DynamicArray for string.
+// StringDynamicArray is a prefab DynamicArray for string.
 type StringDynamicArray []string
 
-// Make a new StringDynamicArray with given capacity.
+// NewStringDynamicArray makes a new StringDynamicArray with given capacity.
 // It panics if capacity < 0.
 func NewStringDynamicArray(capacity int) StringDynamicArray {
 	return make(StringDynamicArray, 0, capacity)
 }
 
+// Len returns the number of items in the array.
 func (sda StringDynamicArray) Len() int {
 	return len(sda)
 }
 
+// Front returns the first item of the array.
+// It panics if the array is nil or empty.
 func (sda StringDynamicArray) Front() interface{} {
 	return sda[0]
 }
 
+// SetFront sets the first item to x.
+// It panics if the array is nil or empty.
 func (sda StringDynamicArray) SetFront(x interface{}) {
 	sda[0] = x.(string)
 }
 
+// Back returns the last item of the array.
+// It panics if the array is nil or empty.
 func (sda StringDynamicArray) Back() interface{} {
 	return sda[len(sda)-1]
 }
 
+// SetBack sets the last item to x.
+// It panics if the array is nil or empty.
 func (sda StringDynamicArray) SetBack(x interface{}) {
 	sda[len(sda)-1] = x.(string)
 }
 
+// Reverse turns the other way round items of the array.
 func (sda StringDynamicArray) Reverse() {
 	for i, k := 0, len(sda)-1; i < k; i, k = i+1, k-1 {
 		sda[i], sda[k] = sda[k], sda[i]
 	}
 }
 
+// Scan browses the items in the array from the first to the last.
+//
+// Its argument handler is a function to deal with the item x in the
+// array and report whether to continue to check the next item or not.
 func (sda StringDynamicArray) Scan(handler func(x interface{}) (cont bool)) {
 	for _, x := range sda {
 		if !handler(x) {
@@ -61,30 +75,43 @@ func (sda StringDynamicArray) Scan(handler func(x interface{}) (cont bool)) {
 	}
 }
 
+// Get returns the i-th item of the array.
+// It panics if i is out of range.
 func (sda StringDynamicArray) Get(i int) interface{} {
 	return sda[i]
 }
 
+// Set sets the i-th item to x.
+// It panics if i is out of range.
 func (sda StringDynamicArray) Set(i int, x interface{}) {
 	sda[i] = x.(string)
 }
 
+// Swap exchanges the i-th and j-th items.
+// It panics if i or j is out of range.
 func (sda StringDynamicArray) Swap(i, j int) {
 	sda[i], sda[j] = sda[j], sda[i]
 }
 
+// Slice returns a slice from argument begin (inclusive) to
+// argument end (exclusive) of the array, as an Array.
+// It panics if begin or end is out of range, or begin > end.
 func (sda StringDynamicArray) Slice(begin, end int) Array {
 	return sda[begin:end:end]
 }
 
+// Cap returns the current capacity of the dynamic array.
 func (sda StringDynamicArray) Cap() int {
 	return cap(sda)
 }
 
+// Push adds x to the back of the dynamic array.
 func (sda *StringDynamicArray) Push(x interface{}) {
 	*sda = append(*sda, x.(string))
 }
 
+// Pop removes and returns the last item of the dynamic array.
+// It panics if the dynamic array is nil or empty.
 func (sda *StringDynamicArray) Pop() interface{} {
 	back := len(*sda) - 1
 	x := (*sda)[back]
@@ -93,6 +120,9 @@ func (sda *StringDynamicArray) Pop() interface{} {
 	return x
 }
 
+// Append adds s to the back of the dynamic array.
+// s shouldn't be modified during calling this method,
+// otherwise, unknown error may occur.
 func (sda *StringDynamicArray) Append(s Sequence) {
 	if s == nil {
 		return
@@ -114,6 +144,8 @@ func (sda *StringDynamicArray) Append(s Sequence) {
 	})
 }
 
+// Truncate removes the i-th and all subsequent items in the dynamic array.
+// It does nothing if i is out of range.
 func (sda *StringDynamicArray) Truncate(i int) {
 	if i < 0 || i >= len(*sda) {
 		return
@@ -124,6 +156,8 @@ func (sda *StringDynamicArray) Truncate(i int) {
 	*sda = (*sda)[:i]
 }
 
+// Insert adds x as the i-th item in the dynamic array.
+// It panics if i is out of range, i.e., i < 0 or i > Len().
 func (sda *StringDynamicArray) Insert(i int, x interface{}) {
 	if i == len(*sda) {
 		sda.Push(x)
@@ -135,6 +169,8 @@ func (sda *StringDynamicArray) Insert(i int, x interface{}) {
 	(*sda)[i] = x.(string)
 }
 
+// Remove removes and returns the i-th item in the dynamic array.
+// It panics if i is out of range, i.e., i < 0 or i >= Len().
 func (sda *StringDynamicArray) Remove(i int) interface{} {
 	back := len(*sda) - 1
 	if i == back {
@@ -147,6 +183,9 @@ func (sda *StringDynamicArray) Remove(i int) interface{} {
 	return x
 }
 
+// RemoveWithoutOrder removes and returns the i-th item in
+// the dynamic array, without preserving order.
+// It panics if i is out of range, i.e., i < 0 or i >= Len().
 func (sda *StringDynamicArray) RemoveWithoutOrder(i int) interface{} {
 	x := (*sda)[i]
 	back := len(*sda) - 1
@@ -158,6 +197,11 @@ func (sda *StringDynamicArray) RemoveWithoutOrder(i int) interface{} {
 	return x
 }
 
+// InsertSequence inserts s to the front of the i-th item
+// in the dynamic array.
+// It panics if i is out of range, i.e., i < 0 or i > Len().
+// s shouldn't be modified during calling this method,
+// otherwise, unknown error may occur.
 func (sda *StringDynamicArray) InsertSequence(i int, s Sequence) {
 	if i == len(*sda) {
 		sda.Append(s)
@@ -181,6 +225,9 @@ func (sda *StringDynamicArray) InsertSequence(i int, s Sequence) {
 	})
 }
 
+// Cut removes items from argument begin (inclusive) to
+// argument end (exclusive) of the dynamic array.
+// It panics if begin or end is out of range, or begin > end.
 func (sda *StringDynamicArray) Cut(begin, end int) {
 	_ = (*sda)[begin:end] // ensure begin and end are valid
 	if begin == end {
@@ -197,6 +244,9 @@ func (sda *StringDynamicArray) Cut(begin, end int) {
 	*sda = (*sda)[:len(*sda)-end+begin]
 }
 
+// CutWithoutOrder removes items from argument begin (inclusive) to
+// argument end (exclusive) of the dynamic array, without preserving order.
+// It panics if begin or end is out of range, or begin > end.
 func (sda *StringDynamicArray) CutWithoutOrder(begin, end int) {
 	_ = (*sda)[begin:end] // ensure begin and end are valid
 	if begin == end {
@@ -217,10 +267,15 @@ func (sda *StringDynamicArray) CutWithoutOrder(begin, end int) {
 	*sda = (*sda)[:len(*sda)-end+begin]
 }
 
+// Extend adds n zero-value items to the back of the dynamic array.
+// It panics if n < 0.
 func (sda *StringDynamicArray) Extend(n int) {
 	*sda = append(*sda, make([]string, n)...)
 }
 
+// Expand inserts n zero-value items to the front of the i-th item
+// in the dynamic array.
+// It panics if i is out of range, i.e., i < 0 or i > Len(), or n < 0.
 func (sda *StringDynamicArray) Expand(i, n int) {
 	if i == len(*sda) {
 		sda.Extend(n)
@@ -234,6 +289,9 @@ func (sda *StringDynamicArray) Expand(i, n int) {
 	}
 }
 
+// Reserve requests that the capacity of the dynamic array
+// is at least the given capacity.
+// It does nothing if capacity <= Cap().
 func (sda *StringDynamicArray) Reserve(capacity int) {
 	if capacity <= 0 || (sda != nil && capacity <= cap(*sda)) {
 		return
@@ -243,6 +301,12 @@ func (sda *StringDynamicArray) Reserve(capacity int) {
 	*sda = s
 }
 
+// Shrink reduces the dynamic array to fit, i.e.,
+// requests Cap() equals to Len().
+// Note that it isn't equivalent to operations on slice
+// like s[:len(s):len(s)],
+// because it will allocate a new array and copy the content
+// if Cap() > Len().
 func (sda *StringDynamicArray) Shrink() {
 	if sda == nil || len(*sda) == cap(*sda) {
 		return
@@ -252,12 +316,18 @@ func (sda *StringDynamicArray) Shrink() {
 	*sda = s
 }
 
+// Clear removes all items in the dynamic array and
+// asks to release the memory.
 func (sda *StringDynamicArray) Clear() {
 	if sda != nil {
 		*sda = nil
 	}
 }
 
+// Filter refines items in the dynamic array (in place).
+//
+// Its argument filter is a function to report
+// whether to keep the item x or not.
 func (sda *StringDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 	if sda == nil || len(*sda) == 0 {
 		return
@@ -278,6 +348,7 @@ func (sda *StringDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 	*sda = (*sda)[:n]
 }
 
+// Less reports whether the i-th item is less than the j-th or not.
 func (sda StringDynamicArray) Less(i, j int) bool {
 	return sda[i] < sda[j]
 }

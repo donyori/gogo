@@ -46,10 +46,15 @@ type ctJobQueue struct {
 	pq pqueue.PriorityQueueMini // Priority queue to manage jobs.
 }
 
+// Len returns the number of jobs in the queue.
 func (cjq *ctJobQueue) Len() int {
 	return cjq.pq.Len()
 }
 
+// Enqueue adds jobs into the job queue.
+//
+// The framework guarantees that all items in jobs are never nil and
+// have a non-zero Ct field.
 func (cjq *ctJobQueue) Enqueue(jobs ...*Job) {
 	if len(jobs) == 0 {
 		return
@@ -61,6 +66,9 @@ func (cjq *ctJobQueue) Enqueue(jobs ...*Job) {
 	cjq.pq.Enqueue(a...)
 }
 
+// Dequeue pops a job in the queue and returns its data
+// (i.e., the Data field of Job).
+// It panics if the queue is nil or empty.
 func (cjq *ctJobQueue) Dequeue() interface{} {
 	return cjq.pq.Dequeue().(*Job).Data
 }
