@@ -53,27 +53,29 @@ type Mutex interface {
 
 // NewMutex creates a new instance of Mutex.
 func NewMutex() Mutex {
-	m := make(mutex, 1)
-	m <- struct{}{}
+	m := &mutex{make(chan struct{}, 1)}
+	m.c <- struct{}{}
 	return m
 }
 
 // mutex is an implementation of interface Mutex.
-type mutex chan struct{}
+type mutex struct {
+	c chan struct{}
+}
 
 // Lock acquires the lock on the mutex.
 // It blocks until the lock is gotten.
-func (m mutex) Lock() {
-	<-m
+func (m *mutex) Lock() {
+	<-m.c
 }
 
 // Unlock releases the lock on the mutex.
 // It panics if the mutex is unlocked.
-func (m mutex) Unlock() {
-	if len(m) > 0 {
+func (m *mutex) Unlock() {
+	if len(m.c) > 0 {
 		panic(errors.AutoMsg("unlock of an unlocked mutex"))
 	}
-	m <- struct{}{}
+	m.c <- struct{}{}
 }
 
 // C returns the channel for acquiring the lock.
@@ -83,11 +85,11 @@ func (m mutex) Unlock() {
 //  <-m.C()
 // is equivalent to
 //  m.Lock()
-func (m mutex) C() <-chan struct{} {
-	return m
+func (m *mutex) C() <-chan struct{} {
+	return m.c
 }
 
 // Locked reports whether the mutex is locked.
-func (m mutex) Locked() bool {
-	return len(m) == 0
+func (m *mutex) Locked() bool {
+	return len(m.c) == 0
 }

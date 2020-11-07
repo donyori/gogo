@@ -19,6 +19,7 @@
 package concurrency
 
 import (
+	"sync"
 	"testing"
 	"time"
 )
@@ -90,4 +91,53 @@ func TestMutex_C_UnlockTwice(t *testing.T) {
 	m.Lock()
 	m.Unlock()
 	m.Unlock()
+}
+
+func TestMutex_Fairness(t *testing.T) {
+	// This test refers to TestMutexFairness
+	// (a test of sync.Mutex, in the file sync/mutex_test.go).
+	m := NewMutex()
+	stopC := make(chan struct{})
+	sc := stopC // A copy of stopC, for closing stopC.
+	defer func() {
+		if sc != nil {
+			close(sc)
+		}
+	}()
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-stopC:
+				return
+			case <-m.C():
+				time.Sleep(time.Microsecond * 10)
+				m.Unlock()
+			}
+		}
+	}()
+	doneC := make(chan struct{})
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 100; i++ {
+			select {
+			case <-stopC:
+				return
+			case <-m.C():
+				time.Sleep(time.Microsecond * 10)
+				m.Unlock()
+			}
+		}
+		close(doneC)
+	}()
+	select {
+	case <-doneC:
+	case <-time.After(time.Second):
+		t.Error("Cannot acquire the lock in 1 second.")
+	}
+	close(sc)
+	sc = nil
+	wg.Wait()
 }
