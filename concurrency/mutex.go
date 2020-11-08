@@ -72,10 +72,11 @@ func (m *mutex) Lock() {
 // Unlock releases the lock on the mutex.
 // It panics if the mutex is unlocked.
 func (m *mutex) Unlock() {
-	if len(m.c) > 0 {
+	select {
+	case m.c <- struct{}{}:
+	default:
 		panic(errors.AutoMsg("unlock of an unlocked mutex"))
 	}
-	m.c <- struct{}{}
 }
 
 // C returns the channel for acquiring the lock.

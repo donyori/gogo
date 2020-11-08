@@ -72,7 +72,7 @@ func TestMutex_Locked(t *testing.T) {
 	}
 }
 
-func TestMutex_C_UnlockOfUnlockedLock(t *testing.T) {
+func TestMutex_UnlockOfUnlockedMutex(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
 			t.Error("No panic when calling Unlock of an unlocked mutex.")
@@ -81,7 +81,7 @@ func TestMutex_C_UnlockOfUnlockedLock(t *testing.T) {
 	NewMutex().Unlock()
 }
 
-func TestMutex_C_UnlockTwice(t *testing.T) {
+func TestMutex_UnlockTwice(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
 			t.Error("No panic when calling Unlock twice.")
