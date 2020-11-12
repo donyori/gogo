@@ -41,13 +41,19 @@ const noticeWithSourceLayout = noticeLayout + "    Program source: <%[4]s>.\n"
 // An error for that the author is missing.
 var ErrAuthorMissing = errors.New("author is missing")
 
-// Print a short notice to w, typically in the terminal interaction. program is
-// the name of the program. year is the publish year of your software. author
-// is the name of the author. source is the URL of the source of your software.
-// If w is nil, it will use os.Stdout instead. If program is empty, it will use
-// os.Args[0] instead. If year is empty, it will use current year instead. If
-// author is empty, it will return ErrAuthorMissing. If source is empty, the
-// part of the program source will be discarded.
+// PrintNotice prints a short notice to w,
+// typically used for terminal interaction.
+//
+// program is the name of the program.
+// year is the publish year of your software.
+// author is the name of the author.
+// source is the URL of the source of your software.
+//
+// If w is nil, it will use os.Stdout instead.
+// If program is empty, it will use os.Args[0] instead.
+// If year is empty, it will use current year instead.
+// If author is empty, it will return ErrAuthorMissing.
+// If source is empty, the part of the program source will be discarded.
 func PrintNotice(w io.Writer, program, year, author, source string) error {
 	if author == "" {
 		return errors.AutoWrap(ErrAuthorMissing)

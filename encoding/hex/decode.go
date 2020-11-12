@@ -18,12 +18,12 @@
 
 package hex
 
-// Return the length of decoding of x source bytes, exactly x / 2.
+// DecodedLen returns the length of decoding of x source bytes, exactly x / 2.
 func DecodedLen(x int) int {
 	return x / 2
 }
 
-// Return the length of decoding of x source bytes, exactly x / 2.
+// DecodedLen64 returns the length of decoding of x source bytes, exactly x / 2.
 func DecodedLen64(x int64) int64 {
 	return x / 2
 }

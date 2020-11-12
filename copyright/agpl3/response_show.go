@@ -26,13 +26,18 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// Response the requests "show w" and "show c" to w, where "show w" means
-// showing the disclaimer of warranty and "show c" means showing the terms and
-// conditions. If w is nil, it will use os.Stdout instead. input is the user's
-// input arguments. If input is nil, it will use os.Args[1:] instead (If user
-// inputs nothing, set input to []string{} but not nil). It returns a boolean
-// doResp to indicate whether the user input "show w" or "show c". It also
-// returns any encountered error during writing to w.
+// RespShowWC responses the requests "show w" and "show c" to w,
+// where "show w" means showing the disclaimer of warranty and
+// "show c" means showing the terms and conditions.
+//
+// If w is nil, it will use os.Stdout instead.
+// input is the user's input arguments.
+// If input is nil, it will use os.Args[1:] instead (If user inputs nothing,
+// set input to []string{} but not nil).
+//
+// It returns a boolean doResp to indicate whether
+// the user's input is one of "show w" and "show c".
+// It also returns any encountered error during writing to w.
 // Note that err must be nil if doResp is false.
 func RespShowWC(w io.Writer, input []string) (doResp bool, err error) {
 	if input == nil {

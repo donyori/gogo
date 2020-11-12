@@ -26,27 +26,29 @@ import (
 	"github.com/donyori/gogo/function"
 )
 
-// Buffer for saving the first K smallest items.
+// TopKBuffer is a buffer for saving the first K smallest items.
 type TopKBuffer interface {
-	// Return the parameter K.
+	// K returns the parameter K.
 	K() int
 
-	// Return the number of items in the buffer.
+	// Len returns the number of items in the buffer.
 	Len() int
 
-	// Add items x into the buffer.
+	// Add adds items x into the buffer.
+	//
 	// Time complexity: O(m log(m + n)), where m = len(x), n = tkb.Len().
 	Add(x ...interface{})
 
-	// Pop all items and return in ascending order.
+	// Drain pops all items and returns them in ascending order.
+	//
 	// Time complexity: O(n log n), where n = tkb.Len().
 	Drain() []interface{}
 
-	// Discard all items and release the memory.
+	// Clear discards all items and asks to release the memory.
 	Clear()
 }
 
-// An implementation of TopKBuffer,
+// topKBuffer is an implementation of interface TopKBuffer,
 // based on github.com/donyori/gogo/container/pqueue.PriorityQueue.
 type topKBuffer struct {
 	ParamK    int
@@ -54,7 +56,7 @@ type topKBuffer struct {
 	Pq        pqueue.PriorityQueue
 }
 
-// Create a new TopKBuffer.
+// NewTopKBuffer creates a new TopKBuffer.
 // data is the initial items in the buffer.
 // It panics if k <= 0 or less is nil.
 func NewTopKBuffer(k int, less function.LessFunc, data ...interface{}) TopKBuffer {
@@ -80,7 +82,7 @@ func NewTopKBuffer(k int, less function.LessFunc, data ...interface{}) TopKBuffe
 	return tkb
 }
 
-// Return the parameter K.
+// K returns the parameter K.
 func (tkb *topKBuffer) K() int {
 	if tkb == nil {
 		return 0
@@ -88,7 +90,7 @@ func (tkb *topKBuffer) K() int {
 	return tkb.ParamK
 }
 
-// Return the number of items in the buffer.
+// Len returns the number of items in the buffer.
 func (tkb *topKBuffer) Len() int {
 	if tkb == nil {
 		return 0
@@ -96,7 +98,8 @@ func (tkb *topKBuffer) Len() int {
 	return tkb.Pq.Len()
 }
 
-// Add items x into the buffer.
+// Add adds items x into the buffer.
+//
 // Time complexity: O(m log(m + n)), where m = len(x), n = tkb.Len().
 func (tkb *topKBuffer) Add(x ...interface{}) {
 	r := tkb.ParamK - tkb.Len()
@@ -114,7 +117,8 @@ func (tkb *topKBuffer) Add(x ...interface{}) {
 	}
 }
 
-// Pop all items and return in ascending order.
+// Drain pops all items and returns them in ascending order.
+//
 // Time complexity: O(n log n), where n = tkb.Len().
 func (tkb *topKBuffer) Drain() []interface{} {
 	n := tkb.Len()
@@ -128,7 +132,7 @@ func (tkb *topKBuffer) Drain() []interface{} {
 	return result
 }
 
-// Discard all items and release the memory.
+// Clear discards all items and asks to release the memory.
 func (tkb *topKBuffer) Clear() {
 	if tkb == nil {
 		return
