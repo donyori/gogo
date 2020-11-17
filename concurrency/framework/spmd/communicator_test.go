@@ -26,8 +26,8 @@ import (
 )
 
 func TestCommunicator_Send_Receive(t *testing.T) {
-	dataFn := func(src, dest int) int {
-		return src*10 + dest
+	dataFn := func(src, dst int) int {
+		return src*10 + dst
 	}
 
 	// Point-to-point communication test.
@@ -40,10 +40,10 @@ func TestCommunicator_Send_Receive(t *testing.T) {
 	// Round 6: 3 -> 0, 2 -> 1
 	prs := Run(4, func(world Communicator, commMap map[string]Communicator) {
 		r := world.Rank()
-		var src, dest int
+		var src, dst int
 		sendTest := func() {
-			if !world.Send(dest, dataFn(r, dest)) {
-				t.Errorf("Goroutine %d, dest %d: Send returns false.", r, dest)
+			if !world.Send(dst, dataFn(r, dst)) {
+				t.Errorf("Goroutine %d, dst %d: Send returns false.", r, dst)
 			}
 		}
 		recvTest := func() {
@@ -56,19 +56,19 @@ func TestCommunicator_Send_Receive(t *testing.T) {
 		}
 		switch r {
 		case 0:
-			for _, dest = range []int{2, 3, 1} {
+			for _, dst = range []int{2, 3, 1} {
 				sendTest()
 			}
 			for _, src = range []int{1, 2, 3} {
 				recvTest()
 			}
 		case 1:
-			for _, dest = range []int{3, 2} {
+			for _, dst = range []int{3, 2} {
 				sendTest()
 			}
 			src = 0
 			recvTest()
-			dest = 0
+			dst = 0
 			sendTest()
 			for _, src = range []int{3, 2} {
 				recvTest()
@@ -77,18 +77,18 @@ func TestCommunicator_Send_Receive(t *testing.T) {
 			for _, src = range []int{0, 1} {
 				recvTest()
 			}
-			dest = 3
+			dst = 3
 			sendTest()
 			src = 3
 			recvTest()
-			for _, dest = range []int{0, 1} {
+			for _, dst = range []int{0, 1} {
 				sendTest()
 			}
 		case 3:
 			for _, src = range []int{1, 0, 2} {
 				recvTest()
 			}
-			for _, dest = range []int{2, 1, 0} {
+			for _, dst = range []int{2, 1, 0} {
 				sendTest()
 			}
 		}
@@ -99,8 +99,8 @@ func TestCommunicator_Send_Receive(t *testing.T) {
 }
 
 func TestCommunicator_Send_Receive_Any(t *testing.T) {
-	dataFn := func(src, dest int) int {
-		return src*10 + dest
+	dataFn := func(src, dst int) int {
+		return src*10 + dst
 	}
 	prs := Run(7, func(world Communicator, commMap map[string]Communicator) {
 		if world.Rank() == 6 {
@@ -121,13 +121,13 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 		}
 		comm := commMap["tester"]
 		r := comm.Rank()
-		var src, dest int
+		var src, dst int
 		var msg interface{}
 		checkD := func(d int) {
 			if d < 0 {
-				t.Errorf("Goroutine %d, dest %d: An unexpected quit signal was detected.", r, dest)
-			} else if d != dest {
-				t.Errorf("Goroutine %d: dest: %d != %d.", r, d, dest)
+				t.Errorf("Goroutine %d, dst %d: An unexpected quit signal was detected.", r, dst)
+			} else if d != dst {
+				t.Errorf("Goroutine %d: dst: %d != %d.", r, d, dst)
 			}
 		}
 		checkSrcMsg := func() {
@@ -139,26 +139,26 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 		}
 		switch r {
 		case 0, 4:
-			for _, dest = range []int{2, 3, 3} {
-				checkD(comm.SendAny(dataFn(r, dest)))
+			for _, dst = range []int{2, 3, 3} {
+				checkD(comm.SendAny(dataFn(r, dst)))
 				world.Barrier()
 			}
 			if comm.Send(3, dataFn(r, 3)) {
-				t.Errorf("Goroutine %d, dest 3: Send should return false but got true.", r)
+				t.Errorf("Goroutine %d, dst 3: Send should return false but got true.", r)
 			}
 		case 1, 5:
 			if !comm.Send(2, dataFn(r, 2)) {
-				t.Errorf("Goroutine %d, dest 2: Send returns false.", r)
+				t.Errorf("Goroutine %d, dst 2: Send returns false.", r)
 			}
-			for _, dest = range []int{2, 3} {
-				checkD(comm.SendPublic(dataFn(r, dest)))
+			for _, dst = range []int{2, 3} {
+				checkD(comm.SendPublic(dataFn(r, dst)))
 				world.Barrier()
-				if dest == 2 {
+				if dst == 2 {
 					world.Barrier()
 				}
 			}
 			if comm.Send(3, dataFn(r, 3)) {
-				t.Errorf("Goroutine %d, dest 3: Send should return false but got true.", r)
+				t.Errorf("Goroutine %d, dst 3: Send should return false but got true.", r)
 			}
 		case 2:
 			for i := 0; i < 6; i++ {
@@ -170,7 +170,7 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 			world.Barrier()
 			world.Barrier()
 			if comm.Send(3, dataFn(r, 3)) {
-				t.Errorf("Goroutine %d, dest 3: Send should return false but got true.", r)
+				t.Errorf("Goroutine %d, dst 3: Send should return false but got true.", r)
 			}
 		case 3:
 			world.Barrier()

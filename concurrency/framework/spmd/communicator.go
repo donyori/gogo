@@ -45,12 +45,12 @@ type Communicator interface {
 	// the message successfully, or a quit signal is detected.
 	// It will panic if the destination goroutine is the sender itself.
 	//
-	// dest is the rank of the destination goroutine.
+	// dst is the rank of the destination goroutine.
 	// msg is the message to be sent.
 	//
 	// It returns true if the communication succeeds,
 	// otherwise (e.g., a quit signal is detected), false.
-	Send(dest int, msg interface{}) bool
+	Send(dst int, msg interface{}) bool
 
 	// Receive receives a message from another goroutine.
 	//
@@ -288,23 +288,23 @@ func (comm *communicator) NumGoroutine() int {
 // the message successfully, or a quit signal is detected.
 // It will panic if the destination goroutine is the sender itself.
 //
-// dest is the rank of the destination goroutine.
+// dst is the rank of the destination goroutine.
 // msg is the message to be sent.
 //
 // It returns true if the communication succeeds,
 // otherwise (e.g., a quit signal is detected), false.
-func (comm *communicator) Send(dest int, msg interface{}) bool {
-	if comm.rank == dest {
-		panic(errors.AutoMsg("dest is the sender itself"))
+func (comm *communicator) Send(dst int, msg interface{}) bool {
+	if comm.rank == dst {
+		panic(errors.AutoMsg("dst is the sender itself"))
 	}
 	idx := comm.rank
-	if idx > dest {
+	if idx > dst {
 		idx--
 	}
 	select {
 	case <-comm.Ctx.Ctrl.Qd.QuitChan():
 		return false
-	case comm.Ctx.Comms[dest].pcs[idx] <- msg:
+	case comm.Ctx.Comms[dst].pcs[idx] <- msg:
 		return true
 	}
 }
@@ -366,8 +366,8 @@ func (comm *communicator) SendPublic(msg interface{}) int {
 	select {
 	case <-quitChan:
 		return -1
-	case dest := <-rxC:
-		return dest
+	case dst := <-rxC:
+		return dst
 	}
 }
 
@@ -433,13 +433,13 @@ func (comm *communicator) SendAny(msg interface{}) int {
 	}
 	n := len(comm.Ctx.Comms)
 	quitChan := comm.Ctx.Ctrl.Qd.QuitChan()
-	var dest, idx int
+	var dst, idx int
 	poll := func() int {
-		for dest = 0; dest < n; dest++ {
-			if dest == comm.rank {
-				dest++
+		for dst = 0; dst < n; dst++ {
+			if dst == comm.rank {
+				dst++
 			}
-			if comm.rank > dest {
+			if comm.rank > dst {
 				idx = comm.rank - 1
 			} else {
 				idx = comm.rank
@@ -451,11 +451,11 @@ func (comm *communicator) SendAny(msg interface{}) int {
 				select {
 				case <-quitChan:
 					return -1
-				case dest := <-rxC:
-					return dest
+				case dst := <-rxC:
+					return dst
 				}
-			case comm.Ctx.Comms[dest].pcs[idx] <- msg:
-				return dest
+			case comm.Ctx.Comms[dst].pcs[idx] <- msg:
+				return dst
 			default:
 			}
 		}
@@ -475,8 +475,8 @@ func (comm *communicator) SendAny(msg interface{}) int {
 			select {
 			case <-quitChan:
 				return -1
-			case dest := <-rxC:
-				return dest
+			case dst := <-rxC:
+				return dst
 			}
 		case <-ticker.C:
 			pollR = poll()
