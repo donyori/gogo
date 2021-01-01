@@ -24,20 +24,24 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// Return the length of encoding of n source bytes, exactly n * 2.
+// EncodedLen returns the length of encoding of n source bytes, exactly n * 2.
 func EncodedLen(n int) int {
 	return n * 2
 }
 
-// Return the length of encoding of n source bytes, exactly n * 2.
+// EncodedLen64 returns the length of encoding of n source bytes, exactly n * 2.
 func EncodedLen64(n int64) int64 {
 	return n * 2
 }
 
-// Encode src into dst.
-// upper indicates to use upper case in hexadecimal representation.
-// It returns the number of bytes written into dst, exactly EncodedLen(len(src)).
-// Encode(dst, src, false) is equivalent to Encode(dst, src) in official package encoding/hex.
+// Encode encodes src in hexadecimal representation into dst.
+//
+// upper indicates to use uppercase in hexadecimal representation.
+// It returns the number of bytes written into dst,
+// exactly EncodedLen(len(src)).
+//
+// Encode(dst, src, false) is equivalent to Encode(dst, src)
+// in official package encoding/hex.
 func Encode(dst, src []byte, upper bool) int {
 	ht := getHexTable(upper)
 	var n int
@@ -49,34 +53,57 @@ func Encode(dst, src []byte, upper bool) int {
 	return n
 }
 
-// Return hexadecimal encoding of src.
-// upper indicates to use upper case in hexadecimal representation.
-// EncodeToString(src, false) is equivalent to EncodeToString(src) in official package encoding/hex.
+// EncodeToString returns hexadecimal encoding of src.
+//
+// upper indicates to use uppercase in hexadecimal representation.
+//
+// EncodeToString(src, false) is equivalent to EncodeToString(src)
+// in official package encoding/hex.
 func EncodeToString(src []byte, upper bool) string {
 	dst := make([]byte, EncodedLen(len(src)))
 	Encode(dst, src, upper)
 	return string(dst)
 }
 
-// An encoder to write hexadecimal characters.
-type Encoder struct {
+// Encoder is a device to write hexadecimal encoding of input data
+// to the destination writer.
+//
+// It combines io.Writer, io.ByteWriter, and io.ReaderFrom.
+// All the methods write hexadecimal encoding of input data to
+// the destination writer.
+type Encoder interface {
+	io.Writer
+	io.ByteWriter
+	io.ReaderFrom
+
+	// EncodeDst returns the destination writer of this encoder.
+	EncodeDst() io.Writer
+}
+
+// encoder is an implementation of interface Encoder.
+type encoder struct {
 	w     io.Writer
 	upper bool
 }
 
-// Create an encoder to write hexadecimal characters to w.
-// upper indicates to use upper case in hexadecimal representation.
-func NewEncoder(w io.Writer, upper bool) *Encoder {
+// NewEncoder creates an encoder to write hexadecimal characters to w.
+//
+// upper indicates to use uppercase in hexadecimal representation.
+// It panics if w is nil.
+func NewEncoder(w io.Writer, upper bool) Encoder {
 	if w == nil {
 		panic(errors.AutoMsg("w is nil"))
 	}
-	return &Encoder{
+	return &encoder{
 		w:     w,
 		upper: upper,
 	}
 }
 
-func (e *Encoder) Write(p []byte) (n int, err error) {
+// Write writes hexadecimal encoding of p to its destination writer.
+//
+// It fits interface io.Writer.
+func (e *encoder) Write(p []byte) (n int, err error) {
 	bufp := encodeBufferPool.Get().(*[]byte)
 	defer encodeBufferPool.Put(bufp)
 	buf := *bufp
@@ -94,7 +121,10 @@ func (e *Encoder) Write(p []byte) (n int, err error) {
 	return n, errors.AutoWrap(err)
 }
 
-func (e *Encoder) WriteByte(c byte) error {
+// WriteByte writes hexadecimal encoding of c to its destination writer.
+//
+// It fits interface io.ByteWriter.
+func (e *encoder) WriteByte(c byte) error {
 	bufp := encodeBufferPool.Get().(*[]byte)
 	defer encodeBufferPool.Put(bufp)
 	buf := *bufp
@@ -104,7 +134,11 @@ func (e *Encoder) WriteByte(c byte) error {
 	return errors.AutoWrap(err)
 }
 
-func (e *Encoder) ReadFrom(r io.Reader) (n int64, err error) {
+// ReadFrom writes hexadecimal encoding of data read from r
+// to its destination writer.
+//
+// It fits interface io.ReaderFrom.
+func (e *encoder) ReadFrom(r io.Reader) (n int64, err error) {
 	bufp := chunkPool.Get().(*[]byte)
 	defer chunkPool.Put(bufp)
 	buf := *bufp
@@ -129,4 +163,9 @@ func (e *Encoder) ReadFrom(r io.Reader) (n int64, err error) {
 			return n, errors.AutoWrap(writeErr)
 		}
 	}
+}
+
+// EncodeDst returns the destination writer of this encoder.
+func (e *encoder) EncodeDst() io.Writer {
+	return e.w
 }

@@ -99,7 +99,7 @@ func init() {
 									if blockSize <= 0 {
 										blockSize = len(s)
 									}
-									if !dumpCfgLineNotValid(cfg) && prefixFn != nil {
+									if !cfg.dumpCfgLineNotValid() && prefixFn != nil {
 										builder.Write(prefixFn())
 									}
 									var line []byte
@@ -107,7 +107,7 @@ func init() {
 									t := src
 									var j int
 									for len(p) > 0 {
-										if !dumpCfgLineNotValid(cfg) && j > 0 && j%blocksPerLine == 0 && prefixFn != nil {
+										if !cfg.dumpCfgLineNotValid() && j > 0 && j%blocksPerLine == 0 && prefixFn != nil {
 											builder.Write(prefixFn())
 										}
 										end := blockSize
@@ -119,17 +119,17 @@ func init() {
 										p = p[end:]
 										t = t[DecodedLen(end):]
 										j++
-										if !dumpCfgLineNotValid(cfg) && j > 0 && j%blocksPerLine == 0 {
+										if !cfg.dumpCfgLineNotValid() && j > 0 && j%blocksPerLine == 0 {
 											if suffixFn != nil {
 												builder.Write(suffixFn(line))
 											}
 											line = line[:0]
 											builder.WriteString(lineSep)
-										} else if !formatCfgNotValid(&cfg.FormatConfig) && len(p) > 0 {
+										} else if !cfg.formatCfgNotValid() && len(p) > 0 {
 											builder.WriteString(sep)
 										}
 									}
-									if !dumpCfgLineNotValid(cfg) && (j == 0 || j%blocksPerLine != 0) {
+									if !cfg.dumpCfgLineNotValid() && (j == 0 || j%blocksPerLine != 0) {
 										if suffixFn != nil {
 											builder.Write(suffixFn(line))
 										}
@@ -193,16 +193,16 @@ func TestDumper_Write(t *testing.T) {
 	buf := make([]byte, testDumpCasesDstMaxLen+1024)
 	w := bytes.NewBuffer(buf)
 	for _, c := range testDumpCases {
-		dumper := NewDumper(w, c.cfg)
-		_, err := dumper.Write([]byte(c.src))
+		d := NewDumper(w, c.cfg)
+		_, err := d.Write([]byte(c.src))
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
-		err = dumper.Close()
+		err = d.Close()
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
-		err = dumper.Close() // Close() again, to detect whether two Close() can make output wrong.
+		err = d.Close() // Close() again, to detect whether two Close() can make output wrong.
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
@@ -227,19 +227,19 @@ func TestDumper_WriteByte(t *testing.T) {
 	buf := make([]byte, testDumpCasesDstMaxLen+1024)
 	w := bytes.NewBuffer(buf)
 	for _, c := range testDumpCases {
-		dumper := NewDumper(w, c.cfg)
+		d := NewDumper(w, c.cfg)
 		for _, b := range []byte(c.src) {
-			err := dumper.WriteByte(b)
+			err := d.WriteByte(b)
 			if err != nil {
 				t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 				break
 			}
 		}
-		err := dumper.Close()
+		err := d.Close()
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
-		err = dumper.Close() // Close() again, to detect whether two Close() can make output wrong.
+		err = d.Close() // Close() again, to detect whether two Close() can make output wrong.
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
@@ -264,16 +264,16 @@ func TestDumper_ReadFrom(t *testing.T) {
 	buf := make([]byte, testDumpCasesDstMaxLen+1024)
 	w := bytes.NewBuffer(buf)
 	for _, c := range testDumpCases {
-		dumper := NewDumper(w, c.cfg)
-		_, err := dumper.ReadFrom(strings.NewReader(c.src))
+		d := NewDumper(w, c.cfg)
+		_, err := d.ReadFrom(strings.NewReader(c.src))
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
-		err = dumper.Close()
+		err = d.Close()
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
-		err = dumper.Close() // Close() again, to detect whether two Close() can make output wrong.
+		err = d.Close() // Close() again, to detect whether two Close() can make output wrong.
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}

@@ -18,12 +18,12 @@
 
 package hex
 
-// Return the length of parsing with cfg of x source bytes.
+// ParsedLen returns the length of parsing with cfg of x source bytes.
 func ParsedLen(x int, cfg *FormatConfig) int {
 	if x == 0 {
 		return 0
 	}
-	if formatCfgNotValid(cfg) {
+	if cfg.formatCfgNotValid() {
 		return DecodedLen(x)
 	}
 	blockSize := cfg.BlockLen * 2
@@ -35,12 +35,12 @@ func ParsedLen(x int, cfg *FormatConfig) int {
 	return x/size*cfg.BlockLen + lastBlockSize/2
 }
 
-// Return the length of parsing with cfg of x source bytes.
+// ParsedLen64 returns the length of parsing with cfg of x source bytes.
 func ParsedLen64(x int64, cfg *FormatConfig) int64 {
 	if x == 0 {
 		return 0
 	}
-	if formatCfgNotValid(cfg) {
+	if cfg.formatCfgNotValid() {
 		return DecodedLen64(x)
 	}
 	blockLen := int64(cfg.BlockLen)

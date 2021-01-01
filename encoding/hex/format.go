@@ -25,49 +25,56 @@ import (
 	myio "github.com/donyori/gogo/io"
 )
 
-// Configuration for hexadecimal formatting.
+// FormatConfig is a configuration for hexadecimal formatting.
 type FormatConfig struct {
-	Upper bool   // Use upper case or not.
+	Upper bool   // Use uppercase or not.
 	Sep   string // Separator.
 
 	// Block size, i.e., the number of bytes (before hexadecimal encoding)
-	// between every two separators. Non-positive values for no separators.
+	// between every two separators.
+	// Non-positive values for no separators.
 	BlockLen int
 }
 
-// Return true if formatting with cfg won't insert any separators.
-func formatCfgNotValid(cfg *FormatConfig) bool {
+// formatCfgNotValid returns true if formatting with cfg
+// won't insert any separators.
+func (cfg *FormatConfig) formatCfgNotValid() bool {
 	return cfg == nil || cfg.Sep == "" || cfg.BlockLen <= 0
 }
 
-// Return the length of formatting with cfg of n source bytes.
+// FormattedLen returns the length of formatting n source bytes with cfg.
 func FormattedLen(n int, cfg *FormatConfig) int {
 	if n == 0 {
 		return 0
 	}
-	if formatCfgNotValid(cfg) {
+	if cfg.formatCfgNotValid() {
 		return EncodedLen(n)
 	}
 	return (n-1)/cfg.BlockLen*(cfg.BlockLen*2+len(cfg.Sep)) + ((n-1)%cfg.BlockLen+1)*2
 }
 
-// Return the length of formatting with cfg of n source bytes.
+// FormattedLen64 returns the length of formatting n source bytes with cfg.
 func FormattedLen64(n int64, cfg *FormatConfig) int64 {
 	if n == 0 {
 		return 0
 	}
-	if formatCfgNotValid(cfg) {
+	if cfg.formatCfgNotValid() {
 		return EncodedLen64(n)
 	}
 	blockLen := int64(cfg.BlockLen)
 	return (n-1)/blockLen*(blockLen*2+int64(len(cfg.Sep))) + ((n-1)%blockLen+1)*2
 }
 
-// Format src into dst, with cfg.
-// It returns the number of bytes written into dst, exactly FormattedLen(len(src), cfg).
-// Format(dst, src, nil) is equivalent to Encode(dst, src) in official package encoding/hex.
+// Format outputs hexadecimal representation of src
+// in the format specified by cfg to dst.
+//
+// It returns the number of bytes written into dst,
+// exactly FormattedLen(len(src), cfg).
+//
+// Format(dst, src, nil) is equivalent to Encode(dst, src)
+// in official package encoding/hex.
 func Format(dst, src []byte, cfg *FormatConfig) int {
-	if formatCfgNotValid(cfg) {
+	if cfg.formatCfgNotValid() {
 		upper := false
 		if cfg != nil {
 			upper = cfg.Upper
@@ -87,15 +94,20 @@ func Format(dst, src []byte, cfg *FormatConfig) int {
 	return n
 }
 
-// Return formatting of src, with cfg.
-// FormatToString(src, nil) is equivalent to EncodeToString(src) in official package encoding/hex.
+// FormatToString returns hexadecimal representation of src
+// in the format specified by cfg.
+//
+// FormatToString(src, nil) is equivalent to EncodeToString(src)
+// in official package encoding/hex.
 func FormatToString(src []byte, cfg *FormatConfig) string {
 	dst := make([]byte, FormattedLen(len(src), cfg))
 	Format(dst, src, cfg)
 	return string(dst)
 }
 
-// Write formatting of src with cfg to w.
+// FormatTo outputs hexadecimal representation of src
+// in the format specified by cfg to w.
+//
 // It returns the bytes formatted from src, and any encountered error.
 func FormatTo(w io.Writer, src []byte, cfg *FormatConfig) (n int, err error) {
 	dst := make([]byte, FormattedLen(len(src), cfg))
@@ -109,9 +121,33 @@ func FormatTo(w io.Writer, src []byte, cfg *FormatConfig) (n int, err error) {
 	return n, errors.AutoWrap(err)
 }
 
-// A formatter to write hexadecimal characters with separators to w.
-// Formatter should be closed after use.
-type Formatter struct {
+// Formatter is a device to write hexadecimal representation of input data,
+// in the specified format, to the destination writer.
+//
+// It combines io.Writer, io.ByteWriter, io.ReaderFrom.
+// All the methods format input data and output to the destination writer.
+//
+// It contains the method Close and the method Flush.
+// The client should flush the formatter after use,
+// and close it when it is no longer needed.
+type Formatter interface {
+	io.Writer
+	io.ByteWriter
+	io.ReaderFrom
+	io.Closer
+	myio.Flusher
+
+	// FormatDst returns the destination writer of this formatter.
+	// It returns nil if the formatter is closed successfully.
+	FormatDst() io.Writer
+
+	// FormatCfg returns a copy of the configuration for hexadecimal formatting
+	// used by this formatter.
+	FormatCfg() *FormatConfig
+}
+
+// formatter is an implementation of interface Formatter.
+type formatter struct {
 	w       io.Writer
 	cfg     FormatConfig
 	err     error
@@ -121,19 +157,23 @@ type Formatter struct {
 	sepCd   int     // Countdown for writing a separator, negative if formatCfgNotValid(cfg).
 }
 
-// Create a formatter to write hexadecimal characters with separators to w.
+// NewFormatter creates a formatter to write hexadecimal characters
+// with separators to w.
+// The format is specified by cfg.
+//
+// It panics if w is nil.
+//
 // Note that the created formatter will keep a copy of cfg,
-// so you can't change its config after create it.
-// Formatter should be closed after use.
-func NewFormatter(w io.Writer, cfg *FormatConfig) *Formatter {
+// so you can't change its config after creating it.
+func NewFormatter(w io.Writer, cfg *FormatConfig) Formatter {
 	if w == nil {
 		panic(errors.AutoMsg("w is nil"))
 	}
-	f := &Formatter{w: w}
+	f := &formatter{w: w}
 	if cfg != nil {
 		f.cfg = *cfg
 	}
-	if formatCfgNotValid(&f.cfg) {
+	if f.cfg.formatCfgNotValid() {
 		f.sepCd = -1
 	} else {
 		f.sepCd = f.cfg.BlockLen
@@ -141,7 +181,11 @@ func NewFormatter(w io.Writer, cfg *FormatConfig) *Formatter {
 	return f
 }
 
-func (f *Formatter) Write(p []byte) (n int, err error) {
+// Write writes hexadecimal representation of p,
+// in the specified format, to the destination writer.
+//
+// It fits interface io.Writer.
+func (f *formatter) Write(p []byte) (n int, err error) {
 	if f.err != nil {
 		return 0, f.err
 	}
@@ -154,40 +198,11 @@ func (f *Formatter) Write(p []byte) (n int, err error) {
 	return n, f.err
 }
 
-// Flush the buffer.
-// It reports no error if formatter is nil.
-func (f *Formatter) Flush() error {
-	if f == nil {
-		return nil
-	}
-	if f.err != nil {
-		return f.err
-	}
-	f.err = errors.AutoWrap(f.flush())
-	return f.err
-}
-
-// Flush the buffer.
-// It reports no error if formatter is nil.
-func (f *Formatter) Close() error {
-	if f == nil || errors.Is(f.err, myio.ErrWriterClosed) {
-		return nil
-	}
-	if f.err != nil {
-		return f.err
-	}
-	err := f.flush()
-	if err != nil {
-		f.err = errors.AutoWrap(err)
-		return f.err
-	}
-	f.w = nil
-	f.err = errors.AutoWrap(myio.ErrWriterClosed)
-	f.sepCd = 0
-	return nil
-}
-
-func (f *Formatter) WriteByte(c byte) error {
+// WriteByte writes hexadecimal representation of c,
+// in the specified format, to the destination writer.
+//
+// It fits interface io.ByteWriter.
+func (f *formatter) WriteByte(c byte) error {
 	if f.err != nil {
 		return f.err
 	}
@@ -199,7 +214,11 @@ func (f *Formatter) WriteByte(c byte) error {
 	return f.err
 }
 
-func (f *Formatter) ReadFrom(r io.Reader) (n int64, err error) {
+// ReadFrom writes hexadecimal representation of data read from r,
+// in the specified format, to the destination writer.
+//
+// It fits interface io.ReaderFrom.
+func (f *formatter) ReadFrom(r io.Reader) (n int64, err error) {
 	if f.err != nil {
 		return 0, f.err
 	}
@@ -236,8 +255,66 @@ func (f *Formatter) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 }
 
+// Close outputs all buffered content to the destination writer
+// and then closes the formatter.
+//
+// It returns any encountered error during writing to the destination writer.
+//
+// All operations, except the method Close, on a closed formatter
+// will report the error ErrWriterClosed.
+// Calling the method Close on a closed formatter will perform nothing
+// and report no error.
+func (f *formatter) Close() error {
+	if errors.Is(f.err, myio.ErrWriterClosed) {
+		return nil
+	}
+	if f.err != nil {
+		return f.err
+	}
+	err := f.flush()
+	if err != nil {
+		f.err = errors.AutoWrap(err)
+		return f.err
+	}
+	f.w = nil
+	f.err = errors.AutoWrap(myio.ErrWriterClosed)
+	f.sepCd = 0
+	return nil
+}
+
+// Flush outputs all buffered content to the destination writer.
+//
+// It returns any encountered error during writing to the destination writer.
+func (f *formatter) Flush() error {
+	if f.err != nil {
+		return f.err
+	}
+	f.err = errors.AutoWrap(f.flush())
+	return f.err
+}
+
+// FormatDst returns the destination writer of this formatter.
+// It returns nil if the formatter is closed successfully.
+func (f *formatter) FormatDst() io.Writer {
+	return f.w
+}
+
+// FormatCfg returns a copy of the configuration for hexadecimal formatting
+// used by this formatter.
+func (f *formatter) FormatCfg() *FormatConfig {
+	cfg := new(FormatConfig)
+	*cfg = f.cfg
+	return cfg
+}
+
+// flush writes all data in the buffer to f.w.
+// If no error occurs during writing to f.w,
+// it puts the buffer to formatBufferPool.
+//
+// It returns any encountered error during writing to f.w.
+//
 // Caller should guarantee that f != nil and f.w != nil.
-func (f *Formatter) flush() error {
+func (f *formatter) flush() error {
 	if f.bufp == nil {
 		return nil
 	}
@@ -251,8 +328,13 @@ func (f *Formatter) flush() error {
 	return err
 }
 
+// flushAndGetBuffer calls the method flush first.
+// If no error occurs, it gets a new buffer from formatBufferPool.
+//
+// It returns any encountered error during writing to f.w.
+//
 // Caller should guarantee that f != nil and f.w != nil.
-func (f *Formatter) flushAndGetBuffer() error {
+func (f *formatter) flushAndGetBuffer() error {
 	err := f.flush()
 	if err == nil && f.bufp == nil {
 		f.bufp = formatBufferPool.Get().(*[]byte)
@@ -260,9 +342,12 @@ func (f *Formatter) flushAndGetBuffer() error {
 	return err
 }
 
+// writeByte writes hexadecimal representation of c,
+// in the specified format, to the destination writer.
+//
 // Caller should guarantee that f != nil, f.w != nil and f.bufp != nil.
 // ht is getHexTable(f.cfg.Upper).
-func (f *Formatter) writeByte(ht string, b byte) error {
+func (f *formatter) writeByte(ht string, b byte) error {
 	buf := *f.bufp
 	if f.sepCd == 0 {
 		if len(buf)-f.idx < len(f.cfg.Sep) {
@@ -289,9 +374,12 @@ func (f *Formatter) writeByte(ht string, b byte) error {
 	return nil
 }
 
+// write writes hexadecimal representation of p,
+// in the specified format, to the destination writer.
+//
 // Caller should guarantee that f != nil, f.w != nil and f.bufp != nil.
 // ht is getHexTable(f.cfg.Upper).
-func (f *Formatter) write(ht string, p []byte) (n int, err error) {
+func (f *formatter) write(ht string, p []byte) (n int, err error) {
 	for _, b := range p {
 		err = f.writeByte(ht, b)
 		if err != nil {

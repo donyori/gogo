@@ -20,8 +20,12 @@ package hex
 
 import "sync"
 
+// hexTable combines a uppercase character table and a lowercase character table
+// used in hexadecimal encoding.
 const hexTable = "0123456789ABCDEF0123456789abcdef"
 
+// getHexTable returns a character table used in hexadecimal encoding.
+// upper indicates to use uppercase letters in the encoding.
 func getHexTable(upper bool) string {
 	if upper {
 		return hexTable[:16]
@@ -29,8 +33,10 @@ func getHexTable(upper bool) string {
 	return hexTable[16:]
 }
 
+// chunkLen is the length of a chunk of source data.
 const chunkLen = 512
 
+// chunkPool is a set of temporary buffers to load source data from readers.
 var chunkPool = sync.Pool{
 	New: func() interface{} {
 		b := make([]byte, chunkLen)
@@ -38,6 +44,8 @@ var chunkPool = sync.Pool{
 	},
 }
 
+// encodeBufferPool is a set of temporary buffers to hold encoding results
+// that will be written to destination writers.
 var encodeBufferPool = sync.Pool{
 	New: func() interface{} {
 		b := make([]byte, EncodedLen(chunkLen))
@@ -45,8 +53,11 @@ var encodeBufferPool = sync.Pool{
 	},
 }
 
+// formatBufferLen is the length of a buffer that holds formatting results.
 const formatBufferLen = 1024
 
+// formatBufferPool is a set of temporary buffers to hold formatting results
+// that will be written to destination writers.
 var formatBufferPool = sync.Pool{
 	New: func() interface{} {
 		b := make([]byte, formatBufferLen)

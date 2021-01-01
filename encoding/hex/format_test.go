@@ -148,16 +148,16 @@ func TestFormatter_Write(t *testing.T) {
 	buf := make([]byte, testFormatCasesDstMaxLen+1024)
 	w := bytes.NewBuffer(buf)
 	for _, c := range testFormatCases {
-		formatter := NewFormatter(w, c.cfg)
-		n, err := formatter.Write([]byte(c.src))
+		f := NewFormatter(w, c.cfg)
+		n, err := f.Write([]byte(c.src))
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
-		err = formatter.Close()
+		err = f.Close()
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
-		err = formatter.Close() // Close() again, to detect whether two Close() can make output wrong.
+		err = f.Close() // Close() again, to detect whether two Close() can make output wrong.
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
@@ -173,21 +173,21 @@ func TestFormatter_WriteByte(t *testing.T) {
 	buf := make([]byte, testFormatCasesDstMaxLen+1024)
 	w := bytes.NewBuffer(buf)
 	for _, c := range testFormatCases {
-		formatter := NewFormatter(w, c.cfg)
+		f := NewFormatter(w, c.cfg)
 		var n int
 		for _, b := range []byte(c.src) {
-			err := formatter.WriteByte(b)
+			err := f.WriteByte(b)
 			if err != nil {
 				t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 				break
 			}
 			n++
 		}
-		err := formatter.Close()
+		err := f.Close()
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
-		err = formatter.Close() // Close() again, to detect whether two Close() can make output wrong.
+		err = f.Close() // Close() again, to detect whether two Close() can make output wrong.
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
@@ -203,16 +203,16 @@ func TestFormatter_ReadFrom(t *testing.T) {
 	buf := make([]byte, testFormatCasesDstMaxLen+1024)
 	w := bytes.NewBuffer(buf)
 	for _, c := range testFormatCases {
-		formatter := NewFormatter(w, c.cfg)
-		n, err := formatter.ReadFrom(strings.NewReader(c.src))
+		f := NewFormatter(w, c.cfg)
+		n, err := f.ReadFrom(strings.NewReader(c.src))
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
-		err = formatter.Close()
+		err = f.Close()
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}
-		err = formatter.Close() // Close() again, to detect whether two Close() can make output wrong.
+		err = f.Close() // Close() again, to detect whether two Close() can make output wrong.
 		if err != nil {
 			t.Errorf("Error: %v, src: %q, cfg: %+v.", err, c.src, c.cfg)
 		}

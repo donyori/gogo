@@ -120,7 +120,7 @@ func TestEncoder_Write(t *testing.T) {
 	upperEncoder := NewEncoder(w, true)
 	lowerEncoder := NewEncoder(w, false)
 	for _, c := range testEncodeCases {
-		var encoder *Encoder
+		var encoder Encoder
 		if c.upper {
 			encoder = upperEncoder
 		} else {
@@ -144,7 +144,7 @@ func TestEncoder_WriteByte(t *testing.T) {
 	upperEncoder := NewEncoder(w, true)
 	lowerEncoder := NewEncoder(w, false)
 	for _, c := range testEncodeCases {
-		var encoder *Encoder
+		var encoder Encoder
 		if c.upper {
 			encoder = upperEncoder
 		} else {
@@ -173,7 +173,7 @@ func TestEncoder_ReadFrom(t *testing.T) {
 	upperEncoder := NewEncoder(w, true)
 	lowerEncoder := NewEncoder(w, false)
 	for _, c := range testEncodeCases {
-		var encoder *Encoder
+		var encoder Encoder
 		if c.upper {
 			encoder = upperEncoder
 		} else {
