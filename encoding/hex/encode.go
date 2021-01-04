@@ -43,7 +43,10 @@ func EncodedLen64(n int64) int64 {
 // Encode(dst, src, false) is equivalent to Encode(dst, src)
 // in official package encoding/hex.
 func Encode(dst, src []byte, upper bool) int {
-	ht := getHexTable(upper)
+	ht := lowercaseHexTable
+	if upper {
+		ht = uppercaseHexTable
+	}
 	var n int
 	for _, b := range src {
 		dst[n] = ht[b>>4]
@@ -107,7 +110,7 @@ func (e *encoder) Write(p []byte) (n int, err error) {
 	bufp := encodeBufferPool.Get().(*[]byte)
 	defer encodeBufferPool.Put(bufp)
 	buf := *bufp
-	size := chunkLen
+	size := sourceBufferLen
 	for len(p) > 0 && err == nil {
 		if len(p) < size {
 			size = len(p)
@@ -139,8 +142,8 @@ func (e *encoder) WriteByte(c byte) error {
 //
 // It fits interface io.ReaderFrom.
 func (e *encoder) ReadFrom(r io.Reader) (n int64, err error) {
-	bufp := chunkPool.Get().(*[]byte)
-	defer chunkPool.Put(bufp)
+	bufp := sourceBufferPool.Get().(*[]byte)
+	defer sourceBufferPool.Put(bufp)
 	buf := *bufp
 	var readLen int
 	var readErr, writeErr error

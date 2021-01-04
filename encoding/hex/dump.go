@@ -156,7 +156,11 @@ func (d *dumper) Write(p []byte) (n int, err error) {
 	if d.err != nil {
 		return 0, d.err
 	}
-	n, err = d.write(getHexTable(d.cfg.Upper), p)
+	ht := lowercaseHexTable
+	if d.cfg.Upper {
+		ht = uppercaseHexTable
+	}
+	n, err = d.write(ht, p)
 	d.err = errors.AutoWrap(err)
 	return n, d.err
 }
@@ -168,7 +172,11 @@ func (d *dumper) WriteByte(c byte) error {
 	if d.err != nil {
 		return d.err
 	}
-	d.err = errors.AutoWrap(d.writeByte(getHexTable(d.cfg.Upper), c))
+	ht := lowercaseHexTable
+	if d.cfg.Upper {
+		ht = uppercaseHexTable
+	}
+	d.err = errors.AutoWrap(d.writeByte(ht, c))
 	return d.err
 }
 
@@ -179,9 +187,12 @@ func (d *dumper) ReadFrom(r io.Reader) (n int64, err error) {
 	if d.err != nil {
 		return 0, d.err
 	}
-	ht := getHexTable(d.cfg.Upper)
-	bufp := chunkPool.Get().(*[]byte)
-	defer chunkPool.Put(bufp)
+	ht := lowercaseHexTable
+	if d.cfg.Upper {
+		ht = uppercaseHexTable
+	}
+	bufp := sourceBufferPool.Get().(*[]byte)
+	defer sourceBufferPool.Put(bufp)
 	buf := *bufp
 	var readLen int
 	var readErr, writeErr error
@@ -323,7 +334,6 @@ func (d *dumper) flush() error {
 // writeByte dumps b to the destination writer.
 //
 // Caller should guarantee that d != nil and d.w != nil.
-// ht is getHexTable(d.cfg.Upper).
 func (d *dumper) writeByte(ht string, b byte) error {
 	d.used = true
 	if d.lineCd == d.bytesPerLine && d.cfg.PrefixFn != nil {
@@ -394,7 +404,6 @@ func (d *dumper) writeByte(ht string, b byte) error {
 // write dumps p to the destination writer.
 //
 // Caller should guarantee that d != nil and d.w != nil.
-// ht is getHexTable(d.cfg.Upper).
 func (d *dumper) write(ht string, p []byte) (n int, err error) {
 	for _, b := range p {
 		err = d.writeByte(ht, b)

@@ -81,7 +81,10 @@ func Format(dst, src []byte, cfg *FormatConfig) int {
 		}
 		return Encode(dst, src, upper)
 	}
-	ht := getHexTable(cfg.Upper)
+	ht := lowercaseHexTable
+	if cfg.Upper {
+		ht = uppercaseHexTable
+	}
 	var n int
 	for i, b := range src {
 		if n > 0 && i%cfg.BlockLen == 0 {
@@ -193,7 +196,11 @@ func (f *formatter) Write(p []byte) (n int, err error) {
 		f.bufp = formatBufferPool.Get().(*[]byte)
 		f.idx, f.written = 0, 0
 	}
-	n, err = f.write(getHexTable(f.cfg.Upper), p)
+	ht := lowercaseHexTable
+	if f.cfg.Upper {
+		ht = uppercaseHexTable
+	}
+	n, err = f.write(ht, p)
 	f.err = errors.AutoWrap(err)
 	return n, f.err
 }
@@ -210,7 +217,11 @@ func (f *formatter) WriteByte(c byte) error {
 		f.bufp = formatBufferPool.Get().(*[]byte)
 		f.idx, f.written = 0, 0
 	}
-	f.err = errors.AutoWrap(f.writeByte(getHexTable(f.cfg.Upper), c))
+	ht := lowercaseHexTable
+	if f.cfg.Upper {
+		ht = uppercaseHexTable
+	}
+	f.err = errors.AutoWrap(f.writeByte(ht, c))
 	return f.err
 }
 
@@ -226,9 +237,12 @@ func (f *formatter) ReadFrom(r io.Reader) (n int64, err error) {
 		f.bufp = formatBufferPool.Get().(*[]byte)
 		f.idx, f.written = 0, 0
 	}
-	ht := getHexTable(f.cfg.Upper)
-	bufp := chunkPool.Get().(*[]byte)
-	defer chunkPool.Put(bufp)
+	ht := lowercaseHexTable
+	if f.cfg.Upper {
+		ht = uppercaseHexTable
+	}
+	bufp := sourceBufferPool.Get().(*[]byte)
+	defer sourceBufferPool.Put(bufp)
 	buf := *bufp
 	var readLen int
 	var readErr, writeErr error
@@ -346,7 +360,6 @@ func (f *formatter) flushAndGetBuffer() error {
 // in the specified format, to the destination writer.
 //
 // Caller should guarantee that f != nil, f.w != nil and f.bufp != nil.
-// ht is getHexTable(f.cfg.Upper).
 func (f *formatter) writeByte(ht string, b byte) error {
 	buf := *f.bufp
 	if f.sepCd == 0 {
@@ -378,7 +391,6 @@ func (f *formatter) writeByte(ht string, b byte) error {
 // in the specified format, to the destination writer.
 //
 // Caller should guarantee that f != nil, f.w != nil and f.bufp != nil.
-// ht is getHexTable(f.cfg.Upper).
 func (f *formatter) write(ht string, p []byte) (n int, err error) {
 	for _, b := range p {
 		err = f.writeByte(ht, b)

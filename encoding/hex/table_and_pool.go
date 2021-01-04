@@ -20,26 +20,20 @@ package hex
 
 import "sync"
 
-// hexTable combines a uppercase character table and a lowercase character table
-// used in hexadecimal encoding.
-const hexTable = "0123456789ABCDEF0123456789abcdef"
+// uppercaseHexTable is a uppercase character table for hexadecimal encoding.
+const uppercaseHexTable = "0123456789ABCDEF"
 
-// getHexTable returns a character table used in hexadecimal encoding.
-// upper indicates to use uppercase letters in the encoding.
-func getHexTable(upper bool) string {
-	if upper {
-		return hexTable[:16]
-	}
-	return hexTable[16:]
-}
+// lowercaseHexTable is a lowercase character table for hexadecimal encoding.
+const lowercaseHexTable = "0123456789abcdef"
 
-// chunkLen is the length of a chunk of source data.
-const chunkLen = 512
+// sourceBufferLen is the length of a chunk of source data.
+const sourceBufferLen = 512
 
-// chunkPool is a set of temporary buffers to load source data from readers.
-var chunkPool = sync.Pool{
+// sourceBufferPool is a set of temporary buffers to load source data
+// from readers.
+var sourceBufferPool = sync.Pool{
 	New: func() interface{} {
-		b := make([]byte, chunkLen)
+		b := make([]byte, sourceBufferLen)
 		return &b
 	},
 }
@@ -48,7 +42,7 @@ var chunkPool = sync.Pool{
 // that will be written to destination writers.
 var encodeBufferPool = sync.Pool{
 	New: func() interface{} {
-		b := make([]byte, EncodedLen(chunkLen))
+		b := make([]byte, EncodedLen(sourceBufferLen))
 		return &b
 	},
 }
@@ -61,6 +55,19 @@ const formatBufferLen = 1024
 var formatBufferPool = sync.Pool{
 	New: func() interface{} {
 		b := make([]byte, formatBufferLen)
+		return &b
+	},
+}
+
+// int64BufferLen is the length of a buffer that holds
+// a hexadecimal representation of a 64-bit integer.
+const int64BufferLen = 17
+
+// int64BufferPool is a set of temporary buffers to hold
+// the hexadecimal representation of a 64-bit integer.
+var int64BufferPool = sync.Pool{
+	New: func() interface{} {
+		b := make([]byte, int64BufferLen)
 		return &b
 	},
 }

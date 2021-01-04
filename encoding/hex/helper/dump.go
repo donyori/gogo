@@ -20,21 +20,20 @@ package helper
 
 import (
 	"bytes"
-	"fmt"
 	"strconv"
 
 	"github.com/donyori/gogo/encoding/hex"
-	"github.com/donyori/gogo/errors"
 )
 
-// PrefixBytesNo creates a function that generates a prefix that representing
-// the offset of the beginning of current line, in bytes.
+// PrefixBytesNo creates a function that generates a prefix to show
+// the hexadecimal representation of the offset of the beginning
+// of current line, in bytes.
 //
 // If cfg != nil, cfg.BlockLen > 0, and cfg.BlocksPerLine > 0,
 // it returns a prefix function used in DumpConfig that generates a prefix
 // representing the byte offset of the beginning of current line,
 // in hexadecimal representation, at least "digits" digits
-// (padding with 0 if not enough).
+// (padding with leading zeros if not enough).
 // If digits is non-positive, it will use 8 instead.
 // upper indicates to use uppercase in the hexadecimal representation.
 // initCount specifies the byte offset of the first line.
@@ -48,20 +47,13 @@ func PrefixBytesNo(cfg *hex.DumpConfig, upper bool, digits int, initCount int64)
 	if digits <= 0 {
 		digits = 8
 	}
-	x := "x"
-	if upper {
-		x = "X"
-	}
-	layout := fmt.Sprintf("%%0%d%s: ", digits, x)
 	count := initCount
 	length := int64(cfg.BlockLen * cfg.BlocksPerLine)
 	buf := bytes.NewBuffer(make([]byte, 0, digits+2))
 	return func() []byte {
 		buf.Reset()
-		_, err := fmt.Fprintf(buf, layout, count)
-		if err != nil {
-			panic(errors.AutoWrap(err))
-		}
+		buf.WriteString(hex.EncodeInt64ToString(count, upper, digits))
+		buf.WriteString(": ")
 		count += length
 		return buf.Bytes()
 	}
