@@ -1,5 +1,5 @@
 // gogo. A Golang toolbox.
-// Copyright (C) 2019-2020 Yuan Gao
+// Copyright (C) 2019-2021 Yuan Gao
 //
 // This file is part of gogo.
 //
@@ -16,5 +16,4 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package copyright provides functions to print copyright information.
 package copyright
