@@ -49,13 +49,18 @@ func PrefixBytesNo(cfg *hex.DumpConfig, upper bool, digits int, initCount int64)
 	}
 	count := initCount
 	length := int64(cfg.BlockLen * cfg.BlocksPerLine)
-	buf := bytes.NewBuffer(make([]byte, 0, digits+2))
+	var buf []byte
+	if digits < 17 {
+		buf = make([]byte, 19)
+	} else {
+		buf = make([]byte, digits+2)
+	}
 	return func() []byte {
-		buf.Reset()
-		buf.WriteString(hex.EncodeInt64ToString(count, upper, digits))
-		buf.WriteString(": ")
+		idx := hex.EncodeInt64(buf, count, upper, digits)
+		buf[idx] = ':'
+		buf[idx+1] = ' '
 		count += length
-		return buf.Bytes()
+		return buf[:idx+2]
 	}
 }
 

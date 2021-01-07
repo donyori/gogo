@@ -37,6 +37,7 @@ func EncodedLen64(n int64) int64 {
 // Encode encodes src in hexadecimal representation into dst.
 //
 // upper indicates to use uppercase in hexadecimal representation.
+//
 // It returns the number of bytes written into dst,
 // exactly EncodedLen(len(src)).
 //
