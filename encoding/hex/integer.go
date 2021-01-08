@@ -29,6 +29,18 @@ import (
 // minInt64Hex is the hexadecimal representation of math.MinInt64, as a string.
 const minInt64Hex = "-8000000000000000"
 
+// EncodeInt64DstLen returns a safe length of dst used in EncodeInt64
+// to ensure that dst has enough space to keep the encoding result.
+//
+// digits is the parameter used in EncodeInt64 to specify the minimum length
+// of the output content (excluding the negative sign "-").
+func EncodeInt64DstLen(digits int) int {
+	if digits <= 16 {
+		return 17
+	}
+	return digits + 1
+}
+
 // EncodeInt64 encodes x in hexadecimal representation into dst.
 //
 // upper indicates to use uppercase in hexadecimal representation.
@@ -40,9 +52,9 @@ const minInt64Hex = "-8000000000000000"
 //
 // It returns the number of bytes written into dst.
 //
-// It panics if dst is too small to store the result.
-// To ensure that dst has enough space to store the result,
-// its length should be at least (digits + 1) and not less than 17.
+// It panics if dst is too small to keep the result.
+// To ensure that dst has enough space to keep the result,
+// its length should be at least EncodeInt64DstLen(digits).
 func EncodeInt64(dst []byte, x int64, upper bool, digits int) int {
 	dstTooSmallMsgFn := func(need int) string {
 		return fmt.Sprintf("dst is too small, len(dst): %d, need: %d", len(dst), need)

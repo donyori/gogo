@@ -84,10 +84,7 @@ func TestEncodeInt64(t *testing.T) {
 	for _, x := range xs {
 		for _, upper := range uppers {
 			for _, digits := range digitsValues {
-				length := 17
-				if digits > 16 {
-					length = digits + 1
-				}
+				length := EncodeInt64DstLen(digits)
 				dst1, dst2 := make([]byte, length), make([]byte, length)
 				n1 := EncodeInt64(dst1, x, upper, digits)
 				n2 := encodeInt64Baseline(dst2, x, upper, digits)
