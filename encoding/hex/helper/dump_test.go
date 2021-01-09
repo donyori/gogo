@@ -31,9 +31,9 @@ func _TestShowExampleDumpConfig(t *testing.T) {
 	for b.Len() < 500 {
 		b.WriteString("Hello world! 你好，世界！")
 	}
-	s := hex.Dump(b.Bytes(), cfg)
+	s := hex.DumpToString(b.Bytes(), cfg)
 	t.Log("\n" + s)
 	cfg = ExampleDumpConfig(false, 0)
-	s = hex.Dump(b.Bytes(), cfg)
+	s = hex.DumpToString(b.Bytes(), cfg)
 	t.Log("\n" + s)
 }

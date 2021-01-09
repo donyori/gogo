@@ -155,9 +155,9 @@ func init() {
 	}
 }
 
-func TestDump(t *testing.T) {
+func TestDumpToString(t *testing.T) {
 	for _, c := range testDumpCases {
-		dst := Dump([]byte(c.src), c.cfg)
+		dst := DumpToString([]byte(c.src), c.cfg)
 		if dst != c.dst {
 			t.Errorf("dst: %q != %q, src: %q, cfg: %+v.", dst, c.dst, c.src, c.cfg)
 		}

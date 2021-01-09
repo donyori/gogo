@@ -47,8 +47,8 @@ func (cfg *DumpConfig) dumpCfgLineNotValid() bool {
 	return cfg == nil || cfg.BlockLen <= 0 || cfg.BlocksPerLine <= 0
 }
 
-// Dump returns a string containing a hexadecimal dump of src with cfg.
-func Dump(src []byte, cfg *DumpConfig) string {
+// DumpToString returns a string containing a hexadecimal dump of src with cfg.
+func DumpToString(src []byte, cfg *DumpConfig) string {
 	var builder strings.Builder
 	_, err := DumpTo(&builder, src, cfg)
 	if err != nil { // It should not happen.
