@@ -307,27 +307,27 @@ func (ctrl *controller) allocatorProc() {
 		dqc = ctrl.dqc // Enable dqc.
 	}
 	var jobs []*Job
-	cntr := 1 // Counter for available input sources. 1 at the beginning stands for the client.
+	ctr := 1 // Counter for available input sources. 1 at the beginning stands for the client.
 	quitChan := ctrl.qd.QuitChan()
 	wsoiC := ctrl.wsoi.C()
-	for cntr > 0 || dqc != nil {
+	for ctr > 0 || dqc != nil {
 		select {
 		case <-quitChan:
 			return
 		case <-wsoiC:
 			wsoiC = nil // Disable this channel to avoid receiving twice.
-			cntr--
+			ctr--
 		case jobs = <-ctrl.ic:
 			if len(jobs) > 0 {
 				ctrl.jq.Enqueue(jobs...)
 			}
 		case jobs = <-ctrl.eqc:
-			cntr--
+			ctr--
 			if len(jobs) > 0 {
 				ctrl.jq.Enqueue(jobs...)
 			}
 		case dqc <- jobData:
-			cntr++
+			ctr++
 			if ctrl.jq.Len() > 0 {
 				jobData = ctrl.jq.Dequeue()
 				continue

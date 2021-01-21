@@ -51,14 +51,14 @@ func TestOnceIndicator_Do(t *testing.T) {
 	if *o != 1 {
 		t.Errorf("Once failed: %d != 1.", *o)
 	}
-	cntr := 0
+	ctr := 0
 	for _, r := range rs {
 		if r {
-			cntr++
+			ctr++
 		}
 	}
-	if cntr != 1 {
-		t.Errorf("Not only one call of Do return true. #true: %d.", cntr)
+	if ctr != 1 {
+		t.Errorf("Not only one call of Do return true. #true: %d.", ctr)
 	}
 }
 

@@ -29,7 +29,7 @@ type context struct {
 
 	// List of channel maps for cluster communication.
 	// Only for chanDispr.
-	ChanMaps [numCOp]map[int64]*chanCntr
+	ChanMaps [numCOp]map[int64]*chanCtr
 }
 
 // newContext creates a new context.

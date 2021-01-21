@@ -212,7 +212,7 @@ type communicator struct {
 	Cdc chan interface{} // Channel for receiving channels form the channel dispatcher.
 	// Counters for cluster communication operations.
 	// Only for method chanDispr.Run.
-	COpCntrs [numCOp]int64
+	COpCtrs [numCOp]int64
 
 	rank int                // The rank of current goroutine.
 	pcs  []chan interface{} // List of channels for point-to-point communication.

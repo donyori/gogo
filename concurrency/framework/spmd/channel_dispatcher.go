@@ -20,10 +20,10 @@ package spmd
 
 import "github.com/donyori/gogo/concurrency/framework"
 
-// chanCntr is a combination of channel or list of channels, and counter.
-type chanCntr struct {
+// chanCtr is a combination of channel or list of channels, and counter.
+type chanCtr struct {
 	Chan interface{}
-	Cntr int
+	Ctr  int
 }
 
 // chanDispr is a channel dispatcher.
@@ -58,10 +58,10 @@ func (cd *chanDispr) Run(quitDevice framework.QuitDevice, finChan chan<- struct{
 	var (
 		comm  *communicator
 		op, n int
-		cntr  int64
+		ctr   int64
 		ctx   *context
-		m     map[int64]*chanCntr
-		cc    *chanCntr
+		m     map[int64]*chanCtr
+		cc    *chanCtr
 		cs    []chan interface{}
 	)
 	quitChan := quitDevice.QuitChan()
@@ -80,19 +80,19 @@ func (cd *chanDispr) Run(quitDevice framework.QuitDevice, finChan chan<- struct{
 		if comm == nil {
 			continue
 		}
-		cntr = comm.COpCntrs[op]
-		comm.COpCntrs[op]++
+		ctr = comm.COpCtrs[op]
+		comm.COpCtrs[op]++
 		ctx = comm.Ctx
 		m = ctx.ChanMaps[op]
 		if m == nil {
-			m = make(map[int64]*chanCntr)
+			m = make(map[int64]*chanCtr)
 			ctx.ChanMaps[op] = m
 		}
-		cc = m[cntr]
+		cc = m[ctr]
 		if cc == nil {
 			n = len(ctx.Comms) - 1
 			if n > 0 {
-				cc = &chanCntr{Cntr: n}
+				cc = &chanCtr{Ctr: n}
 				switch op {
 				case cOpBcast:
 					cc.Chan = make(chan interface{}, n)
@@ -107,15 +107,15 @@ func (cd *chanDispr) Run(quitDevice framework.QuitDevice, finChan chan<- struct{
 				default:
 					continue // Ignore invalid operation.
 				}
-				m[cntr] = cc
+				m[ctr] = cc
 			} else {
-				cc = &chanCntr{Chan: make(chan interface{}, 1)}
+				cc = &chanCtr{Chan: make(chan interface{}, 1)}
 				// Don't store cc into m when n is 0.
 			}
 		} else {
-			cc.Cntr--
-			if cc.Cntr == 0 {
-				delete(m, cntr)
+			cc.Ctr--
+			if cc.Ctr == 0 {
+				delete(m, ctr)
 			}
 		}
 		select {
