@@ -59,7 +59,8 @@ func DumpToString(src []byte, cfg *DumpConfig) string {
 
 // DumpTo dumps src with cfg to w.
 //
-// It returns the bytes dumped from src, and any encountered error.
+// It returns the number of bytes dumped from src,
+// and any write error encountered.
 func DumpTo(w io.Writer, src []byte, cfg *DumpConfig) (n int, err error) {
 	d := NewDumper(w, cfg)
 	defer func() {
@@ -222,7 +223,7 @@ func (d *dumper) ReadFrom(r io.Reader) (n int64, err error) {
 // Close outputs all buffered content to the destination writer
 // and then closes the dumper.
 //
-// It returns any encountered error during writing to the destination writer.
+// It returns any write error encountered.
 //
 // All operations, except the method Close, on a closed dumper
 // will report the error ErrWriterClosed.
@@ -289,7 +290,7 @@ func (d *dumper) Close() error {
 
 // Flush outputs all buffered content to the destination writer.
 //
-// It returns any encountered error during writing to the destination writer.
+// It returns any write error encountered.
 func (d *dumper) Flush() error {
 	if d.err != nil {
 		return d.err
@@ -315,7 +316,7 @@ func (d *dumper) DumpCfg() *DumpConfig {
 // flush writes all data in the buffer to d.w,
 // and maintains indexes d.idx and d.written.
 //
-// It returns any encountered error during writing to d.w.
+// It returns any write error encountered.
 //
 // Caller should guarantee that d != nil and d.w != nil.
 func (d *dumper) flush() error {

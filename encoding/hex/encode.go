@@ -34,7 +34,7 @@ func EncodedLen64(n int64) int64 {
 	return n * 2
 }
 
-// Encode encodes src in hexadecimal representation into dst.
+// Encode encodes src in hexadecimal representation to dst.
 //
 // upper indicates to use uppercase in hexadecimal representation.
 //

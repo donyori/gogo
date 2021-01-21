@@ -41,7 +41,7 @@ type BufferedWriter interface {
 	Available() int
 
 	// Write a single Unicode code point.
-	// It returns the number of bytes written and any encountered error.
+	// It returns the number of bytes written and any write error encountered.
 	WriteRune(r rune) (size int, err error)
 }
 

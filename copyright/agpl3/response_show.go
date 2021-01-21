@@ -37,7 +37,7 @@ import (
 //
 // It returns a boolean doResp to indicate whether
 // the user's input is one of "show w" and "show c".
-// It also returns any encountered error during writing to w.
+// It also returns any write error encountered.
 // Note that err must be nil if doResp is false.
 func RespShowWC(w io.Writer, input []string) (doResp bool, err error) {
 	if input == nil {

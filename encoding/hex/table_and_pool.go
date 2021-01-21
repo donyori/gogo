@@ -31,6 +31,9 @@ const sourceBufferLen = 512
 
 // sourceBufferPool is a set of temporary buffers to load source data
 // from readers.
+//
+// The user should guarantee that the size of the buffer
+// put into this pool is exactly sourceBufferLen (512).
 var sourceBufferPool = sync.Pool{
 	New: func() interface{} {
 		b := make([]byte, sourceBufferLen)
@@ -40,6 +43,9 @@ var sourceBufferPool = sync.Pool{
 
 // encodeBufferPool is a set of temporary buffers to hold encoding results
 // that will be written to destination writers.
+//
+// The user should guarantee that the size of the buffer
+// put into this pool is exactly EncodedLen(sourceBufferLen) (1024).
 var encodeBufferPool = sync.Pool{
 	New: func() interface{} {
 		b := make([]byte, EncodedLen(sourceBufferLen))
@@ -52,6 +58,9 @@ const formatBufferLen = 1024
 
 // formatBufferPool is a set of temporary buffers to hold formatting results
 // that will be written to destination writers.
+//
+// The user should guarantee that the size of the buffer
+// put into this pool is exactly formatBufferLen (1024).
 var formatBufferPool = sync.Pool{
 	New: func() interface{} {
 		b := make([]byte, formatBufferLen)
@@ -65,6 +74,9 @@ const int64BufferLen = 17
 
 // int64BufferPool is a set of temporary buffers to hold
 // the hexadecimal representation of a 64-bit integer.
+//
+// The user should guarantee that the size of the buffer
+// put into this pool is exactly int64BufferLen (17).
 var int64BufferPool = sync.Pool{
 	New: func() interface{} {
 		b := make([]byte, int64BufferLen)

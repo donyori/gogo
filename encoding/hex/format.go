@@ -111,7 +111,8 @@ func FormatToString(src []byte, cfg *FormatConfig) string {
 // FormatTo outputs hexadecimal representation of src
 // in the format specified by cfg to w.
 //
-// It returns the bytes formatted from src, and any encountered error.
+// It returns the number of bytes formatted from src,
+// and any write error encountered.
 func FormatTo(w io.Writer, src []byte, cfg *FormatConfig) (n int, err error) {
 	dst := make([]byte, FormattedLen(len(src), cfg))
 	Format(dst, src, cfg)
@@ -272,7 +273,7 @@ func (f *formatter) ReadFrom(r io.Reader) (n int64, err error) {
 // Close outputs all buffered content to the destination writer
 // and then closes the formatter.
 //
-// It returns any encountered error during writing to the destination writer.
+// It returns any write error encountered.
 //
 // All operations, except the method Close, on a closed formatter
 // will report the error ErrWriterClosed.
@@ -298,7 +299,7 @@ func (f *formatter) Close() error {
 
 // Flush outputs all buffered content to the destination writer.
 //
-// It returns any encountered error during writing to the destination writer.
+// It returns any write error encountered.
 func (f *formatter) Flush() error {
 	if f.err != nil {
 		return f.err
@@ -325,7 +326,7 @@ func (f *formatter) FormatCfg() *FormatConfig {
 // If no error occurs during writing to f.w,
 // it puts the buffer to formatBufferPool.
 //
-// It returns any encountered error during writing to f.w.
+// It returns any write error encountered.
 //
 // Caller should guarantee that f != nil and f.w != nil.
 func (f *formatter) flush() error {
@@ -345,7 +346,7 @@ func (f *formatter) flush() error {
 // flushAndGetBuffer calls the method flush first.
 // If no error occurs, it gets a new buffer from formatBufferPool.
 //
-// It returns any encountered error during writing to f.w.
+// It returns any write error encountered.
 //
 // Caller should guarantee that f != nil and f.w != nil.
 func (f *formatter) flushAndGetBuffer() error {

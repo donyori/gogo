@@ -38,6 +38,6 @@ type LineReader interface {
 // An interface that wraps method WriteLineTo.
 type LineWriterTo interface {
 	// Write a line to w. It stops to write data if an error occurs. It returns
-	// the number of bytes written to w and any encountered error.
+	// the number of bytes written to w and any write error encountered.
 	WriteLineTo(w stdio.Writer) (n int64, err error)
 }

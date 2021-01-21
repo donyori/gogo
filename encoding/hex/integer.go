@@ -20,6 +20,7 @@ package hex
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"strings"
 
@@ -41,7 +42,7 @@ func EncodeInt64DstLen(digits int) int {
 	return digits + 1
 }
 
-// EncodeInt64 encodes x in hexadecimal representation into dst.
+// EncodeInt64 encodes x in hexadecimal representation to dst.
 //
 // upper indicates to use uppercase in hexadecimal representation.
 // digits specifies the minimum length of the output content
@@ -164,6 +165,84 @@ func EncodeInt64ToString(x int64, upper bool, digits int) string {
 	return b.String()
 }
 
+// EncodeInt64To encodes x in hexadecimal representation to w.
+//
+// upper indicates to use uppercase in hexadecimal representation.
+// digits specifies the minimum length of the output content
+// (excluding the negative sign "-").
+// It pads with leading zeros after the sign (if any)
+// if the length is not enough.
+// If digits is non-positive, no padding will be applied.
+//
+// It returns the number of bytes written to w, and any write error encountered.
+func EncodeInt64To(w io.Writer, x int64, upper bool, digits int) (written int, err error) {
+	if w == nil {
+		panic(errors.AutoMsg("w is nil"))
+	}
+
+	bufp := int64BufferPool.Get().(*[]byte)
+	defer int64BufferPool.Put(bufp)
+	buf := *bufp
+
+	// Special cases for 0 and -0x8000000000000000 (minimum value of int64):
+	if x == 0 && digits <= 1 {
+		if bw, ok := w.(io.ByteWriter); ok {
+			err = errors.AutoWrap(bw.WriteByte('0'))
+			if err == nil {
+				written = 1
+			}
+			return
+		}
+		buf[0] = '0'
+		written, err = w.Write(buf[:1])
+		return written, errors.AutoWrap(err)
+	}
+	var n int
+	if x == math.MinInt64 {
+		if digits < int64BufferLen {
+			if sw, ok := w.(io.StringWriter); ok {
+				written, err = sw.WriteString(minInt64Hex)
+			} else {
+				n := copy(buf, minInt64Hex)
+				written, err = w.Write(buf[:n])
+			}
+			return written, errors.AutoWrap(err)
+		}
+		written, err = writeSignAndLeadingZerosTo(w, x, digits, buf)
+		if err != nil {
+			return written, errors.AutoWrap(err)
+		}
+		buf[0] = '8'
+		n, err = w.Write(buf[:16])
+		written += n
+		return written, errors.AutoWrap(err)
+	}
+
+	// Other cases:
+	if digits >= int64BufferLen {
+		written, err = writeSignAndLeadingZerosTo(w, x, digits, buf)
+		if err != nil {
+			return written, errors.AutoWrap(err)
+		}
+	}
+	idx := encodeInt64(buf, x, upper, digits)
+	if digits >= int64BufferLen {
+		// Items in buf[1:idx] are '0'
+		// set by function writeSignAndLeadingZerosTo.
+		// buf[idx:] is the hexadecimal representation of x without any sign,
+		// set by function encodeInt64.
+		// So, buf[1:] is the hexadecimal representation of x
+		// with (16 - idx) leading zeros.
+		// The negative sign (if x < 0) and other leading zeros have already
+		// been written to w by function writeSignAndLeadingZerosTo.
+		// Therefore, just write buf[1:] to w and everything is done.
+		idx = 1
+	}
+	n, err = w.Write(buf[idx:])
+	written += n
+	return written, errors.AutoWrap(err)
+}
+
 // encodeInt64 encodes x in hexadecimal representation into buf
 // with given parameters.
 //
@@ -174,7 +253,7 @@ func EncodeInt64ToString(x int64, upper bool, digits int) string {
 // It pads with leading zeros after the sign (if any)
 // if the length is not enough.
 // If digits is non-positive, no padding will be applied.
-// Note that, if digits is not less than int64BufferLen,
+// In addition, if digits is not less than int64BufferLen,
 // no padding will be applied in this function,
 // and only the hexadecimal representation of x without any sign will be
 // written to buf.
@@ -183,6 +262,8 @@ func EncodeInt64ToString(x int64, upper bool, digits int) string {
 //
 // It returns the start index of the valid content in buf.
 // This function writes the encoding result to buf[idx:].
+// This function will not access (including reading and writing)
+// the rest part of the buffer (i.e., buf[:idx]).
 //
 // The caller should guarantee that (x != 0 || digits > 1) and
 // x != math.MinInt64 (= -0x8000000000000000).
@@ -215,4 +296,56 @@ func encodeInt64(buf []byte, x int64, upper bool, digits int) (idx int) {
 		buf[idx] = '-'
 	}
 	return
+}
+
+// writeSignAndLeadingZerosTo is for function EncodeInt64To.
+// It writes the negative sign (if x < 0) and
+// (digits - 16) leading zeros to w, through using the buffer buf.
+//
+// w, x, digits are the same as that of its caller.
+// buf is obtained from int64BufferPool, with size int64BufferLen (17).
+// This function sets all items in buf[1:] to character '0'.
+// It sets buf[0] to '-' if x < 0 and digits <= int64BufferLen + 15,
+// otherwise, '0'.
+//
+// It returns the number of bytes written to w,
+// and any write error encountered.
+//
+// The caller should guarantee that w != nil, digits >= int64BufferLen,
+// and buf != nil.
+func writeSignAndLeadingZerosTo(w io.Writer, x int64, digits int, buf []byte) (written int, err error) {
+	if x >= 0 {
+		buf[0] = '0'
+	} else {
+		buf[0] = '-'
+	}
+	for i := 1; i < int64BufferLen; i++ {
+		buf[i] = '0'
+	}
+	ctr := digits - 16 // Counter for the number of leading zeros remaining to be written.
+	if x < 0 {
+		if ctr <= int64BufferLen-1 {
+			written, err = w.Write(buf[:ctr+1])
+			return written, errors.AutoWrap(err)
+		}
+		written, err = w.Write(buf)
+		buf[0] = '0'
+		if err != nil {
+			return written, errors.AutoWrap(err)
+		}
+		ctr -= written - 1
+	}
+	var n int // For the return value of w.Write.
+	for ctr > 0 {
+		if ctr > int64BufferLen {
+			n, err = w.Write(buf)
+		} else {
+			n, err = w.Write(buf[:ctr])
+		}
+		written, ctr = written+n, ctr-n
+		if err != nil {
+			return written, errors.AutoWrap(err)
+		}
+	}
+	return // err must be nil, so don't need errors.AutoWrap(err).
 }
