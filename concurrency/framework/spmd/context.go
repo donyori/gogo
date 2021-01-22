@@ -18,8 +18,30 @@
 
 package spmd
 
+import "github.com/donyori/gogo/container/sequence"
+
+// bcastChanCtr is a combination of a channel used in Broadcast and a counter.
+type bcastChanCtr struct {
+	Chan chan interface{}
+	Ctr  int // Counter for the number of remaining uses.
+}
+
+// scatterChanCtr is a combination of a channel list used in Scatter
+// and a counter.
+type scatterChanCtr struct {
+	Chans []chan sequence.Array
+	Ctr   int // Counter for the number of remaining uses.
+}
+
+// gatherChanCtr is a combination of a channel used in Gather and a counter.
+type gatherChanCtr struct {
+	Chan chan *sndrMsg
+	Ctr  int // Counter for the number of remaining uses.
+}
+
 // context is the environment of the communicators.
 // Each goroutine group has its own context.
+// Each communicator belongs to only one group (context).
 type context struct {
 	Id         string           // ID of the group.
 	Ctrl       *controller      // Controller.
@@ -27,9 +49,9 @@ type context struct {
 	WorldRanks []int            // List of world ranks of the goroutines, corresponding to Comms.
 	PubC       chan *sndrMsgRxc // Public channel used by communicators.
 
-	// List of channel maps for cluster communication.
-	// Only for chanDispr.
-	ChanMaps [numCOp]map[int64]*chanCtr
+	BcastMap   map[int64]*bcastChanCtr   // Channel map for Broadcast, maintained by the channel dispatcher, initially nil.
+	ScatterMap map[int64]*scatterChanCtr // Channel list map for Scatter, maintained by the channel dispatcher, initially nil.
+	GatherMap  map[int64]*gatherChanCtr  // Channel map for Gather, maintained by the channel dispatcher, initially nil.
 }
 
 // newContext creates a new context.

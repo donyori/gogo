@@ -248,10 +248,8 @@ func TestCommunicator_Broadcast(t *testing.T) {
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("Panic: %q.", prs)
 	}
-	for i, m := range ctrl.World.ChanMaps {
-		if n := len(m); n > 0 {
-			t.Errorf("Channel map %d is NOT clean. %d element(s) remained.", i, n)
-		}
+	if n := len(ctrl.World.BcastMap); n > 0 {
+		t.Errorf("Broadcast channel map is NOT clean. %d element(s) remained.", n)
 	}
 }
 
@@ -300,10 +298,8 @@ func TestCommunicator_Scatter(t *testing.T) {
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("Panic: %q.", prs)
 	}
-	for i, m := range ctrl.World.ChanMaps {
-		if n := len(m); n > 0 {
-			t.Errorf("Channel map %d is NOT clean. %d element(s) remained.", i, n)
-		}
+	if n := len(ctrl.World.ScatterMap); n > 0 {
+		t.Errorf("Scatter channel map is NOT clean. %d element(s) remained.", n)
 	}
 }
 
@@ -343,9 +339,7 @@ func TestCommunicator_Gather(t *testing.T) {
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("Panic: %q.", prs)
 	}
-	for i, m := range ctrl.World.ChanMaps {
-		if n := len(m); n > 0 {
-			t.Errorf("Channel map %d is NOT clean. %d element(s) remained.", i, n)
-		}
+	if n := len(ctrl.World.GatherMap); n > 0 {
+		t.Errorf("Gather channel map is NOT clean. %d element(s) remained.", n)
 	}
 }
