@@ -40,13 +40,13 @@ func TestCombine(t *testing.T) {
 		errs   []error
 		wanted ErrorList
 	}{
-		{nil, nil},
+		{nil, ErrorList{}},
 		{[]error{}, ErrorList{}},
 		{[]error{nil}, ErrorList{}},
 		{[]error{testErrors[0]}, []error{testErrors[0]}},
 		{append(testErrors[:0:0], testErrors...), testErrors},
 		{[]error{testErrors[0], testErrors[0]}, []error{testErrors[0], testErrors[0]}},
-		{[]error{testErrors[0], errors.New(testErrors[0].Error())}, nil},
+		{[]error{testErrors[0], errors.New(testErrors[0].Error())}, nil}, // this case, wanted will be set later
 		{[]error{testErrors[0], nil}, testErrors[:1]},
 		{[]error{nil, testErrors[0]}, testErrors[:1]},
 		{append(testErrors, testErrors...), append(testErrors, testErrors...)},
@@ -54,10 +54,12 @@ func TestCombine(t *testing.T) {
 		{append(testErrors, nil), testErrors},
 		{append(testErrors[:2:2], append([]error{nil}, testErrors[2:]...)...), testErrors},
 	}
-	cases[6].wanted = cases[6].errs
+	cases[6].wanted = append(ErrorList{}, cases[6].errs...)
 	for _, c := range cases {
 		el := Combine(c.errs...)
-		if errorsNotEqual(el, c.wanted) {
+		if el == nil {
+			t.Errorf("Combine returns a nil error list, errs: %v.", c.errs)
+		} else if errorsNotEqual(*el, c.wanted) {
 			t.Errorf("Combine(): %v != %v, errs: %v.", el, c.wanted, c.errs)
 		}
 	}
@@ -165,8 +167,8 @@ func TestErrorList_Error(t *testing.T) {
 		el ErrorList
 		s  string
 	}{
-		{nil, "no errors"},
-		{ErrorList{}, "no errors"},
+		{nil, "no error"},
+		{ErrorList{}, "no error"},
 		{ErrorList{nil}, fmt.Sprintf("%v", error(nil))},
 		{ErrorList{testErrors[0]}, fmt.Sprintf("%v", testErrors[0])},
 		{append(testErrors[:0:0], testErrors...), ""},
@@ -194,32 +196,13 @@ func TestErrorList_Error(t *testing.T) {
 	}
 }
 
-func TestErrorList_Unwrap(t *testing.T) {
-	cases := []struct {
-		el  ErrorList
-		err error
-	}{
-		{nil, nil},
-		{ErrorList{}, nil},
-		{ErrorList{nil}, nil},
-		{ErrorList{testErrors[0]}, testErrors[0]},
-		{append(testErrors[:0:0], testErrors...), nil},
-	}
-	for _, c := range cases {
-		err := c.el.Unwrap()
-		if err != c.err {
-			t.Errorf("el.Unwrap(): %v != %v, el: %v", err, c.err, c.el)
-		}
-	}
-}
-
 func TestErrorList_String(t *testing.T) {
 	cases := []struct {
 		el ErrorList
 		s  string
 	}{
-		{nil, "no errors"},
-		{ErrorList{}, "no errors"},
+		{nil, "no error"},
+		{ErrorList{}, "no error"},
 		{ErrorList{nil}, fmt.Sprintf("%v", error(nil))},
 		{ErrorList{testErrors[0]}, fmt.Sprintf("%v", testErrors[0])},
 		{append(testErrors[:0:0], testErrors...), ""},

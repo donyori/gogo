@@ -18,45 +18,39 @@
 
 package errors
 
-// An error wrapper to wrap an error as another error with method Unwrap.
-// It is allowed to return the error itself directly if the error that will be
-// wrapped is in the exclusion list.
-type Wrapper interface {
-	// Wrap err as a new error. Or return err itself directly
-	// if err is in the exclusion list.
-	Wrap(err error) error
-}
+// Interfaces combining error and other methods (Unwrap, Is, As)
+// supported since Go 1.13.
 
-// Interfaces combining error and other methods supported since Go 1.13.
-
-// An error with method Unwrap, to simplify working with errors that
-// contain other errors since Go 1.13. For more details,
-// see <https://blog.golang.org/go1.13-errors>.
+// WrappingError is an error with method Unwrap,
+// to simplify working with errors that contain other errors since Go 1.13.
+// For more details, see <https://blog.golang.org/go1.13-errors>.
 type WrappingError interface {
 	error
 
-	// Return the contained error.
-	// Return nil if it contains no error.
+	// Unwrap returns the contained error.
+	// It returns nil if it contains no error.
+	// See errors.Unwrap for detail.
 	Unwrap() error
 }
 
-// An error with method Is, to custom the behavior of errors.Is.
+// ErrorIs is an error with method Is, to custom the behavior of errors.Is.
 // For more details, see <https://blog.golang.org/go1.13-errors>.
 type ErrorIs interface {
 	error
 
-	// Report whether any error in its error chain matches target.
+	// Is reports whether any error in its error chain matches target.
 	// See errors.Is for detail.
 	Is(target error) bool
 }
 
-// An error with method As, to custom the behavior of errors.As.
+// ErrorAs is an error with method As, to custom the behavior of errors.As.
 // For more details, see <https://blog.golang.org/go1.13-errors>.
 type ErrorAs interface {
 	error
 
-	// Find the first error in its error chain that matches target,
-	// and if so, set target to that error value and returns true.
+	// As finds the first error in its error chain that matches target,
+	// and if so, sets target to that error value and returns true.
+	// Otherwise, it returns false.
 	// See errors.As for detail.
 	As(target interface{}) bool
 }

@@ -20,7 +20,7 @@ package errors
 
 import "strconv"
 
-// Strategy for auto generating error message.
+// ErrorMessageStrategy is a strategy for auto-generating error messages.
 type ErrorMessageStrategy int8
 
 // Enumeration of supported error message strategies.
@@ -34,12 +34,20 @@ const (
 
 //go:generate stringer -type=ErrorMessageStrategy -output=error_message_strategy_string.go -linecomment
 
-// Return true if the error message strategy is known.
+// Valid returns true if the error message strategy is known.
+//
+// Known error message strategies are shown as follows:
+//  OriginalMsg: use the error message itself
+//  PrefixFullPkgName: add the full package name before the error message
+//  PrefixSimplePkgName: add the simple package name before the error message
+//  PrefixFullFuncName: add the full function name before the error message
+//  PrefixSimpleFuncName: add the simple function name before the error message
 func (i ErrorMessageStrategy) Valid() bool {
 	return i >= OriginalMsg && i <= PrefixSimpleFuncName
 }
 
-// Panic if i is invalid. Do nothing otherwise.
+// MustValid panics if i is invalid.
+// Otherwise, it does nothing.
 func (i ErrorMessageStrategy) MustValid() {
 	if !i.Valid() {
 		panic(AutoMsgWithStrategy("unknown message strategy: "+strconv.FormatInt(int64(i), 10), defaultMessageStrategy, 1))

@@ -157,9 +157,9 @@ func TestAutoNew(t *testing.T) {
 		if s := err.Error(); s != c.wanted {
 			t.Errorf("AutoNew: %q != %q, msg: %q, ms: %v.", s, c.wanted, c.msg, c.ms)
 		}
-		tmpAme := new(autoMadeError)
+		tmpAme := new(autoError)
 		if !As(err, &tmpAme) {
-			t.Errorf("The error returned by AutoNew is not a *autoMadeError, msg: %q, ms: %v.", c.msg, c.ms)
+			t.Errorf("The error returned by AutoNew is not a *autoError, msg: %q, ms: %v.", c.msg, c.ms)
 		}
 	}
 }
@@ -209,9 +209,9 @@ func TestAutoNewWithStrategy(t *testing.T) {
 			if s := err.Error(); s != c.wanted {
 				t.Errorf("AutoNewWithStrategy: %q != %q, msg: %q, ms: %v, skip: %d.", s, c.wanted, c.msg, c.ms, c.skip)
 			}
-			tmpAme := new(autoMadeError)
+			tmpAme := new(autoError)
 			if !As(err, &tmpAme) {
-				t.Errorf("The error returned by AutoNewWithStrategy is not a *autoMadeError, msg: %q, ms: %v.", c.msg, c.ms)
+				t.Errorf("The error returned by AutoNewWithStrategy is not a *autoError, msg: %q, ms: %v.", c.msg, c.ms)
 			}
 		}
 	}()
@@ -239,13 +239,21 @@ func TestAutoWrap(t *testing.T) {
 	for _, c := range cases {
 		SetDefaultMessageStrategy(c.ms)
 		var err error = AutoNew(c.msg)
+		if err == nil {
+			t.Errorf("AutoNew returns a nil error, msg: %q, ms: %v.", c.msg, c.ms)
+			continue
+		}
 		err = AutoWrap(err)
+		if err == nil {
+			t.Errorf("AutoWrap returns a nil error but err != nil, msg: %q, ms: %v.", c.msg, c.ms)
+			continue
+		}
 		if s := err.Error(); s != c.wanted {
 			t.Errorf("AutoWrap: %q != %q, msg: %q, ms: %v.", s, c.wanted, c.msg, c.ms)
 		}
-		tmpAme := new(autoMadeError)
+		tmpAme := new(autoError)
 		if !As(err, &tmpAme) {
-			t.Errorf("The error returned by AutoWrap is not a *autoMadeError, msg: %q, ms: %v.", c.msg, c.ms)
+			t.Errorf("The error returned by AutoWrap is not a *autoError, msg: %q, ms: %v.", c.msg, c.ms)
 		}
 	}
 	// Test whether io.EOF is excluded.
@@ -289,17 +297,25 @@ func TestAutoWrapSkip(t *testing.T) {
 		{"some error", PrefixSimpleFuncName, 0, "TestAutoWrapSkip.func1: some error"},
 		{"some error", PrefixSimpleFuncName, 1, "TestAutoWrapSkip: some error"},
 	}
-	func() {
+	func() { // Use an inner function to test the "skip" function.
 		for _, c := range cases {
 			SetDefaultMessageStrategy(c.ms)
 			var err error = AutoNew(c.msg)
+			if err == nil {
+				t.Errorf("AutoNew returns a nil error, msg: %q, ms: %v.", c.msg, c.ms)
+				continue
+			}
 			err = AutoWrapSkip(err, c.skip)
+			if err == nil {
+				t.Errorf("AutoWrapSkip returns a nil error but err != nil, msg: %q, ms: %v, skip: %d.", c.msg, c.ms, c.skip)
+				continue
+			}
 			if s := err.Error(); s != c.wanted {
 				t.Errorf("AutoWrapSkip: %q != %q, msg: %q, ms: %v, skip: %d.", s, c.wanted, c.msg, c.ms, c.skip)
 			}
-			tmpAme := new(autoMadeError)
+			tmpAme := new(autoError)
 			if !As(err, &tmpAme) {
-				t.Errorf("The error returned by AutoWrapSkip is not a *autoMadeError, msg: %q, ms: %v, skip: %d.", c.msg, c.ms, c.skip)
+				t.Errorf("The error returned by AutoWrapSkip is not a *autoError, msg: %q, ms: %v, skip: %d.", c.msg, c.ms, c.skip)
 			}
 		}
 		// Test whether io.EOF is excluded.
@@ -313,4 +329,61 @@ func TestAutoWrapSkip(t *testing.T) {
 			}
 		}
 	}()
+}
+
+func TestAutoWrapExcludeAndExclusions(t *testing.T) {
+	daw := defaultAutoWrapper
+	defer func() {
+		defaultAutoWrapper = daw
+	}()
+	defaultAutoWrapper = NewAutoWrapper(DefaultMessageStrategy())
+	exclusions := AutoWrapExclusions()
+	if exclusions != nil {
+		t.Fatalf("AutoWrapExclusions: %v != nil.", exclusions)
+	}
+	el := []error{
+		New("msg 1"),
+		New("msg 2"),
+		New("msg 2"),
+		New("msg 4"),
+	}
+	AutoWrapExclude(el...)
+	exclusions = AutoWrapExclusions()
+	if len(exclusions) != len(el) {
+		t.Fatalf("AutoWrapExclusions: %v, len != %d.", exclusions, len(el))
+	}
+	failed := false
+	for _, err := range el {
+		found := false
+		for _, e := range exclusions {
+			if err == e {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Error %v not found in exclusions.", err)
+			failed = true
+		}
+	}
+	if failed {
+		t.FailNow()
+	}
+	AutoWrapExclude(el...)
+	exclusions = AutoWrapExclusions()
+	if len(exclusions) != len(el) {
+		t.Fatalf("After excluding el again, AutoWrapExclusions: %v, len != %d.", exclusions, len(el))
+	}
+	for _, err := range el {
+		found := false
+		for _, e := range exclusions {
+			if err == e {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("After excluding el again, Error %v not found in exclusions.", err)
+		}
+	}
 }

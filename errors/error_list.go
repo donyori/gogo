@@ -23,9 +23,9 @@ import (
 	"strings"
 )
 
-// An error list, to collect multiple errors.
+// ErrorList is a list of errors, to collect multiple errors.
 //
-// If it is empty, it reports "no errors".
+// If it is empty, it reports "no error".
 // If there is only one item, it performs the same as this item.
 // If there are two or more items, it reports the number of errors,
 // followed by an error array, in which every item is quoted.
@@ -37,24 +37,22 @@ import (
 // and add error(s) to ErrorList to discard nil errors.
 type ErrorList []error
 
-// Combine multiple errors into an ErrorList.
+// Combine combines multiple errors into an ErrorList.
 // Note that nil error will be discarded.
-// It returns nil if len(errs) == 0.
-func Combine(errs ...error) ErrorList {
-	if len(errs) == 0 {
-		return nil
-	}
+// It always returns a non-nil *ErrorList.
+func Combine(errs ...error) *ErrorList {
 	el := make(ErrorList, 0, len(errs))
 	el.Append(errs...)
-	return el
+	return &el
 }
 
-// Return the number of errors in the error list.
+// Len returns the number of errors in the error list.
 func (el ErrorList) Len() int {
 	return len(el)
 }
 
-// Append errors to the error list. Note that nil error will be discarded.
+// Append appends errs to the error list.
+// Note that nil error will be discarded.
 func (el *ErrorList) Append(errs ...error) {
 	for _, err := range errs {
 		if err != nil {
@@ -63,9 +61,9 @@ func (el *ErrorList) Append(errs ...error) {
 	}
 }
 
-// Return a necessary error.
-// If len(el) == 0, it returns nil.
-// If len(el) == 1, it returns el[0].
+// ToError returns a necessary error.
+// If el.Len() == 0, it returns nil.
+// If el.Len() == 1, it returns el[0].
 // Otherwise, it returns el (itself).
 func (el *ErrorList) ToError() error {
 	if el == nil || len(*el) == 0 {
@@ -77,8 +75,9 @@ func (el *ErrorList) ToError() error {
 	return el
 }
 
-// Remove duplicated and nil errors. An error is regarded as duplicated if
-// its method Error returns the same string as that of a previous error.
+// Deduplicate removes duplicated and nil errors.
+// An error is regarded as duplicated if its method Error returns
+// the same string as that of a previous error.
 func (el *ErrorList) Deduplicate() {
 	if el == nil || len(*el) == 0 {
 		return
@@ -105,31 +104,25 @@ func (el *ErrorList) Deduplicate() {
 	*el = (*el)[:n]
 }
 
-// Return the same as el.String().
+// Error returns the same as el.String().
 func (el *ErrorList) Error() string {
 	return el.String()
 }
 
-// If there is only one item, return it.
-// Otherwise, return nil indicating that it cannot be unwrapped.
-func (el *ErrorList) Unwrap() error {
-	if el != nil && len(*el) == 1 {
-		return (*el)[0]
-	}
-	return nil
-}
-
-// If it is empty, return "no errors".
+// String returns the error message of this error list, as follows:
+//
+// If the error list is empty, it returns "no error".
 //
 // If there is only one item (denoted by t), then
-// return t.Error() if t != nil, or return <nil> otherwise.
+// it returns t.Error() if t != nil, or returns "<nil>" otherwise.
 //
-// If there are two or more items, return the number of errors,
+// If there are two or more items, it returns the number of errors,
 // followed by an error array, in which every item is double-quoted
-// in Go string literal. Especially, nil error item will be "<nil>".
+// in Go string literal.
+// Especially, nil error item will be "<nil>".
 func (el *ErrorList) String() string {
 	if el == nil || len(*el) == 0 {
-		return "no errors"
+		return "no error"
 	}
 	if len(*el) == 1 {
 		err := (*el)[0]

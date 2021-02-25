@@ -22,22 +22,22 @@ import stderrors "errors"
 
 // Export functions from standard package errors for convenience.
 
-// Export standard errors.New.
+// New directly calls standard errors.New.
 func New(msg string) error {
 	return stderrors.New(msg)
 }
 
-// Export standard errors.Unwrap.
+// Unwrap directly calls standard errors.Unwrap.
 func Unwrap(err error) error {
 	return stderrors.Unwrap(err)
 }
 
-// Export standard errors.Is.
+// Is directly calls standard errors.Is.
 func Is(err, target error) bool {
 	return stderrors.Is(err, target)
 }
 
-// Export standard errors.As.
+// As directly calls standard errors.As.
 func As(err error, target interface{}) bool {
 	return stderrors.As(err, target)
 }
