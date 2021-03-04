@@ -46,7 +46,6 @@ type LineWriterTo interface {
 	//
 	// It stops writing data if an error occurs.
 	//
-	// It returns the number of bytes written to w and
-	// any write error encountered.
+	// It returns the number of bytes written to w and any error encountered.
 	WriteLineTo(w stdio.Writer) (n int64, err error)
 }

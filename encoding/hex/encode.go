@@ -106,7 +106,7 @@ func NewEncoder(w io.Writer, upper bool) Encoder {
 
 // Write writes hexadecimal encoding of p to its destination writer.
 //
-// It fits interface io.Writer.
+// It conforms to interface io.Writer.
 func (e *encoder) Write(p []byte) (n int, err error) {
 	bufp := encodeBufferPool.Get().(*[]byte)
 	defer encodeBufferPool.Put(bufp)
@@ -127,7 +127,7 @@ func (e *encoder) Write(p []byte) (n int, err error) {
 
 // WriteByte writes hexadecimal encoding of c to its destination writer.
 //
-// It fits interface io.ByteWriter.
+// It conforms to interface io.ByteWriter.
 func (e *encoder) WriteByte(c byte) error {
 	bufp := encodeBufferPool.Get().(*[]byte)
 	defer encodeBufferPool.Put(bufp)
@@ -141,7 +141,7 @@ func (e *encoder) WriteByte(c byte) error {
 // ReadFrom writes hexadecimal encoding of data read from r
 // to its destination writer.
 //
-// It fits interface io.ReaderFrom.
+// It conforms to interface io.ReaderFrom.
 func (e *encoder) ReadFrom(r io.Reader) (n int64, err error) {
 	bufp := sourceBufferPool.Get().(*[]byte)
 	defer sourceBufferPool.Put(bufp)

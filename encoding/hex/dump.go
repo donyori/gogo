@@ -152,7 +152,7 @@ func NewDumper(w io.Writer, cfg *DumpConfig) Dumper {
 
 // Write dumps p to the destination writer.
 //
-// It fits interface io.Writer.
+// It conforms to interface io.Writer.
 func (d *dumper) Write(p []byte) (n int, err error) {
 	if d.err != nil {
 		return 0, d.err
@@ -168,7 +168,7 @@ func (d *dumper) Write(p []byte) (n int, err error) {
 
 // WriteByte dumps c to the destination writer.
 //
-// It fits interface io.ByteWriter.
+// It conforms to interface io.ByteWriter.
 func (d *dumper) WriteByte(c byte) error {
 	if d.err != nil {
 		return d.err
@@ -183,7 +183,7 @@ func (d *dumper) WriteByte(c byte) error {
 
 // ReadFrom dumps data read from r to the destination writer.
 //
-// It fits interface io.ReaderFrom.
+// It conforms to interface io.ReaderFrom.
 func (d *dumper) ReadFrom(r io.Reader) (n int64, err error) {
 	if d.err != nil {
 		return 0, d.err

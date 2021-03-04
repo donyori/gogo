@@ -188,7 +188,7 @@ func NewFormatter(w io.Writer, cfg *FormatConfig) Formatter {
 // Write writes hexadecimal representation of p,
 // in the specified format, to the destination writer.
 //
-// It fits interface io.Writer.
+// It conforms to interface io.Writer.
 func (f *formatter) Write(p []byte) (n int, err error) {
 	if f.err != nil {
 		return 0, f.err
@@ -209,7 +209,7 @@ func (f *formatter) Write(p []byte) (n int, err error) {
 // WriteByte writes hexadecimal representation of c,
 // in the specified format, to the destination writer.
 //
-// It fits interface io.ByteWriter.
+// It conforms to interface io.ByteWriter.
 func (f *formatter) WriteByte(c byte) error {
 	if f.err != nil {
 		return f.err
@@ -229,7 +229,7 @@ func (f *formatter) WriteByte(c byte) error {
 // ReadFrom writes hexadecimal representation of data read from r,
 // in the specified format, to the destination writer.
 //
-// It fits interface io.ReaderFrom.
+// It conforms to interface io.ReaderFrom.
 func (f *formatter) ReadFrom(r io.Reader) (n int64, err error) {
 	if f.err != nil {
 		return 0, f.err

@@ -50,6 +50,7 @@ type BufferedReader interface {
 	// If it returns fewer than n bytes,
 	// it also returns an error explaining why the read is short.
 	// The error is bufio.ErrBufferFull if n is larger than its buffer size.
+	// (To test whether err is bufio.ErrBufferFull, use function errors.Is.)
 	//
 	// Calling Peek prevents a UnreadByte or UnreadRune call from succeeding
 	// until the next read operation.
@@ -158,7 +159,11 @@ func (rbr *resettableBufferedReader) UnreadRune() error {
 	return errors.AutoWrap(rbr.br.UnreadRune())
 }
 
-// WriteTo implements io.WriterTo.
+// WriteTo writes data to w until there's no more data to write or
+// when an error occurs.
+//
+// The return value n is the number of bytes written.
+// Any error encountered during the write is also returned.
 //
 // This may make multiple calls to the Read method of the underlying reader.
 //
@@ -190,8 +195,7 @@ func (rbr *resettableBufferedReader) ReadLine() (line []byte, more bool, err err
 //
 // It stops writing data if an error occurs.
 //
-// It returns the number of bytes written to w and
-// any write error encountered.
+// It returns the number of bytes written to w and any error encountered.
 func (rbr *resettableBufferedReader) WriteLineTo(w stdio.Writer) (n int64, err error) {
 	var line []byte
 	var written int
@@ -233,6 +237,7 @@ func (rbr *resettableBufferedReader) Buffered() int {
 // If it returns fewer than n bytes,
 // it also returns an error explaining why the read is short.
 // The error is bufio.ErrBufferFull if n is larger than its buffer size.
+// (To test whether err is bufio.ErrBufferFull, use function errors.Is.)
 //
 // Calling Peek prevents a UnreadByte or UnreadRune call from succeeding
 // until the next read operation.

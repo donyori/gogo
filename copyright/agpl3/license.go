@@ -18,7 +18,7 @@
 
 package agpl3
 
-// Disclaimer of warranty.
+// DisclaimerOfWarranty is the disclaimer of warranty in AGPL v3.
 const DisclaimerOfWarranty = `THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
 APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
 HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM "AS IS" WITHOUT WARRANTY
@@ -28,7 +28,7 @@ PURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM
 IS WITH YOU.  SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF
 ALL NECESSARY SERVICING, REPAIR OR CORRECTION.`
 
-// Limitation of liability.
+// LimitationOfLiability is the limitation of liability in AGPL v3.
 const LimitationOfLiability = `IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
 WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MODIFIES AND/OR CONVEYS
 THE PROGRAM AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES, INCLUDING ANY
@@ -39,7 +39,7 @@ PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER PROGRAMS),
 EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGES.`
 
-// Terms and conditions.
+// TermsAndConditions is the terms and conditions of AGPL v3.
 const TermsAndConditions = `                       TERMS AND CONDITIONS
 
   0. Definitions.
@@ -602,7 +602,7 @@ copy of the Program in return for a fee.
 
                      END OF TERMS AND CONDITIONS`
 
-// Full text of GNU Affero General Public License Version 3.
+// FullLicense is the full text of AGPL v3.
 const FullLicense = `                    GNU AFFERO GENERAL PUBLIC LICENSE
                        Version 3, 19 November 2007
 
