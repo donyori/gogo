@@ -25,7 +25,7 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// An interface for buffered reader.
+// BufferedReader is an interface for a reader with a buffer.
 //
 // Note that bufio.Reader implements all methods of this interface
 // except WriteLineTo of LineWriterTo.
@@ -37,67 +37,168 @@ type BufferedReader interface {
 	LineReader
 	LineWriterTo
 
-	// Return the size of the underlying buffer in bytes.
+	// Size returns the size of the underlying buffer in bytes.
 	Size() int
 
-	// Return the number of bytes that can be read from the current buffer.
+	// Buffered returns the number of bytes
+	// that can be read from the current buffer.
 	Buffered() int
 
-	// Return the next n bytes without advancing the reader. The bytes stop
-	// being valid at the next read call. If it returns fewer than n bytes, it
-	// also returns an error explaining why the read is short. The error is
-	// bufio.ErrBufferFull if n is larger than its buffer size.
+	// Peek returns the next n bytes without advancing the reader.
+	//
+	// The bytes stop being valid at the next read call.
+	// If it returns fewer than n bytes,
+	// it also returns an error explaining why the read is short.
+	// The error is bufio.ErrBufferFull if n is larger than its buffer size.
 	//
 	// Calling Peek prevents a UnreadByte or UnreadRune call from succeeding
 	// until the next read operation.
 	Peek(n int) (data []byte, err error)
 
-	// Discard the next n bytes and return the number of bytes discarded. If it
-	// discards fewer than n bytes, it also returns an error explaining why.
+	// Discard skips the next n bytes and returns the number of bytes discarded.
+	//
+	// If it skips fewer than n bytes, it also returns an error explaining why.
+	//
+	// If 0 <= n <= Buffered(),
+	// it is guaranteed to succeed without reading from the underlying reader.
 	Discard(n int) (discarded int, err error)
 }
 
-// An interface combining BufferedReader and ReaderResetter.
+// ResettableBufferedReader is an interface
+// combining BufferedReader and ReaderResetter.
 type ResettableBufferedReader interface {
 	BufferedReader
 	ReaderResetter
 }
 
+// defaultBufferSize is the default buffer size used by
+// function NewBufferedReader.
 const defaultBufferSize = 4096
 
+// resettableBufferedReader is an implementation of
+// interface ResettableBufferedReader.
 type resettableBufferedReader struct {
-	*bufio.Reader
+	br *bufio.Reader
 }
 
-// Create a BufferedReader on r, whose buffer has at least the default size.
+// NewBufferedReader creates a BufferedReader on r,
+// whose buffer has at least the default size (4096 bytes).
 func NewBufferedReader(r stdio.Reader) ResettableBufferedReader {
 	return NewBufferedReaderSize(r, defaultBufferSize)
 }
 
-// Create a BufferedReader on r, whose buffer has at least given size.
-// If r is a BufferedReader with large enough buffer, it returns r directly.
+// NewBufferedReaderSize creates a BufferedReader on r,
+// whose buffer has at least the specified size.
+//
+// If r is a BufferedReader with a large enough buffer, it returns r directly.
 func NewBufferedReaderSize(r stdio.Reader, size int) ResettableBufferedReader {
 	if br, ok := r.(ResettableBufferedReader); ok && br.Size() >= size {
 		return br
 	}
 	if br, ok := r.(*resettableBufferedReader); ok {
-		br = &resettableBufferedReader{Reader: bufio.NewReaderSize(br.Reader, size)}
+		br = &resettableBufferedReader{bufio.NewReaderSize(br.br, size)}
 		return br
 	}
 	br, ok := r.(*bufio.Reader)
 	if !ok || br.Size() < size {
 		br = bufio.NewReaderSize(r, size)
 	}
-	return &resettableBufferedReader{Reader: br}
+	return &resettableBufferedReader{br}
 }
 
-func (r *resettableBufferedReader) WriteLineTo(w stdio.Writer) (n int64, err error) {
+// Read reads data into p.
+//
+// It returns the number of bytes read into p.
+// The bytes are taken from at most one Read on the underlying reader,
+// hence n may be less than len(p).
+//
+// To read exactly len(p) bytes, use io.ReadFull(b, p).
+// At EOF, the count will be zero and err will be io.EOF.
+func (rbr *resettableBufferedReader) Read(p []byte) (n int, err error) {
+	n, err = rbr.br.Read(p)
+	return n, errors.AutoWrap(err)
+}
+
+// ReadByte reads and returns a single byte.
+//
+// If no byte is available, returns an error.
+func (rbr *resettableBufferedReader) ReadByte() (byte, error) {
+	c, err := rbr.br.ReadByte()
+	return c, errors.AutoWrap(err)
+}
+
+// UnreadByte unreads the last byte.
+// Only the most recently read byte can be unread.
+//
+// UnreadByte returns an error if the most recent method called on the
+// reader was not a read operation.
+// Notably, Peek is not considered a read operation.
+func (rbr *resettableBufferedReader) UnreadByte() error {
+	return errors.AutoWrap(rbr.br.UnreadByte())
+}
+
+// ReadRune reads a single UTF-8 encoded Unicode character and
+// returns the rune and its size in bytes.
+//
+// If the encoded rune is invalid,
+// it consumes one byte and returns unicode.ReplacementChar (U+FFFD)
+// with a size of 1.
+func (rbr *resettableBufferedReader) ReadRune() (r rune, size int, err error) {
+	r, size, err = rbr.br.ReadRune()
+	return r, size, errors.AutoWrap(err)
+}
+
+// UnreadRune unreads the last rune.
+//
+// If the most recent method called on the reader was not a ReadRune,
+// UnreadRune returns an error.
+// (In this regard it is stricter than UnreadByte,
+// which will unread the last byte from any read operation.)
+func (rbr *resettableBufferedReader) UnreadRune() error {
+	return errors.AutoWrap(rbr.br.UnreadRune())
+}
+
+// WriteTo implements io.WriterTo.
+//
+// This may make multiple calls to the Read method of the underlying reader.
+//
+// If the underlying reader supports the WriteTo method,
+// this calls the underlying WriteTo without buffering.
+func (rbr *resettableBufferedReader) WriteTo(w stdio.Writer) (n int64, err error) {
+	n, err = rbr.br.WriteTo(w)
+	return n, errors.AutoWrap(err)
+}
+
+// ReadLine reads a line excluding the end-of-line bytes.
+//
+// If the line is too long for the buffer,
+// then more is set and the beginning of the line is returned.
+// The rest of the line will be returned from future calls.
+// more will be false when returning the last fragment of the line.
+//
+// It either returns a non-nil line or it returns an error, never both.
+//
+// Caller should not keep the return value line,
+// and line is only valid until the next call to the reader,
+// including the method ReadLine and any other possible methods.
+func (rbr *resettableBufferedReader) ReadLine() (line []byte, more bool, err error) {
+	line, more, err = rbr.br.ReadLine()
+	return line, more, errors.AutoWrap(err)
+}
+
+// WriteLineTo reads a line from its underlying reader and writes it to w.
+//
+// It stops writing data if an error occurs.
+//
+// It returns the number of bytes written to w and
+// any write error encountered.
+func (rbr *resettableBufferedReader) WriteLineTo(w stdio.Writer) (n int64, err error) {
 	var line []byte
 	var written int
 	var errList errors.ErrorList
 	more := true
 	for more {
-		line, more, err = r.ReadLine()
+		line, more, err = rbr.ReadLine()
 		if err != nil {
 			errList.Append(err)
 		}
@@ -109,9 +210,49 @@ func (r *resettableBufferedReader) WriteLineTo(w stdio.Writer) (n int64, err err
 			}
 		}
 		if err = errList.ToError(); err != nil {
-			// Don't wrap err to keep consistent with other methods of bufio.Reader.
-			return
+			return n, errors.AutoWrap(err)
 		}
 	}
 	return
+}
+
+// Size returns the size of the underlying buffer in bytes.
+func (rbr *resettableBufferedReader) Size() int {
+	return rbr.br.Size()
+}
+
+// Buffered returns the number of bytes
+// that can be read from the current buffer.
+func (rbr *resettableBufferedReader) Buffered() int {
+	return rbr.br.Buffered()
+}
+
+// Peek returns the next n bytes without advancing the reader.
+//
+// The bytes stop being valid at the next read call.
+// If it returns fewer than n bytes,
+// it also returns an error explaining why the read is short.
+// The error is bufio.ErrBufferFull if n is larger than its buffer size.
+//
+// Calling Peek prevents a UnreadByte or UnreadRune call from succeeding
+// until the next read operation.
+func (rbr *resettableBufferedReader) Peek(n int) (data []byte, err error) {
+	data, err = rbr.br.Peek(n)
+	return data, errors.AutoWrap(err)
+}
+
+// Discard skips the next n bytes and returns the number of bytes discarded.
+//
+// If it skips fewer than n bytes, it also returns an error explaining why.
+//
+// If 0 <= n <= Buffered(),
+// it is guaranteed to succeed without reading from the underlying reader.
+func (rbr *resettableBufferedReader) Discard(n int) (discarded int, err error) {
+	discarded, err = rbr.br.Discard(n)
+	return discarded, errors.AutoWrap(err)
+}
+
+// Reset resets all states and switches to read from r.
+func (rbr *resettableBufferedReader) Reset(r stdio.Reader) {
+	rbr.br.Reset(r)
 }

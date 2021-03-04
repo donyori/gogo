@@ -18,10 +18,10 @@
 
 package io
 
-import "errors"
+import "github.com/donyori/gogo/errors"
 
-// An error indicating that the reader is closed.
-var ErrReaderClosed = errors.New("reader is closed")
+// ErrReaderClosed is an error indicating that the reader is closed.
+var ErrReaderClosed = errors.AutoNew("reader is closed")
 
-// An error indicating that the writer is closed.
-var ErrWriterClosed = errors.New("writer is closed")
+// ErrWriterClosed is an error indicating that the writer is closed.
+var ErrWriterClosed = errors.AutoNew("writer is closed")

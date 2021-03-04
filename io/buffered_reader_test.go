@@ -41,11 +41,11 @@ func TestNewBufferedReaderSize(t *testing.T) {
 		t.Errorf("b (on r) size: %d != %d.", n, size)
 	}
 	b = NewBufferedReaderSize(bufr, size)
-	if b.(*resettableBufferedReader).Reader != bufr {
+	if b.(*resettableBufferedReader).br != bufr {
 		t.Error("b.Reader != bufr.")
 	}
 	b = NewBufferedReaderSize(bufr128, size)
-	if b.(*resettableBufferedReader).Reader != bufr128 {
+	if b.(*resettableBufferedReader).br != bufr128 {
 		t.Error("b.Reader != bufr128.")
 	}
 	b = NewBufferedReaderSize(bufr64, size)
