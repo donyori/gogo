@@ -245,11 +245,11 @@ var (
 
 func timestampToTime(tsType timestampType, ts []byte) (t stdtime.Time, err error) {
 	if len(ts) == 0 {
-		return stdtime.Time{}, errors.New("empty timestamp")
+		return stdtime.Time{}, errors.AutoNew("empty timestamp")
 	}
 	// Check tsType if this function is exported.
 	if ok := timestampRegExprMapping[tsType].Match(ts); !ok {
-		return stdtime.Time{}, errors.New("invalid timestamp")
+		return stdtime.Time{}, errors.AutoNew("invalid timestamp")
 	}
 	pointIdx := bytes.IndexRune(ts, '.')
 	tst := tsType
@@ -273,7 +273,7 @@ func timestampToTime(tsType timestampType, ts []byte) (t stdtime.Time, err error
 			tst = nanoTimestamp
 		}
 		if pointIdx >= 0 && len(ts)-pointIdx-1 > timestampFractionalLenMapping[tst] {
-			return stdtime.Time{}, errors.New("invalid timestamp")
+			return stdtime.Time{}, errors.AutoNew("invalid timestamp")
 		}
 	}
 	var s, ns []byte
