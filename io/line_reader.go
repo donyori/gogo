@@ -20,24 +20,33 @@ package io
 
 import stdio "io"
 
-// An interface that wraps method ReadLine. It may be useful to read long lines
+// LineReader is an interface that wraps method ReadLine.
+//
+// It may be useful to read long lines
 // that are hard to be loaded in a buffer once.
 type LineReader interface {
-	// Read a line excluding the end-of-line bytes. If the line was too long
-	// for the buffer then more is set and the beginning of the line is returned.
-	// The rest of the line will be returned from future calls. more will be
-	// false when returning the last fragment of the line. It either returns a
-	// non-nil line or it returns an error, never both.
+	// ReadLine reads a line excluding the end-of-line bytes.
 	//
-	// Caller shouldn't keep the return value line, and line is only valid
-	// until the next call to the reader, including the method ReadLine and
-	// any other possible methods.
+	// If the line is too long for the buffer,
+	// then more is set and the beginning of the line is returned.
+	// The rest of the line will be returned from future calls.
+	// more will be false when returning the last fragment of the line.
+	//
+	// It either returns a non-nil line or it returns an error, never both.
+	//
+	// Caller should not keep the return value line,
+	// and line is only valid until the next call to the reader,
+	// including the method ReadLine and any other possible methods.
 	ReadLine() (line []byte, more bool, err error)
 }
 
-// An interface that wraps method WriteLineTo.
+// LineWriterTo is an interface that wraps method WriteLineTo.
 type LineWriterTo interface {
-	// Write a line to w. It stops to write data if an error occurs. It returns
-	// the number of bytes written to w and any write error encountered.
+	// WriteLineTo reads a line from its underlying reader and writes it to w.
+	//
+	// It stops writing data if an error occurs.
+	//
+	// It returns the number of bytes written to w and
+	// any write error encountered.
 	WriteLineTo(w stdio.Writer) (n int64, err error)
 }

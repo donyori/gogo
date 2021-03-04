@@ -21,7 +21,8 @@ package sequence
 // GeneralDynamicArray is a prefab DynamicArray for interface{}.
 type GeneralDynamicArray []interface{}
 
-// NewGeneralDynamicArray makes a new GeneralDynamicArray with given capacity.
+// NewGeneralDynamicArray makes a new GeneralDynamicArray
+// with specified capacity.
 // It panics if capacity < 0.
 func NewGeneralDynamicArray(capacity int) GeneralDynamicArray {
 	return make(GeneralDynamicArray, 0, capacity)
@@ -290,7 +291,7 @@ func (gda *GeneralDynamicArray) Expand(i, n int) {
 }
 
 // Reserve requests that the capacity of the dynamic array
-// is at least the given capacity.
+// is at least the specified capacity.
 // It does nothing if capacity <= Cap().
 func (gda *GeneralDynamicArray) Reserve(capacity int) {
 	if capacity <= 0 || (gda != nil && capacity <= cap(*gda)) {

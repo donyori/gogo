@@ -21,7 +21,7 @@ package sequence
 // IntDynamicArray is a prefab DynamicArray for int.
 type IntDynamicArray []int
 
-// NewIntDynamicArray makes a new IntDynamicArray with given capacity.
+// NewIntDynamicArray makes a new IntDynamicArray with specified capacity.
 // It panics if capacity < 0.
 func NewIntDynamicArray(capacity int) IntDynamicArray {
 	return make(IntDynamicArray, 0, capacity)
@@ -278,7 +278,7 @@ func (ida *IntDynamicArray) Expand(i, n int) {
 }
 
 // Reserve requests that the capacity of the dynamic array
-// is at least the given capacity.
+// is at least the specified capacity.
 // It does nothing if capacity <= Cap().
 func (ida *IntDynamicArray) Reserve(capacity int) {
 	if capacity <= 0 || (ida != nil && capacity <= cap(*ida)) {

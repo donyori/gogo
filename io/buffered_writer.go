@@ -20,10 +20,11 @@ package io
 
 import stdio "io"
 
-// An interface for buffered writer.
+// BufferedWriter is an interface for a writer with a buffer.
 //
-// Note that after all data has been written, the client should call the method
-// Flush to guarantee all data has been forwarded to the underlying writer.
+// Note that after all data has been written,
+// the client should call the method Flush to guarantee that
+// all data has been forwarded to the underlying writer.
 type BufferedWriter interface {
 	stdio.Writer
 	stdio.ByteWriter
@@ -31,21 +32,24 @@ type BufferedWriter interface {
 	stdio.ReaderFrom
 	Flusher
 
-	// Return the size of the underlying buffer in bytes.
+	// Size returns the size of the underlying buffer in bytes.
 	Size() int
 
-	// Return the number of bytes that have been written into the current buffer.
+	// Buffered returns the number of bytes that
+	// have been written into the current buffer.
 	Buffered() int
 
-	// Return the number of bytes unused in the current buffer.
+	// Available returns the number of bytes unused in the current buffer.
 	Available() int
 
-	// Write a single Unicode code point.
+	// WriteRune writes a single Unicode code point.
+	//
 	// It returns the number of bytes written and any write error encountered.
 	WriteRune(r rune) (size int, err error)
 }
 
-// An interface combining BufferedWriter and WriterResetter.
+// ResettableBufferedWriter is an interface
+// combining BufferedWriter and WriterResetter.
 type ResettableBufferedWriter interface {
 	BufferedWriter
 	WriterResetter

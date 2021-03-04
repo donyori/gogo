@@ -16,5 +16,5 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package file provides functions to read and write files.
+// Package file provides functions to read, write, and verify files.
 package file

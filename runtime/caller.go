@@ -48,7 +48,7 @@ func CallerFrame(skip int) (frame stdruntime.Frame, ok bool) {
 }
 
 // Return the full package name and simple function name of
-// the function in the given stack frame.
+// the function in the specified stack frame.
 // The return value ok is false if the information is unretrievable.
 func FramePkgFunc(frame stdruntime.Frame) (pkg, fn string, ok bool) {
 	if frame.PC == 0 || frame.Function == "" {

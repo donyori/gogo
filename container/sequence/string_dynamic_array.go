@@ -21,7 +21,8 @@ package sequence
 // StringDynamicArray is a prefab DynamicArray for string.
 type StringDynamicArray []string
 
-// NewStringDynamicArray makes a new StringDynamicArray with given capacity.
+// NewStringDynamicArray makes a new StringDynamicArray
+// with specified capacity.
 // It panics if capacity < 0.
 func NewStringDynamicArray(capacity int) StringDynamicArray {
 	return make(StringDynamicArray, 0, capacity)
@@ -290,7 +291,7 @@ func (sda *StringDynamicArray) Expand(i, n int) {
 }
 
 // Reserve requests that the capacity of the dynamic array
-// is at least the given capacity.
+// is at least the specified capacity.
 // It does nothing if capacity <= Cap().
 func (sda *StringDynamicArray) Reserve(capacity int) {
 	if capacity <= 0 || (sda != nil && capacity <= cap(*sda)) {

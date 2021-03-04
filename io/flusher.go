@@ -18,9 +18,11 @@
 
 package io
 
-// An interface that wraps the method Flush, which writes any buffered data
-// to the underlying writer.
+// Flusher is an interface that wraps the method Flush,
+// which writes any buffered data to the underlying writer.
 type Flusher interface {
-	// Write any buffered data to the underlying writer.
+	// Flush writes any buffered data to the underlying writer.
+	//
+	// It returns any write error encountered.
 	Flush() error
 }

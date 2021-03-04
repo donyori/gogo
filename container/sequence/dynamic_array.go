@@ -81,7 +81,7 @@ type DynamicArray interface {
 	Expand(i, n int)
 
 	// Reserve requests that the capacity of the dynamic array
-	// is at least the given capacity.
+	// is at least the specified capacity.
 	// It does nothing if capacity <= Cap().
 	Reserve(capacity int)
 

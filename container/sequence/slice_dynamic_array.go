@@ -33,7 +33,8 @@ type SliceDynamicArray struct {
 	v reflect.Value
 }
 
-// WrapSlice makes a SliceDynamicArray by given slicePtr: a pointer to a slice.
+// WrapSlice makes a SliceDynamicArray by specified slicePtr:
+// a pointer to a slice.
 // It panics if slicePtr isn't a pointer to a slice.
 func WrapSlice(slicePtr interface{}) *SliceDynamicArray {
 	if slicePtr == nil {
@@ -54,7 +55,7 @@ func WrapSlice(slicePtr interface{}) *SliceDynamicArray {
 	return sda
 }
 
-// NewSliceDynamicArray makes a SliceDynamicArray with given
+// NewSliceDynamicArray makes a SliceDynamicArray with specified
 // itemType, length and capacity.
 // The underlying slice will be:
 //  make([]itemType, length, capacity)
@@ -393,7 +394,7 @@ func (sda *SliceDynamicArray) Expand(i, n int) {
 }
 
 // Reserve requests that the capacity of the dynamic array
-// is at least the given capacity.
+// is at least the specified capacity.
 // It does nothing if capacity <= Cap().
 func (sda *SliceDynamicArray) Reserve(capacity int) {
 	if capacity <= sda.Cap() {

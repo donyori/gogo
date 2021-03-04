@@ -20,23 +20,26 @@ package io
 
 import stdio "io"
 
-// An interface that wraps method Reset,
+// Resetter is an interface that wraps method Reset,
 // which resets all states of its instance.
 type Resetter interface {
-	// Reset all states.
+	// Reset resets all states.
 	Reset()
 }
 
-// An interface that wraps method Reset, which resets all states of
-// its instance and switches to read from the reader r.
+// ReaderResetter is an interface that wraps method Reset,
+// which resets all states of its instance and
+// switches to read from the reader r.
 type ReaderResetter interface {
-	// Reset all states and switch to read from r.
+	// Reset resets all states and switches to read from r.
 	Reset(r stdio.Reader)
 }
 
-// An interface that wraps method Reset, which discards any buffered data,
-// resets all states of its instance, and switches to write to the writer w.
+// WriterResetter is an interface that wraps method Reset,
+// which discards any unflushed data, resets all states of its instance,
+// and switches to write to the writer w.
 type WriterResetter interface {
-	// Discard any buffered data, reset all states, and switch to write to w.
+	// Reset discards any unflushed data, resets all states,
+	// and switches to write to w.
 	Reset(w stdio.Writer)
 }

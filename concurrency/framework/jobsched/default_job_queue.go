@@ -111,7 +111,7 @@ func (djq *defaultJobQueue) jobLess(a, b interface{}) bool {
 //
 // The ultimate priority (p_u) is calculated as follows:
 //  p_u = (p+1) * min(1+t/n, 1.025^(t/n))
-// where p is the priority given by the user,
+// where p is the priority specified by the user,
 // t is a measure of the waiting time of the job, equal to the number of
 // calls to the method Dequeue since the job was added to this queue,
 // and n is the number of goroutines to process jobs.

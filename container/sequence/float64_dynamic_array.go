@@ -21,7 +21,8 @@ package sequence
 // Float64DynamicArray is a prefab DynamicArray for float64.
 type Float64DynamicArray []float64
 
-// NewFloat64DynamicArray makes a new Float64DynamicArray with given capacity.
+// NewFloat64DynamicArray makes a new Float64DynamicArray
+// with specified capacity.
 // It panics if capacity < 0.
 func NewFloat64DynamicArray(capacity int) Float64DynamicArray {
 	return make(Float64DynamicArray, 0, capacity)
@@ -278,7 +279,7 @@ func (fda *Float64DynamicArray) Expand(i, n int) {
 }
 
 // Reserve requests that the capacity of the dynamic array
-// is at least the given capacity.
+// is at least the specified capacity.
 // It does nothing if capacity <= Cap().
 func (fda *Float64DynamicArray) Reserve(capacity int) {
 	if capacity <= 0 || (fda != nil && capacity <= cap(*fda)) {

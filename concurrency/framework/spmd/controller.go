@@ -125,7 +125,7 @@ func New(n int, biz BusinessFunc, groupMap map[string][]int) framework.Controlle
 	return ctrl
 }
 
-// Run creates a Controller with given parameters, and then run it.
+// Run creates a Controller with specified parameters, and then run it.
 // It returns the panic records of the Controller.
 //
 // The arguments are the same as those of function New.
