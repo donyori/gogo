@@ -38,31 +38,36 @@ func TestNewBufferedReaderSize(t *testing.T) {
 	const size = 128
 	b := NewBufferedReaderSize(r, size)
 	if n := b.Size(); n != size {
-		t.Errorf("b (on r) size: %d != %d.", n, size)
+		t.Errorf("(on r) size: %d != %d.", n, size)
 	}
 	b = NewBufferedReaderSize(bufr, size)
 	if b.(*resettableBufferedReader).br != bufr {
-		t.Error("b.Reader != bufr.")
+		t.Error("(on bufr) b.br != bufr.")
 	}
 	b = NewBufferedReaderSize(bufr128, size)
 	if b.(*resettableBufferedReader).br != bufr128 {
-		t.Error("b.Reader != bufr128.")
+		t.Error("(on bufr128) b.br != bufr128.")
 	}
 	b = NewBufferedReaderSize(bufr64, size)
 	if n := b.Size(); n != size {
-		t.Errorf("b (on bufr64) size: %d != %d.", n, size)
+		t.Errorf("(on bufr64) size: %d != %d.", n, size)
 	}
 	b = NewBufferedReaderSize(br, size)
 	if b != br {
-		t.Error("b != br.")
+		t.Error("(on br) b != br.")
 	}
 	b = NewBufferedReaderSize(br128, size)
 	if b != br128 {
-		t.Error("b != br128.")
+		t.Error("(on br128) b != br128.")
 	}
 	b = NewBufferedReaderSize(br64, size)
 	if n := b.Size(); n != size {
-		t.Errorf("b (on br64) size: %d != %d.", n, size)
+		t.Errorf("(on br64) size: %d != %d.", n, size)
+	}
+
+	b = NewBufferedReaderSize(r, 0)
+	if n := b.Size(); n != minReadBufferSize {
+		t.Errorf("(on r, size 0) size: %d != minReadBufferSize (%d).", n, minReadBufferSize)
 	}
 }
 

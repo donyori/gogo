@@ -27,8 +27,8 @@ import (
 
 // BufferedReader is an interface for a reader with a buffer.
 //
-// Note that bufio.Reader implements all methods of this interface
-// except WriteLineTo of LineWriterTo.
+// To get a BufferedReader, use function NewBufferedReader
+// or NewBufferedReaderSize.
 type BufferedReader interface {
 	stdio.Reader
 	stdio.ByteScanner
@@ -67,32 +67,45 @@ type BufferedReader interface {
 
 // ResettableBufferedReader is an interface
 // combining BufferedReader and ReaderResetter.
+//
+// To get a ResettableBufferedReader, use function NewBufferedReader
+// or NewBufferedReaderSize.
 type ResettableBufferedReader interface {
 	BufferedReader
 	ReaderResetter
 }
 
-// defaultBufferSize is the default buffer size used by
-// function NewBufferedReader.
+// defaultBufferSize is the default buffer size used by functions
+// NewBufferedReader, NewBufferedWriter, and NewBufferedWriterSize.
 const defaultBufferSize = 4096
 
+// minReadBufferSize is the minimum buffer size of the reader
+// used by function NewBufferedReaderSize.
+const minReadBufferSize = 16
+
 // resettableBufferedReader is an implementation of
-// interface ResettableBufferedReader.
+// interface ResettableBufferedReader based on bufio.Reader.
 type resettableBufferedReader struct {
 	br *bufio.Reader
 }
 
-// NewBufferedReader creates a BufferedReader on r,
+// NewBufferedReader creates a ResettableBufferedReader on r,
 // whose buffer has at least the default size (4096 bytes).
 func NewBufferedReader(r stdio.Reader) ResettableBufferedReader {
 	return NewBufferedReaderSize(r, defaultBufferSize)
 }
 
-// NewBufferedReaderSize creates a BufferedReader on r,
+// NewBufferedReaderSize creates a ResettableBufferedReader on r,
 // whose buffer has at least the specified size.
 //
-// If r is a BufferedReader with a large enough buffer, it returns r directly.
+// If size is less than 16, it will use 16 instead.
+//
+// If r is a ResettableBufferedReader with a large enough buffer,
+// it returns r directly.
 func NewBufferedReaderSize(r stdio.Reader, size int) ResettableBufferedReader {
+	if size < minReadBufferSize {
+		size = minReadBufferSize
+	}
 	if br, ok := r.(ResettableBufferedReader); ok && br.Size() >= size {
 		return br
 	}
