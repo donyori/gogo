@@ -19,93 +19,81 @@
 package errors
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
 
-// ErrorList is a list of errors, to collect multiple errors.
+// ErrorList is a list of errors, to collect multiple errors in sequence.
 //
 // If it is empty, it reports "no error".
 // If there is only one item, it performs the same as this item.
 // If there are two or more items, it reports the number of errors,
 // followed by an error array, in which every item is quoted.
 //
-// Note that *ErrorList is an implementation of interface error,
-// but not ErrorList, in order to make it comparable.
+// Note that *ErrorList, not ErrorList,
+// is the implementation of interface error.
+type ErrorList interface {
+	error
+	fmt.Stringer
+
+	// Len returns the number of errors in the error list.
+	Len() int
+
+	// Erroneous reports whether the error list contains non-nil errors.
+	Erroneous() bool
+
+	// ToList returns a copy of the list of errors, as type []error.
+	//
+	// If there is no errors in the list, it returns nil.
+	ToList() []error
+
+	// ToError returns a necessary error.
+	//
+	// If there is no error, it returns nil.
+	// If there is only one item, it returns this item.
+	// Otherwise, it returns the error list itself.
+	ToError() error
+
+	// Range calls handler for all items in the list one by one.
+	//
+	// handler has two parameters: i (the index of the error) and
+	// err (the error value),
+	// and returns an indicator cont to report whether to continue the iteration.
+	Range(handler func(i int, err error) (cont bool))
+
+	// Append appends errs to the error list.
+	Append(errs ...error)
+
+	// Deduplicate removes duplicated and nil errors.
+	//
+	// An error is regarded as duplicated if its method Error returns
+	// the same string as that of a previous error.
+	Deduplicate()
+}
+
+// errorList is an implementation of interface ErrorList.
+type errorList struct {
+	list      []error
+	ignoreNil bool
+}
+
+// NewErrorList creates a new ErrorList.
 //
-// Recommend using function Combine and method Append to make a new ErrorList
-// and add error(s) to ErrorList to discard nil errors.
-type ErrorList []error
-
-// Combine combines multiple errors into an ErrorList.
-// Note that nil error will be discarded.
-// It always returns a non-nil *ErrorList.
-func Combine(errs ...error) *ErrorList {
-	el := make(ErrorList, 0, len(errs))
-	el.Append(errs...)
-	return &el
-}
-
-// Len returns the number of errors in the error list.
-func (el ErrorList) Len() int {
-	return len(el)
-}
-
-// Append appends errs to the error list.
-// Note that nil error will be discarded.
-func (el *ErrorList) Append(errs ...error) {
-	for _, err := range errs {
-		if err != nil {
-			*el = append(*el, err)
-		}
-	}
-}
-
-// ToError returns a necessary error.
-// If el.Len() == 0, it returns nil.
-// If el.Len() == 1, it returns el[0].
-// Otherwise, it returns el (itself).
-func (el *ErrorList) ToError() error {
-	if el == nil || len(*el) == 0 {
-		return nil
-	}
-	if len(*el) == 1 {
-		return (*el)[0]
+// ignoreNil indicates whether the ErrorList accepts nil errors.
+// If ignoreNil is true, the ErrorList will discard all nil errors.
+// errs is a list of errors adding to the ErrorList initially.
+func NewErrorList(ignoreNil bool, errs ...error) ErrorList {
+	el := &errorList{ignoreNil: ignoreNil}
+	if len(errs) > 0 {
+		el.list = make([]error, 0, len(errs))
+		el.Append(errs...)
 	}
 	return el
 }
 
-// Deduplicate removes duplicated and nil errors.
-// An error is regarded as duplicated if its method Error returns
-// the same string as that of a previous error.
-func (el *ErrorList) Deduplicate() {
-	if el == nil || len(*el) == 0 {
-		return
-	}
-	set := make(map[string]bool)
-	n := 0
-	for i := 0; i < len(*el); i++ {
-		x := (*el)[i]
-		if x != nil {
-			errStr := x.Error()
-			if !set[errStr] {
-				set[errStr] = true
-				(*el)[n] = x
-				n++
-			}
-		}
-	}
-	if n == len(*el) {
-		return
-	}
-	for i := n; i < len(*el); i++ {
-		(*el)[i] = nil
-	}
-	*el = (*el)[:n]
-}
-
 // Error returns the same as el.String().
-func (el *ErrorList) Error() string {
+func (el *errorList) Error() string {
 	return el.String()
 }
 
@@ -120,22 +108,22 @@ func (el *ErrorList) Error() string {
 // followed by an error array, in which every item is double-quoted
 // in Go string literal.
 // Especially, nil error item will be "<nil>".
-func (el *ErrorList) String() string {
-	if el == nil || len(*el) == 0 {
+func (el *errorList) String() string {
+	if len(el.list) == 0 {
 		return "no error"
 	}
-	if len(*el) == 1 {
-		err := (*el)[0]
+	if len(el.list) == 1 {
+		err := el.list[0]
 		if err != nil {
 			return err.Error()
 		}
 		return "<nil>"
 	}
 	var builder strings.Builder
-	s := strconv.Itoa(len(*el))
+	s := strconv.Itoa(len(el.list))
 	builder.WriteString(s)
 	builder.WriteString(" errors: [")
-	for i, err := range *el {
+	for i, err := range el.list {
 		if i > 0 {
 			builder.WriteString(", ")
 		}
@@ -148,4 +136,119 @@ func (el *ErrorList) String() string {
 	}
 	builder.WriteString("]")
 	return builder.String()
+}
+
+// Len returns the number of errors in the error list.
+func (el *errorList) Len() int {
+	return len(el.list)
+}
+
+// Erroneous reports whether the error list contains non-nil errors.
+func (el *errorList) Erroneous() bool {
+	if el.ignoreNil {
+		return len(el.list) > 0
+	}
+	for _, err := range el.list {
+		if err != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// ToList returns a copy of the list of errors, as type []error.
+//
+// If there is no errors in the list, it returns nil.
+func (el *errorList) ToList() []error {
+	if len(el.list) == 0 {
+		return nil
+	}
+	errs := make([]error, len(el.list)) // Explicitly set the capacity of the slice to len(el.list).
+	copy(errs, el.list)
+	return errs
+}
+
+// ToError returns a necessary error.
+//
+// If there is no error, it returns nil.
+// If there is only one item, it returns this item.
+// Otherwise, it returns the error list itself.
+func (el *errorList) ToError() error {
+	switch len(el.list) {
+	case 0:
+		return nil
+	case 1:
+		return el.list[0]
+	default:
+		return el
+	}
+}
+
+// Range calls handler for all items in the list one by one.
+//
+// handler has two parameters: i (the index of the error) and
+// err (the error value),
+// and returns an indicator cont to report whether to continue the iteration.
+func (el *errorList) Range(handler func(i int, err error) (cont bool)) {
+	if len(el.list) == 0 {
+		return
+	}
+	for i, err := range el.list {
+		if !handler(i, err) {
+			return
+		}
+	}
+}
+
+// Append appends errs to the error list.
+func (el *errorList) Append(errs ...error) {
+	for _, err := range errs {
+		if err != nil || !el.ignoreNil {
+			el.list = append(el.list, err)
+		}
+	}
+}
+
+// Deduplicate removes duplicated and nil errors.
+//
+// An error is regarded as duplicated if its method Error returns
+// the same string as that of a previous error.
+func (el *errorList) Deduplicate() {
+	if len(el.list) == 0 {
+		return
+	}
+	set := make(map[string]bool)
+	n := 0
+	for i := 0; i < len(el.list); i++ {
+		x := el.list[i]
+		if x != nil {
+			errStr := x.Error()
+			if !set[errStr] {
+				set[errStr] = true
+				el.list[n] = x
+				n++
+			}
+		}
+	}
+	if n == len(el.list) {
+		return
+	}
+	for i := n; i < len(el.list); i++ {
+		el.list[i] = nil
+	}
+	el.list = el.list[:n]
+}
+
+// Combine collects multiple non-nil errors into an error list.
+//
+// It discards all nil errors.
+//
+// If there is no non-nil error, it returns nil.
+// If there is only one non-nil error, it returns this error.
+// Otherwise, it returns an ErrorList containing all non-nil errors.
+func Combine(errs ...error) error {
+	if len(errs) == 0 {
+		return nil
+	}
+	return NewErrorList(true, errs...).ToError()
 }

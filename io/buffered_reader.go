@@ -212,7 +212,7 @@ func (rbr *resettableBufferedReader) ReadLine() (line []byte, more bool, err err
 func (rbr *resettableBufferedReader) WriteLineTo(w stdio.Writer) (n int64, err error) {
 	var line []byte
 	var written int
-	var errList errors.ErrorList
+	errList := errors.NewErrorList(true)
 	more := true
 	for more {
 		line, more, err = rbr.ReadLine()
@@ -226,11 +226,11 @@ func (rbr *resettableBufferedReader) WriteLineTo(w stdio.Writer) (n int64, err e
 				errList.Append(err)
 			}
 		}
-		if err = errList.ToError(); err != nil {
-			return n, errors.AutoWrap(err)
+		if errList.Erroneous() {
+			return n, errors.AutoWrap(errList.ToError())
 		}
 	}
-	return
+	return // err must be nil.
 }
 
 // Size returns the size of the underlying buffer in bytes.
