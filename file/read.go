@@ -31,11 +31,13 @@ import (
 	myio "github.com/donyori/gogo/io"
 )
 
-// An error indicating that the file is not archived by tar, or is opened in
-// raw mode. Clients should use errors.Is to test whether an error is ErrNotTar.
+// ErrNotTar is an error indicating that the file is not archived by tar,
+// or is opened in raw mode.
+//
+// The client should use errors.Is to test whether an error is ErrNotTar.
 var ErrNotTar = errors.AutoNew("file is not archived by tar, or is opened in raw mode")
 
-// Options for function Read.
+// ReadOption is a set of options for function Read.
 type ReadOption struct {
 	// Offset of the file to read, in bytes,
 	// relative to the origin of the file for positive values,
@@ -58,35 +60,40 @@ type ReadOption struct {
 	BufferWhenOpen bool
 }
 
-// A reader to read data from a file.
+// Reader is a device to read data from a file.
 type Reader interface {
 	io.Closer
 	myio.BufferedReader
 
-	// Return true if the file is archived by tar (i.e., tape archive) and is
-	// not opened in raw mode.
+	// TarEnabled returns true if the file is archived by tar
+	// (i.e., tape archive) and is not opened in raw mode.
 	TarEnabled() bool
 
-	// Advance to the next entry in the tar archive. The Header.Size determines
-	// how many bytes can be read for the next file. Any remaining data in
-	// current file is automatically discarded. io.EOF is returned at the end of
-	// the input.
+	// TarNext advances to the next entry in the tar archive.
 	//
-	// If the file is not archived by tar (i.e., tape archive), or the file is
-	// opened in raw mode, it does nothing but returns ErrNotTar.
+	// The tar.Header.Size determines how many bytes can be read
+	// for the next file.
+	// Any remaining data in current file is automatically discarded.
+	//
+	// io.EOF is returned at the end of the input.
+	//
+	// If the file is not archived by tar, or the file is opened in raw mode,
+	// it does nothing and returns ErrNotTar.
+	// (To test whether the error is ErrNotTar, use function errors.Is.)
 	TarNext() (header *tar.Header, err error)
 
-	// Return a copy of option used by this reader.
+	// Option returns a copy of options used by this reader.
 	Option() *ReadOption
 
-	// Return the filename as presented to function Read.
+	// Filename returns the filename as presented to function Read.
 	Filename() string
 
-	// Return the information of the file.
+	// FileInfo returns the information of the file.
 	FileInfo() (info os.FileInfo, err error)
 }
 
-// A reader to read a file.
+// reader is an implementation of interface Reader.
+//
 // Use it with function Read.
 type reader struct {
 	option  ReadOption
@@ -96,11 +103,15 @@ type reader struct {
 	br      myio.ResettableBufferedReader
 	tr      *tar.Reader
 	closers []io.Closer
+	closed  bool // true if method Close has been called once and no error occurred during that call
 }
 
-// Open a file with given name for read. If the file is a symlink,
-// it will be evaluated by filepath.EvalSymlinks. The file is opened by
-// os.Open; the associated file descriptor has mode O_RDONLY.
+// Read opens a file with specified name for reading.
+//
+// If the file is a symlink, it will be evaluated by filepath.EvalSymlinks.
+//
+// The file is opened by os.Open;
+// the associated file descriptor has mode syscall.O_RDONLY.
 func Read(name string, option *ReadOption) (r Reader, err error) {
 	name, err = filepath.EvalSymlinks(name)
 	if err != nil {
@@ -113,16 +124,24 @@ func Read(name string, option *ReadOption) (r Reader, err error) {
 	if option == nil {
 		option = new(ReadOption)
 	}
+	el := errors.NewErrorList(true)
+	defer func() {
+		if el.Erroneous() {
+			r, err = nil, errors.AutoWrap(el.ToError())
+		}
+	}()
 	fr := &reader{
 		option:  *option,
 		f:       f,
 		ubr:     f,
 		closers: []io.Closer{f},
 	}
+	r = fr
 	defer func() {
-		if err != nil {
-			r = nil
-			fr.Close() // ignore error
+		if el.Erroneous() {
+			for i := len(fr.closers) - 1; i >= 0; i-- {
+				el.Append(fr.closers[i].Close())
+			}
 		}
 	}()
 	if option.Offset > 0 {
@@ -131,7 +150,8 @@ func Read(name string, option *ReadOption) (r Reader, err error) {
 		_, err = f.Seek(option.Offset, io.SeekEnd)
 	}
 	if err != nil {
-		return nil, errors.AutoWrap(err)
+		el.Append(err)
+		return
 	}
 	if option.Limit > 0 {
 		fr.ubr = io.LimitReader(fr.ubr, option.Limit)
@@ -143,10 +163,10 @@ func Read(name string, option *ReadOption) (r Reader, err error) {
 		for loop {
 			switch ext {
 			case ".gz", ".tgz":
-				var gr *gzip.Reader
-				gr, err = gzip.NewReader(fr.ubr)
-				if err != nil {
-					return nil, errors.AutoWrap(err)
+				gr, err1 := gzip.NewReader(fr.ubr)
+				if err1 != nil {
+					el.Append(err1)
+					return
 				}
 				fr.closers = append(fr.closers, gr)
 				fr.ubr = gr
@@ -170,22 +190,23 @@ func Read(name string, option *ReadOption) (r Reader, err error) {
 	if option.BufferWhenOpen {
 		fr.createBr()
 	}
-	return fr, nil
+	return
 }
 
-// Close all closers used by this reader, including the file.
+// Close closes all closers used by this reader, including the file.
 func (fr *reader) Close() error {
-	if fr == nil || errors.Is(fr.err, myio.ErrReaderClosed) {
+	if fr.closed {
 		return nil
 	}
-	var errList errors.ErrorList
+	errList := errors.NewErrorList(true) // errList records the errors occurred during Close.
 	for i := len(fr.closers) - 1; i >= 0; i-- {
 		errList.Append(fr.closers[i].Close())
 	}
 	err := errors.AutoWrap(errList.ToError())
+	fr.closed = err == nil
 	if fr.err == nil {
-		if err == nil {
-			fr.err = myio.ErrReaderClosed
+		if fr.closed {
+			fr.err = errors.AutoWrap(myio.ErrReaderClosed)
 		} else {
 			fr.err = err
 		}
@@ -193,6 +214,9 @@ func (fr *reader) Close() error {
 	return err
 }
 
+// Read reads data into p.
+//
+// It conforms to interface io.Reader.
 func (fr *reader) Read(p []byte) (n int, err error) {
 	if fr.err != nil {
 		return 0, fr.err
@@ -208,6 +232,9 @@ func (fr *reader) Read(p []byte) (n int, err error) {
 	return n, fr.err
 }
 
+// ReadByte reads and returns a single byte.
+//
+// It conforms to interface io.ByteReader.
 func (fr *reader) ReadByte() (byte, error) {
 	if fr.err != nil {
 		return 0, fr.err
@@ -226,6 +253,10 @@ func (fr *reader) ReadByte() (byte, error) {
 	return c, fr.err
 }
 
+// UnreadByte unreads the last byte.
+// Only the most recently read byte can be unread.
+//
+// It conforms to interface io.ByteScanner.
 func (fr *reader) UnreadByte() error {
 	if fr.err != nil {
 		return fr.err
@@ -241,6 +272,10 @@ func (fr *reader) UnreadByte() error {
 	return fr.err
 }
 
+// ReadRune reads a single UTF-8 encoded Unicode character and
+// returns the rune and its size in bytes.
+//
+// It conforms to interface io.RuneReader.
 func (fr *reader) ReadRune() (r rune, size int, err error) {
 	if fr.err != nil {
 		return 0, 0, fr.err
@@ -257,6 +292,9 @@ func (fr *reader) ReadRune() (r rune, size int, err error) {
 	return r, size, fr.err
 }
 
+// UnreadRune unreads the last rune.
+//
+// It conforms to interface io.RuneScanner.
 func (fr *reader) UnreadRune() error {
 	if fr.err != nil {
 		return fr.err
@@ -272,6 +310,13 @@ func (fr *reader) UnreadRune() error {
 	return fr.err
 }
 
+// WriteTo writes data to w until there's no more data to write or
+// when an error occurs.
+//
+// The return value n is the number of bytes written.
+// Any error encountered during the write is also returned.
+//
+// It conforms to interface io.WriterTo.
 func (fr *reader) WriteTo(w io.Writer) (n int64, err error) {
 	if fr.err != nil {
 		return 0, fr.err
@@ -290,6 +335,18 @@ func (fr *reader) WriteTo(w io.Writer) (n int64, err error) {
 	return n, fr.err
 }
 
+// ReadLine reads a line excluding the end-of-line bytes.
+//
+// If the line is too long for the buffer,
+// then more is set and the beginning of the line is returned.
+// The rest of the line will be returned from future calls.
+// more will be false when returning the last fragment of the line.
+//
+// It either returns a non-nil line or it returns an error, never both.
+//
+// Caller should not keep the return value line,
+// and line is only valid until the next call to the reader,
+// including the method ReadLine and any other possible methods.
 func (fr *reader) ReadLine() (line []byte, more bool, err error) {
 	if fr.err != nil {
 		return nil, false, fr.err
@@ -302,6 +359,11 @@ func (fr *reader) ReadLine() (line []byte, more bool, err error) {
 	return line, more, fr.err
 }
 
+// WriteLineTo reads a line from its underlying reader and writes it to w.
+//
+// It stops writing data if an error occurs.
+//
+// It returns the number of bytes written to w and any error encountered.
 func (fr *reader) WriteLineTo(w io.Writer) (n int64, err error) {
 	if fr.err != nil {
 		return 0, fr.err
@@ -314,20 +376,37 @@ func (fr *reader) WriteLineTo(w io.Writer) (n int64, err error) {
 	return n, fr.err
 }
 
+// Size returns the size of the underlying buffer in bytes.
+//
+// If there is no buffer, it returns 0.
 func (fr *reader) Size() int {
-	if fr == nil || fr.br == nil {
+	if fr.br == nil {
 		return 0
 	}
 	return fr.br.Size()
 }
 
+// Buffered returns the number of bytes
+// that can be read from the current buffer.
+//
+// If there is no buffer, it returns 0.
 func (fr *reader) Buffered() int {
-	if fr == nil || fr.br == nil {
+	if fr.br == nil {
 		return 0
 	}
 	return fr.br.Buffered()
 }
 
+// Peek returns the next n bytes without advancing the reader.
+//
+// The bytes stop being valid at the next read call.
+// If it returns fewer than n bytes,
+// it also returns an error explaining why the read is short.
+// The error is bufio.ErrBufferFull if n is larger than its buffer size.
+// (To test whether err is bufio.ErrBufferFull, use function errors.Is.)
+//
+// Calling Peek prevents a UnreadByte or UnreadRune call from succeeding
+// until the next read operation.
 func (fr *reader) Peek(n int) (data []byte, err error) {
 	if fr.err != nil {
 		return nil, fr.err
@@ -340,6 +419,12 @@ func (fr *reader) Peek(n int) (data []byte, err error) {
 	return data, fr.err
 }
 
+// Discard skips the next n bytes and returns the number of bytes discarded.
+//
+// If it skips fewer than n bytes, it also returns an error explaining why.
+//
+// If 0 <= n <= Buffered(),
+// it is guaranteed to succeed without reading from the underlying reader.
 func (fr *reader) Discard(n int) (discarded int, err error) {
 	if fr.err != nil {
 		return 0, fr.err
@@ -352,10 +437,23 @@ func (fr *reader) Discard(n int) (discarded int, err error) {
 	return discarded, fr.err
 }
 
+// TarEnabled returns true if the file is archived by tar
+// (i.e., tape archive) and is not opened in raw mode.
 func (fr *reader) TarEnabled() bool {
-	return fr != nil && fr.tr != nil
+	return fr.tr != nil
 }
 
+// TarNext advances to the next entry in the tar archive.
+//
+// The tar.Header.Size determines how many bytes can be read
+// for the next file.
+// Any remaining data in current file is automatically discarded.
+//
+// io.EOF is returned at the end of the input.
+//
+// If the file is not archived by tar, or the file is opened in raw mode,
+// it does nothing and returns ErrNotTar.
+// (To test whether the error is ErrNotTar, use function errors.Is.)
 func (fr *reader) TarNext() (header *tar.Header, err error) {
 	if !fr.TarEnabled() {
 		return nil, errors.AutoWrap(ErrNotTar)
@@ -376,30 +474,25 @@ func (fr *reader) TarNext() (header *tar.Header, err error) {
 	return header, err
 }
 
+// Option returns a copy of options used by this reader.
 func (fr *reader) Option() *ReadOption {
-	if fr == nil {
-		return nil
-	}
 	option := new(ReadOption)
 	*option = fr.option
 	return option
 }
 
+// Filename returns the filename as presented to function Read.
 func (fr *reader) Filename() string {
-	if fr == nil {
-		return ""
-	}
 	return fr.f.Name()
 }
 
+// FileInfo returns the information of the file.
 func (fr *reader) FileInfo() (info os.FileInfo, err error) {
-	if fr == nil {
-		return nil, nil
-	}
 	return fr.f.Stat()
 }
 
-// Wrap a BufferedReader on current reader.
+// createBr wraps a BufferedReader on current reader.
+//
 // Caller should guarantee that fr.br == nil.
 func (fr *reader) createBr() {
 	if fr.option.BufferSize <= 0 {

@@ -30,7 +30,7 @@ import (
 	"testing"
 )
 
-func TestNew_TarGz(t *testing.T) {
+func TestWrite_TarGz(t *testing.T) {
 	dir, err := ioutil.TempDir("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
@@ -38,7 +38,7 @@ func TestNew_TarGz(t *testing.T) {
 	defer os.RemoveAll(dir) // ignore error
 	filename := filepath.Join(dir, "simple.tar.gz")
 	var perm os.FileMode = 0740
-	writer, err := New(filename, perm, &WriteOption{
+	writer, err := Write(filename, perm, &WriteOption{
 		BufferWhenOpen: true,
 		Backup:         true,
 		MakeDirs:       true,
