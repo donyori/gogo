@@ -80,7 +80,7 @@ type errorList struct {
 
 // NewErrorList creates a new ErrorList.
 //
-// ignoreNil indicates whether the ErrorList accepts nil errors.
+// ignoreNil indicates whether the ErrorList ignores nil errors.
 // If ignoreNil is true, the ErrorList will discard all nil errors.
 // errs is a list of errors adding to the ErrorList initially.
 func NewErrorList(ignoreNil bool, errs ...error) ErrorList {
