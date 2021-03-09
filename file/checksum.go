@@ -27,39 +27,42 @@ import (
 	"github.com/donyori/gogo/encoding/hex"
 )
 
-// A combination of a hash algorithm and an expected checksum.
+// Checksum is a combination of a hash function generator and
+// an expected checksum.
 type Checksum struct {
-	// A function to generate a hasher. E.g. crypto/sha256.New.
+	// A function to generate a hash function. E.g. crypto/sha256.New.
 	HashGen func() hash.Hash
 
-	// Expected checksum, encoding to hexadecimal representation.
+	// Expected checksum, in hexadecimal representation.
 	HexExpSum string
 }
 
-// Verify a file by checksum.
+// VerifyChecksum verifies a file by checksum.
+//
 // It returns true if and only if the file can be read
 // and matches all checksums.
-// Note that it returns false if any one of chksums contains a nil HashGen
-// or an empty HexExpSum.
-func VerifyChecksum(filename string, chksums ...Checksum) bool {
+// Note that it returns false if anyone of cs contains a nil HashGen
+// or an empty HexExpSum,
+// and it returns true if len(cs) is 0 and the file can be opened for reading.
+func VerifyChecksum(filename string, cs ...Checksum) bool {
 	f, err := os.Open(filename)
 	if err != nil {
 		return false
 	}
-	defer f.Close() // ignore
-	if len(chksums) == 0 {
+	defer f.Close() // ignore error
+	if len(cs) == 0 {
 		return true
 	}
-	hashes := make([]hash.Hash, len(chksums))
-	ws := make([]io.Writer, len(chksums))
-	for i := range chksums {
-		if chksums[i].HashGen == nil {
+	hashes := make([]hash.Hash, len(cs))
+	ws := make([]io.Writer, len(cs))
+	for i := range cs {
+		if cs[i].HashGen == nil {
 			return false
 		}
-		if chksums[i].HexExpSum == "" {
+		if cs[i].HexExpSum == "" {
 			return false
 		}
-		hashes[i] = chksums[i].HashGen()
+		hashes[i] = cs[i].HashGen()
 		ws[i] = hashes[i]
 	}
 	w := ws[0]
@@ -70,9 +73,9 @@ func VerifyChecksum(filename string, chksums ...Checksum) bool {
 	if err != nil {
 		return false
 	}
-	for i := range chksums {
+	for i := range cs {
 		sum := hex.EncodeToString(hashes[i].Sum(nil), false)
-		if sum != strings.ToLower(chksums[i].HexExpSum) {
+		if sum != strings.ToLower(cs[i].HexExpSum) {
 			return false
 		}
 	}

@@ -38,9 +38,9 @@ func TestTmp(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		go func(no int) {
 			defer wg.Done()
-			f, err := Tmp(tmpRoot, "f.*.tmp", 0740)
+			f, err := Tmp(tmpRoot, "f.", ".tmp", 0740)
 			if err != nil {
-				t.Error(i, err)
+				t.Error(no, err)
 				return
 			}
 			defer f.Close() // ignore error
@@ -56,7 +56,7 @@ func TestTmp(t *testing.T) {
 	set := make(map[string]bool)
 	for _, filename := range files {
 		if set[filename] {
-			t.Error("Conflict::", filename)
+			t.Error("Conflict:", filename)
 			continue
 		}
 		set[filename] = true
@@ -76,9 +76,9 @@ func TestTmpDir(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		go func(no int) {
 			defer wg.Done()
-			dir, err := TmpDir(tmpRoot, "tmp", 0700)
+			dir, err := TmpDir(tmpRoot, "tmp", "", 0700)
 			if err != nil {
-				t.Error(i, err)
+				t.Error(no, err)
 				return
 			}
 			locker.Lock()
@@ -93,7 +93,7 @@ func TestTmpDir(t *testing.T) {
 	set := make(map[string]bool)
 	for _, dir := range dirs {
 		if set[dir] {
-			t.Error("Conflict::", dir)
+			t.Error("Conflict:", dir)
 			continue
 		}
 		set[dir] = true

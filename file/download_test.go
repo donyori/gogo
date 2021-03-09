@@ -29,19 +29,23 @@ import (
 	"time"
 )
 
+var (
+	testHttpDlUrl      = `https://www.gnu.org/licenses/agpl-3.0.txt`
+	testHttpDlChecksum = Checksum{
+		HashGen: sha256.New,
+		// This SHA256 checksum was generated on March 9, 2021.
+		HexExpSum: "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+	}
+)
+
 func TestHttpDownload(t *testing.T) {
 	dir, err := ioutil.TempDir("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir) // ignore error
-	filename := filepath.Join(dir, "go1.4.tar.gz")
-	url := `https://dl.google.com/go/go1.4-bootstrap-20170531.tar.gz`
-	chksum := Checksum{
-		HashGen:   sha256.New,
-		HexExpSum: "49f806f66762077861b7de7081f586995940772d29d4c45068c134441a743fa2",
-	}
-	err = HttpDownload(url, filename, 0600, chksum)
+	filename := filepath.Join(dir, "testfile.dat")
+	err = HttpDownload(testHttpDlUrl, filename, 0600, testHttpDlChecksum)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,8 +59,8 @@ func TestHttpDownload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum := hex.EncodeToString(h.Sum(nil)); sum != chksum.HexExpSum {
-		t.Errorf("Checksum: %s != %s.", sum, chksum.HexExpSum)
+	if sum := hex.EncodeToString(h.Sum(nil)); sum != testHttpDlChecksum.HexExpSum {
+		t.Errorf("Checksum: %s != %s.", sum, testHttpDlChecksum.HexExpSum)
 	}
 }
 
@@ -66,13 +70,8 @@ func TestHttpUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir) // ignore error
-	filename := filepath.Join(dir, "go1.4.tar.gz")
-	url := `https://dl.google.com/go/go1.4-bootstrap-20170531.tar.gz`
-	chksum := Checksum{
-		HashGen:   sha256.New,
-		HexExpSum: "49f806f66762077861b7de7081f586995940772d29d4c45068c134441a743fa2",
-	}
-	updated, err := HttpUpdate(url, filename, 0600, chksum)
+	filename := filepath.Join(dir, "testfile.dat")
+	updated, err := HttpUpdate(testHttpDlUrl, filename, 0600, testHttpDlChecksum)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +83,7 @@ func TestHttpUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	modTime := info.ModTime()
-	updated, err = HttpUpdate(url, filename, 0600, chksum)
+	updated, err = HttpUpdate(testHttpDlUrl, filename, 0600, testHttpDlChecksum)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +97,7 @@ func TestHttpUpdate(t *testing.T) {
 	if !modTime.Equal(info.ModTime()) {
 		t.Error("File has been modified.")
 	}
-	updated, err = HttpUpdate(url, filename, 0600)
+	updated, err = HttpUpdate(testHttpDlUrl, filename, 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +121,7 @@ func TestHttpUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Now()
-	updated, err = HttpUpdate(url, filename, 0600, chksum)
+	updated, err = HttpUpdate(testHttpDlUrl, filename, 0600, testHttpDlChecksum)
 	if err != nil {
 		t.Fatal(err)
 	}

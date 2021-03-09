@@ -20,6 +20,9 @@ package file
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -32,32 +35,72 @@ func TestVerifyChecksum(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir) // ignore error
-	filename := filepath.Join(dir, "go1.4.tar.gz")
+	filename := filepath.Join(dir, "testfile.dat")
+
 	v := VerifyChecksum(filename)
 	if v {
 		t.Error("True for non-exist file.")
 	}
 
-	chksum := Checksum{
-		HashGen:   sha256.New,
-		HexExpSum: "49f806f66762077861b7de7081f586995940772d29d4c45068c134441a743fa2",
-	}
-	url := `https://dl.google.com/go/go1.4-bootstrap-20170531.tar.gz`
-	err = HttpDownload(url, filename, 0600, chksum)
+	// Make test file:
+	filename2 := filepath.Join(dir, "testfile2.dat")
+	fw, err := os.Create(filename)
 	if err != nil {
 		t.Fatal(err)
+	}
+	defer func() {
+		if fw != nil {
+			fw.Close() // ignore error
+		}
+	}()
+	fw2, err := os.Create(filename2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if fw2 != nil {
+			fw2.Close() // ignore error
+		}
+	}()
+	h := sha256.New()
+	w := io.MultiWriter(fw, h)
+	w2 := io.MultiWriter(fw, fw2, h)
+	for i := 0; i < 5000; i++ {
+		_, err = fmt.Fprintln(w2, "gogo test file.")
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	for i := 0; i < 5000; i++ {
+		_, err = fmt.Fprintln(w, "gogo test file.")
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	err = fw.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fw = nil
+	err = fw2.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fw2 = nil
+	ck := Checksum{
+		HashGen:   sha256.New,
+		HexExpSum: hex.EncodeToString(h.Sum(nil)),
 	}
 
 	v = VerifyChecksum(filename)
 	if !v {
 		t.Error("False for existing file.")
 	}
-	v = VerifyChecksum(filename, chksum)
+	v = VerifyChecksum(filename, ck)
 	if !v {
 		t.Error("False for intact file.")
 	}
-	chksum.HexExpSum = "49f806f66762077861b7de7081f586995940772d29d4c45068c134441a743fa3"
-	v = VerifyChecksum(filename, chksum)
+	v = VerifyChecksum(filename2, ck)
 	if v {
 		t.Error("True for damaged file.")
 	}

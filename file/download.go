@@ -30,33 +30,43 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// Download a file via HTTP/HTTPS Get,
-// and save as the local file specified by filename, with given permission perm.
+// HttpDownload downloads a file from the specified URL via HTTP Get,
+// and saves as a local file specified by filename,
+// with specified permission perm.
 //
-// The client can specify checksums to verify the downloaded file.
+// The client can specify checksums cs to verify the downloaded file.
 // A damaged file will be removed and ErrVerificationFail will be returned.
-func HttpDownload(url, filename string, perm os.FileMode, chksums ...Checksum) error {
+//
+// It reports an error and downloads nothing if anyone of cs contains
+// a nil HashGen or an empty HexExpSum.
+func HttpDownload(url, filename string, perm os.FileMode, cs ...Checksum) (err error) {
 	var hashes []hash.Hash
 	var ws []io.Writer
-	if len(chksums) > 0 {
-		hashes = make([]hash.Hash, len(chksums))
-		ws = make([]io.Writer, len(chksums))
-		for i := range chksums {
-			if chksums[i].HashGen == nil {
-				return errors.AutoNew("given hash generator is nil")
+	if len(cs) > 0 {
+		hashes = make([]hash.Hash, len(cs))
+		ws = make([]io.Writer, len(cs))
+		for i := range cs {
+			if cs[i].HashGen == nil {
+				return errors.AutoNew("specified hash generator is nil")
 			}
-			if chksums[i].HexExpSum == "" {
-				return errors.AutoNew("given expected checksum is empty")
+			if cs[i].HexExpSum == "" {
+				return errors.AutoNew("specified expected checksum is empty")
 			}
-			hashes[i] = chksums[i].HashGen()
+			hashes[i] = cs[i].HashGen()
 			ws[i] = hashes[i]
 		}
 	}
-	resp, err := http.Get(url)
+	var client http.Client
+	resp, err := client.Get(url)
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	defer resp.Body.Close() // ignore error
+	defer func() {
+		err1 := resp.Body.Close()
+		if err1 != nil {
+			err = errors.AutoWrap(errors.Combine(err, err1))
+		}
+	}()
 	if resp.StatusCode != http.StatusOK {
 		errMsg := resp.Status
 		if errMsg == "" {
@@ -64,7 +74,7 @@ func HttpDownload(url, filename string, perm os.FileMode, chksums ...Checksum) e
 		}
 		return errors.AutoNew("response status is not OK when downloading " + url + ": " + errMsg)
 	}
-	w, err := New(filename, perm, &WriteOption{
+	w, err := Write(filename, perm, &WriteOption{
 		Raw:      true,
 		Backup:   true,
 		MakeDirs: true,
@@ -72,9 +82,9 @@ func HttpDownload(url, filename string, perm os.FileMode, chksums ...Checksum) e
 			if err != nil {
 				return false
 			}
-			for i := range chksums {
+			for i := range cs {
 				sum := hex.EncodeToString(hashes[i].Sum(nil), false)
-				if sum != strings.ToLower(chksums[i].HexExpSum) {
+				if sum != strings.ToLower(cs[i].HexExpSum) {
 					return false
 				}
 			}
@@ -84,19 +94,28 @@ func HttpDownload(url, filename string, perm os.FileMode, chksums ...Checksum) e
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	defer w.Close() // ignore error
+	defer func() {
+		err1 := w.Close()
+		if err1 != nil {
+			err = errors.AutoWrap(errors.Combine(err, err1))
+		}
+	}()
 	_, err = io.Copy(w, resp.Body)
 	return errors.AutoWrap(err)
 }
 
-// Update mode of HttpDownload.
-// It verifies the file with given filename using VerifyChecksum.
+// HttpUpdate is the update mode of function HttpDownload.
+//
+// It verifies the file with specified filename using function VerifyChecksum.
 // If the verification is passed, it does nothing and returns (false, nil).
-// Otherwise, it calls HttpDownload.
-func HttpUpdate(url, filename string, perm os.FileMode, chksums ...Checksum) (updated bool, err error) {
-	if VerifyChecksum(filename, chksums...) {
+// Otherwise, it calls function HttpDownload to download the file.
+//
+// It returns an indicator updated and any error encountered.
+// updated is true if and only if this function has created or edited the file.
+func HttpUpdate(url, filename string, perm os.FileMode, cs ...Checksum) (updated bool, err error) {
+	if VerifyChecksum(filename, cs...) {
 		return
 	}
-	err = errors.AutoWrap(HttpDownload(url, filename, perm, chksums...))
+	err = errors.AutoWrap(HttpDownload(url, filename, perm, cs...))
 	return err == nil, err
 }

@@ -79,7 +79,7 @@ type Reader interface {
 	//
 	// If the file is not archived by tar, or the file is opened in raw mode,
 	// it does nothing and returns ErrNotTar.
-	// (To test whether the error is ErrNotTar, use function errors.Is.)
+	// (To test whether err is ErrNotTar, use function errors.Is.)
 	TarNext() (header *tar.Header, err error)
 
 	// Option returns a copy of options used by this reader.
@@ -453,7 +453,7 @@ func (fr *reader) TarEnabled() bool {
 //
 // If the file is not archived by tar, or the file is opened in raw mode,
 // it does nothing and returns ErrNotTar.
-// (To test whether the error is ErrNotTar, use function errors.Is.)
+// (To test whether err is ErrNotTar, use function errors.Is.)
 func (fr *reader) TarNext() (header *tar.Header, err error) {
 	if !fr.TarEnabled() {
 		return nil, errors.AutoWrap(ErrNotTar)

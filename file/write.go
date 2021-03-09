@@ -130,7 +130,8 @@ type writer struct {
 	closed   bool // true if method Close has been called once and no error occurred during that call
 }
 
-// Write creates or opens a file with specified name for writing.
+// Write creates (if necessary) and opens a file
+// with specified name for writing.
 //
 // If name is empty, it does nothing and returns an error.
 // If option is nil, it uses the default write option instead.
@@ -191,7 +192,7 @@ func Write(name string, perm os.FileMode, option *WriteOption, copies ...io.Writ
 	}()
 
 	if option.Backup {
-		fw.f, err = Tmp(dir, base+".*.tmp", perm)
+		fw.f, err = Tmp(dir, base+".", ".tmp", perm)
 		if err != nil {
 			el.Append(err)
 			return
