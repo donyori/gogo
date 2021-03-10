@@ -91,7 +91,7 @@ func testBinarySearch(t *testing.T, data, negativeSamples []int) {
 	for i, n := 0, len(data); i < n; i++ {
 		s[i] = &data[i]
 	}
-	less := func(a, b interface{}) bool {
+	var less function.LessFunc = func(a, b interface{}) bool {
 		return *(a.(*int)) < *(b.(*int))
 	}
 	itf1 := &BinarySearchArrayAdapter{
@@ -101,7 +101,7 @@ func testBinarySearch(t *testing.T, data, negativeSamples []int) {
 	}
 	itf2 := &BinarySearchArrayAdapter{
 		Data:    s,
-		EqualFn: function.GenerateEqualViaLess(less),
+		EqualFn: less.ToEqual(),
 		LessFn:  less,
 	}
 	for i, x := range s {

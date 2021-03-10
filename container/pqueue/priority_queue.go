@@ -247,7 +247,7 @@ func NewPriorityQueueEx(less function.LessFunc, equal function.EqualFunc, data .
 		panic(errors.AutoMsg("less is nil"))
 	}
 	if equal == nil {
-		equal = function.GenerateEqualViaLess(less)
+		equal = less.ToEqual()
 	}
 	gda := sequence.GeneralDynamicArray(append(data[:0:0], data...))
 	pq := &priorityQueueEx{

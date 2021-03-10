@@ -24,39 +24,31 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// A function to test whether a == b.
+// EqualFunc is a function to test whether a == b.
 type EqualFunc func(a, b interface{}) bool
 
-// Generate EqualFunc via LessFunc.
-// equal(a, b) = !(less(a, b) || less(b, a)).
-func GenerateEqualViaLess(less LessFunc) EqualFunc {
-	return func(a, b interface{}) bool {
-		return !(less(a, b) || less(b, a))
-	}
-}
-
-// Negative the function, i.e., to test whether !(a == b).
+// Not returns a negative function to test whether !(a == b).
 func (ef EqualFunc) Not() EqualFunc {
 	return func(a, b interface{}) bool {
 		return !ef(a, b)
 	}
 }
 
-// A prefab EqualFunc for comparable variables
+// Equal is a prefab EqualFunc for comparable variables
 // (i.e., variables that can be operands of equality operators == and !=).
 //
 // For more information about comparable types,
 // see <https://golang.org/ref/spec#Comparison_operators>.
-func Equal(a, b interface{}) bool {
+var Equal EqualFunc = func(a, b interface{}) bool {
 	return a == b
 }
 
-// A prefab EqualFunc for []int.
+// IntsEqual is a prefab EqualFunc for []int.
 //
 // It returns true iff a and b have the same length and the same content,
 // or both a and b are nil.
 // A nil slice and an empty slice are considered unequal.
-func IntsEqual(a, b interface{}) bool {
+var IntsEqual EqualFunc = func(a, b interface{}) bool {
 	if a == nil || a.([]int) == nil {
 		return b == nil || b.([]int) == nil
 	} else if b == nil || b.([]int) == nil {
@@ -74,12 +66,12 @@ func IntsEqual(a, b interface{}) bool {
 	return true
 }
 
-// A prefab EqualFunc for []float64.
+// Float64sEqual is a prefab EqualFunc for []float64.
 //
 // It returns true iff a and b have the same length and the same content,
 // or both a and b are nil.
 // A nil slice and an empty slice are considered unequal.
-func Float64sEqual(a, b interface{}) bool {
+var Float64sEqual EqualFunc = func(a, b interface{}) bool {
 	if a == nil || a.([]float64) == nil {
 		return b == nil || b.([]float64) == nil
 	} else if b == nil || b.([]float64) == nil {
@@ -97,12 +89,12 @@ func Float64sEqual(a, b interface{}) bool {
 	return true
 }
 
-// A prefab EqualFunc for []string.
+// StringsEqual is a prefab EqualFunc for []string.
 //
 // It returns true iff a and b have the same length and the same content,
 // or both a and b are nil.
 // A nil slice and an empty slice are considered unequal.
-func StringsEqual(a, b interface{}) bool {
+var StringsEqual EqualFunc = func(a, b interface{}) bool {
 	if a == nil || a.([]string) == nil {
 		return b == nil || b.([]string) == nil
 	} else if b == nil || b.([]string) == nil {
@@ -120,7 +112,7 @@ func StringsEqual(a, b interface{}) bool {
 	return true
 }
 
-// A prefab EqualFunc for []interface{}.
+// GeneralSliceEqual is a prefab EqualFunc for []interface{}.
 //
 // It returns true iff a and b have the same length and the same content,
 // or both a and b are nil.
@@ -132,7 +124,7 @@ func StringsEqual(a, b interface{}) bool {
 // (i.e., cannot use "==" and "!=" on it).
 // For more information about comparable types,
 // see <https://golang.org/ref/spec#Comparison_operators>.
-func GeneralSliceEqual(a, b interface{}) bool {
+var GeneralSliceEqual EqualFunc = func(a, b interface{}) bool {
 	if a == nil || a.([]interface{}) == nil {
 		return b == nil || b.([]interface{}) == nil
 	} else if b == nil || b.([]interface{}) == nil {
@@ -150,7 +142,7 @@ func GeneralSliceEqual(a, b interface{}) bool {
 	return true
 }
 
-// A prefab EqualFunc for slice (i.e., []Type).
+// SliceEqual is a prefab EqualFunc for slice (i.e., []Type).
 //
 // For better performance,
 // if the slice type is []int, []float64, []string, or []interface{},
@@ -170,7 +162,7 @@ func GeneralSliceEqual(a, b interface{}) bool {
 // It will panic if the type of a or b is not a slice.
 // However, if the type of the elements of a is not the same as that of b,
 // it will return false rather than panic.
-func SliceEqual(a, b interface{}) bool {
+var SliceEqual EqualFunc = func(a, b interface{}) bool {
 	if a == nil {
 		if b == nil {
 			return true

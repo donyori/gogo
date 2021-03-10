@@ -207,7 +207,7 @@ func (bsad *BinarySearchArrayAdapter) Len() int {
 // It panics if i is out of range.
 func (bsad *BinarySearchArrayAdapter) Equal(i int, x interface{}) bool {
 	if bsad.EqualFn == nil && bsad.LessFn != nil {
-		bsad.EqualFn = function.GenerateEqualViaLess(bsad.LessFn)
+		bsad.EqualFn = bsad.LessFn.ToEqual()
 	}
 	return bsad.EqualFn(bsad.Data.Get(i), x)
 }

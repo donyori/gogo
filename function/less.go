@@ -18,34 +18,43 @@
 
 package function
 
-// A function to test whether a < b.
+// LessFunc is a function to test whether a < b.
 type LessFunc func(a, b interface{}) bool
 
-// Negative the function, i.e., to test whether !(a < b).
+// Not returns a negative function to test whether !(a < b).
 func (lf LessFunc) Not() LessFunc {
 	return func(a, b interface{}) bool {
 		return !lf(a, b)
 	}
 }
 
-// Reverse the function, i.e., to test whether b < a.
+// Reverse returns a reverse function to test whether b < a.
 func (lf LessFunc) Reverse() LessFunc {
 	return func(a, b interface{}) bool {
 		return lf(b, a)
 	}
 }
 
-// A prefab LessFunc for int.
-func IntLess(a, b interface{}) bool {
+// ToEqual returns an EqualFunc to test whether a == b.
+// The return function reports true if and only if
+//  !(less(a, b) || less(b, a))
+func (lf LessFunc) ToEqual() EqualFunc {
+	return func(a, b interface{}) bool {
+		return !(lf(a, b) || lf(b, a))
+	}
+}
+
+// IntLess is a prefab LessFunc for int.
+var IntLess LessFunc = func(a, b interface{}) bool {
 	return a.(int) < b.(int)
 }
 
-// A prefab LessFunc for float64.
-func Float64Less(a, b interface{}) bool {
+// Float64Less is a prefab LessFunc for float64.
+var Float64Less LessFunc = func(a, b interface{}) bool {
 	return a.(float64) < b.(float64)
 }
 
-// A prefab LessFunc for string.
-func StringLess(a, b interface{}) bool {
+// StringLess is a prefab LessFunc for string.
+var StringLess LessFunc = func(a, b interface{}) bool {
 	return a.(string) < b.(string)
 }

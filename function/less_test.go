@@ -62,11 +62,10 @@ func TestStringLess(t *testing.T) {
 }
 
 func TestLessFunc_Not(t *testing.T) {
-	var less LessFunc = IntLess
-	nLess := less.Not()
+	nLess := IntLess.Not()
 	intPairs := [][2]int{{1, 2}, {2, 1}, {1, 1}}
 	for _, pair := range intPairs {
-		r1 := !less(pair[0], pair[1])
+		r1 := !IntLess(pair[0], pair[1])
 		r2 := nLess(pair[0], pair[1])
 		if r1 != r2 {
 			t.Errorf("nLess(%d, %d) != !less(%[1]d, %d).", pair[0], pair[1])
@@ -75,14 +74,25 @@ func TestLessFunc_Not(t *testing.T) {
 }
 
 func TestLessFunc_Reverse(t *testing.T) {
-	var less LessFunc = IntLess
-	rLess := less.Reverse()
+	rLess := IntLess.Reverse()
 	intPairs := [][2]int{{1, 2}, {2, 1}, {1, 1}}
 	for _, pair := range intPairs {
-		r1 := less(pair[1], pair[0])
+		r1 := IntLess(pair[1], pair[0])
 		r2 := rLess(pair[0], pair[1])
 		if r1 != r2 {
 			t.Errorf("rLess(%d, %d) != less(%[2]d, %[1]d).", pair[0], pair[1])
+		}
+	}
+}
+
+func TestLessFunc_ToEqual(t *testing.T) {
+	equal := IntLess.ToEqual()
+	intPairs := [][2]int{{1, 2}, {2, 1}, {1, 1}}
+	for _, pair := range intPairs {
+		r1 := equal(pair[0], pair[1])
+		r2 := pair[0] == pair[1]
+		if r1 != r2 {
+			t.Errorf("equal(%d, %d) != %t.", pair[0], pair[1], r2)
 		}
 	}
 }
