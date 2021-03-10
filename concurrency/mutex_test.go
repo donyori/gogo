@@ -113,7 +113,7 @@ func TestMutex_Fairness(t *testing.T) {
 			case <-stopC:
 				return
 			case <-m.C():
-				time.Sleep(time.Microsecond * 10)
+				time.Sleep(time.Microsecond * 100)
 				m.Unlock()
 			}
 		}
@@ -121,12 +121,12 @@ func TestMutex_Fairness(t *testing.T) {
 	doneC := make(chan struct{})
 	go func() {
 		defer wg.Done()
-		for i := 0; i < 100; i++ {
+		for i := 0; i < 10; i++ {
+			time.Sleep(time.Microsecond * 100)
 			select {
 			case <-stopC:
 				return
 			case <-m.C():
-				time.Sleep(time.Microsecond * 10)
 				m.Unlock()
 			}
 		}
@@ -134,8 +134,8 @@ func TestMutex_Fairness(t *testing.T) {
 	}()
 	select {
 	case <-doneC:
-	case <-time.After(time.Second):
-		t.Error("Cannot acquire the lock in 1 second.")
+	case <-time.After(time.Second * 10):
+		t.Error("Cannot acquire the lock in 10 second.")
 	}
 	close(sc)
 	sc = nil
