@@ -39,7 +39,7 @@ PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER PROGRAMS),
 EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGES.`
 
-// TermsAndConditions is the terms and conditions of AGPL v3.
+// TermsAndConditions are the terms and conditions of AGPL v3.
 const TermsAndConditions = `                       TERMS AND CONDITIONS
 
   0. Definitions.

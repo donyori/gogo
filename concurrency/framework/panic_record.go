@@ -43,7 +43,8 @@ func (pr PanicRec) Error() string {
 	return pr.String()
 }
 
-// PanicRecords is a list of panic records, used by the framework codes.
+// PanicRecords are panic records, used by the framework codes.
+//
 // It is safe for concurrent use by multiple goroutines.
 type PanicRecords struct {
 	recs []PanicRec   // List of panic records.

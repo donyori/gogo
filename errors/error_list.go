@@ -82,7 +82,7 @@ type errorList struct {
 //
 // ignoreNil indicates whether the ErrorList ignores nil errors.
 // If ignoreNil is true, the ErrorList will discard all nil errors.
-// errs is a list of errors adding to the ErrorList initially.
+// errs are errors added to the ErrorList initially.
 func NewErrorList(ignoreNil bool, errs ...error) ErrorList {
 	el := &errorList{ignoreNil: ignoreNil}
 	if len(errs) > 0 {
