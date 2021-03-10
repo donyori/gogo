@@ -21,13 +21,15 @@ package file
 import (
 	"archive/tar"
 	"compress/gzip"
-	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/donyori/gogo/errors"
 )
 
 func TestWrite_TarGz(t *testing.T) {
@@ -38,19 +40,18 @@ func TestWrite_TarGz(t *testing.T) {
 	defer os.RemoveAll(dir) // ignore error
 	filename := filepath.Join(dir, "simple.tar.gz")
 	var perm os.FileMode = 0740
-	writer, err := Write(filename, perm, &WriteOption{
-		BufferWhenOpen: true,
-		Backup:         true,
-		MakeDirs:       true,
-		GzipLv:         gzip.BestCompression,
+	w, err := Write(filename, perm, &WriteOptions{
+		BufOpen: true,
+		Backup:  true,
+		MkDirs:  true,
+		GzipLv:  gzip.BestCompression,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	closed := false
 	defer func() {
-		if !closed {
-			writer.Close() // ignore error
+		if w != nil {
+			w.Close() // ignore error
 		}
 	}()
 	files := []struct {
@@ -66,24 +67,24 @@ func TestWrite_TarGz(t *testing.T) {
 			Mode: 0600,
 			Size: int64(len(files[i].body)),
 		}
-		err = writer.TarWriteHeader(hdr)
+		err = w.TarWriteHeader(hdr)
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = writer.WriteString(files[i].body)
+		_, err = w.WriteString(files[i].body)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = writer.Flush()
+		err = w.Flush()
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
-	err = writer.Close()
+	err = w.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
-	closed = true
+	w = nil
 
 	f, err := os.Open(filename)
 	if err != nil {
@@ -130,5 +131,80 @@ func TestWrite_TarGz(t *testing.T) {
 		if string(read) != files[i].body {
 			t.Errorf("Got: %q != %q.", read, files[i].body)
 		}
+	}
+}
+
+func TestWrite_Append(t *testing.T) {
+	testWriteAppend(t, true)
+	testWriteAppend(t, false)
+}
+
+func testWriteAppend(tb testing.TB, backup bool) {
+	dir, err := ioutil.TempDir("", "gogo_test_")
+	if err != nil {
+		tb.Fatal(err)
+	}
+	defer os.RemoveAll(dir) // ignore error
+	const content = "gogo test file."
+	filename := filepath.Join(dir, "testfile.dat")
+	options := &WriteOptions{
+		Append: true,
+		Raw:    true,
+		Backup: backup,
+		MkDirs: true,
+	}
+	var perm os.FileMode = 0740
+	w1, err := Write(filename, perm, options)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	defer func() {
+		if w1 != nil {
+			w1.Close() // ignore error
+		}
+	}()
+	_, err = fmt.Fprint(w1, content)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	err = w1.Close()
+	if err != nil {
+		tb.Fatal(err)
+	}
+	w1 = nil
+
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	if string(data) != content {
+		tb.Errorf("After first write: data: %s\nwanted: %s", data, content)
+	}
+
+	w2, err := Write(filename, perm, options)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	defer func() {
+		if w2 != nil {
+			w2.Close() // ignore error
+		}
+	}()
+	_, err = fmt.Fprint(w2, content)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	err = w2.Close()
+	if err != nil {
+		tb.Fatal(err)
+	}
+	w2 = nil
+
+	data, err = ioutil.ReadFile(filename)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	if string(data) != content+content {
+		tb.Errorf("After second write: data: %s\nwanted: %s", data, content+content)
 	}
 }

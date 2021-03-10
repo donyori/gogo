@@ -64,7 +64,7 @@ func HttpDownload(url, filename string, perm os.FileMode, cs ...Checksum) (err e
 	defer func() {
 		err1 := resp.Body.Close()
 		if err1 != nil {
-			err = errors.AutoWrap(errors.Combine(err, err1))
+			err = errors.AutoWrapSkip(errors.Combine(err, err1), 1) // skip = 1 to skip the inner function
 		}
 	}()
 	if resp.StatusCode != http.StatusOK {
@@ -74,10 +74,10 @@ func HttpDownload(url, filename string, perm os.FileMode, cs ...Checksum) (err e
 		}
 		return errors.AutoNew("response status is not OK when downloading " + url + ": " + errMsg)
 	}
-	w, err := Write(filename, perm, &WriteOption{
-		Raw:      true,
-		Backup:   true,
-		MakeDirs: true,
+	w, err := Write(filename, perm, &WriteOptions{
+		Raw:    true,
+		Backup: true,
+		MkDirs: true,
 		VerifyFn: func() bool {
 			if err != nil {
 				return false
@@ -97,7 +97,7 @@ func HttpDownload(url, filename string, perm os.FileMode, cs ...Checksum) (err e
 	defer func() {
 		err1 := w.Close()
 		if err1 != nil {
-			err = errors.AutoWrap(errors.Combine(err, err1))
+			err = errors.AutoWrapSkip(errors.Combine(err, err1), 1) // skip = 1 to skip the inner function
 		}
 	}()
 	_, err = io.Copy(w, resp.Body)

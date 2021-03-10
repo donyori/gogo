@@ -37,8 +37,8 @@ import (
 // The client should use errors.Is to test whether an error is ErrNotTar.
 var ErrNotTar = errors.AutoNew("file is not archived by tar, or is opened in raw mode")
 
-// ReadOption is a set of options for function Read.
-type ReadOption struct {
+// ReadOptions are options for function Read.
+type ReadOptions struct {
 	// Offset of the file to read, in bytes,
 	// relative to the origin of the file for positive values,
 	// and relative to the end of the file for negative values.
@@ -53,11 +53,11 @@ type ReadOption struct {
 
 	// Size of the buffer for reading the file at least.
 	// Non-positive values for using default value.
-	BufferSize int
+	BufSize int
 
 	// If true, a buffer will be created when open the file. Otherwise,
 	// a buffer won't be created until calling methods that need a buffer.
-	BufferWhenOpen bool
+	BufOpen bool
 }
 
 // Reader is a device to read data from a file.
@@ -82,8 +82,8 @@ type Reader interface {
 	// (To test whether err is ErrNotTar, use function errors.Is.)
 	TarNext() (header *tar.Header, err error)
 
-	// Option returns a copy of options used by this reader.
-	Option() *ReadOption
+	// Options returns a copy of options used by this reader.
+	Options() *ReadOptions
 
 	// Filename returns the filename as presented to function Read.
 	Filename() string
@@ -96,7 +96,7 @@ type Reader interface {
 //
 // Use it with function Read.
 type reader struct {
-	option  ReadOption
+	options ReadOptions
 	err     error
 	f       *os.File
 	ubr     io.Reader // unbuffered reader
@@ -112,7 +112,7 @@ type reader struct {
 //
 // The file is opened by os.Open;
 // the associated file descriptor has mode syscall.O_RDONLY.
-func Read(name string, option *ReadOption) (r Reader, err error) {
+func Read(name string, options *ReadOptions) (r Reader, err error) {
 	name, err = filepath.EvalSymlinks(name)
 	if err != nil {
 		return nil, errors.AutoWrap(err)
@@ -121,17 +121,17 @@ func Read(name string, option *ReadOption) (r Reader, err error) {
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
-	if option == nil {
-		option = new(ReadOption)
+	if options == nil {
+		options = new(ReadOptions)
 	}
 	el := errors.NewErrorList(true)
 	defer func() {
 		if el.Erroneous() {
-			r, err = nil, errors.AutoWrap(el.ToError())
+			r, err = nil, errors.AutoWrapSkip(el.ToError(), 1) // skip = 1 to skip the inner function
 		}
 	}()
 	fr := &reader{
-		option:  *option,
+		options: *options,
 		f:       f,
 		ubr:     f,
 		closers: []io.Closer{f},
@@ -144,19 +144,19 @@ func Read(name string, option *ReadOption) (r Reader, err error) {
 			}
 		}
 	}()
-	if option.Offset > 0 {
-		_, err = f.Seek(option.Offset, io.SeekStart)
-	} else if option.Offset < 0 {
-		_, err = f.Seek(option.Offset, io.SeekEnd)
+	if options.Offset > 0 {
+		_, err = f.Seek(options.Offset, io.SeekStart)
+	} else if options.Offset < 0 {
+		_, err = f.Seek(options.Offset, io.SeekEnd)
 	}
 	if err != nil {
 		el.Append(err)
 		return
 	}
-	if option.Limit > 0 {
-		fr.ubr = io.LimitReader(fr.ubr, option.Limit)
+	if options.Limit > 0 {
+		fr.ubr = io.LimitReader(fr.ubr, options.Limit)
 	}
-	if !option.Raw {
+	if !options.Raw {
 		base := strings.ToLower(filepath.Base(name))
 		ext := filepath.Ext(base)
 		loop := true
@@ -187,7 +187,7 @@ func Read(name string, option *ReadOption) (r Reader, err error) {
 			ext = filepath.Ext(base)
 		}
 	}
-	if option.BufferWhenOpen {
+	if options.BufOpen {
 		fr.createBr()
 	}
 	return
@@ -474,11 +474,11 @@ func (fr *reader) TarNext() (header *tar.Header, err error) {
 	return header, err
 }
 
-// Option returns a copy of options used by this reader.
-func (fr *reader) Option() *ReadOption {
-	option := new(ReadOption)
-	*option = fr.option
-	return option
+// Options returns a copy of options used by this reader.
+func (fr *reader) Options() *ReadOptions {
+	options := new(ReadOptions)
+	*options = fr.options
+	return options
 }
 
 // Filename returns the filename as presented to function Read.
@@ -495,9 +495,9 @@ func (fr *reader) FileInfo() (info os.FileInfo, err error) {
 //
 // Caller should guarantee that fr.br == nil.
 func (fr *reader) createBr() {
-	if fr.option.BufferSize <= 0 {
+	if fr.options.BufSize <= 0 {
 		fr.br = myio.NewBufferedReader(fr.ubr)
 	} else {
-		fr.br = myio.NewBufferedReaderSize(fr.ubr, fr.option.BufferSize)
+		fr.br = myio.NewBufferedReaderSize(fr.ubr, fr.options.BufSize)
 	}
 }

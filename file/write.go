@@ -33,8 +33,8 @@ import (
 // ErrVerificationFail is an error indicating that the file verification failed.
 var ErrVerificationFail = errors.AutoNew("file verification failed")
 
-// WriteOption is a set of options for function Write.
-type WriteOption struct {
+// WriteOptions are options for function Write.
+type WriteOptions struct {
 	// Only take effect when the target file already exists.
 	// If true, it will append data to the file.
 	// Otherwise, it will truncate the file.
@@ -46,11 +46,11 @@ type WriteOption struct {
 
 	// Size of the buffer for writing the file at least.
 	// Non-positive values for using default value.
-	BufferSize int
+	BufSize int
 
 	// If true, a buffer will be created when open the file. Otherwise,
 	// a buffer won't be created until calling methods that need a buffer.
-	BufferWhenOpen bool
+	BufOpen bool
 
 	// Let the writer write data to a temporary file. After calling method
 	// Close, the writer move the temporary file to the target file. If any
@@ -59,7 +59,7 @@ type WriteOption struct {
 	Backup bool
 
 	// Make parent directories before creating the file.
-	MakeDirs bool
+	MkDirs bool
 
 	// A verify function to report whether the data written to the file is
 	// correct. The function will be called in our writer's method Close.
@@ -74,11 +74,11 @@ type WriteOption struct {
 	GzipLv int
 }
 
-// defaultWriteOption is a set of default options for function Write.
-var defaultWriteOption = &WriteOption{
-	Backup:   true,
-	MakeDirs: true,
-	GzipLv:   gzip.DefaultCompression,
+// defaultWriteOptions are default options for function Write.
+var defaultWriteOptions = &WriteOptions{
+	Backup: true,
+	MkDirs: true,
+	GzipLv: gzip.DefaultCompression,
 }
 
 // Writer is a device to write data to a file.
@@ -102,8 +102,8 @@ type Writer interface {
 	// (To test whether the error is ErrNotTar, use function errors.Is.)
 	TarWriteHeader(hdr *tar.Header) error
 
-	// Option returns a copy of options used by this writer.
-	Option() *WriteOption
+	// Options returns a copy of options used by this writer.
+	Options() *WriteOptions
 
 	// Filename returns the filename as presented to function Write.
 	Filename() string
@@ -118,7 +118,7 @@ type Writer interface {
 //
 // Use it with function Write.
 type writer struct {
-	option   WriteOption
+	options  WriteOptions
 	filename string
 	tmp      string // name of the temporary file
 	err      error
@@ -134,14 +134,14 @@ type writer struct {
 // with specified name for writing.
 //
 // If name is empty, it does nothing and returns an error.
-// If option is nil, it uses the default write option instead.
-// The default write option is shown as follows:
+// If options is nil, it uses the default write options instead.
+// The default write options are shown as follows:
 //  Append: false,
 //  Raw: false,
-//  BufferSize: 0,
-//  BufferWhenOpen: false,
+//  BufSize: 0,
+//  BufOpen: false,
 //  Backup: true,
-//  MakeDirs: true,
+//  MkDirs: true,
 //  VerifyFn: nil,
 //  GzipLv: gzip.DefaultCompression,
 //
@@ -157,27 +157,27 @@ type writer struct {
 // 2. If an error occurs when writing to copies,
 // other writing will also stop and the writer will fall into the error state.
 //
-// As for the write option,
+// As for the write options,
 // notice that when options Append and Backup are both enabled
 // and the specified file already exists,
 // this function will copy the specified file to a temporary file,
 // which may cost a lot of time and space resource.
 // Data copied from the specified file won't be written to copies.
-func Write(name string, perm os.FileMode, option *WriteOption, copies ...io.Writer) (w Writer, err error) {
+func Write(name string, perm os.FileMode, options *WriteOptions, copies ...io.Writer) (w Writer, err error) {
 	if name == "" {
 		return nil, errors.AutoNew("name is empty")
 	}
-	if option == nil {
-		option = defaultWriteOption
+	if options == nil {
+		options = defaultWriteOptions
 	}
 	fw := &writer{
-		option:   *option,
+		options:  *options,
 		filename: name,
 	}
 	w = fw
 
 	dir, base := filepath.Split(name)
-	if option.MakeDirs {
+	if options.MkDirs {
 		err = os.MkdirAll(dir, perm)
 		if err != nil {
 			return nil, errors.AutoWrap(err)
@@ -187,11 +187,11 @@ func Write(name string, perm os.FileMode, option *WriteOption, copies ...io.Writ
 	el := errors.NewErrorList(true)
 	defer func() {
 		if el.Erroneous() {
-			w, err = nil, errors.AutoWrap(el.ToError())
+			w, err = nil, errors.AutoWrapSkip(el.ToError(), 1) // skip = 1 to skip the inner function
 		}
 	}()
 
-	if option.Backup {
+	if options.Backup {
 		fw.f, err = Tmp(dir, base+".", ".tmp", perm)
 		if err != nil {
 			el.Append(err)
@@ -204,22 +204,25 @@ func Write(name string, perm os.FileMode, option *WriteOption, copies ...io.Writ
 				el.Append(os.Remove(fw.tmp))
 			}
 		}()
-		if option.Append {
-			f, err1 := os.Open(name)
-			if err1 != nil {
-				el.Append(err1)
-				return
-			}
-			defer el.Append(f.Close())
-			_, err1 = io.Copy(fw.f, f)
-			if err1 != nil {
+		if options.Append {
+			r, err1 := os.Open(name)
+			if err1 == nil {
+				defer func() {
+					el.Append(r.Close())
+				}()
+				_, err1 = io.Copy(fw.f, r)
+				if err1 != nil {
+					el.Append(err1)
+					return
+				}
+			} else if !errors.Is(err1, os.ErrNotExist) {
 				el.Append(err1)
 				return
 			}
 		}
 	} else {
 		flag := os.O_WRONLY | os.O_CREATE
-		if option.Append {
+		if options.Append {
 			flag |= os.O_APPEND
 		} else {
 			flag |= os.O_TRUNC
@@ -250,14 +253,14 @@ func Write(name string, perm os.FileMode, option *WriteOption, copies ...io.Writ
 	if len(copies) > 0 {
 		fw.ubw = io.MultiWriter(append([]io.Writer{fw.ubw}, copies...)...)
 	}
-	if !option.Raw {
+	if !options.Raw {
 		base = strings.ToLower(base)
 		ext := filepath.Ext(base)
 		loop := true
 		for loop {
 			switch ext {
 			case ".gz", ".tgz":
-				gw, err1 := gzip.NewWriterLevel(fw.ubw, option.GzipLv)
+				gw, err1 := gzip.NewWriterLevel(fw.ubw, options.GzipLv)
 				if err1 != nil {
 					el.Append(err1)
 					return
@@ -280,8 +283,8 @@ func Write(name string, perm os.FileMode, option *WriteOption, copies ...io.Writ
 			ext = filepath.Ext(base)
 		}
 	}
-	if option.BufferWhenOpen {
-		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.option.BufferSize)
+	if options.BufOpen {
+		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.options.BufSize)
 	}
 	return
 }
@@ -295,39 +298,39 @@ func (fw *writer) Close() (err error) {
 	if fw.closed {
 		return
 	}
-	errList := errors.NewErrorList(true) // errList records the errors occurred during Close.
+	el := errors.NewErrorList(true) // el records the errors occurred during Close.
 	rmDone := false
 	defer func() {
 		if !rmDone {
-			errList.Append(os.Remove(fw.tmp))
-			err = errList.ToError()
+			el.Append(os.Remove(fw.tmp))
+			err = errors.AutoWrapSkip(el.ToError(), 1) // skip = 1 to skip the inner function
 		}
 		fw.closed = err == nil
 	}()
 	if fw.bw != nil {
-		errList.Append(fw.bw.Flush())
+		el.Append(fw.bw.Flush())
 	}
 	for i := len(fw.closers) - 1; i >= 0; i-- {
-		errList.Append(fw.closers[i].Close())
+		el.Append(fw.closers[i].Close())
 	}
-	if fw.err == nil && !errList.Erroneous() &&
-		fw.option.VerifyFn != nil && !fw.option.VerifyFn() {
-		errList.Append(ErrVerificationFail)
+	if fw.err == nil && !el.Erroneous() &&
+		fw.options.VerifyFn != nil && !fw.options.VerifyFn() {
+		el.Append(ErrVerificationFail)
 	}
-	if fw.option.Backup {
-		if fw.err == nil && !errList.Erroneous() {
-			errList.Append(os.Rename(fw.f.Name(), fw.filename))
-			if errList.Erroneous() {
-				errList.Append(os.Remove(fw.tmp))
+	if fw.options.Backup {
+		if fw.err == nil && !el.Erroneous() {
+			el.Append(os.Rename(fw.f.Name(), fw.filename))
+			if el.Erroneous() {
+				el.Append(os.Remove(fw.tmp))
 			}
 		} else {
-			errList.Append(os.Remove(fw.tmp))
+			el.Append(os.Remove(fw.tmp))
 		}
-	} else if fw.err != nil || errList.Erroneous() {
-		errList.Append(os.Remove(fw.tmp))
+	} else if fw.err != nil || el.Erroneous() {
+		el.Append(os.Remove(fw.tmp))
 	}
 	rmDone = true
-	err = errors.AutoWrap(errList.ToError()) // only return the errors occurred during Close
+	err = errors.AutoWrap(el.ToError()) // only return the errors occurred during Close
 	if fw.err == nil {
 		if err == nil {
 			fw.err = errors.AutoWrap(myio.ErrWriterClosed)
@@ -374,7 +377,7 @@ func (fw *writer) WriteByte(c byte) error {
 	} else if bw, ok := fw.ubw.(io.ByteWriter); ok {
 		err = bw.WriteByte(c)
 	} else {
-		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.option.BufferSize)
+		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.options.BufSize)
 		err = fw.bw.WriteByte(c)
 	}
 	fw.err = errors.AutoWrap(err)
@@ -420,7 +423,7 @@ func (fw *writer) ReadFrom(r io.Reader) (n int64, err error) {
 	} else if wt, ok := r.(io.WriterTo); ok {
 		n, err = wt.WriteTo(fw.ubw)
 	} else {
-		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.option.BufferSize)
+		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.options.BufSize)
 		n, err = fw.bw.ReadFrom(r)
 	}
 	fw.err = errors.AutoWrap(err)
@@ -482,7 +485,7 @@ func (fw *writer) WriteRune(r rune) (size int, err error) {
 		return 0, fw.err
 	}
 	if fw.bw == nil {
-		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.option.BufferSize)
+		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.options.BufSize)
 	}
 	size, err = fw.bw.WriteRune(r)
 	fw.err = errors.AutoWrap(err)
@@ -526,11 +529,11 @@ func (fw *writer) TarWriteHeader(hdr *tar.Header) error {
 	return fw.err
 }
 
-// Option returns a copy of options used by this writer.
-func (fw *writer) Option() *WriteOption {
-	option := new(WriteOption)
-	*option = fw.option
-	return option
+// Options returns a copy of options used by this writer.
+func (fw *writer) Options() *WriteOptions {
+	options := new(WriteOptions)
+	*options = fw.options
+	return options
 }
 
 // Filename returns the filename as presented to function Write.
