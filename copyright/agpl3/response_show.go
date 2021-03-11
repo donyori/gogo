@@ -35,7 +35,7 @@ import (
 // If input is nil, it will use os.Args[1:] instead (If user inputs nothing,
 // set input to []string{} but not nil).
 //
-// It returns a boolean doResp to indicate whether
+// It returns a Boolean doResp to indicate whether
 // the user's input is one of "show w" and "show c".
 // It also returns any write error encountered.
 // Note that err must be nil if doResp is false.
