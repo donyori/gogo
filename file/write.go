@@ -134,7 +134,7 @@ type writer struct {
 // with specified name for writing.
 //
 // If name is empty, it does nothing and returns an error.
-// If options is nil, it uses the default write options instead.
+// If options is nil, it will use the default write options instead.
 // The default write options are shown as follows:
 //  Append: false,
 //  Raw: false,

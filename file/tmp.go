@@ -41,7 +41,7 @@ var ErrPatternHasPathSeparator = errors.AutoNew("pattern/prefix/suffix contains 
 // it returns a nil f and an error ErrPatternHasPathSeparator.
 // (To test whether err is ErrPatternHasPathSeparator, use function errors.Is.)
 //
-// If dir is empty, it uses the default directory for temporary files
+// If dir is empty, it will use the default directory for temporary files
 // (as returned by os.TempDir) instead.
 //
 // Calling this function simultaneously will not choose the same file.
@@ -80,7 +80,7 @@ func Tmp(dir, prefix, suffix string, perm os.FileMode) (f *os.File, err error) {
 // it returns an empty name and an error ErrPatternHasPathSeparator.
 // (To test whether err is ErrPatternHasPathSeparator, use function errors.Is.)
 //
-// If dir is empty, it uses the default directory for temporary files
+// If dir is empty, it will use the default directory for temporary files
 // (as returned by os.TempDir) instead.
 //
 // Calling this function simultaneously will not choose the same directory.

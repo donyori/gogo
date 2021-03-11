@@ -348,7 +348,7 @@ type autoError struct {
 	msg string // Error message.
 }
 
-// Error returns the error message.
+// Error reports the error message.
 func (ae *autoError) Error() string {
 	return ae.msg
 }
