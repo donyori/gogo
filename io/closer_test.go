@@ -19,6 +19,7 @@
 package io
 
 import (
+	stdio "io"
 	"testing"
 
 	"github.com/donyori/gogo/errors"
@@ -27,6 +28,7 @@ import (
 type testCloser struct {
 	tb     testing.TB
 	closed bool
+	err    error // Test can set err to simulate a failed call to Close.
 }
 
 func (tc *testCloser) Close() error {
@@ -34,8 +36,8 @@ func (tc *testCloser) Close() error {
 		tc.tb.Error("Call testCloser.Close again.")
 		return errors.AutoNew("call testCloser.Close again") // Don't use *ClosedError here.
 	}
-	tc.closed = true
-	return nil
+	tc.closed = tc.err == nil
+	return tc.err
 }
 
 func TestNoErrorCloser(t *testing.T) {
@@ -76,5 +78,132 @@ func TestErrorCloser(t *testing.T) {
 		if !ec.Closed() {
 			t.Errorf("ec.Closed is false after %d call to Close.", i)
 		}
+	}
+}
+
+func TestMultiCloser(t *testing.T) {
+	testMultiCloser(t, false, false)
+	testMultiCloser(t, false, true)
+	testMultiCloser(t, true, false)
+	testMultiCloser(t, true, true)
+}
+
+func testMultiCloser(t *testing.T, tryAll, noError bool) {
+	failErr := errors.New("an error to simulate a failed call to Close")
+	closers := []stdio.Closer{
+		&testCloser{tb: t, err: failErr},
+		&testCloser{tb: t},
+		&testCloser{tb: t, err: failErr},
+		&testCloser{tb: t},
+	}
+	anotherCloser := &testCloser{tb: t}
+	mc := NewMultiCloser(tryAll, noError, closers...)
+
+	// Before the first call to Close:
+	if mc.Closed() {
+		t.Errorf("mc.Closed is true before the first call to Close. tryAll: %t, noError: %t.",
+			tryAll, noError)
+	}
+	for i, closer := range closers {
+		closed, ok := mc.CloserClosed(closer)
+		if !ok {
+			t.Errorf("The %d closer is in mc but mc.CloserClosed returns (%t, %t). tryAll: %t, noError: %t.",
+				i, closed, ok, tryAll, noError)
+		}
+		if closed {
+			t.Errorf("mc.CloserClosed for the %d closer is true before the first call to Close. tryAll: %t, noError: %t.",
+				i, tryAll, noError)
+		}
+	}
+	closed, ok := mc.CloserClosed(anotherCloser)
+	if closed || ok {
+		t.Errorf("mc.CloserClosed returns (%t, %t) for anotherCloser. tryAll: %t, noError: %t.",
+			closed, ok, tryAll, noError)
+	}
+
+	// First call (a failed call) to Close:
+	testMultiCloserOneCall(t, tryAll, noError, failErr, closers, anotherCloser, mc, 0)
+
+	closers[2].(*testCloser).err = nil
+	// Second call (a failed call) to Close:
+	testMultiCloserOneCall(t, tryAll, noError, failErr, closers, anotherCloser, mc, 1)
+
+	closers[0].(*testCloser).err = nil
+	// Third call (A successful call) to Close:
+	testMultiCloserOneCall(t, tryAll, noError, failErr, closers, anotherCloser, mc, 2)
+}
+
+func testMultiCloserOneCall(t *testing.T, tryAll, noError bool, failErr error, closers []stdio.Closer, anotherCloser stdio.Closer, mc MultiCloser, callNo int) {
+	err := mc.Close()
+	if callNo < 2 {
+		if tryAll && callNo == 0 {
+			el, ok := err.(errors.ErrorList)
+			if !ok {
+				t.Errorf("The %d call to Close returns %v, not a ErrorList.",
+					callNo, err)
+			}
+			errs := el.ToList()
+			if len(errs) != 2 || errs[0] != failErr || errs[1] != failErr {
+				t.Errorf("The %d call to Close returns %v != [%v, %[3]v].",
+					callNo, err, failErr)
+			}
+		} else {
+			if err != failErr {
+				t.Errorf("The %d call to Close returns %v != %v. tryAll: %t, noError: %t.",
+					callNo, err, failErr, tryAll, noError)
+			}
+		}
+		if mc.Closed() {
+			t.Errorf("mc.Closed is true after the %d call (a failed call) to Close. tryAll: %t, noError: %t.",
+				callNo, tryAll, noError)
+		}
+	} else {
+		if err != nil {
+			t.Errorf("The %d call to Close returns %v != nil. tryAll: %t, noError: %t.",
+				callNo, err, tryAll, noError)
+		}
+		if !mc.Closed() {
+			t.Errorf("mc.Closed is false after the %d call (a successful call) to Close. tryAll: %t, noError: %t.",
+				callNo, tryAll, noError)
+		}
+	}
+
+	if tryAll {
+		for i, closer := range closers {
+			wantedClosed := closer.(*testCloser).err == nil
+			closed, ok := mc.CloserClosed(closer)
+			if !ok {
+				t.Errorf("The %d closer is in mc but mc.CloserClosed returns (%t, %t). tryAll: %t, noError: %t.",
+					i, closed, ok, tryAll, noError)
+			}
+			if closed != wantedClosed {
+				t.Errorf("mc.CloserClosed for the %d closer is %t != %t. tryAll: %t, noError: %t.",
+					i, closed, wantedClosed, tryAll, noError)
+			}
+		}
+	} else {
+		var idx int
+		for idx = len(closers) - 1; idx >= 0; idx-- {
+			if closers[idx].(*testCloser).err != nil {
+				break
+			}
+		}
+		for i, closer := range closers {
+			wantedClosed := i > idx
+			closed, ok := mc.CloserClosed(closer)
+			if !ok {
+				t.Errorf("The %d closer is in mc but mc.CloserClosed returns (%t, %t). tryAll: %t, noError: %t.",
+					i, closed, ok, tryAll, noError)
+			}
+			if closed != wantedClosed {
+				t.Errorf("mc.CloserClosed for the %d closer is %t != %t. tryAll: %t, noError: %t.",
+					i, closed, wantedClosed, tryAll, noError)
+			}
+		}
+	}
+	closed, ok := mc.CloserClosed(anotherCloser)
+	if closed || ok {
+		t.Errorf("mc.CloserClosed returns (%t, %t) for anotherCloser. tryAll: %t, noError: %t.",
+			closed, ok, tryAll, noError)
 	}
 }

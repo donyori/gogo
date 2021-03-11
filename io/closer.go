@@ -131,3 +131,158 @@ func (ec *errorCloser) Close() error {
 func (ec *errorCloser) Closed() bool {
 	return ec.ok
 }
+
+// MultiCloser is a device to close multiple closers sequentially.
+//
+// It closes its closers sequentially from the last one to the first one.
+//
+// Its method Closed returns true if and only if
+// all its closers are already successfully closed.
+//
+// If its option tryAll is enabled,
+// its method Close will try to close all its closers,
+// regardless of whether any error occurs, and return all errors encountered.
+// (It returns an ErrorList if there are multiple errors.)
+//
+// If its option tryAll is disabled, when an error occurs,
+// its method Close will stop closing other closers and return this error.
+//
+// If its option noError is enabled, its method Close will do nothing and
+// return nil after the first successful call.
+//
+// If its option noError is disabled, its method Close will do nothing and
+// return a *ClosedError after the first successful call.
+type MultiCloser interface {
+	Closer
+
+	// CloserClosed reports whether the specified closer is closed successfully.
+	//
+	// It returns two Boolean indicators:
+	// closed reports whether the specified closer
+	// has been successfully closed by this MultiCloser.
+	// ok reports whether the specified closer is in this MultiCloser.
+	CloserClosed(closer stdio.Closer) (closed, ok bool)
+}
+
+// Masks for the field flag of struct multiCloser.
+const (
+	multiCloserTryAllMask  uint8 = 0x01
+	multiCloserNoErrorMask uint8 = 0x02
+)
+
+// multiCloser is an implementation of interface MultiCloser.
+type multiCloser struct {
+	cm   map[stdio.Closer]bool // Closed map, to record whether the closer is closed successfully.
+	cs   []stdio.Closer
+	idx  int   // Index of the last successfully closed closer. (It equals to len(cs) initially.)
+	flag uint8 // The first bit (0x01) is the option tryAll, and the second bit (0x02) is the option noError.
+}
+
+// NewMultiCloser creates a new MultiCloser.
+//
+// If the option tryAll is enabled,
+// its method Close will try to close all its closers,
+// regardless of whether any error occurs, and return all errors encountered.
+// (It returns an ErrorList if there are multiple errors.)
+//
+// If the option tryAll is disabled, when an error occurs,
+// its method Close will stop closing other closers and return this error.
+//
+// If the option noError is enabled, its method Close will do nothing and
+// return nil after the first successful call.
+//
+// If the option noError is disabled, its method Close will do nothing and
+// return a *ClosedError after the first successful call.
+//
+// closers are the closers provided to the MultiCloser.
+// All nil closers will be ignored.
+// If there is no non-nil closer,
+// the MultiCloser will perform as an already closed closer.
+func NewMultiCloser(tryAll, noError bool, closers ...stdio.Closer) MultiCloser {
+	mc := &multiCloser{
+		cm: make(map[stdio.Closer]bool),
+		cs: make([]stdio.Closer, 0, len(closers)),
+	}
+	for _, c := range closers {
+		if c != nil {
+			mc.cm[c] = false
+			mc.cs = append(mc.cs, c)
+		}
+	}
+	mc.idx = len(mc.cs)
+	if tryAll {
+		mc.flag |= multiCloserTryAllMask
+	}
+	if noError {
+		mc.flag |= multiCloserNoErrorMask
+	}
+	return mc
+}
+
+// Close closes its closers sequentially from the last one to the first one.
+//
+// If the option tryAll is enabled, it will try to close all its closers,
+// regardless of whether any error occurs, and return all errors encountered.
+// (It returns an ErrorList if there are multiple errors.)
+//
+// If the option tryAll is disabled, when an error occurs,
+// it will stop closing other closers and return this error.
+//
+// If the option noError is enabled,
+// it will do nothing and return nil after the first successful call.
+//
+// If the option noError is disabled,
+// it will do nothing and return a *ClosedError after the first successful call.
+func (mc *multiCloser) Close() error {
+	if mc.idx == 0 {
+		var err error
+		if mc.flag&multiCloserNoErrorMask == 0 {
+			err = NewClosedError("MultiCloser", nil)
+		}
+		return err
+	}
+
+	if mc.flag&multiCloserTryAllMask == 0 {
+		for mc.idx > 0 {
+			err := mc.cs[mc.idx-1].Close()
+			if err != nil {
+				return err // Don't wrap the error.
+			}
+			mc.cm[mc.cs[mc.idx-1]] = true
+			mc.idx--
+		}
+		return nil
+	} else {
+		el := errors.NewErrorList(true)
+		for i := mc.idx - 1; i >= 0; i-- {
+			if mc.cm[mc.cs[i]] {
+				continue
+			}
+			err := mc.cs[i].Close()
+			el.Append(err)
+			if err == nil {
+				mc.cm[mc.cs[i]] = true
+				if !el.Erroneous() {
+					mc.idx = i
+				}
+			}
+		}
+		return el.ToError() // Don't wrap the error.
+	}
+}
+
+// Closed reports whether all its closers are closed successfully.
+func (mc *multiCloser) Closed() bool {
+	return mc.idx == 0
+}
+
+// CloserClosed reports whether the specified closer is closed successfully.
+//
+// It returns two Boolean indicators:
+// closed reports whether the specified closer
+// has been successfully closed by this MultiCloser.
+// ok reports whether the specified closer is in this MultiCloser.
+func (mc *multiCloser) CloserClosed(closer stdio.Closer) (closed, ok bool) {
+	closed, ok = mc.cm[closer]
+	return
+}
