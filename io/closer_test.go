@@ -101,7 +101,7 @@ func testMultiCloser(t *testing.T, tryAll, noError bool) {
 
 	// Before the first call to Close:
 	if mc.Closed() {
-		t.Errorf("mc.Closed is true before the first call to Close. tryAll: %t, noError: %t.",
+		t.Errorf("mc.Closed is true before the first call to mc.Close. tryAll: %t, noError: %t.",
 			tryAll, noError)
 	}
 	for i, closer := range closers {
@@ -111,7 +111,7 @@ func testMultiCloser(t *testing.T, tryAll, noError bool) {
 				i, closed, ok, tryAll, noError)
 		}
 		if closed {
-			t.Errorf("mc.CloserClosed for the %d closer is true before the first call to Close. tryAll: %t, noError: %t.",
+			t.Errorf("mc.CloserClosed for the %d closer is true before the first call to mc.Close. tryAll: %t, noError: %t.",
 				i, tryAll, noError)
 		}
 	}
@@ -129,43 +129,53 @@ func testMultiCloser(t *testing.T, tryAll, noError bool) {
 	testMultiCloserOneCall(t, tryAll, noError, failErr, closers, anotherCloser, mc, 1)
 
 	closers[0].(*testCloser).err = nil
-	// Third call (A successful call) to Close:
+	// Third call (a successful call) to Close:
 	testMultiCloserOneCall(t, tryAll, noError, failErr, closers, anotherCloser, mc, 2)
+
+	// Fourth call (a call to the successfully closed mc) to Close:
+	testMultiCloserOneCall(t, tryAll, noError, failErr, closers, anotherCloser, mc, 3)
 }
 
 func testMultiCloserOneCall(t *testing.T, tryAll, noError bool, failErr error, closers []stdio.Closer, anotherCloser stdio.Closer, mc MultiCloser, callNo int) {
 	err := mc.Close()
-	if callNo < 2 {
-		if tryAll && callNo == 0 {
+	var wantedErr error
+	var wantedClosed bool
+	callString := "a failed call"
+	switch callNo {
+	case 0:
+		if tryAll {
 			el, ok := err.(errors.ErrorList)
 			if !ok {
-				t.Errorf("The %d call to Close returns %v, not a ErrorList.",
+				t.Errorf("The %d call to mc.Close returns %v, not a ErrorList.",
 					callNo, err)
 			}
 			errs := el.ToList()
 			if len(errs) != 2 || errs[0] != failErr || errs[1] != failErr {
-				t.Errorf("The %d call to Close returns %v != [%v, %[3]v].",
+				t.Errorf("The %d call to mc.Close returns %v != [%v, %[3]v].",
 					callNo, err, failErr)
 			}
 		} else {
-			if err != failErr {
-				t.Errorf("The %d call to Close returns %v != %v. tryAll: %t, noError: %t.",
-					callNo, err, failErr, tryAll, noError)
-			}
+			wantedErr = failErr
 		}
-		if mc.Closed() {
-			t.Errorf("mc.Closed is true after the %d call (a failed call) to Close. tryAll: %t, noError: %t.",
-				callNo, tryAll, noError)
+	case 1:
+		wantedErr = failErr
+	case 2:
+		wantedClosed = true
+		callString = "a successful call"
+	default:
+		if !noError {
+			wantedErr = ErrClosed
 		}
-	} else {
-		if err != nil {
-			t.Errorf("The %d call to Close returns %v != nil. tryAll: %t, noError: %t.",
-				callNo, err, tryAll, noError)
-		}
-		if !mc.Closed() {
-			t.Errorf("mc.Closed is false after the %d call (a successful call) to Close. tryAll: %t, noError: %t.",
-				callNo, tryAll, noError)
-		}
+		wantedClosed = true
+		callString = "a call to the successfully closed mc"
+	}
+	if (!tryAll || callNo > 0) && !errors.Is(err, wantedErr) {
+		t.Errorf("The %d call to mc.Close returns %v != %v. tryAll: %t, noError: %t.",
+			callNo, err, wantedErr, tryAll, noError)
+	}
+	if mc.Closed() != wantedClosed {
+		t.Errorf("mc.Closed returns %t after the %d call (%s) to Close. tryAll: %t, noError: %t.",
+			!wantedClosed, callNo, callString, tryAll, noError)
 	}
 
 	if tryAll {
@@ -201,6 +211,7 @@ func testMultiCloserOneCall(t *testing.T, tryAll, noError bool, failErr error, c
 			}
 		}
 	}
+
 	closed, ok := mc.CloserClosed(anotherCloser)
 	if closed || ok {
 		t.Errorf("mc.CloserClosed returns (%t, %t) for anotherCloser. tryAll: %t, noError: %t.",
