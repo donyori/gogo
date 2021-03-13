@@ -82,8 +82,16 @@ var defaultWriteOptions = &WriteOptions{
 }
 
 // Writer is a device to write data to a file.
+//
+// Its method Close closes all closable objects opened by this writer,
+// including the file, and processes the temporary file used by this writer.
+// After successfully closing this writer,
+// its method Close will do nothing and return nil.
+//
+// The written file will be removed by its method Close
+// if any error occurs during writing.
 type Writer interface {
-	io.Closer
+	myio.Closer
 	myio.BufferedWriter
 
 	// TarEnabled returns true if the file is archived by tar
@@ -118,16 +126,15 @@ type Writer interface {
 //
 // Use it with function Write.
 type writer struct {
-	options  WriteOptions
-	filename string
-	tmp      string // name of the temporary file
 	err      error
-	f        *os.File
-	ubw      io.Writer // unbuffered writer
+	options  WriteOptions
 	bw       myio.ResettableBufferedWriter
-	tw       *tar.Writer
-	closers  []io.Closer
+	ubw      io.Writer // unbuffered writer
+	tmp      string    // name of the temporary file
+	filename string
 	closed   bool // true if method Close has been called once and no error occurred during that call
+	c        myio.Closer
+	tw       *tar.Writer
 }
 
 // Write creates (if necessary) and opens a file
@@ -191,16 +198,17 @@ func Write(name string, perm os.FileMode, options *WriteOptions, copies ...io.Wr
 		}
 	}()
 
+	var f *os.File
 	if options.Backup {
-		fw.f, err = Tmp(dir, base+".", ".tmp", perm)
+		f, err = Tmp(dir, base+".", ".tmp", perm)
 		if err != nil {
 			el.Append(err)
 			return
 		}
-		fw.tmp = fw.f.Name()
+		fw.tmp = f.Name()
 		defer func() {
 			if el.Erroneous() {
-				el.Append(fw.f.Close())
+				el.Append(f.Close())
 				el.Append(os.Remove(fw.tmp))
 			}
 		}()
@@ -210,7 +218,7 @@ func Write(name string, perm os.FileMode, options *WriteOptions, copies ...io.Wr
 				defer func() {
 					el.Append(r.Close())
 				}()
-				_, err1 = io.Copy(fw.f, r)
+				_, err1 = io.Copy(f, r)
 				if err1 != nil {
 					el.Append(err1)
 					return
@@ -227,25 +235,27 @@ func Write(name string, perm os.FileMode, options *WriteOptions, copies ...io.Wr
 		} else {
 			flag |= os.O_TRUNC
 		}
-		fw.f, err = os.OpenFile(name, flag, perm)
+		f, err = os.OpenFile(name, flag, perm)
 		if err != nil {
 			el.Append(err)
 			return
 		}
 		defer func() {
 			if el.Erroneous() {
-				el.Append(fw.f.Close())
+				el.Append(f.Close())
 			}
 		}()
 	}
 
-	fw.ubw, fw.closers = fw.f, []io.Closer{fw.f}
+	fw.ubw = f
+	closers := make([]io.Closer, 1, 3)
+	closers[0] = f
 	defer func() {
 		if el.Erroneous() {
-			// Close all closers except fw.closers[0] (i.e., fw.f),
+			// Close all closers except fw.closers[0] (i.e., f),
 			// which will be closed in previous defer function.
-			for i := len(fw.closers) - 1; i > 0; i-- {
-				el.Append(fw.closers[i].Close())
+			for i := len(closers) - 1; i > 0; i-- {
+				el.Append(closers[i].Close())
 			}
 		}
 	}()
@@ -265,7 +275,7 @@ func Write(name string, perm os.FileMode, options *WriteOptions, copies ...io.Wr
 					el.Append(err1)
 					return
 				}
-				fw.closers = append(fw.closers, gw)
+				closers = append(closers, gw)
 				fw.ubw = gw
 				if ext == ".tgz" {
 					ext = ".tar"
@@ -273,7 +283,7 @@ func Write(name string, perm os.FileMode, options *WriteOptions, copies ...io.Wr
 				}
 			case ".tar":
 				fw.tw = tar.NewWriter(fw.ubw)
-				fw.closers = append(fw.closers, fw.tw)
+				closers = append(closers, fw.tw)
 				fw.ubw = fw.tw
 				loop = false
 			default:
@@ -282,6 +292,12 @@ func Write(name string, perm os.FileMode, options *WriteOptions, copies ...io.Wr
 			base = base[:len(base)-len(ext)]
 			ext = filepath.Ext(base)
 		}
+	}
+
+	if len(closers) > 1 {
+		fw.c = myio.NewMultiCloser(true, true, closers...)
+	} else {
+		fw.c = myio.WrapNoErrorCloser(f)
 	}
 	if options.BufOpen {
 		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.options.BufSize)
@@ -302,7 +318,13 @@ func (fw *writer) Close() (err error) {
 	rmDone := false
 	defer func() {
 		if !rmDone {
-			el.Append(os.Remove(fw.tmp))
+			var name string
+			if fw.options.Backup {
+				name = fw.tmp
+			} else {
+				name = fw.filename
+			}
+			el.Append(os.Remove(name))
 			err = errors.AutoWrapSkip(el.ToError(), 1) // skip = 1 to skip the inner function
 		}
 		fw.closed = err == nil
@@ -310,16 +332,14 @@ func (fw *writer) Close() (err error) {
 	if fw.bw != nil {
 		el.Append(fw.bw.Flush())
 	}
-	for i := len(fw.closers) - 1; i >= 0; i-- {
-		el.Append(fw.closers[i].Close())
-	}
+	el.Append(fw.c.Close())
 	if fw.err == nil && !el.Erroneous() &&
 		fw.options.VerifyFn != nil && !fw.options.VerifyFn() {
 		el.Append(ErrVerificationFail)
 	}
 	if fw.options.Backup {
 		if fw.err == nil && !el.Erroneous() {
-			el.Append(os.Rename(fw.f.Name(), fw.filename))
+			el.Append(os.Rename(fw.tmp, fw.filename))
 			if el.Erroneous() {
 				el.Append(os.Remove(fw.tmp))
 			}
@@ -327,10 +347,10 @@ func (fw *writer) Close() (err error) {
 			el.Append(os.Remove(fw.tmp))
 		}
 	} else if fw.err != nil || el.Erroneous() {
-		el.Append(os.Remove(fw.tmp))
+		el.Append(os.Remove(fw.filename))
 	}
-	rmDone = true
 	err = errors.AutoWrap(el.ToError()) // only return the errors occurred during Close
+	rmDone = true
 	if fw.err == nil {
 		if err == nil {
 			fw.err = errors.AutoWrap(myio.ErrWriterClosed)
@@ -339,6 +359,11 @@ func (fw *writer) Close() (err error) {
 		}
 	}
 	return
+}
+
+// Closed reports whether this writer is closed successfully.
+func (fw *writer) Closed() bool {
+	return fw.closed
 }
 
 // Write writes the contents of p into the buffer.

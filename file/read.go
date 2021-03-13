@@ -61,8 +61,13 @@ type ReadOptions struct {
 }
 
 // Reader is a device to read data from a file.
+//
+// Its method Close closes all closable objects opened by this reader,
+// including the file.
+// After successfully closing this reader,
+// its method Close will do nothing and return nil.
 type Reader interface {
-	io.Closer
+	myio.Closer
 	myio.BufferedReader
 
 	// TarEnabled returns true if the file is archived by tar
@@ -96,14 +101,13 @@ type Reader interface {
 //
 // Use it with function Read.
 type reader struct {
-	options ReadOptions
 	err     error
-	f       *os.File
-	ubr     io.Reader // unbuffered reader
 	br      myio.ResettableBufferedReader
+	ubr     io.Reader // unbuffered reader
+	options ReadOptions
+	c       myio.Closer
+	f       *os.File
 	tr      *tar.Reader
-	closers []io.Closer
-	closed  bool // true if method Close has been called once and no error occurred during that call
 }
 
 // Read opens a file with specified name for reading.
@@ -130,20 +134,21 @@ func Read(name string, options *ReadOptions) (r Reader, err error) {
 			r, err = nil, errors.AutoWrapSkip(el.ToError(), 1) // skip = 1 to skip the inner function
 		}
 	}()
-	fr := &reader{
-		options: *options,
-		f:       f,
-		ubr:     f,
-		closers: []io.Closer{f},
-	}
-	r = fr
+	closers := make([]io.Closer, 1, 2)
+	closers[0] = f
 	defer func() {
 		if el.Erroneous() {
-			for i := len(fr.closers) - 1; i >= 0; i-- {
-				el.Append(fr.closers[i].Close())
+			for i := len(closers) - 1; i >= 0; i-- {
+				el.Append(closers[i].Close())
 			}
 		}
 	}()
+	fr := &reader{
+		ubr:     f,
+		options: *options,
+		f:       f,
+	}
+	r = fr
 	if options.Offset > 0 {
 		_, err = f.Seek(options.Offset, io.SeekStart)
 	} else if options.Offset < 0 {
@@ -168,7 +173,7 @@ func Read(name string, options *ReadOptions) (r Reader, err error) {
 					el.Append(err1)
 					return
 				}
-				fr.closers = append(fr.closers, gr)
+				closers = append(closers, gr)
 				fr.ubr = gr
 				if ext == ".tgz" {
 					ext = ".tar"
@@ -187,6 +192,11 @@ func Read(name string, options *ReadOptions) (r Reader, err error) {
 			ext = filepath.Ext(base)
 		}
 	}
+	if len(closers) > 1 {
+		fr.c = myio.NewMultiCloser(true, true, closers...)
+	} else {
+		fr.c = myio.WrapNoErrorCloser(f)
+	}
 	if options.BufOpen {
 		fr.createBr()
 	}
@@ -195,23 +205,23 @@ func Read(name string, options *ReadOptions) (r Reader, err error) {
 
 // Close closes all closers used by this reader, including the file.
 func (fr *reader) Close() error {
-	if fr.closed {
+	if fr.c.Closed() {
 		return nil
 	}
-	errList := errors.NewErrorList(true) // errList records the errors occurred during Close.
-	for i := len(fr.closers) - 1; i >= 0; i-- {
-		errList.Append(fr.closers[i].Close())
-	}
-	err := errors.AutoWrap(errList.ToError())
-	fr.closed = err == nil
+	err := errors.AutoWrap(fr.c.Close())
 	if fr.err == nil {
-		if fr.closed {
+		if fr.c.Closed() {
 			fr.err = errors.AutoWrap(myio.ErrReaderClosed)
 		} else {
 			fr.err = err
 		}
 	}
 	return err
+}
+
+// Closed reports whether this reader is closed successfully.
+func (fr *reader) Closed() bool {
+	return fr.c.Closed()
 }
 
 // Read reads data into p.
