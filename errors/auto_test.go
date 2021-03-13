@@ -157,8 +157,8 @@ func TestAutoNew(t *testing.T) {
 		if s := err.Error(); s != c.wanted {
 			t.Errorf("AutoNew: %q != %q, msg: %q, ms: %v.", s, c.wanted, c.msg, c.ms)
 		}
-		tmpAme := new(autoError)
-		if !As(err, &tmpAme) {
+		tmpAe := new(autoError)
+		if !As(err, &tmpAe) {
 			t.Errorf("The error returned by AutoNew is not a *autoError, msg: %q, ms: %v.", c.msg, c.ms)
 		}
 	}
@@ -209,8 +209,8 @@ func TestAutoNewWithStrategy(t *testing.T) {
 			if s := err.Error(); s != c.wanted {
 				t.Errorf("AutoNewWithStrategy: %q != %q, msg: %q, ms: %v, skip: %d.", s, c.wanted, c.msg, c.ms, c.skip)
 			}
-			tmpAme := new(autoError)
-			if !As(err, &tmpAme) {
+			tmpAe := new(autoError)
+			if !As(err, &tmpAe) {
 				t.Errorf("The error returned by AutoNewWithStrategy is not a *autoError, msg: %q, ms: %v.", c.msg, c.ms)
 			}
 		}
@@ -251,8 +251,8 @@ func TestAutoWrap(t *testing.T) {
 		if s := err.Error(); s != c.wanted {
 			t.Errorf("AutoWrap: %q != %q, msg: %q, ms: %v.", s, c.wanted, c.msg, c.ms)
 		}
-		tmpAme := new(autoError)
-		if !As(err, &tmpAme) {
+		tmpAe := new(autoError)
+		if !As(err, &tmpAe) {
 			t.Errorf("The error returned by AutoWrap is not a *autoError, msg: %q, ms: %v.", c.msg, c.ms)
 		}
 	}
@@ -313,8 +313,8 @@ func TestAutoWrapSkip(t *testing.T) {
 			if s := err.Error(); s != c.wanted {
 				t.Errorf("AutoWrapSkip: %q != %q, msg: %q, ms: %v, skip: %d.", s, c.wanted, c.msg, c.ms, c.skip)
 			}
-			tmpAme := new(autoError)
-			if !As(err, &tmpAme) {
+			tmpAe := new(autoError)
+			if !As(err, &tmpAe) {
 				t.Errorf("The error returned by AutoWrapSkip is not a *autoError, msg: %q, ms: %v, skip: %d.", c.msg, c.ms, c.skip)
 			}
 		}

@@ -252,19 +252,19 @@ func (aw *autoWrapper) WrapSkip(err error, skip int) error {
 			}
 		}
 	}
-	ame := &autoError{err: err}
+	ae := &autoError{err: err}
 	// Find the first error that isn't an AutoError along the error chain.
-	var tmpAme AutoError
+	var tmpAe AutoError
 	tmpErr := err
-	for As(tmpErr, &tmpAme) {
+	for As(tmpErr, &tmpAe) {
 		tmpErr = Unwrap(tmpErr)
 		if tmpErr == nil {
 			break
 		}
 		err = tmpErr
 	}
-	ame.msg = AutoMsgWithStrategy(err.Error(), aw.msgStrategy, skip+1)
-	return ame
+	ae.msg = AutoMsgWithStrategy(err.Error(), aw.msgStrategy, skip+1)
+	return ae
 }
 
 // defaultAutoWrapper is the auto wrapper used by function AutoWrap.
