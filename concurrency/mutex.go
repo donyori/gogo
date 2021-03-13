@@ -30,7 +30,7 @@ import (
 // Moreover, it enables the client to acquire the lock while listening to
 // other channels in a select statement, rather than just blocking.
 //
-// Like sync.Mutex, it allows the client to get the lock
+// Like sync.Mutex, it permits the client to get the lock
 // on one goroutine, and release it on another goroutine.
 // It does not support reentry.
 // And it will panic if the client calls the method Unlock

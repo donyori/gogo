@@ -107,7 +107,7 @@ func AutoMsgWithStrategy(msg string, ms ErrorMessageStrategy, skip int) string {
 }
 
 // Wrapper is a device to wrap an error as another error with method Unwrap.
-// It is allowed to return the error itself directly by adding the error to
+// It is permitted to return the error itself directly by adding the error to
 // its exclusion list.
 type Wrapper interface {
 	// Exclusions returns its exclusion list.
