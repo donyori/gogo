@@ -58,6 +58,11 @@ type WriteOptions struct {
 	// the original target file won't be changed.
 	Backup bool
 
+	// Let the writer preserve the written file when encountering an error.
+	// If false (the default), the written file will be removed
+	// by the method Close if any error occurs during writing.
+	PreserveOnFail bool
+
 	// Make parent directories before creating the file.
 	MkDirs bool
 
@@ -88,8 +93,8 @@ var defaultWriteOptions = &WriteOptions{
 // After successfully closing this writer,
 // its method Close will do nothing and return nil.
 //
-// The written file will be removed by its method Close
-// if any error occurs during writing.
+// The written file will be removed by its method Close if any error occurs
+// during writing and the option PreserveOnFail is disabled.
 type Writer interface {
 	myio.Closer
 	myio.BufferedWriter
@@ -215,6 +220,10 @@ func Write(name string, perm os.FileMode, options *WriteOptions, copies ...io.Wr
 		if options.Append {
 			r, err1 := os.Open(name)
 			if err1 == nil {
+				// Don't use
+				//  defer el.Append(r.Close())
+				// because the argument (i.e., r.Close()) will be evaluated here
+				// rather than when executing the deferred function.
 				defer func() {
 					el.Append(r.Close())
 				}()
@@ -309,7 +318,8 @@ func Write(name string, perm os.FileMode, options *WriteOptions, copies ...io.Wr
 // verify the written file,
 // and process the temporary file if the option Backup enabled.
 //
-// The written file will be removed if any error occurs during writing.
+// The written file will be removed if any error occurs during writing and
+// the option PreserveOnFail is disabled.
 func (fw *writer) Close() (err error) {
 	if fw.closed {
 		return
@@ -321,11 +331,13 @@ func (fw *writer) Close() (err error) {
 			var name string
 			if fw.options.Backup {
 				name = fw.tmp
-			} else {
+			} else if !fw.options.PreserveOnFail {
 				name = fw.filename
 			}
-			el.Append(os.Remove(name))
-			err = errors.AutoWrapSkip(el.ToError(), 1) // skip = 1 to skip the inner function
+			if name != "" {
+				el.Append(os.Remove(name))
+				err = errors.AutoWrapSkip(el.ToError(), 1) // skip = 1 to skip the inner function
+			}
 		}
 		fw.closed = err == nil
 	}()
@@ -346,7 +358,7 @@ func (fw *writer) Close() (err error) {
 		} else {
 			el.Append(os.Remove(fw.tmp))
 		}
-	} else if fw.err != nil || el.Erroneous() {
+	} else if (fw.err != nil || el.Erroneous()) && !fw.options.PreserveOnFail {
 		el.Append(os.Remove(fw.filename))
 	}
 	err = errors.AutoWrap(el.ToError()) // only return the errors occurred during Close
