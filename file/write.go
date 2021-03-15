@@ -58,6 +58,7 @@ type WriteOptions struct {
 	// the original target file won't be changed.
 	Backup bool
 
+	// Only take effect when the option Backup is disabled.
 	// Let the writer preserve the written file when encountering an error.
 	// If false (the default), the written file will be removed
 	// by the method Close if any error occurs during writing.
@@ -168,6 +169,9 @@ type writer struct {
 // including flushing or closing them after use.
 // 2. If an error occurs when writing to copies,
 // other writing will also stop and the writer will fall into the error state.
+// 3. During one write operation, data will be written to the file first,
+// and then to copies sequentially. If an error occurs when writing to copies,
+// the data of current write operation has already been written to the file.
 //
 // As for the write options,
 // notice that when options Append and Backup are both enabled

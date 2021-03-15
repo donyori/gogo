@@ -21,7 +21,6 @@ package file
 import (
 	"archive/tar"
 	"compress/gzip"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -139,10 +138,10 @@ func TestWrite_Append(t *testing.T) {
 	testWriteAppend(t, false)
 }
 
-func testWriteAppend(tb testing.TB, backup bool) {
+func testWriteAppend(t *testing.T, backup bool) {
 	dir, err := ioutil.TempDir("", "gogo_test_")
 	if err != nil {
-		tb.Fatal(err)
+		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir) // ignore error
 	const content = "gogo test file."
@@ -156,55 +155,159 @@ func testWriteAppend(tb testing.TB, backup bool) {
 	var perm os.FileMode = 0740
 	w1, err := Write(filename, perm, options)
 	if err != nil {
-		tb.Fatal(err)
+		t.Fatal(err)
 	}
 	defer func() {
 		if w1 != nil {
 			w1.Close() // ignore error
 		}
 	}()
-	_, err = fmt.Fprint(w1, content)
+	_, err = w1.WriteString(content)
 	if err != nil {
-		tb.Fatal(err)
+		t.Fatal(err)
 	}
 	err = w1.Close()
 	if err != nil {
-		tb.Fatal(err)
+		t.Fatal(err)
 	}
 	w1 = nil
 
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		tb.Fatal(err)
+		t.Fatal(err)
 	}
 	if string(data) != content {
-		tb.Errorf("After first write: data: %s\nwanted: %s", data, content)
+		t.Errorf("Backup: %t. After first write, data: %s\nwanted: %s",
+			backup, data, content)
 	}
 
 	w2, err := Write(filename, perm, options)
 	if err != nil {
-		tb.Fatal(err)
+		t.Fatal(err)
 	}
 	defer func() {
 		if w2 != nil {
 			w2.Close() // ignore error
 		}
 	}()
-	_, err = fmt.Fprint(w2, content)
+	_, err = w2.WriteString(content)
 	if err != nil {
-		tb.Fatal(err)
+		t.Fatal(err)
 	}
 	err = w2.Close()
 	if err != nil {
-		tb.Fatal(err)
+		t.Fatal(err)
 	}
 	w2 = nil
 
 	data, err = ioutil.ReadFile(filename)
 	if err != nil {
-		tb.Fatal(err)
+		t.Fatal(err)
 	}
 	if string(data) != content+content {
-		tb.Errorf("After second write: data: %s\nwanted: %s", data, content+content)
+		t.Errorf("Backup: %t. After second write, data: %s\nwanted: %s",
+			backup, data, content+content)
+	}
+}
+
+// testErrorWriter always returns an error err
+// to simulate the failed writing scenario.
+type testErrorWriter struct {
+	err error
+}
+
+func (tew *testErrorWriter) Write([]byte) (n int, err error) {
+	return 0, tew.err
+}
+
+func TestWrite_Error(t *testing.T) {
+	testWriteError(t, false, false)
+	testWriteError(t, false, true)
+	testWriteError(t, true, false)
+	testWriteError(t, true, true)
+}
+
+func testWriteError(t *testing.T, backup, preserveOnFail bool) {
+	dir, err := ioutil.TempDir("", "gogo_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir) // ignore error
+	const content = "gogo test file."
+	filename := filepath.Join(dir, "testfile.dat")
+	fw, err := os.Create(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if fw != nil {
+			fw.Close() // ignore error
+		}
+	}()
+	_, err = fw.WriteString(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = fw.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fw = nil
+
+	options := &WriteOptions{
+		Raw:            true,
+		Backup:         backup,
+		PreserveOnFail: preserveOnFail,
+		MkDirs:         true,
+	}
+	var perm os.FileMode = 0740
+	wErr := errors.New("testErrorWriter error")
+	w, err := Write(filename, perm, options, &testErrorWriter{wErr})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if w != nil {
+			w.Close() // ignore error
+		}
+	}()
+	_, err = w.WriteString(content + content)
+	if !errors.Is(err, wErr) {
+		t.Errorf("Write err: %v != %v. Backup: %t, PreserveOnFail: %t.",
+			err, wErr, backup, preserveOnFail)
+	}
+	err = w.Close()
+	if err != nil {
+		t.Errorf("Close err: %v != nil. Backup: %t, PreserveOnFail: %t.",
+			err, backup, preserveOnFail)
+	} else if !w.Closed() {
+		t.Errorf("Closed: false. Backup: %t, PreserveOnFail: %t.",
+			backup, preserveOnFail)
+	}
+	w = nil
+
+	data, err := ioutil.ReadFile(filename)
+	var wantedContent string
+	if backup || preserveOnFail {
+		if err != nil {
+			t.Errorf("Open file after writing, err: %v != nil. Backup: %t, PreserveOnFail: %t.",
+				err, backup, preserveOnFail)
+			return
+		}
+		if backup {
+			wantedContent = content
+		} else {
+			// The data should be written to the file before
+			// the testErrorWriter returns an error.
+			wantedContent = content + content
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("Open file after writing, err: %v is not %v. Backup: %t, PreserveOnFail: %t.",
+			err, os.ErrNotExist, backup, preserveOnFail)
+		return
+	}
+	if string(data) != wantedContent {
+		t.Errorf("After writing, Backup: %t, PreserveOnFail: %t, file: %q\nwanted: %q",
+			backup, preserveOnFail, data, wantedContent)
 	}
 }
