@@ -265,7 +265,7 @@ func EncodeInt64To(w io.Writer, x int64, upper bool, digits int) (written int, e
 // This function will not access (including reading and writing)
 // the rest part of the buffer (i.e., buf[:idx]).
 //
-// The caller should guarantee that (x != 0 || digits > 1) and
+// Caller should guarantee that (x != 0 || digits > 1) and
 // x != math.MinInt64 (= -0x8000000000000000).
 // These two special cases should be handled by the caller.
 func encodeInt64(buf []byte, x int64, upper bool, digits int) (idx int) {
@@ -311,7 +311,7 @@ func encodeInt64(buf []byte, x int64, upper bool, digits int) (idx int) {
 // It returns the number of bytes written to w,
 // and any write error encountered.
 //
-// The caller should guarantee that w != nil, digits >= int64BufferLen,
+// Caller should guarantee that w != nil, digits >= int64BufferLen,
 // and buf != nil.
 func writeSignAndLeadingZerosTo(w io.Writer, x int64, digits int, buf []byte) (written int, err error) {
 	if x >= 0 {

@@ -47,7 +47,7 @@ var ErrPatternHasPathSeparator = errors.AutoNew("pattern/prefix/suffix contains 
 // Calling this function simultaneously will not choose the same file.
 //
 // The client can use f.Name() to find the path of the file.
-// It is the client's responsibility to remove the file when no longer needed.
+// The client is responsible for removing the file when no longer needed.
 func Tmp(dir, prefix, suffix string, perm os.FileMode) (f *os.File, err error) {
 	err = checkTmpPrefixAndSuffix(prefix, suffix)
 	if err != nil {
@@ -85,8 +85,7 @@ func Tmp(dir, prefix, suffix string, perm os.FileMode) (f *os.File, err error) {
 //
 // Calling this function simultaneously will not choose the same directory.
 //
-// It is the client's responsibility to remove the directory
-// when no longer needed.
+// The client is responsible for removing the directory when no longer needed.
 func TmpDir(dir, prefix, suffix string, perm os.FileMode) (name string, err error) {
 	err = checkTmpPrefixAndSuffix(prefix, suffix)
 	if err != nil {

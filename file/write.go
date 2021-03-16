@@ -165,7 +165,7 @@ type writer struct {
 // such as calculating the checksum to verify the file.
 //
 // But note that:
-// 1. It's the client's responsibility to manage copies,
+// 1. The client is responsible for managing copies,
 // including flushing or closing them after use.
 // 2. If an error occurs when writing to copies,
 // other writing will also stop and the writer will fall into the error state.
