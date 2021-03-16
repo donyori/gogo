@@ -31,7 +31,8 @@ import (
 )
 
 // ErrVerificationFail is an error indicating that the file verification failed.
-var ErrVerificationFail = errors.AutoNew("file verification failed")
+var ErrVerificationFail = errors.AutoNewWithStrategy("file verification failed",
+	errors.PrefixFullPkgName, 0)
 
 // WriteOptions are options for function Write.
 type WriteOptions struct {

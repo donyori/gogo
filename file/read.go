@@ -35,7 +35,8 @@ import (
 // or is opened in raw mode.
 //
 // The client should use errors.Is to test whether an error is ErrNotTar.
-var ErrNotTar = errors.AutoNew("file is not archived by tar, or is opened in raw mode")
+var ErrNotTar = errors.AutoNewWithStrategy("file is not archived by tar, or is opened in raw mode",
+	errors.PrefixFullPkgName, 0)
 
 // ReadOptions are options for function Read.
 type ReadOptions struct {
