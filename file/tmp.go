@@ -62,7 +62,7 @@ func Tmp(dir, prefix, suffix string, perm os.FileMode) (f *os.File, err error) {
 	for try := 0; try < 100; try++ {
 		f, err = os.OpenFile(prefix+strconv.FormatUint(uint64(r), 36)+suffix,
 			os.O_RDWR|os.O_CREATE|os.O_EXCL, perm)
-		if err == nil || !os.IsExist(err) {
+		if err == nil || !errors.Is(err, os.ErrExist) {
 			return f, errors.AutoWrap(err)
 		}
 		r = r*1664525 + 1013904223 // constants from Numerical Recipes, for a linear congruential generator
@@ -109,7 +109,7 @@ func TmpDir(dir, prefix, suffix string, perm os.FileMode) (name string, err erro
 				return "", errors.AutoWrap(err)
 			}
 		}
-		if !os.IsExist(err) {
+		if !errors.Is(err, os.ErrExist) {
 			return "", errors.AutoWrap(err)
 		}
 		r = r*1664525 + 1013904223 // constants from Numerical Recipes, for a linear congruential generator

@@ -28,6 +28,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/donyori/gogo/errors"
 )
 
 var (
@@ -37,11 +39,21 @@ var (
 		// This SHA256 checksum was generated on March 9, 2021.
 		HexExpSum: "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
 	}
+	testHttpDlWrongChecksum = Checksum{
+		HashGen:   sha256.New,
+		HexExpSum: "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db07912345",
+	}
 )
 
 func TestHttpDownload(t *testing.T) {
 	testHttpDownloadFn(t, func(filename string) error {
 		return HttpDownload(testHttpDlUrl, filename, 0600, testHttpDlChecksum)
+	})
+}
+
+func TestHttpDownload_ChecksumFailed(t *testing.T) {
+	testHttpDownloadFnChecksumFailed(t, func(filename string, cs ...Checksum) error {
+		return HttpDownload(testHttpDlUrl, filename, 0600, cs...)
 	})
 }
 
@@ -55,9 +67,29 @@ func TestHttpCustomDownload(t *testing.T) {
 	})
 }
 
+func TestHttpCustomDownload_ChecksumFailed(t *testing.T) {
+	testHttpDownloadFnChecksumFailed(t, func(filename string, cs ...Checksum) error {
+		req, err := http.NewRequest("", testHttpDlUrl, nil)
+		if err != nil {
+			return err
+		}
+		return HttpCustomDownload(req, filename, 0600, cs...)
+	})
+}
+
 func TestHttpUpdate(t *testing.T) {
 	testHttpUpdateFn(t, func(filename string, cs ...Checksum) (updated bool, err error) {
 		return HttpUpdate(testHttpDlUrl, filename, 0600, cs...)
+	})
+}
+
+func TestHttpUpdate_ChecksumFailed(t *testing.T) {
+	testHttpDownloadFnChecksumFailed(t, func(filename string, cs ...Checksum) error {
+		updated, err := HttpUpdate(testHttpDlUrl, filename, 0600, cs...)
+		if updated {
+			t.Error("Checksum Failed Case, updated is true.")
+		}
+		return err
 	})
 }
 
@@ -68,6 +100,20 @@ func TestHttpCustomUpdate(t *testing.T) {
 			return false, err
 		}
 		return HttpCustomUpdate(req, filename, 0600, cs...)
+	})
+}
+
+func TestHttpCustomUpdate_ChecksumFailed(t *testing.T) {
+	testHttpDownloadFnChecksumFailed(t, func(filename string, cs ...Checksum) error {
+		req, err := http.NewRequest("", testHttpDlUrl, nil)
+		if err != nil {
+			return err
+		}
+		updated, err := HttpCustomUpdate(req, filename, 0600, cs...)
+		if updated {
+			t.Error("Checksum Failed Case, updated is true.")
+		}
+		return err
 	})
 }
 
@@ -176,5 +222,56 @@ func testHttpUpdateFn(t *testing.T, fn func(filename string, cs ...Checksum) (up
 	}
 	if !now.Before(info.ModTime()) {
 		t.Error("File has not been updated after damaging.")
+	}
+}
+
+func testHttpDownloadFnChecksumFailed(t *testing.T, fn func(filename string, cs ...Checksum) error) {
+	dir, err := ioutil.TempDir("", "gogo_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir) // ignore error
+	filename := filepath.Join(dir, "testfile.dat")
+	var client http.Client
+	resp, err := client.Get(testHttpDlUrl)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close() // ignore error
+	f, err := os.Create(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if f != nil {
+			f.Close() // ignore error
+		}
+	}()
+	_, err = io.Copy(f, resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f = nil
+	info, err := os.Lstat(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	modTime := info.ModTime()
+
+	err = fn(filename, testHttpDlWrongChecksum)
+	if !errors.Is(err, ErrVerificationFail) {
+		t.Errorf("Checksum Failed Case, err: %v != %v.", err, ErrVerificationFail)
+	}
+
+	info, err = os.Lstat(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !modTime.Equal(info.ModTime()) {
+		t.Error("Checksum Failed Case, file has been modified.")
 	}
 }
