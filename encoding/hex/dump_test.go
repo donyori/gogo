@@ -20,7 +20,7 @@ package hex
 
 import (
 	"bytes"
-	"encoding/hex"
+	stdhex "encoding/hex"
 	"strings"
 	"testing"
 )
@@ -91,11 +91,11 @@ func init() {
 										PrefixFn:      prefixFn,
 										SuffixFn:      suffixFn,
 									}
-									s := hex.EncodeToString([]byte(src))
+									s := stdhex.EncodeToString([]byte(src))
 									if upper {
 										s = strings.ToUpper(s)
 									}
-									blockSize := hex.EncodedLen(blockLen)
+									blockSize := stdhex.EncodedLen(blockLen)
 									if blockSize <= 0 {
 										blockSize = len(s)
 									}

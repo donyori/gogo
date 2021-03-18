@@ -20,7 +20,7 @@ package hex
 
 import (
 	"bytes"
-	"encoding/hex"
+	stdhex "encoding/hex"
 	"strings"
 	"testing"
 )
@@ -51,7 +51,7 @@ func init() {
 		for _, upper := range uppers {
 			for _, sep := range seps {
 				for _, blockLen := range blockLens {
-					s := hex.EncodeToString([]byte(src))
+					s := stdhex.EncodeToString([]byte(src))
 					if upper {
 						s = strings.ToUpper(s)
 					}
@@ -60,7 +60,7 @@ func init() {
 						capacity = (len(src) + blockLen - 1) / blockLen
 					}
 					blocks := make([]string, 0, capacity)
-					blockSize := hex.EncodedLen(blockLen)
+					blockSize := stdhex.EncodedLen(blockLen)
 					if blockSize <= 0 {
 						blockSize = len(s)
 					}

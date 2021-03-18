@@ -20,7 +20,7 @@ package hex
 
 import (
 	"bytes"
-	"encoding/hex"
+	stdhex "encoding/hex"
 	"strings"
 	"testing"
 )
@@ -47,7 +47,7 @@ func init() {
 	var i int
 	for _, src := range srcs {
 		for _, upper := range uppers {
-			s := hex.EncodeToString([]byte(src))
+			s := stdhex.EncodeToString([]byte(src))
 			if upper {
 				s = strings.ToUpper(s)
 			}
@@ -66,12 +66,12 @@ func init() {
 
 func TestEncode_CompareWithOfficial(t *testing.T) {
 	srcs := [][]byte{nil, {}, []byte("Hello world! 你好，世界！")}
-	dst := make([]byte, hex.EncodedLen(len(srcs[len(srcs)-1])))
+	dst := make([]byte, stdhex.EncodedLen(len(srcs[len(srcs)-1])))
 	stdDst := make([]byte, len(dst))
 	for _, src := range srcs {
 		n := Encode(dst, src, false)
-		if n2 := hex.Encode(stdDst, src); n != n2 {
-			t.Errorf(`Encode(dst, src, "", false): %d != hex.Encode(dst, src): %d, src: %q.`, n, n2, src)
+		if n2 := stdhex.Encode(stdDst, src); n != n2 {
+			t.Errorf(`Encode(dst, src, "", false): %d != stdhex.Encode(dst, src): %d, src: %q.`, n, n2, src)
 		}
 		if string(dst[:n]) != string(stdDst[:n]) {
 			t.Errorf("dst: %q != stdDst: %q.", dst[:n], stdDst[:n])
