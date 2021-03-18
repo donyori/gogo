@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -39,13 +40,45 @@ var (
 )
 
 func TestHttpDownload(t *testing.T) {
+	testHttpDownloadFn(t, func(filename string) error {
+		return HttpDownload(testHttpDlUrl, filename, 0600, testHttpDlChecksum)
+	})
+}
+
+func TestHttpCustomDownload(t *testing.T) {
+	testHttpDownloadFn(t, func(filename string) error {
+		req, err := http.NewRequest("", testHttpDlUrl, nil)
+		if err != nil {
+			return err
+		}
+		return HttpCustomDownload(req, filename, 0600, testHttpDlChecksum)
+	})
+}
+
+func TestHttpUpdate(t *testing.T) {
+	testHttpUpdateFn(t, func(filename string, cs ...Checksum) (updated bool, err error) {
+		return HttpUpdate(testHttpDlUrl, filename, 0600, cs...)
+	})
+}
+
+func TestHttpCustomUpdate(t *testing.T) {
+	testHttpUpdateFn(t, func(filename string, cs ...Checksum) (updated bool, err error) {
+		req, err := http.NewRequest("", testHttpDlUrl, nil)
+		if err != nil {
+			return false, err
+		}
+		return HttpCustomUpdate(req, filename, 0600, cs...)
+	})
+}
+
+func testHttpDownloadFn(t *testing.T, fn func(filename string) error) {
 	dir, err := ioutil.TempDir("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir) // ignore error
 	filename := filepath.Join(dir, "testfile.dat")
-	err = HttpDownload(testHttpDlUrl, filename, 0600, testHttpDlChecksum)
+	err = fn(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,14 +97,14 @@ func TestHttpDownload(t *testing.T) {
 	}
 }
 
-func TestHttpUpdate(t *testing.T) {
+func testHttpUpdateFn(t *testing.T, fn func(filename string, cs ...Checksum) (updated bool, err error)) {
 	dir, err := ioutil.TempDir("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir) // ignore error
 	filename := filepath.Join(dir, "testfile.dat")
-	updated, err := HttpUpdate(testHttpDlUrl, filename, 0600, testHttpDlChecksum)
+	updated, err := fn(filename, testHttpDlChecksum)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +116,7 @@ func TestHttpUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	modTime := info.ModTime()
-	updated, err = HttpUpdate(testHttpDlUrl, filename, 0600, testHttpDlChecksum)
+	updated, err = fn(filename, testHttpDlChecksum)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +130,7 @@ func TestHttpUpdate(t *testing.T) {
 	if !modTime.Equal(info.ModTime()) {
 		t.Error("File has been modified.")
 	}
-	updated, err = HttpUpdate(testHttpDlUrl, filename, 0600)
+	updated, err = fn(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,13 +148,22 @@ func TestHttpUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		if f != nil {
+			f.Close() // ignore error
+		}
+	}()
 	_, err = f.WriteString("abc")
-	f.Close() // ignore error
 	if err != nil {
 		t.Fatal(err)
 	}
+	err = f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f = nil
 	now := time.Now()
-	updated, err = HttpUpdate(testHttpDlUrl, filename, 0600, testHttpDlChecksum)
+	updated, err = fn(filename, testHttpDlChecksum)
 	if err != nil {
 		t.Fatal(err)
 	}

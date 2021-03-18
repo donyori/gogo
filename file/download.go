@@ -34,12 +34,90 @@ import (
 // and saves as a local file specified by filename,
 // with specified permission perm.
 //
+// This function will not create any directory.
+// The client is responsible for creating necessary directories.
+//
 // The client can specify checksums cs to verify the downloaded file.
 // A damaged file will be removed and ErrVerificationFail will be returned.
 //
 // It reports an error and downloads nothing if anyone of cs contains
 // a nil HashGen or an empty HexExpSum.
-func HttpDownload(url, filename string, perm os.FileMode, cs ...Checksum) (err error) {
+func HttpDownload(url, filename string, perm os.FileMode, cs ...Checksum) error {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return errors.AutoWrap(err)
+	}
+	return errors.AutoWrap(httpRequestDownload(req, filename, perm, cs...))
+}
+
+// HttpCustomDownload downloads a file from the specified HTTP request req,
+// and saves as a local file specified by filename,
+// with specified permission perm.
+//
+// The client can create the custom request req using function http.NewRequest.
+//
+// This function will not create any directory.
+// The client is responsible for creating necessary directories.
+//
+// The client can specify checksums cs to verify the downloaded file.
+// A damaged file will be removed and ErrVerificationFail will be returned.
+//
+// It reports an error and downloads nothing if anyone of cs contains
+// a nil HashGen or an empty HexExpSum.
+func HttpCustomDownload(req *http.Request, filename string, perm os.FileMode, cs ...Checksum) error {
+	if req == nil {
+		return errors.AutoNew("req is nil")
+	}
+	return errors.AutoWrap(httpRequestDownload(req, filename, perm, cs...))
+}
+
+// HttpUpdate is the update mode of function HttpDownload.
+//
+// It verifies the file with specified filename using function VerifyChecksum.
+// If the verification is passed, it does nothing and returns (false, nil).
+// Otherwise, it calls function HttpDownload to download the file.
+//
+// It returns an indicator updated and any error encountered.
+// updated is true if and only if this function has created or edited the file.
+func HttpUpdate(url, filename string, perm os.FileMode, cs ...Checksum) (updated bool, err error) {
+	if VerifyChecksum(filename, cs...) {
+		return
+	}
+	err = errors.AutoWrap(HttpDownload(url, filename, perm, cs...))
+	return err == nil, err
+}
+
+// HttpCustomUpdate is the update mode of function HttpCustomDownload.
+//
+// It verifies the file with specified filename using function VerifyChecksum.
+// If the verification is passed, it does nothing and returns (false, nil).
+// Otherwise, it calls function HttpCustomDownload to download the file.
+//
+// It returns an indicator updated and any error encountered.
+// updated is true if and only if this function has created or edited the file.
+func HttpCustomUpdate(req *http.Request, filename string, perm os.FileMode, cs ...Checksum) (updated bool, err error) {
+	if VerifyChecksum(filename, cs...) {
+		return
+	}
+	err = errors.AutoWrap(HttpCustomDownload(req, filename, perm, cs...))
+	return err == nil, err
+}
+
+// httpRequestDownload downloads a file from the specified HTTP request req,
+// and saves as a local file specified by filename,
+// with specified permission perm.
+//
+// This function will not create any directory.
+// The client is responsible for creating necessary directories.
+//
+// The client can specify checksums cs to verify the downloaded file.
+// A damaged file will be removed and ErrVerificationFail will be returned.
+//
+// It reports an error and downloads nothing if anyone of cs contains
+// a nil HashGen or an empty HexExpSum.
+//
+// Caller should guarantee that req != nil.
+func httpRequestDownload(req *http.Request, filename string, perm os.FileMode, cs ...Checksum) (err error) {
 	var hashes []hash.Hash
 	var ws []io.Writer
 	if len(cs) > 0 {
@@ -57,7 +135,7 @@ func HttpDownload(url, filename string, perm os.FileMode, cs ...Checksum) (err e
 		}
 	}
 	var client http.Client
-	resp, err := client.Get(url)
+	resp, err := client.Do(req)
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
@@ -72,12 +150,11 @@ func HttpDownload(url, filename string, perm os.FileMode, cs ...Checksum) (err e
 		if errMsg == "" {
 			errMsg = "status code: " + strconv.Itoa(resp.StatusCode)
 		}
-		return errors.AutoNew("response status is not OK when downloading " + url + ": " + errMsg)
+		return errors.AutoNew("response status is not OK when downloading " + req.URL.String() + ": " + errMsg)
 	}
 	w, err := Write(filename, perm, &WriteOptions{
 		Raw:    true,
 		Backup: true,
-		MkDirs: true,
 		VerifyFn: func() bool {
 			if err != nil {
 				return false
@@ -102,20 +179,4 @@ func HttpDownload(url, filename string, perm os.FileMode, cs ...Checksum) (err e
 	}()
 	_, err = io.Copy(w, resp.Body)
 	return errors.AutoWrap(err)
-}
-
-// HttpUpdate is the update mode of function HttpDownload.
-//
-// It verifies the file with specified filename using function VerifyChecksum.
-// If the verification is passed, it does nothing and returns (false, nil).
-// Otherwise, it calls function HttpDownload to download the file.
-//
-// It returns an indicator updated and any error encountered.
-// updated is true if and only if this function has created or edited the file.
-func HttpUpdate(url, filename string, perm os.FileMode, cs ...Checksum) (updated bool, err error) {
-	if VerifyChecksum(filename, cs...) {
-		return
-	}
-	err = errors.AutoWrap(HttpDownload(url, filename, perm, cs...))
-	return err == nil, err
 }
