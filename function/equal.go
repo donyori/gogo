@@ -43,12 +43,41 @@ var Equal EqualFunc = func(a, b interface{}) bool {
 	return a == b
 }
 
+// BytesEqual is a prefab EqualFunc for []byte.
+//
+// It returns true iff a and b have the same length and the same content,
+// or both a and b are nil.
+// A nil slice and an empty slice are considered unequal.
+var BytesEqual EqualFunc = bytesEqual
+
+// bytesEqual is an implementation of function bytesEqual.
+func bytesEqual(a, b interface{}) bool {
+	if a == nil || a.([]byte) == nil {
+		return b == nil || b.([]byte) == nil
+	} else if b == nil || b.([]byte) == nil {
+		return false
+	}
+	ba, bb := a.([]byte), b.([]byte)
+	if len(ba) != len(bb) {
+		return false
+	}
+	for i, k := 0, len(ba)-1; i <= k; i, k = i+1, k-1 {
+		if ba[i] != bb[i] || ba[k] != bb[k] {
+			return false
+		}
+	}
+	return true
+}
+
 // IntsEqual is a prefab EqualFunc for []int.
 //
 // It returns true iff a and b have the same length and the same content,
 // or both a and b are nil.
 // A nil slice and an empty slice are considered unequal.
-var IntsEqual EqualFunc = func(a, b interface{}) bool {
+var IntsEqual EqualFunc = intsEqual
+
+// intsEqual is an implementation of function IntsEqual.
+func intsEqual(a, b interface{}) bool {
 	if a == nil || a.([]int) == nil {
 		return b == nil || b.([]int) == nil
 	} else if b == nil || b.([]int) == nil {
@@ -71,7 +100,10 @@ var IntsEqual EqualFunc = func(a, b interface{}) bool {
 // It returns true iff a and b have the same length and the same content,
 // or both a and b are nil.
 // A nil slice and an empty slice are considered unequal.
-var Float64sEqual EqualFunc = func(a, b interface{}) bool {
+var Float64sEqual EqualFunc = float64sEqual
+
+// float64sEqual is an implementation of function Float64sEqual.
+func float64sEqual(a, b interface{}) bool {
 	if a == nil || a.([]float64) == nil {
 		return b == nil || b.([]float64) == nil
 	} else if b == nil || b.([]float64) == nil {
@@ -94,7 +126,10 @@ var Float64sEqual EqualFunc = func(a, b interface{}) bool {
 // It returns true iff a and b have the same length and the same content,
 // or both a and b are nil.
 // A nil slice and an empty slice are considered unequal.
-var StringsEqual EqualFunc = func(a, b interface{}) bool {
+var StringsEqual EqualFunc = stringsEqual
+
+// stringsEqual is an implementation of function StringsEqual.
+func stringsEqual(a, b interface{}) bool {
 	if a == nil || a.([]string) == nil {
 		return b == nil || b.([]string) == nil
 	} else if b == nil || b.([]string) == nil {
@@ -124,7 +159,10 @@ var StringsEqual EqualFunc = func(a, b interface{}) bool {
 // (i.e., cannot use "==" and "!=" on it).
 // For more information about comparable types,
 // see <https://golang.org/ref/spec#Comparison_operators>.
-var GeneralSliceEqual EqualFunc = func(a, b interface{}) bool {
+var GeneralSliceEqual EqualFunc = generalSliceEqual
+
+// generalSliceEqual is an implementation of function GeneralSliceEqual.
+func generalSliceEqual(a, b interface{}) bool {
 	if a == nil || a.([]interface{}) == nil {
 		return b == nil || b.([]interface{}) == nil
 	} else if b == nil || b.([]interface{}) == nil {
@@ -162,7 +200,10 @@ var GeneralSliceEqual EqualFunc = func(a, b interface{}) bool {
 // It will panic if the type of a or b is not a slice.
 // However, if the type of the elements of a is not the same as that of b,
 // it will return false rather than panic.
-var SliceEqual EqualFunc = func(a, b interface{}) bool {
+var SliceEqual EqualFunc = sliceEqual
+
+// sliceEqual is an implementation of function SliceEqual.
+func sliceEqual(a, b interface{}) bool {
 	if a == nil {
 		if b == nil {
 			return true

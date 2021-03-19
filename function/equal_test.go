@@ -62,12 +62,28 @@ func TestEqualFunc_Not(t *testing.T) {
 	}
 }
 
-func TestGenerateEqualViaLess(t *testing.T) {
-	intPairs := [][2]int{{0, 0}, {0, 1}, {1, 0}, {1, 1}}
-	eq := IntLess.ToEqual()
-	for _, pair := range intPairs {
-		if r := eq(pair[0], pair[1]); r != (pair[0] == pair[1]) {
-			t.Errorf("eq(%d, %d): %t.", pair[0], pair[1], r)
+func TestBytesEqual(t *testing.T) {
+	equalPairs := [][2][]byte{
+		{{}, {}},                           // Empty.
+		{nil, nil},                         // Nil.
+		{[]byte("1234"), []byte("1234")},   // Even length.
+		{[]byte("12345"), []byte("12345")}, // Odd length.
+	}
+	unequalPairs := [][2][]byte{
+		{nil, {}},                            // Nil - empty.
+		{{}, nil},                            // Empty - nil.
+		{[]byte("123"), []byte("1234")},      // Different length.
+		{[]byte("12345"), []byte("12545")},   // Odd length.
+		{[]byte("123456"), []byte("123356")}, // Even length.
+	}
+	for i, pair := range equalPairs {
+		if r := BytesEqual(pair[0], pair[1]); !r {
+			t.Errorf("equalPairs Case %d: BytesEqual(a, b): false. a: %#v, b: %#v.", i, pair[0], pair[1])
+		}
+	}
+	for i, pair := range unequalPairs {
+		if r := BytesEqual(pair[0], pair[1]); r {
+			t.Errorf("unequalPairs Case %d: BytesEqual(a, b): true. a: %#v, b: %#v.", i, pair[0], pair[1])
 		}
 	}
 }
@@ -188,6 +204,19 @@ func TestGeneralSliceEqual(t *testing.T) {
 
 func TestSliceEqual(t *testing.T) {
 	// Cases from other slice EqualFunc prefab tests.
+	bEqualPairs := [][2][]byte{
+		{{}, {}},                           // Empty.
+		{nil, nil},                         // Nil.
+		{[]byte("1234"), []byte("1234")},   // Even length.
+		{[]byte("12345"), []byte("12345")}, // Odd length.
+	}
+	bUnequalPairs := [][2][]byte{
+		{nil, {}},                            // Nil - empty.
+		{{}, nil},                            // Empty - nil.
+		{[]byte("123"), []byte("1234")},      // Different length.
+		{[]byte("12345"), []byte("12545")},   // Odd length.
+		{[]byte("123456"), []byte("123356")}, // Even length.
+	}
 	iEqualPairs := [][2][]int{
 		{{}, {}},                           // Empty.
 		{nil, nil},                         // Nil.
@@ -259,6 +288,12 @@ func TestSliceEqual(t *testing.T) {
 	}
 
 	// Append cases from other slice EqualFunc prefab tests.
+	for _, pair := range bEqualPairs {
+		equalPairs = append(equalPairs, [2]interface{}{pair[0], pair[1]})
+	}
+	for _, pair := range bUnequalPairs {
+		unequalPairs = append(unequalPairs, [2]interface{}{pair[0], pair[1]})
+	}
 	for _, pair := range iEqualPairs {
 		equalPairs = append(equalPairs, [2]interface{}{pair[0], pair[1]})
 	}

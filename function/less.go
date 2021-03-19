@@ -45,16 +45,25 @@ func (lf LessFunc) ToEqual() EqualFunc {
 }
 
 // IntLess is a prefab LessFunc for int.
-var IntLess LessFunc = func(a, b interface{}) bool {
+var IntLess LessFunc = intLess
+
+// intLess is an implementation of function IntLess.
+func intLess(a, b interface{}) bool {
 	return a.(int) < b.(int)
 }
 
 // Float64Less is a prefab LessFunc for float64.
-var Float64Less LessFunc = func(a, b interface{}) bool {
+var Float64Less LessFunc = float64Less
+
+// float64Less is an implementation of function Float64Less.
+func float64Less(a, b interface{}) bool {
 	return a.(float64) < b.(float64)
 }
 
 // StringLess is a prefab LessFunc for string.
-var StringLess LessFunc = func(a, b interface{}) bool {
+var StringLess LessFunc = stringLess
+
+// stringLess is an implementation of function StringLess.
+func stringLess(a, b interface{}) bool {
 	return a.(string) < b.(string)
 }
