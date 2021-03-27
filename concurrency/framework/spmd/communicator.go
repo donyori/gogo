@@ -156,7 +156,7 @@ type Communicator interface {
 	// For others, x can be anything (including nil) and will be ignored.
 	//
 	// It returns the message to be broadcast (equals to x of the root) and
-	// an indicator ok. ok is false iff a quit signal is detected.
+	// an indicator ok. ok is false if and only if a quit signal is detected.
 	Broadcast(root int, x interface{}) (msg interface{}, ok bool)
 
 	// Scatter equally divides the message x of the root into n parts,
@@ -174,7 +174,7 @@ type Communicator interface {
 	// For others, x can be anything (including nil) and will be ignored.
 	//
 	// It returns the received message and an indicator ok.
-	// ok is false iff a quit signal is detected.
+	// ok is false if and only if a quit signal is detected.
 	Scatter(root int, x sequence.Sequence) (msg sequence.Array, ok bool)
 
 	// Gather collects messages from all goroutines (including the root)
@@ -192,7 +192,7 @@ type Communicator interface {
 	// For the root, x is the list of messages ordered by
 	// the ranks of sender goroutines.
 	// For others, x is nil.
-	// ok is false iff a quit signal is detected.
+	// ok is false if and only if a quit signal is detected.
 	Gather(root int, msg interface{}) (x []interface{}, ok bool)
 }
 
@@ -591,7 +591,7 @@ func (comm *communicator) Barrier() bool {
 // For others, x can be anything (including nil) and will be ignored.
 //
 // It returns the message to be broadcast (equals to x of the root) and
-// an indicator ok. ok is false iff a quit signal is detected.
+// an indicator ok. ok is false if and only if a quit signal is detected.
 func (comm *communicator) Broadcast(root int, x interface{}) (msg interface{}, ok bool) {
 	if comm.checkRootAndN(root) {
 		// No other goroutines in this group.
@@ -662,7 +662,7 @@ func (comm *communicator) Broadcast(root int, x interface{}) (msg interface{}, o
 // For others, x can be anything (including nil) and will be ignored.
 //
 // It returns the received message and an indicator ok.
-// ok is false iff a quit signal is detected.
+// ok is false if and only if a quit signal is detected.
 func (comm *communicator) Scatter(root int, x sequence.Sequence) (msg sequence.Array, ok bool) {
 	if comm.checkRootAndN(root) {
 		// No other goroutines in this group.
@@ -766,7 +766,7 @@ func (comm *communicator) Scatter(root int, x sequence.Sequence) (msg sequence.A
 // For the root, x is the list of messages ordered by
 // the ranks of sender goroutines.
 // For others, x is nil.
-// ok is false iff a quit signal is detected.
+// ok is false if and only if a quit signal is detected.
 func (comm *communicator) Gather(root int, msg interface{}) (x []interface{}, ok bool) {
 	if comm.checkRootAndN(root) {
 		// No other goroutines in this group.
@@ -820,7 +820,7 @@ func (comm *communicator) Gather(root int, msg interface{}) (x []interface{}, ok
 }
 
 // checkRootAndN panics if root is out of range.
-// It returns true iff comm.NumGoroutine() <= 1.
+// It returns true if and only if comm.NumGoroutine() <= 1.
 func (comm *communicator) checkRootAndN(root int) bool {
 	n := len(comm.Ctx.Comms)
 	if root < 0 || root >= n {

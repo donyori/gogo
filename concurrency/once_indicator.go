@@ -27,8 +27,9 @@ type OnceIndicator interface {
 	// Do performs the same as the method Do of sync.Once, and indicate whether
 	// the function f is called in this invocation.
 	//
-	// In detail, it calls the function f and returns true iff the method Do
-	// is being called for the first time for this instance of OnceIndicator.
+	// In detail, it calls the function f and returns true if and only if
+	// the method Do is being called for the first time for this instance
+	// of OnceIndicator.
 	// Otherwise, it does nothing but waits for the first call of f to finish,
 	// and then returns false.
 	//
@@ -46,7 +47,7 @@ type OnceIndicator interface {
 
 	// Test reports whether the method Do for this instance is called or not.
 	//
-	// It returns true iff the first call of the method Do
+	// It returns true if and only if the first call of the method Do
 	// for this instance has finished.
 	Test() bool
 }
@@ -65,8 +66,9 @@ type onceIndicator struct {
 // Do performs the same as the method Do of sync.Once, and indicate whether
 // the function f is called in this invocation.
 //
-// In detail, it calls the function f and returns true iff the method Do
-// is being called for the first time for this instance of OnceIndicator.
+// In detail, it calls the function f and returns true if and only if
+// the method Do is being called for the first time for this instance
+// of OnceIndicator.
 // Otherwise, it does nothing but waits for the first call of f to finish,
 // and then returns false.
 //
@@ -98,7 +100,7 @@ func (oi *onceIndicator) Wait() {
 
 // Test reports whether the method Do for this instance is called or not.
 //
-// It returns true iff the first call of the method Do
+// It returns true if and only if the first call of the method Do
 // for this instance has finished.
 func (oi *onceIndicator) Test() bool {
 	select {

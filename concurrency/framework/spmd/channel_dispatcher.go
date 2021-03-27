@@ -95,7 +95,8 @@ func (cd *chanDispr) Run(quitDevice framework.QuitDevice, finChan chan<- struct{
 // It should be obtained from the quit device passed to the caller.
 // qry is the channel dispatcher query received from BcastChan.
 //
-// It returns an indicator, which is true iff a quit signal is detected.
+// It returns an indicator, which is true if and only if
+// a quit signal is detected.
 func (cd *chanDispr) handleBcast(quitChan <-chan struct{}, qry *chanDispQry) bool {
 	ctx := qry.Comm.Ctx
 	if ctx.BcastMap == nil {
@@ -131,7 +132,8 @@ func (cd *chanDispr) handleBcast(quitChan <-chan struct{}, qry *chanDispQry) boo
 // It should be obtained from the quit device passed to the caller.
 // qry is the channel dispatcher query received from ScatterChan.
 //
-// It returns an indicator, which is true iff a quit signal is detected.
+// It returns an indicator, which is true if and only if
+// a quit signal is detected.
 func (cd *chanDispr) handleScatter(quitChan <-chan struct{}, qry *chanDispQry) bool {
 	ctx := qry.Comm.Ctx
 	if ctx.ScatterMap == nil {
@@ -170,7 +172,8 @@ func (cd *chanDispr) handleScatter(quitChan <-chan struct{}, qry *chanDispQry) b
 // It should be obtained from the quit device passed to the caller.
 // qry is the channel dispatcher query received from GatherChan.
 //
-// It returns an indicator, which is true iff a quit signal is detected.
+// It returns an indicator, which is true if and only if
+// a quit signal is detected.
 func (cd *chanDispr) handleGather(quitChan <-chan struct{}, qry *chanDispQry) bool {
 	ctx := qry.Comm.Ctx
 	if ctx.GatherMap == nil {
