@@ -34,60 +34,136 @@ func (ef EqualFunc) Not() EqualFunc {
 	}
 }
 
-// Equal is a prefab EqualFunc for comparable variables
-// (i.e., variables that can be operands of equality operators == and !=).
+// Equal is a prefab EqualFunc performing as follows:
+//
+// If any input variable is nil (the nil interface{}),
+// it returns true if and only if the other input variable is also nil or
+// is the zero value of its type.
+//
+// Otherwise (two input variables are both non-nil interface{}),
+// it returns true if and only if the two input variables satisfies
+// the following three conditions:
+//  1. they have identical dynamic types;
+//  2. values of their type are comparable;
+//  3. they have equal dynamic values.
+//
+// If any input variable is not comparable,
+// it returns false rather than panicking.
+//
+// For more information about identical types,
+// see <https://golang.org/ref/spec#Type_identity>.
 //
 // For more information about comparable types,
 // see <https://golang.org/ref/spec#Comparison_operators>.
-var Equal EqualFunc = func(a, b interface{}) bool {
-	return a == b
+var Equal EqualFunc = equal
+
+// equal is an implementation of function Equal.
+func equal(a, b interface{}) bool {
+	if a == nil {
+		return b == nil || reflect.ValueOf(b).IsZero()
+	}
+	if b == nil {
+		return reflect.ValueOf(a).IsZero()
+	}
+	// It's sufficient to just test whether a is comparable.
+	return reflect.TypeOf(a).Comparable() && a == b
 }
 
-// BytesEqual is a prefab EqualFunc for []byte.
+// BytesEqual is a prefab EqualFunc for []byte and string.
 //
-// It returns true iff a and b have the same length and the same content,
-// or both a and b are nil.
-// A nil slice and an empty slice are considered unequal.
+// It returns true if and only if the input slices have the same length
+// and the same content.
+// The nil interface{}, nil []byte, empty []byte, and empty string are
+// considered equal for convenience.
+//
+// It panics if any non-nil input variable is neither []byte nor string.
+//
+// Note that []uint8 is equivalent to []byte as byte is an alias for uint8.
 var BytesEqual EqualFunc = bytesEqual
 
-// bytesEqual is an implementation of function bytesEqual.
-func bytesEqual(a, b interface{}) bool {
-	if a == nil || a.([]byte) == nil {
-		return b == nil || b.([]byte) == nil
-	} else if b == nil || b.([]byte) == nil {
+// bytesEqualBytesString is used by function bytesEqual.
+//
+// It returns true if and only if b and s have the same length
+// and the same content.
+func bytesEqualBytesString(b []byte, s string) bool {
+	if len(b) != len(s) {
 		return false
 	}
-	ba, bb := a.([]byte), b.([]byte)
-	if len(ba) != len(bb) {
-		return false
-	}
-	for i, k := 0, len(ba)-1; i <= k; i, k = i+1, k-1 {
-		if ba[i] != bb[i] || ba[k] != bb[k] {
+	for i, k := 0, len(b)-1; i <= k; i, k = i+1, k-1 {
+		if b[i] != s[i] || b[k] != s[k] {
 			return false
 		}
 	}
 	return true
 }
 
+// bytesEqual is an implementation of function bytesEqual.
+func bytesEqual(a, b interface{}) bool {
+	if a == nil {
+		a = ""
+	}
+	if b == nil {
+		b = ""
+	}
+	if sa, ok := a.(string); ok {
+		if sb, ok := b.(string); ok {
+			return sa == sb
+		}
+		if bb, ok := b.([]byte); ok {
+			return bytesEqualBytesString(bb, sa)
+		}
+	} else if ba, ok := a.([]byte); ok {
+		if sb, ok := b.(string); ok {
+			return bytesEqualBytesString(ba, sb)
+		}
+		if bb, ok := b.([]byte); ok {
+			if len(ba) != len(bb) {
+				return false
+			}
+			for i, k := 0, len(ba)-1; i <= k; i, k = i+1, k-1 {
+				if ba[i] != bb[i] || ba[k] != bb[k] {
+					return false
+				}
+			}
+			return true
+		}
+	} else {
+		panic(errors.AutoNew("a is neither []byte nor string"))
+	}
+	panic(errors.AutoNew("b is neither []byte nor string"))
+}
+
 // IntsEqual is a prefab EqualFunc for []int.
 //
-// It returns true iff a and b have the same length and the same content,
-// or both a and b are nil.
-// A nil slice and an empty slice are considered unequal.
+// It returns true if and only if the input slices have the same length
+// and the same content.
+// The nil interface{}, nil []int, and empty []int are considered equal
+// for convenience.
+//
+// It panics if any non-nil input variable is not []int.
 var IntsEqual EqualFunc = intsEqual
 
 // intsEqual is an implementation of function IntsEqual.
 func intsEqual(a, b interface{}) bool {
-	if a == nil || a.([]int) == nil {
-		return b == nil || b.([]int) == nil
-	} else if b == nil || b.([]int) == nil {
-		return false
+	var ia, ib []int
+	var ok bool
+	if a != nil {
+		ia, ok = a.([]int)
+		if !ok {
+			panic(errors.AutoNew("a is not []int"))
+		}
 	}
-	ia, ib := a.([]int), b.([]int)
+	if b != nil {
+		ib, ok = b.([]int)
+		if !ok {
+			panic(errors.AutoNew("b is not []int"))
+		}
+	}
 	if len(ia) != len(ib) {
 		return false
 	}
 	for i, k := 0, len(ia)-1; i <= k; i, k = i+1, k-1 {
+		// ia and ib will never be nil here.
 		if ia[i] != ib[i] || ia[k] != ib[k] {
 			return false
 		}
@@ -97,23 +173,35 @@ func intsEqual(a, b interface{}) bool {
 
 // Float64sEqual is a prefab EqualFunc for []float64.
 //
-// It returns true iff a and b have the same length and the same content,
-// or both a and b are nil.
-// A nil slice and an empty slice are considered unequal.
+// It returns true if and only if the input slices have the same length
+// and the same content.
+// The nil interface{}, nil []float64, and empty []float64 are considered equal
+// for convenience.
+//
+// It panics if any non-nil input variable is not []float64.
 var Float64sEqual EqualFunc = float64sEqual
 
 // float64sEqual is an implementation of function Float64sEqual.
 func float64sEqual(a, b interface{}) bool {
-	if a == nil || a.([]float64) == nil {
-		return b == nil || b.([]float64) == nil
-	} else if b == nil || b.([]float64) == nil {
-		return false
+	var fa, fb []float64
+	var ok bool
+	if a != nil {
+		fa, ok = a.([]float64)
+		if !ok {
+			panic(errors.AutoNew("a is not []float64"))
+		}
 	}
-	fa, fb := a.([]float64), b.([]float64)
+	if b != nil {
+		fb, ok = b.([]float64)
+		if !ok {
+			panic(errors.AutoNew("b is not []float64"))
+		}
+	}
 	if len(fa) != len(fb) {
 		return false
 	}
 	for i, k := 0, len(fa)-1; i <= k; i, k = i+1, k-1 {
+		// fa and fb will never be nil here.
 		if fa[i] != fb[i] || fa[k] != fb[k] {
 			return false
 		}
@@ -123,23 +211,35 @@ func float64sEqual(a, b interface{}) bool {
 
 // StringsEqual is a prefab EqualFunc for []string.
 //
-// It returns true iff a and b have the same length and the same content,
-// or both a and b are nil.
-// A nil slice and an empty slice are considered unequal.
+// It returns true if and only if the input slices have the same length
+// and the same content.
+// The nil interface{}, nil []string, and empty []string are considered equal
+// for convenience.
+//
+// It panics if any non-nil input variable is not []string.
 var StringsEqual EqualFunc = stringsEqual
 
 // stringsEqual is an implementation of function StringsEqual.
 func stringsEqual(a, b interface{}) bool {
-	if a == nil || a.([]string) == nil {
-		return b == nil || b.([]string) == nil
-	} else if b == nil || b.([]string) == nil {
-		return false
+	var sa, sb []string
+	var ok bool
+	if a != nil {
+		sa, ok = a.([]string)
+		if !ok {
+			panic(errors.AutoNew("a is not []string"))
+		}
 	}
-	sa, sb := a.([]string), b.([]string)
+	if b != nil {
+		sb, ok = b.([]string)
+		if !ok {
+			panic(errors.AutoNew("b is not []string"))
+		}
+	}
 	if len(sa) != len(sb) {
 		return false
 	}
 	for i, k := 0, len(sa)-1; i <= k; i, k = i+1, k-1 {
+		// sa and sb will never be nil here.
 		if sa[i] != sb[i] || sa[k] != sb[k] {
 			return false
 		}
@@ -149,98 +249,91 @@ func stringsEqual(a, b interface{}) bool {
 
 // GeneralSliceEqual is a prefab EqualFunc for []interface{}.
 //
-// It returns true iff a and b have the same length and the same content,
-// or both a and b are nil.
-// A nil slice and an empty slice are considered unequal.
+// It returns true if and only if the input slices have the same length
+// and the same content.
+// The nil interface{}, nil []interface{}, and empty []interface{}
+// are considered equal for convenience.
 //
-// It tests the elements of a and b through the "not equal" operator (i.e., !=)
-// rather than something like reflect.DeepEqual.
-// It will panic if the element type is not comparable
-// (i.e., cannot use "==" and "!=" on it).
-// For more information about comparable types,
-// see <https://golang.org/ref/spec#Comparison_operators>.
+// It panics if any non-nil input variable is not []interface{}.
+//
+// It tests the elements of input slices through the prefab function Equal.
+// See the document of Equal for details.
 var GeneralSliceEqual EqualFunc = generalSliceEqual
 
 // generalSliceEqual is an implementation of function GeneralSliceEqual.
 func generalSliceEqual(a, b interface{}) bool {
-	if a == nil || a.([]interface{}) == nil {
-		return b == nil || b.([]interface{}) == nil
-	} else if b == nil || b.([]interface{}) == nil {
-		return false
+	var ia, ib []interface{}
+	var ok bool
+	if a != nil {
+		ia, ok = a.([]interface{})
+		if !ok {
+			panic(errors.AutoNew("a is not []interface{}"))
+		}
 	}
-	ia, ib := a.([]interface{}), b.([]interface{})
+	if b != nil {
+		ib, ok = b.([]interface{})
+		if !ok {
+			panic(errors.AutoNew("b is not []interface{}"))
+		}
+	}
 	if len(ia) != len(ib) {
 		return false
 	}
 	for i, k := 0, len(ia)-1; i <= k; i, k = i+1, k-1 {
-		if ia[i] != ib[i] || ia[k] != ib[k] {
+		// ia and ib will never be nil here.
+		if !(equal(ia[i], ib[i]) && equal(ia[k], ib[k])) {
 			return false
 		}
 	}
 	return true
 }
 
-// SliceEqual is a prefab EqualFunc for slice (i.e., []Type).
+// SliceItemEqual is a prefab EqualFunc to test whether the items of
+// a slice (i.e., []Type) or a string are correspondingly equal,
+// where string is treated as []byte in this function.
 //
-// For better performance,
-// if the slice type is []int, []float64, []string, or []interface{},
-// use IntsEqual, Float64sEqual, StringsEqual, or GeneralSliceEqual instead.
+// For better performance, if the slice type is []byte, []uint8, string, []int,
+// []float64, []string, or []interface{},
+// use the corresponding function BytesEqual, IntsEqual, Float64sEqual,
+// StringsEqual, or GeneralSliceEqual instead.
 //
-// It returns true iff a and b have the same type, the same length,
-// and the same content, or both a and b are nil.
-// A nil slice and an empty slice are considered unequal.
+// It returns true if and only if the input slices have the same length
+// and the same content.
+// It doesn't matter whether the two input slice types are identical.
+// The nil interface{}, nil slice, and empty slice are considered equal
+// for convenience.
 //
-// It tests the elements of a and b through the "not equal" operator (i.e., !=)
-// rather than something like reflect.DeepEqual.
-// It will panic if the element type is not comparable
-// (i.e., cannot use "==" and "!=" on it).
-// For more information about comparable types,
-// see <https://golang.org/ref/spec#Comparison_operators>.
+// It panics if any non-nil input variable is neither slice nor string.
 //
-// It will panic if the type of a or b is not a slice.
-// However, if the type of the elements of a is not the same as that of b,
-// it will return false rather than panic.
-var SliceEqual EqualFunc = sliceEqual
+// It tests the elements of input variables through the prefab function Equal.
+// See the document of Equal for details.
+var SliceItemEqual EqualFunc = sliceItemEqual
 
-// sliceEqual is an implementation of function SliceEqual.
-func sliceEqual(a, b interface{}) bool {
-	if a == nil {
-		if b == nil {
-			return true
-		}
-		vb := reflect.ValueOf(b)
-		if vb.Kind() != reflect.Slice {
-			panic(errors.AutoMsg("b is NOT a slice"))
-		}
-		return vb.IsNil()
-	} else if b == nil {
-		va := reflect.ValueOf(a)
-		if va.Kind() != reflect.Slice {
-			panic(errors.AutoMsg("a is NOT a slice"))
-		}
-		return va.IsNil()
-	}
+// sliceItemEqual is an implementation of function SliceItemEqual.
+func sliceItemEqual(a, b interface{}) bool {
 	va, vb := reflect.ValueOf(a), reflect.ValueOf(b)
-	if va.Kind() != reflect.Slice {
-		panic(errors.AutoMsg("a is NOT a slice"))
+	var na, nb int
+	switch va.Kind() {
+	case reflect.Slice, reflect.String:
+		na = va.Len()
+	case reflect.Invalid:
+	default:
+		panic(errors.AutoNew("a is neither slice nor string"))
 	}
-	if vb.Kind() != reflect.Slice {
-		panic(errors.AutoMsg("b is NOT a slice"))
+	switch vb.Kind() {
+	case reflect.Slice, reflect.String:
+		nb = vb.Len()
+	case reflect.Invalid:
+	default:
+		panic(errors.AutoNew("b is neither slice nor string"))
 	}
-	if va.Type().Elem() != vb.Type().Elem() {
+
+	if na != nb {
 		return false
 	}
-	if va.IsNil() {
-		return vb.IsNil()
-	} else if vb.IsNil() {
-		return false
-	}
-	if va.Len() != vb.Len() {
-		return false
-	}
-	for i, k := 0, va.Len()-1; i <= k; i, k = i+1, k-1 {
-		if va.Index(i).Interface() != vb.Index(i).Interface() ||
-			va.Index(k).Interface() != vb.Index(k).Interface() {
+	for i, k := 0, na-1; i <= k; i, k = i+1, k-1 {
+		if !(equal(va.Index(i).Interface(), vb.Index(i).Interface()) &&
+			equal(va.Index(k).Interface(), vb.Index(k).Interface())) {
 			return false
 		}
 	}
