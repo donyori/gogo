@@ -89,8 +89,8 @@ func bytesEqualBytesString(b []byte, s string) bool {
 	if len(b) != len(s) {
 		return false
 	}
-	for i, k := 0, len(b)-1; i <= k; i, k = i+1, k-1 {
-		if b[i] != s[i] || b[k] != s[k] {
+	for i := range b {
+		if b[i] != s[i] {
 			return false
 		}
 	}
@@ -120,8 +120,8 @@ func bytesEqual(a, b interface{}) bool {
 			if len(ba) != len(bb) {
 				return false
 			}
-			for i, k := 0, len(ba)-1; i <= k; i, k = i+1, k-1 {
-				if ba[i] != bb[i] || ba[k] != bb[k] {
+			for i := range ba {
+				if ba[i] != bb[i] {
 					return false
 				}
 			}
@@ -162,9 +162,9 @@ func intsEqual(a, b interface{}) bool {
 	if len(ia) != len(ib) {
 		return false
 	}
-	for i, k := 0, len(ia)-1; i <= k; i, k = i+1, k-1 {
+	for i := range ia {
 		// ia and ib will never be nil here.
-		if ia[i] != ib[i] || ia[k] != ib[k] {
+		if ia[i] != ib[i] {
 			return false
 		}
 	}
@@ -200,9 +200,9 @@ func float64sEqual(a, b interface{}) bool {
 	if len(fa) != len(fb) {
 		return false
 	}
-	for i, k := 0, len(fa)-1; i <= k; i, k = i+1, k-1 {
+	for i := range fa {
 		// fa and fb will never be nil here.
-		if fa[i] != fb[i] || fa[k] != fb[k] {
+		if fa[i] != fb[i] {
 			return false
 		}
 	}
@@ -238,9 +238,9 @@ func stringsEqual(a, b interface{}) bool {
 	if len(sa) != len(sb) {
 		return false
 	}
-	for i, k := 0, len(sa)-1; i <= k; i, k = i+1, k-1 {
+	for i := range sa {
 		// sa and sb will never be nil here.
-		if sa[i] != sb[i] || sa[k] != sb[k] {
+		if sa[i] != sb[i] {
 			return false
 		}
 	}
@@ -279,9 +279,9 @@ func generalSliceEqual(a, b interface{}) bool {
 	if len(ia) != len(ib) {
 		return false
 	}
-	for i, k := 0, len(ia)-1; i <= k; i, k = i+1, k-1 {
+	for i := range ia {
 		// ia and ib will never be nil here.
-		if !(equal(ia[i], ib[i]) && equal(ia[k], ib[k])) {
+		if !equal(ia[i], ib[i]) {
 			return false
 		}
 	}
@@ -331,9 +331,8 @@ func sliceItemEqual(a, b interface{}) bool {
 	if na != nb {
 		return false
 	}
-	for i, k := 0, na-1; i <= k; i, k = i+1, k-1 {
-		if !(equal(va.Index(i).Interface(), vb.Index(i).Interface()) &&
-			equal(va.Index(k).Interface(), vb.Index(k).Interface())) {
+	for i := 0; i < na; i++ {
+		if !equal(va.Index(i).Interface(), vb.Index(i).Interface()) {
 			return false
 		}
 	}

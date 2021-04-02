@@ -18,7 +18,12 @@
 
 package function
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+
+	"github.com/donyori/gogo/errors"
+)
 
 func TestEqual(t *testing.T) {
 	pairs := [][2]interface{}{
@@ -313,4 +318,184 @@ func testMkEqNeqPairs(eqGroups [][]interface{}, eqExCap, neqExCap int) (eqPairs,
 		}
 	}
 	return
+}
+
+func BenchmarkIntsEqual(b *testing.B) {
+	data := make([]int, 9999)
+	for i := range data {
+		data[i] = i % 100
+	}
+
+	bms := []struct {
+		name string
+		fn   EqualFunc
+	}{
+		{"One direction", IntsEqual},
+		{"Two directions", testIntsEqualBidirectionalComparison},
+	}
+	for _, bm := range bms {
+		b.Run(bm.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				if !bm.fn(data, data) {
+					b.Error(bm.name, "case reports false.")
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkBytesEqual(b *testing.B) {
+	const span = 'Z' - 'A' + 1
+	bs := make([]byte, 9999)
+	for i := range bs {
+		bs[i] = 'A' + byte(i%span)
+	}
+	s := string(bs)
+
+	bms := []struct {
+		name string
+		fn   EqualFunc
+	}{
+		{"One direction", BytesEqual},
+		{"Two directions", testBytesEqualBidirectionalComparison},
+	}
+	for _, bm := range bms {
+		b.Run(bm.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				if !bm.fn(bs, s) {
+					b.Error(bm.name, "case reports false.")
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkSliceItemEqual(b *testing.B) {
+	const span = 'Z' - 'A' + 1
+	bs := make([]byte, 9999)
+	for i := range bs {
+		bs[i] = 'A' + byte(i%span)
+	}
+	s := string(bs)
+
+	bms := []struct {
+		name string
+		fn   EqualFunc
+	}{
+		{"One direction", SliceItemEqual},
+		{"Two directions", testSliceItemEqualBidirectionalComparison},
+	}
+	for _, bm := range bms {
+		b.Run(bm.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				if !bm.fn(bs, s) {
+					b.Error(bm.name, "case reports false.")
+				}
+			}
+		})
+	}
+}
+
+var testIntsEqualBidirectionalComparison EqualFunc = func(a, b interface{}) bool {
+	var ia, ib []int
+	var ok bool
+	if a != nil {
+		ia, ok = a.([]int)
+		if !ok {
+			panic(errors.AutoNew("a is not []int"))
+		}
+	}
+	if b != nil {
+		ib, ok = b.([]int)
+		if !ok {
+			panic(errors.AutoNew("b is not []int"))
+		}
+	}
+	if len(ia) != len(ib) {
+		return false
+	}
+	for i, k := 0, len(ia)-1; i <= k; i, k = i+1, k-1 {
+		// ia and ib will never be nil here.
+		if ia[i] != ib[i] || ia[k] != ib[k] {
+			return false
+		}
+	}
+	return true
+}
+
+var testBytesEqualBidirectionalComparison EqualFunc = func(a, b interface{}) bool {
+	if a == nil {
+		a = ""
+	}
+	if b == nil {
+		b = ""
+	}
+	if sa, ok := a.(string); ok {
+		if sb, ok := b.(string); ok {
+			return sa == sb
+		}
+		if bb, ok := b.([]byte); ok {
+			return testBytesEqualBytesStringBidirectionalComparison(bb, sa)
+		}
+	} else if ba, ok := a.([]byte); ok {
+		if sb, ok := b.(string); ok {
+			return testBytesEqualBytesStringBidirectionalComparison(ba, sb)
+		}
+		if bb, ok := b.([]byte); ok {
+			if len(ba) != len(bb) {
+				return false
+			}
+			for i, k := 0, len(ba)-1; i <= k; i, k = i+1, k-1 {
+				if ba[i] != bb[i] || ba[k] != bb[k] {
+					return false
+				}
+			}
+			return true
+		}
+	} else {
+		panic(errors.AutoNew("a is neither []byte nor string"))
+	}
+	panic(errors.AutoNew("b is neither []byte nor string"))
+}
+
+var testSliceItemEqualBidirectionalComparison EqualFunc = func(a, b interface{}) bool {
+	va, vb := reflect.ValueOf(a), reflect.ValueOf(b)
+	var na, nb int
+	switch va.Kind() {
+	case reflect.Slice, reflect.String:
+		na = va.Len()
+	case reflect.Invalid:
+	default:
+		panic(errors.AutoNew("a is neither slice nor string"))
+	}
+	switch vb.Kind() {
+	case reflect.Slice, reflect.String:
+		nb = vb.Len()
+	case reflect.Invalid:
+	default:
+		panic(errors.AutoNew("b is neither slice nor string"))
+	}
+
+	if na != nb {
+		return false
+	}
+	for i, k := 0, na-1; i <= k; i, k = i+1, k-1 {
+		if !(equal(va.Index(i).Interface(), vb.Index(i).Interface()) &&
+			equal(va.Index(k).Interface(), vb.Index(k).Interface())) {
+			return false
+		}
+	}
+	return true
+}
+
+func testBytesEqualBytesStringBidirectionalComparison(b []byte, s string) bool {
+	if len(b) != len(s) {
+		return false
+	}
+	for i, k := 0, len(b)-1; i <= k; i, k = i+1, k-1 {
+		if b[i] != s[i] || b[k] != s[k] {
+			return false
+		}
+	}
+	return true
 }
