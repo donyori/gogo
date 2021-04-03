@@ -29,6 +29,10 @@ const lowercaseHexTable = "0123456789abcdef"
 // sourceBufferLen is the length of a chunk of source data.
 const sourceBufferLen = 512
 
+// letterCaseDiff is the result of 'A' xor 'a'.
+// It indicates the different bit of the uppercase and lowercase letters.
+const letterCaseDiff byte = 'A' ^ 'a'
+
 // sourceBufferPool is a set of temporary buffers to load source data
 // from readers.
 //
