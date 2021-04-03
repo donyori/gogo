@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/donyori/gogo/encoding/hex"
 	"github.com/donyori/gogo/errors"
@@ -160,8 +159,7 @@ func httpRequestDownload(req *http.Request, filename string, perm os.FileMode, c
 				return false
 			}
 			for i := range cs {
-				sum := hex.EncodeToString(hashes[i].Sum(nil), false)
-				if sum != strings.ToLower(cs[i].HexExpSum) {
+				if !hex.CanEncodeToString(hashes[i].Sum(nil), cs[i].HexExpSum) {
 					return false
 				}
 			}
