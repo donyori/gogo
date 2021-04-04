@@ -20,7 +20,6 @@ package hex
 
 import (
 	stdhex "encoding/hex"
-	"math"
 	"strings"
 	"testing"
 )
@@ -102,7 +101,7 @@ func BenchmarkCanEncodeToString(b *testing.B) {
 	}
 	src := make([]byte, 9999)
 	for i := range src {
-		src[i] = byte(i % math.MaxUint8)
+		src[i] = byte(i % (1 << 8))
 	}
 	dst := stdhex.EncodeToString(src)
 	data := []struct {
@@ -121,12 +120,12 @@ func BenchmarkCanEncodeToString(b *testing.B) {
 		r    bool
 	}, len(fns)*len(data))
 	var idx int
-	for i := range fns {
-		for k := range data {
-			bms[idx].name = fns[i].name + "_" + data[k].name
-			bms[idx].fn = fns[i].fn
-			bms[idx].x = data[k].x
-			bms[idx].r = data[k].r
+	for i := range data {
+		for k := range fns {
+			bms[idx].name = fns[k].name + "_" + data[i].name
+			bms[idx].fn = fns[k].fn
+			bms[idx].x = data[i].x
+			bms[idx].r = data[i].r
 			idx++
 		}
 	}

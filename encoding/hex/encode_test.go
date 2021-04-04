@@ -21,6 +21,7 @@ package hex
 import (
 	"bytes"
 	stdhex "encoding/hex"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -189,4 +190,58 @@ func TestEncoder_ReadFrom(t *testing.T) {
 		}
 		w.Reset()
 	}
+}
+
+func BenchmarkEncodeToString(b *testing.B) {
+	fns := []struct {
+		name string
+		fn   func(src []byte, upper bool) string
+	}{
+		{"MyFunc_Conversion", EncodeToString},
+		{"Builder", testEncodeToString},
+	}
+	bms := make([]struct {
+		name  string
+		fn    func(src []byte, upper bool) string
+		src   []byte
+		upper bool
+		r     string
+	}, len(fns)*len(testEncodeCases))
+	var idx int
+	for i := range testEncodeCases {
+		for k := range fns {
+			bms[idx].name = fns[k].name + "_" + strconv.Itoa(i)
+			bms[idx].fn = fns[k].fn
+			bms[idx].src = []byte(testEncodeCases[i].src)
+			bms[idx].upper = testEncodeCases[i].upper
+			bms[idx].r = testEncodeCases[i].dst
+			idx++
+		}
+	}
+
+	for _, bm := range bms {
+		b.Run(bm.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				if r := bm.fn(bm.src, bm.upper); r != bm.r {
+					b.Errorf("Case %q, upper: %t\n  src: %q\n  got: %q\n  wanted: %q", bm.name, bm.upper, bm.src, r, bm.r)
+				}
+			}
+		})
+	}
+}
+
+// testEncodeToString is another implementation of function EncodeToString,
+// based on strings.Builder.
+func testEncodeToString(src []byte, upper bool) string {
+	var builder strings.Builder
+	builder.Grow(EncodedLen(len(src)))
+	ht := lowercaseHexTable
+	if upper {
+		ht = uppercaseHexTable
+	}
+	for _, b := range src {
+		builder.WriteByte(ht[b>>4])
+		builder.WriteByte(ht[b&0x0f])
+	}
+	return builder.String()
 }

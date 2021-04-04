@@ -31,6 +31,18 @@ const sourceBufferLen = 512
 
 // letterCaseDiff is the result of 'A' xor 'a'.
 // It indicates the different bit of the uppercase and lowercase letters.
+//
+// A letter byte ('A'-'Z','a'-'z', binary representation:
+// 0b0100_0001-0b0101_1010,0b0110_0001-0b0111_1010) bitwise or letterCaseDiff
+// gets the corresponding lowercase letter ('a'-'z').
+// A number byte ('0'-'9', binary representation: 0b0011_0000-0b0011_1001)
+// bitwise or letterCaseDiff gets the number itself.
+// But the bytes 0b0001_0000-0b0001_1001 bitwise or letterCaseDiff
+// gets the number byte ('0'-'9').
+// Therefore, a necessary and sufficient condition to test whether
+// a specified byte c equals to a byte x of the lowercase character table
+// (lowercaseHexTable) case-insensitively, is:
+//  c >= '0' && c|letterCaseDiff == x
 const letterCaseDiff byte = 'A' ^ 'a'
 
 // sourceBufferPool is a set of temporary buffers to load source data
