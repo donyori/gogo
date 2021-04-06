@@ -19,6 +19,7 @@
 package hex
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/donyori/gogo/errors"
@@ -68,33 +69,19 @@ func FormattedLen64(n int64, cfg *FormatConfig) int64 {
 // Format outputs hexadecimal representation of src
 // in the format specified by cfg to dst.
 //
+// It panics if dst doesn't have enough space to hold the formatting result.
+// The client should guarantee that len(dst) >= FormattedLen(len(src), cfg).
+//
 // It returns the number of bytes written into dst,
 // exactly FormattedLen(len(src), cfg).
 //
 // Format(dst, src, nil) is equivalent to Encode(dst, src)
 // in official package encoding/hex.
 func Format(dst, src []byte, cfg *FormatConfig) int {
-	if cfg.formatCfgNotValid() {
-		upper := false
-		if cfg != nil {
-			upper = cfg.Upper
-		}
-		return Encode(dst, src, upper)
+	if reqLen := FormattedLen(len(src), cfg); reqLen > len(dst) {
+		panic(errors.AutoMsg(fmt.Sprintf("dst is too small, length: %d, required: %d", len(dst), reqLen)))
 	}
-	ht := lowercaseHexTable
-	if cfg.Upper {
-		ht = uppercaseHexTable
-	}
-	var n int
-	for i, b := range src {
-		if n > 0 && i%cfg.BlockLen == 0 {
-			n += copy(dst[n:], cfg.Sep)
-		}
-		dst[n] = ht[b>>4]
-		dst[n+1] = ht[b&0x0f]
-		n += 2
-	}
-	return n
+	return format(dst, src, cfg)
 }
 
 // FormatToString returns hexadecimal representation of src
@@ -104,7 +91,7 @@ func Format(dst, src []byte, cfg *FormatConfig) int {
 // in official package encoding/hex.
 func FormatToString(src []byte, cfg *FormatConfig) string {
 	dst := make([]byte, FormattedLen(len(src), cfg))
-	Format(dst, src, cfg)
+	format(dst, src, cfg)
 	return string(dst)
 }
 
@@ -115,7 +102,7 @@ func FormatToString(src []byte, cfg *FormatConfig) string {
 // and any write error encountered.
 func FormatTo(w io.Writer, src []byte, cfg *FormatConfig) (n int, err error) {
 	dst := make([]byte, FormattedLen(len(src), cfg))
-	Format(dst, src, cfg)
+	format(dst, src, cfg)
 	n, err = w.Write(dst)
 	if n == len(dst) {
 		n = len(src)
@@ -401,4 +388,32 @@ func (f *formatter) write(ht string, p []byte) (n int, err error) {
 		n++
 	}
 	return
+}
+
+// format is an implementation of function Format,
+// without checking the length of dst.
+//
+// Caller should guarantee that len(dst) >= FormattedLen(len(src), cfg).
+func format(dst, src []byte, cfg *FormatConfig) int {
+	if cfg.formatCfgNotValid() {
+		upper := false
+		if cfg != nil {
+			upper = cfg.Upper
+		}
+		return Encode(dst, src, upper)
+	}
+	ht := lowercaseHexTable
+	if cfg.Upper {
+		ht = uppercaseHexTable
+	}
+	var n int
+	for i, b := range src {
+		if n > 0 && i%cfg.BlockLen == 0 {
+			n += copy(dst[n:], cfg.Sep)
+		}
+		dst[n] = ht[b>>4]
+		dst[n+1] = ht[b&0x0f]
+		n += 2
+	}
+	return n
 }

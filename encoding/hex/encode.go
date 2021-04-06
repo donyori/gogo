@@ -19,6 +19,7 @@
 package hex
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/donyori/gogo/errors"
@@ -36,6 +37,9 @@ func EncodedLen64(n int64) int64 {
 
 // Encode encodes src in hexadecimal representation to dst.
 //
+// It panics if dst doesn't have enough space to hold the encoding result.
+// The client should guarantee that len(dst) >= EncodedLen(len(src)).
+//
 // upper indicates to use uppercase in hexadecimal representation.
 //
 // It returns the number of bytes written into dst,
@@ -44,17 +48,10 @@ func EncodedLen64(n int64) int64 {
 // Encode(dst, src, false) is equivalent to Encode(dst, src)
 // in official package encoding/hex.
 func Encode(dst, src []byte, upper bool) int {
-	ht := lowercaseHexTable
-	if upper {
-		ht = uppercaseHexTable
+	if reqLen := EncodedLen(len(src)); reqLen > len(dst) {
+		panic(errors.AutoMsg(fmt.Sprintf("dst is too small, length: %d, required: %d", len(dst), reqLen)))
 	}
-	var n int
-	for _, b := range src {
-		dst[n] = ht[b>>4]
-		dst[n+1] = ht[b&0x0f]
-		n += 2
-	}
-	return n
+	return encode(dst, src, upper)
 }
 
 // EncodeToString returns hexadecimal encoding of src.
@@ -65,7 +62,7 @@ func Encode(dst, src []byte, upper bool) int {
 // in official package encoding/hex.
 func EncodeToString(src []byte, upper bool) string {
 	dst := make([]byte, EncodedLen(len(src)))
-	Encode(dst, src, upper)
+	encode(dst, src, upper)
 	return string(dst)
 }
 
@@ -116,7 +113,7 @@ func (e *encoder) Write(p []byte) (n int, err error) {
 		if len(p) < size {
 			size = len(p)
 		}
-		encoded := Encode(buf, p[:size], e.upper)
+		encoded := encode(buf, p[:size], e.upper)
 		var written int
 		written, err = e.w.Write(buf[:encoded])
 		n += DecodedLen(written)
@@ -133,7 +130,7 @@ func (e *encoder) WriteByte(c byte) error {
 	defer encodeBufferPool.Put(bufp)
 	buf := *bufp
 	buf[0] = c
-	encoded := Encode(buf[1:], buf[:1], e.upper)
+	encoded := encode(buf[1:], buf[:1], e.upper)
 	_, err := e.w.Write(buf[1 : 1+encoded])
 	return errors.AutoWrap(err)
 }
@@ -172,4 +169,22 @@ func (e *encoder) ReadFrom(r io.Reader) (n int64, err error) {
 // EncodeDst returns the destination writer of this encoder.
 func (e *encoder) EncodeDst() io.Writer {
 	return e.w
+}
+
+// encode is an implementation of function Encode,
+// without checking the length of dst.
+//
+// Caller should guarantee that len(dst) >= EncodedLen(len(src)).
+func encode(dst, src []byte, upper bool) int {
+	ht := lowercaseHexTable
+	if upper {
+		ht = uppercaseHexTable
+	}
+	var n int
+	for _, b := range src {
+		dst[n] = ht[b>>4]
+		dst[n+1] = ht[b&0x0f]
+		n += 2
+	}
+	return n
 }

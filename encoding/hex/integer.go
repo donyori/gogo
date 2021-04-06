@@ -57,8 +57,8 @@ func EncodeInt64DstLen(digits int) int {
 // To ensure that dst has enough space to keep the result,
 // its length should be at least EncodeInt64DstLen(digits).
 func EncodeInt64(dst []byte, x int64, upper bool, digits int) int {
-	dstTooSmallMsgFn := func(need int) string {
-		return fmt.Sprintf("dst is too small, len(dst): %d, need: %d", len(dst), need)
+	dstTooSmallMsgFn := func(required int) string {
+		return fmt.Sprintf("dst is too small, length: %d, required: %d", len(dst), required)
 	}
 
 	// Special cases for 0 and -0x8000000000000000 (minimum value of int64):

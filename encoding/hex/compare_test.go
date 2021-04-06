@@ -30,7 +30,7 @@ func TestCanEncode(t *testing.T) {
 		for _, dstCase := range testEncodeCases {
 			dst := dstCase.dst
 			if r := CanEncode([]byte(src), []byte(dst)); r != (src == dstCase.src) {
-				t.Errorf("CanEncode: %t\n  src: %q\n  dst: %q\n  wanted: %q", r, src, dst, srcCase.dst)
+				t.Errorf("CanEncode: %t\n  src: %q\n  dst:         %q\n  encode(src): %q", r, src, dst, srcCase.dst)
 			}
 		}
 	}
@@ -48,7 +48,7 @@ func TestCanEncode(t *testing.T) {
 			continue
 		}
 		if CanEncode([]byte(c.src), dst) {
-			t.Errorf("CanEncode: true\n  src: %q\n  dst: %q\n  wanted: %q", c.src, dst, c.dst)
+			t.Errorf("CanEncode: true\n  src: %q\n  dst:         %q\n  encode(src): %q", c.src, dst, c.dst)
 		}
 		skipAll = false
 	}
@@ -63,7 +63,7 @@ func TestCanEncodeToString(t *testing.T) {
 		for _, dstCase := range testEncodeCases {
 			dst := dstCase.dst
 			if r := CanEncodeToString([]byte(src), dst); r != (src == dstCase.src) {
-				t.Errorf("CanEncodeToString: %t\n  src: %q\n  dst: %q\n  wanted: %q", r, src, dst, srcCase.dst)
+				t.Errorf("CanEncodeToString: %t\n  src: %q\n  dst:         %q\n  encode(src): %q", r, src, dst, srcCase.dst)
 			}
 		}
 	}
@@ -81,7 +81,7 @@ func TestCanEncodeToString(t *testing.T) {
 			continue
 		}
 		if CanEncodeToString([]byte(c.src), string(dst)) {
-			t.Errorf("CanEncodeToString: true\n  src: %q\n  dst: %q\n  wanted: %q", c.src, dst, c.dst)
+			t.Errorf("CanEncodeToString: true\n  src: %q\n  dst:         %q\n  encode(src): %q", c.src, dst, c.dst)
 		}
 		skipAll = false
 	}
@@ -134,7 +134,7 @@ func BenchmarkCanEncodeToString(b *testing.B) {
 		b.Run(bm.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				if r := bm.fn(src, bm.x); r != bm.r {
-					b.Errorf("Case %q, got: %t\n  x: %q\n  wanted: %q", bm.name, r, bm.x, dst)
+					b.Errorf("Case %q, got: %t\n  x:           %q\n  encode(src): %q", bm.name, r, bm.x, dst)
 				}
 			}
 		})
