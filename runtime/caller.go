@@ -23,8 +23,10 @@ import (
 	"strings"
 )
 
-// Return the package name of the function fn. fn is the package path-qualified
-// function name that uniquely identifies a single function in the program.
+// FuncPkg returns the package name of the function fn.
+//
+// fn is the package path-qualified function name that uniquely identifies
+// a single function in the program.
 func FuncPkg(fn string) string {
 	// The first dot ('.') after the last slash ('/') splits the package name
 	// and the function name. The dots in the package name after the last slash
@@ -34,8 +36,11 @@ func FuncPkg(fn string) string {
 	return fn[:i]
 }
 
-// Return the stack frame information of caller. skip is the number of
-// stack frames to ascend, with 0 identifying the caller of CallerFrame.
+// CallerFrame returns the stack frame information of caller.
+//
+// skip is the number of stack frames to ascend,
+// with 0 identifying the caller of CallerFrame.
+//
 // The return value ok is false if the information is unretrievable.
 func CallerFrame(skip int) (frame stdruntime.Frame, ok bool) {
 	rpc := make([]uintptr, 1)
@@ -47,8 +52,9 @@ func CallerFrame(skip int) (frame stdruntime.Frame, ok bool) {
 	return frame, frame.PC != 0
 }
 
-// Return the full package name and simple function name of
+// FramePkgFunc returns the full package name and simple function name of
 // the function in the specified stack frame.
+//
 // The return value ok is false if the information is unretrievable.
 func FramePkgFunc(frame stdruntime.Frame) (pkg, fn string, ok bool) {
 	if frame.PC == 0 || frame.Function == "" {
@@ -58,9 +64,12 @@ func FramePkgFunc(frame stdruntime.Frame) (pkg, fn string, ok bool) {
 	return pkg, frame.Function[len(pkg)+1:], true
 }
 
-// Return the full package name and simple function name of caller.
+// CallerPkgFunc returns the full package name and simple function name of
+// its caller.
+//
 // skip is the number of stack frames to ascend,
 // with 0 identifying the caller of CallerPkgFunc.
+//
 // The return value ok is false if the information is unretrievable.
 func CallerPkgFunc(skip int) (pkg, fn string, ok bool) {
 	frame, ok := CallerFrame(skip + 1)

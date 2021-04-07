@@ -48,77 +48,79 @@ var testGlobalTagPkgFuncs [][3]string
 
 func init() {
 	pkg, fn, _ := CallerPkgFunc(0)
-	testGlobalTagPkgFuncs = append(testGlobalTagPkgFuncs, [3]string{"init-1", pkg, fn})
+	testGlobalTagPkgFuncs = append(testGlobalTagPkgFuncs, [3]string{"init.0", pkg, fn})
 }
 
 func init() {
 	pkg, fn, _ := CallerPkgFunc(0)
-	testGlobalTagPkgFuncs = append(testGlobalTagPkgFuncs, [3]string{"init-2", pkg, fn})
+	testGlobalTagPkgFuncs = append(testGlobalTagPkgFuncs, [3]string{"init.1", pkg, fn})
 }
 
-func _TestShowCallerPkgFunc(t *testing.T) {
+func TestCallerPkgFunc(t *testing.T) {
 	var records []struct {
-		tag string
-		pkg string
-		fn  string
+		expFn string
+		pkg   string
+		fn    string
 	}
 	for _, elem := range testGlobalTagPkgFuncs {
 		records = append(records, struct {
-			tag string
-			pkg string
-			fn  string
-		}{tag: elem[0], pkg: elem[1], fn: elem[2]})
+			expFn string
+			pkg   string
+			fn    string
+		}{elem[0], elem[1], elem[2]})
 	}
 	pkg, fn, _ := CallerPkgFunc(0)
 	records = append(records, struct {
-		tag string
-		pkg string
-		fn  string
-	}{tag: "TestFunc", pkg: pkg, fn: fn})
+		expFn string
+		pkg   string
+		fn    string
+	}{"TestCallerPkgFunc", pkg, fn})
 	func() {
 		defer func() {
 			pkg, fn, _ := CallerPkgFunc(0)
 			records = append(records, struct {
-				tag string
-				pkg string
-				fn  string
-			}{tag: "inner-2", pkg: pkg, fn: fn})
+				expFn string
+				pkg   string
+				fn    string
+			}{"TestCallerPkgFunc.func1.1", pkg, fn})
 		}()
 		pkg, fn, _ := CallerPkgFunc(0)
 		records = append(records, struct {
-			tag string
-			pkg string
-			fn  string
-		}{tag: "inner-1", pkg: pkg, fn: fn})
+			expFn string
+			pkg   string
+			fn    string
+		}{"TestCallerPkgFunc.func1", pkg, fn})
 	}()
 	tes := new(TestExportedStruct)
 	pkg, fn = tes.Foo()
 	records = append(records, struct {
-		tag string
-		pkg string
-		fn  string
-	}{tag: "TES.Foo", pkg: pkg, fn: fn})
+		expFn string
+		pkg   string
+		fn    string
+	}{"(*TestExportedStruct).Foo", pkg, fn})
 	pkg, fn = tes.foo()
 	records = append(records, struct {
-		tag string
-		pkg string
-		fn  string
-	}{tag: "TES.foo", pkg: pkg, fn: fn})
+		expFn string
+		pkg   string
+		fn    string
+	}{"(*TestExportedStruct).foo", pkg, fn})
 	tls := new(testLocalStruct)
 	pkg, fn = tls.Foo()
 	records = append(records, struct {
-		tag string
-		pkg string
-		fn  string
-	}{tag: "TLS.Foo", pkg: pkg, fn: fn})
+		expFn string
+		pkg   string
+		fn    string
+	}{"(*testLocalStruct).Foo", pkg, fn})
 	pkg, fn = tls.foo()
 	records = append(records, struct {
-		tag string
-		pkg string
-		fn  string
-	}{tag: "TLS.foo", pkg: pkg, fn: fn})
+		expFn string
+		pkg   string
+		fn    string
+	}{"(*testLocalStruct).foo", pkg, fn})
 
-	for i := range records {
-		t.Logf("Record %d: %+v.", i, records[i])
+	for _, rec := range records {
+		if rec.pkg != "github.com/donyori/gogo/runtime" || rec.fn != rec.expFn {
+			t.Errorf("pkg: %s, fn: %s\nwanted: pkg: github.com/donyori/gogo/runtime, fn: %s", rec.pkg, rec.fn, rec.expFn)
+		}
 	}
 }
