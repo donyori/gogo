@@ -172,7 +172,7 @@ func TestTimestamp_UnmarshalJSON(t *testing.T) {
 		err := json.Unmarshal(c.ForParse, &ts)
 		if err != nil {
 			t.Errorf("Case %d: %v.", i+1, err)
-		} else if !(stdtime.Time)(ts).Equal(stdtime.Time(c.Timestamp)) {
+		} else if !(Time)(ts).Equal(Time(c.Timestamp)) {
 			t.Errorf("Case %d: ts: %v != %v.", i+1, ts, c.Timestamp)
 		}
 	}
@@ -204,7 +204,7 @@ func TestUnixTimestamp_UnmarshalJSON(t *testing.T) {
 		err := json.Unmarshal(c.Bytes, &ut)
 		if err != nil {
 			t.Errorf("Case %d: %v.", i+1, err)
-		} else if !(stdtime.Time)(ut).Equal(stdtime.Time(c.Timestamp)) {
+		} else if !(Time)(ut).Equal(Time(c.Timestamp)) {
 			t.Errorf("Case %d: ut: %v != %v.", i+1, ut, c.Timestamp)
 		}
 	}
@@ -236,7 +236,7 @@ func TestMilliTimestamp_UnmarshalJSON(t *testing.T) {
 		err := json.Unmarshal(c.Bytes, &mt)
 		if err != nil {
 			t.Errorf("Case %d: %v.", i+1, err)
-		} else if !(stdtime.Time)(mt).Equal(stdtime.Time(c.Timestamp)) {
+		} else if !(Time)(mt).Equal(Time(c.Timestamp)) {
 			t.Errorf("Case %d: mt: %v != %v.", i+1, mt, c.Timestamp)
 		}
 	}
@@ -264,12 +264,12 @@ func TestMicroTimestamp_MarshalJSON(t *testing.T) {
 
 func TestMicroTimestamp_UnmarshalJSON(t *testing.T) {
 	for i, c := range testMicroTimestampCases {
-		var ct MicroTimestamp
-		err := json.Unmarshal(c.Bytes, &ct)
+		var ut MicroTimestamp
+		err := json.Unmarshal(c.Bytes, &ut)
 		if err != nil {
 			t.Errorf("Case %d: %v.", i+1, err)
-		} else if !(stdtime.Time)(ct).Equal(stdtime.Time(c.Timestamp)) {
-			t.Errorf("Case %d: ct: %v != %v.", i+1, ct, c.Timestamp)
+		} else if !(Time)(ut).Equal(Time(c.Timestamp)) {
+			t.Errorf("Case %d: ut: %v != %v.", i+1, ut, c.Timestamp)
 		}
 	}
 }
@@ -300,8 +300,53 @@ func TestNanoTimestamp_UnmarshalJSON(t *testing.T) {
 		err := json.Unmarshal(c.Bytes, &nt)
 		if err != nil {
 			t.Errorf("Case %d: %v.", i+1, err)
-		} else if !(stdtime.Time)(nt).Equal(stdtime.Time(c.Timestamp)) {
+		} else if !(Time)(nt).Equal(Time(c.Timestamp)) {
 			t.Errorf("Case %d: nt: %v != %v.", i+1, nt, c.Timestamp)
 		}
+	}
+}
+
+func TestUnmarshalJSON_Null(t *testing.T) {
+	now := stdtime.Now()
+	b := []byte("null")
+
+	ts := Timestamp(now)
+	err := ts.UnmarshalJSON(b)
+	if err != nil {
+		t.Errorf("type: %T, err: %v.", ts, err)
+	} else if !now.Equal(Time(ts)) {
+		t.Errorf(`type: %T, not no-op for "null".`, ts)
+	}
+
+	unixTs := UnixTimestamp(now)
+	err = unixTs.UnmarshalJSON(b)
+	if err != nil {
+		t.Errorf("type: %T, err: %v.", unixTs, err)
+	} else if !now.Equal(Time(unixTs)) {
+		t.Errorf(`type: %T, not no-op for "null".`, unixTs)
+	}
+
+	mts := MilliTimestamp(now)
+	err = mts.UnmarshalJSON(b)
+	if err != nil {
+		t.Errorf("type: %T, err: %v.", mts, err)
+	} else if !now.Equal(Time(mts)) {
+		t.Errorf(`type: %T, not no-op for "null".`, mts)
+	}
+
+	uts := MicroTimestamp(now)
+	err = uts.UnmarshalJSON(b)
+	if err != nil {
+		t.Errorf("type: %T, err: %v.", uts, err)
+	} else if !now.Equal(Time(uts)) {
+		t.Errorf(`type: %T, not no-op for "null".`, uts)
+	}
+
+	nts := NanoTimestamp(now)
+	err = nts.UnmarshalJSON(b)
+	if err != nil {
+		t.Errorf("type: %T, err: %v.", nts, err)
+	} else if !now.Equal(Time(nts)) {
+		t.Errorf(`type: %T, not no-op for "null".`, nts)
 	}
 }

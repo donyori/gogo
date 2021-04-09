@@ -27,231 +27,442 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
+// Time is an alias of standard time.Time.
+//
+// It exports the standard time.Time for convenience.
+type Time = stdtime.Time
+
+// Regular expression patterns for various timestamps.
 const (
-	// Unix timestamp pattern. (without escape to fit more languages)
+	// UnixTimestampPattern is a regular expression pattern for UNIX timestamp.
+	// (without escape to fit more languages)
 	UnixTimestampPattern = "^[+-]?[0-9]+([.][0-9]{1,9})?$"
-	// Millisecond timestamp pattern. (without escape to fit more languages)
+	// MilliTimestampPattern is a regular expression pattern for
+	// millisecond timestamp. (without escape to fit more languages)
 	MilliTimestampPattern = "^[+-]?[0-9]+([.][0-9]{1,6})?$"
-	// Microsecond timestamp pattern. (without escape to fit more languages)
+	// MicroTimestampPattern is a regular expression pattern for
+	// microsecond timestamp. (without escape to fit more languages)
 	MicroTimestampPattern = "^[+-]?[0-9]+([.][0-9]{1,3})?$"
-	// Nanosecond timestamp pattern. (without escape to fit more languages)
+	// NanoTimestampPattern is a regular expression pattern for
+	// nanosecond timestamp. (without escape to fit more languages)
 	NanoTimestampPattern = "^[+-]?[0-9]+$"
 )
 
-// Timestamp.
-// Auto detect the time unit (seconds, milliseconds, microseconds, or nanoseconds)
-// when parse from string.
-// Treated as UnixTimestamp when format string.
+// Timestamp is a timestamp wrapped on Time.
+//
+// It automatically detects the time unit (seconds, milliseconds, microseconds,
+// or nanoseconds) when parsing from string.
+// It is treated as a UNIX timestamp (in seconds) when formatting to string.
 //
 // It determines the time unit by the integer part digits, as follows:
-// less than 12-digits: in seconds,
-// 12-digits to 14-digits: in milliseconds,
-// 15-digits or 16-digits: in microseconds,
-// more than 16-digits: in nanoseconds.
-type Timestamp stdtime.Time
+//  less than 12-digits - second,
+//  12-digits to 14-digits - millisecond,
+//  15-digits or 16-digits - microsecond,
+//  more than 16-digits - nanosecond.
+type Timestamp Time
 
+// String formats this timestamp in seconds to a decimal representation.
 func (ts Timestamp) String() string {
-	return string(timeToTimestamp(autoTimestamp, stdtime.Time(ts)))
+	return string(timeToTimestamp(autoTimestamp, Time(ts)))
 }
 
+// MarshalText formats this timestamp in seconds to a decimal representation.
+//
+// It always returns a nil error.
+//
+// It conforms to interface encoding.TextMarshaler.
 func (ts Timestamp) MarshalText() (text []byte, err error) {
-	return timeToTimestamp(autoTimestamp, stdtime.Time(ts)), nil
+	return timeToTimestamp(autoTimestamp, Time(ts)), nil
 }
 
+// UnmarshalText parses decimal timestamp.
+//
+// It automatically determines the time unit by the integer part digits,
+// as follows:
+//  less than 12-digits - second,
+//  12-digits to 14-digits - millisecond,
+//  15-digits or 16-digits - microsecond,
+//  more than 16-digits - nanosecond.
+//
+// It reports an error if text is empty or text is not decimal timestamp.
+//
+// It conforms to interface encoding.TextUnmarshaler.
 func (ts *Timestamp) UnmarshalText(text []byte) error {
 	t, err := timestampToTime(autoTimestamp, text)
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*stdtime.Time)(ts) = t
+	*(*Time)(ts) = t
 	return nil
 }
 
+// MarshalJSON formats this timestamp in seconds to a decimal representation.
+//
+// It always returns a nil error.
+//
+// It conforms to interface encoding/json.Marshaler.
 func (ts Timestamp) MarshalJSON() ([]byte, error) {
-	return timeToTimestamp(autoTimestamp, stdtime.Time(ts)), nil
+	return timeToTimestamp(autoTimestamp, Time(ts)), nil
 }
 
+// UnmarshalJSON parses decimal timestamp.
+//
+// It automatically determines the time unit by the integer part digits,
+// as follows:
+//  less than 12-digits - second,
+//  12-digits to 14-digits - millisecond,
+//  15-digits or 16-digits - microsecond,
+//  more than 16-digits - nanosecond.
+//
+// It reports an error if b is empty or
+// b is neither decimal timestamp nor []byte("null").
+//
+// By convention, to approximate the behavior of encoding/json.Unmarshal itself,
+// It does nothing if b is []byte("null").
+//
+// It conforms to interface encoding/json.Unmarshaler.
 func (ts *Timestamp) UnmarshalJSON(b []byte) error {
+	if string(b) == "null" {
+		return nil
+	}
 	t, err := timestampToTime(autoTimestamp, b)
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*stdtime.Time)(ts) = t
+	*(*Time)(ts) = t
 	return nil
 }
 
-// Unix timestamp, in seconds.
-type UnixTimestamp stdtime.Time
+// UnixTimestamp is a UNIX timestamp (in seconds) wrapped on Time.
+type UnixTimestamp Time
 
+// String formats this timestamp in seconds to a decimal representation.
 func (ut UnixTimestamp) String() string {
-	return string(timeToTimestamp(unixTimestamp, stdtime.Time(ut)))
+	return string(timeToTimestamp(unixTimestamp, Time(ut)))
 }
 
+// MarshalText formats this timestamp in seconds to a decimal representation.
+//
+// It always returns a nil error.
+//
+// It conforms to interface encoding.TextMarshaler.
 func (ut UnixTimestamp) MarshalText() (text []byte, err error) {
-	return timeToTimestamp(unixTimestamp, stdtime.Time(ut)), nil
+	return timeToTimestamp(unixTimestamp, Time(ut)), nil
 }
 
+// UnmarshalText parses decimal timestamp in seconds.
+//
+// It reports an error if text is empty or text is not decimal timestamp.
+//
+// It conforms to interface encoding.TextUnmarshaler.
 func (ut *UnixTimestamp) UnmarshalText(text []byte) error {
 	t, err := timestampToTime(unixTimestamp, text)
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*stdtime.Time)(ut) = t
+	*(*Time)(ut) = t
 	return nil
 }
 
+// MarshalJSON formats this timestamp in seconds to a decimal representation.
+//
+// It always returns a nil error.
+//
+// It conforms to interface encoding/json.Marshaler.
 func (ut UnixTimestamp) MarshalJSON() ([]byte, error) {
-	return timeToTimestamp(unixTimestamp, stdtime.Time(ut)), nil
+	return timeToTimestamp(unixTimestamp, Time(ut)), nil
 }
 
+// UnmarshalJSON parses decimal timestamp in seconds.
+//
+// It reports an error if b is empty or
+// b is neither decimal timestamp nor []byte("null").
+//
+// By convention, to approximate the behavior of encoding/json.Unmarshal itself,
+// It does nothing if b is []byte("null").
+//
+// It conforms to interface encoding/json.Unmarshaler.
 func (ut *UnixTimestamp) UnmarshalJSON(b []byte) error {
+	if string(b) == "null" {
+		return nil
+	}
 	t, err := timestampToTime(unixTimestamp, b)
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*stdtime.Time)(ut) = t
+	*(*Time)(ut) = t
 	return nil
 }
 
-// Timestamp in milliseconds.
-// Often used in JavaScript.
-type MilliTimestamp stdtime.Time
+// MilliTimestamp is a millisecond timestamp, often used in JavaScript,
+// wrapped on Time.
+type MilliTimestamp Time
 
+// String formats this timestamp in milliseconds to a decimal representation.
 func (mt MilliTimestamp) String() string {
-	return string(timeToTimestamp(milliTimestamp, stdtime.Time(mt)))
+	return string(timeToTimestamp(milliTimestamp, Time(mt)))
 }
 
+// MarshalText formats this timestamp in milliseconds to
+// a decimal representation.
+//
+// It always returns a nil error.
+//
+// It conforms to interface encoding.TextMarshaler.
 func (mt MilliTimestamp) MarshalText() (text []byte, err error) {
-	return timeToTimestamp(milliTimestamp, stdtime.Time(mt)), nil
+	return timeToTimestamp(milliTimestamp, Time(mt)), nil
 }
 
+// UnmarshalText parses decimal timestamp in milliseconds.
+//
+// It reports an error if text is empty or text is not decimal timestamp.
+//
+// It conforms to interface encoding.TextUnmarshaler.
 func (mt *MilliTimestamp) UnmarshalText(text []byte) error {
 	t, err := timestampToTime(milliTimestamp, text)
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*stdtime.Time)(mt) = t
+	*(*Time)(mt) = t
 	return nil
 }
 
+// MarshalJSON formats this timestamp in milliseconds to
+// a decimal representation.
+//
+// It always returns a nil error.
+//
+// It conforms to interface encoding/json.Marshaler.
 func (mt MilliTimestamp) MarshalJSON() ([]byte, error) {
-	return timeToTimestamp(milliTimestamp, stdtime.Time(mt)), nil
+	return timeToTimestamp(milliTimestamp, Time(mt)), nil
 }
 
+// UnmarshalJSON parses decimal timestamp in milliseconds.
+//
+// It reports an error if b is empty or
+// b is neither decimal timestamp nor []byte("null").
+//
+// By convention, to approximate the behavior of encoding/json.Unmarshal itself,
+// It does nothing if b is []byte("null").
+//
+// It conforms to interface encoding/json.Unmarshaler.
 func (mt *MilliTimestamp) UnmarshalJSON(b []byte) error {
+	if string(b) == "null" {
+		return nil
+	}
 	t, err := timestampToTime(milliTimestamp, b)
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*stdtime.Time)(mt) = t
+	*(*Time)(mt) = t
 	return nil
 }
 
-// Timestamp in microseconds.
-type MicroTimestamp stdtime.Time
+// MicroTimestamp is a microsecond timestamp wrapped on Time.
+type MicroTimestamp Time
 
+// String formats this timestamp in microseconds to a decimal representation.
 func (ct MicroTimestamp) String() string {
-	return string(timeToTimestamp(microTimestamp, stdtime.Time(ct)))
+	return string(timeToTimestamp(microTimestamp, Time(ct)))
 }
 
+// MarshalText formats this timestamp in microseconds to
+// a decimal representation.
+//
+// It always returns a nil error.
+//
+// It conforms to interface encoding.TextMarshaler.
 func (ct MicroTimestamp) MarshalText() (text []byte, err error) {
-	return timeToTimestamp(microTimestamp, stdtime.Time(ct)), nil
+	return timeToTimestamp(microTimestamp, Time(ct)), nil
 }
 
+// UnmarshalText parses decimal timestamp in microseconds.
+//
+// It reports an error if text is empty or text is not decimal timestamp.
+//
+// It conforms to interface encoding.TextUnmarshaler.
 func (ct *MicroTimestamp) UnmarshalText(text []byte) error {
 	t, err := timestampToTime(microTimestamp, text)
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*stdtime.Time)(ct) = t
+	*(*Time)(ct) = t
 	return nil
 }
 
+// MarshalJSON formats this timestamp in microseconds to
+// a decimal representation.
+//
+// It always returns a nil error.
+//
+// It conforms to interface encoding/json.Marshaler.
 func (ct MicroTimestamp) MarshalJSON() ([]byte, error) {
-	return timeToTimestamp(microTimestamp, stdtime.Time(ct)), nil
+	return timeToTimestamp(microTimestamp, Time(ct)), nil
 }
 
+// UnmarshalJSON parses decimal timestamp in microseconds.
+//
+// It reports an error if b is empty or
+// b is neither decimal timestamp nor []byte("null").
+//
+// By convention, to approximate the behavior of encoding/json.Unmarshal itself,
+// It does nothing if b is []byte("null").
+//
+// It conforms to interface encoding/json.Unmarshaler.
 func (ct *MicroTimestamp) UnmarshalJSON(b []byte) error {
+	if string(b) == "null" {
+		return nil
+	}
 	t, err := timestampToTime(microTimestamp, b)
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*stdtime.Time)(ct) = t
+	*(*Time)(ct) = t
 	return nil
 }
 
-// Timestamp in nanoseconds.
-type NanoTimestamp stdtime.Time
+// NanoTimestamp is a nanosecond timestamp wrapped on Time.
+type NanoTimestamp Time
 
+// String formats this timestamp in nanoseconds to a decimal representation.
 func (nt NanoTimestamp) String() string {
-	return string(timeToTimestamp(nanoTimestamp, stdtime.Time(nt)))
+	return string(timeToTimestamp(nanoTimestamp, Time(nt)))
 }
 
+// MarshalText formats this timestamp in nanoseconds to
+// a decimal representation.
+//
+// It always returns a nil error.
+//
+// It conforms to interface encoding.TextMarshaler.
 func (nt NanoTimestamp) MarshalText() (text []byte, err error) {
-	return timeToTimestamp(nanoTimestamp, stdtime.Time(nt)), nil
+	return timeToTimestamp(nanoTimestamp, Time(nt)), nil
 }
 
+// UnmarshalText parses decimal timestamp in nanoseconds.
+//
+// It reports an error if text is empty or text is not decimal timestamp.
+//
+// It conforms to interface encoding.TextUnmarshaler.
 func (nt *NanoTimestamp) UnmarshalText(text []byte) error {
 	t, err := timestampToTime(nanoTimestamp, text)
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*stdtime.Time)(nt) = t
+	*(*Time)(nt) = t
 	return nil
 }
 
+// MarshalJSON formats this timestamp in nanoseconds to
+// a decimal representation.
+//
+// It always returns a nil error.
+//
+// It conforms to interface encoding/json.Marshaler.
 func (nt NanoTimestamp) MarshalJSON() ([]byte, error) {
-	return timeToTimestamp(nanoTimestamp, stdtime.Time(nt)), nil
+	return timeToTimestamp(nanoTimestamp, Time(nt)), nil
 }
 
+// UnmarshalJSON parses decimal timestamp in nanoseconds.
+//
+// It reports an error if b is empty or
+// b is neither decimal timestamp nor []byte("null").
+//
+// By convention, to approximate the behavior of encoding/json.Unmarshal itself,
+// It does nothing if b is []byte("null").
+//
+// It conforms to interface encoding/json.Unmarshaler.
 func (nt *NanoTimestamp) UnmarshalJSON(b []byte) error {
+	if string(b) == "null" {
+		return nil
+	}
 	t, err := timestampToTime(nanoTimestamp, b)
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*stdtime.Time)(nt) = t
+	*(*Time)(nt) = t
 	return nil
 }
 
+// timestampType indicates the type of timestamp.
+//
+// Possible types are autoTimestamp, unixTimestamp, milliTimestamp,
+// microTimestamp, and nanoTimestamp.
 type timestampType int8
 
+// Types of timestamp.
 const (
+	// autoTimestamp is a timestamp that automatically detects the time unit
+	// when parsing from string.
+	// It is treated as a UNIX timestamp (in seconds) when formatting to string.
+	//
+	// It determines the time unit by the integer part digits, as follows:
+	//  less than 12-digits - second,
+	//  12-digits to 14-digits - millisecond,
+	//  15-digits or 16-digits - microsecond,
+	//  more than 16-digits - nanosecond.
 	autoTimestamp timestampType = iota
+	// unixTimestamp is a UNIX timestamp (in seconds).
 	unixTimestamp
+	// milliTimestamp is a millisecond timestamp.
 	milliTimestamp
+	// microTimestamp is a microsecond timestamp.
 	microTimestamp
+	// nanoTimestamp is a nanosecond timestamp.
 	nanoTimestamp
 )
 
+// Regular expressions compiled from the patterns.
 var (
-	unixTimestampRegExpr  = regexp.MustCompile(UnixTimestampPattern)
+	// unixTimestampRegExpr is a regular expression for UNIX timestamp.
+	unixTimestampRegExpr = regexp.MustCompile(UnixTimestampPattern)
+	// milliTimestampRegExpr is a regular expression for millisecond timestamp.
 	milliTimestampRegExpr = regexp.MustCompile(MilliTimestampPattern)
+	// microTimestampRegExpr is a regular expression for microsecond timestamp.
 	microTimestampRegExpr = regexp.MustCompile(MicroTimestampPattern)
-	nanoTimestampRegExpr  = regexp.MustCompile(NanoTimestampPattern)
+	// nanoTimestampRegExpr is a regular expression for nanosecond timestamp.
+	nanoTimestampRegExpr = regexp.MustCompile(NanoTimestampPattern)
 )
 
+// Variables used in functions timestampToTime and timeToTimestamp.
 var (
-	timestampRegExprMapping = []*regexp.Regexp{
+	// timestampRegExprMapping is a mapping from timestampType to
+	// regular expressions.
+	timestampRegExprMapping = [...]*regexp.Regexp{
 		unixTimestampRegExpr,
 		unixTimestampRegExpr,
 		milliTimestampRegExpr,
 		microTimestampRegExpr,
 		nanoTimestampRegExpr,
 	}
-	// Reflect the float point position relative to nanoseconds.
-	timestampFloatShiftMapping    = []int{1e9, 1e9, 1e6, 1e3, 1}
-	timestampFractionalLenMapping = []int{-1, 9, 6, 3, 0}
+
+	// timestampFloatShiftMapping is a mapping from timestampType to
+	// the float point position relative to nanoseconds.
+	timestampFloatShiftMapping = [...]int{1e9, 1e9, 1e6, 1e3, 1}
+
+	// timestampFractionalLenMapping is a mapping from timestampType to
+	// the maximum length of fractional part of decimal timestamp.
+	//
+	// The first item -1 means it is invalid for autoTimestamp.
+	timestampFractionalLenMapping = [...]int{-1, 9, 6, 3, 0}
 )
 
-func timestampToTime(tsType timestampType, ts []byte) (t stdtime.Time, err error) {
+// timestampToTime parses decimal timestamp ts into Time
+// according to the timestamp type tsType.
+//
+// It reports an error if ts is empty, or ts is not valid for tsType.
+//
+// Caller should guarantee that tsType is valid.
+func timestampToTime(tsType timestampType, ts []byte) (t Time, err error) {
 	if len(ts) == 0 {
-		return stdtime.Time{}, errors.AutoNew("empty timestamp")
+		err = errors.AutoNew("empty timestamp")
+		return
 	}
-	// Check tsType if this function is exported.
-	if ok := timestampRegExprMapping[tsType].Match(ts); !ok {
-		return stdtime.Time{}, errors.AutoNew("invalid timestamp")
+	if !timestampRegExprMapping[tsType].Match(ts) {
+		err = errors.AutoNew("invalid timestamp")
+		return
 	}
-	pointIdx := bytes.IndexRune(ts, '.')
+	pointIdx := bytes.IndexByte(ts, '.')
 	tst := tsType
 	if tsType == autoTimestamp {
 		var k int // length of integer part
@@ -273,7 +484,8 @@ func timestampToTime(tsType timestampType, ts []byte) (t stdtime.Time, err error
 			tst = nanoTimestamp
 		}
 		if pointIdx >= 0 && len(ts)-pointIdx-1 > timestampFractionalLenMapping[tst] {
-			return stdtime.Time{}, errors.AutoNew("invalid timestamp")
+			err = errors.AutoNew("invalid timestamp")
+			return
 		}
 	}
 	var s, ns []byte
@@ -307,10 +519,13 @@ func timestampToTime(tsType timestampType, ts []byte) (t stdtime.Time, err error
 	return stdtime.Unix(sec, nsec), nil
 }
 
-func timeToTimestamp(tsType timestampType, t stdtime.Time) []byte {
-	// Check tsType if this function is exported.
+// timeToTimestamp formats time t into decimal timestamp
+// according to the timestamp type tsType.
+//
+// Caller should guarantee that tsType is valid.
+func timeToTimestamp(tsType timestampType, t Time) []byte {
 	intPart := t.Unix()
-	sign := 1                  // specially, sign = 1 for zero
+	sign := 1                  // sign = 1 for non-negative values, -1 for negative values.
 	fracPart := t.Nanosecond() // Nanosecond() always returns non-negative value, so adjust as follows:
 	if intPart < 0 {
 		sign = -sign
@@ -328,9 +543,9 @@ func timeToTimestamp(tsType timestampType, t stdtime.Time) []byte {
 	}
 	var b bytes.Buffer
 	b.WriteString(s)
-	b.WriteRune('.')
+	b.WriteByte('.')
 	for radix := shift / 10; radix > 0 && fracPart != 0; radix /= 10 {
-		b.WriteRune('0' + rune(fracPart/radix))
+		b.WriteByte('0' + byte(fracPart/radix))
 		fracPart %= radix
 	}
 	return b.Bytes()
