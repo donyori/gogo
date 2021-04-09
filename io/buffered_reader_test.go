@@ -77,7 +77,7 @@ func TestBufferedReader_WriteLineTo(t *testing.T) {
 	for longLineBuilder.Len() < 16384 {
 		longLineBuilder.WriteString("12345678")
 	}
-	longLineBuilder.WriteRune('\n')
+	longLineBuilder.WriteByte('\n')
 	data := make([]byte, 0, 65560)
 	for i := 0; i < 4; i++ {
 		data = append(data, longLineBuilder.String()...)
@@ -91,7 +91,7 @@ func TestBufferedReader_WriteLineTo(t *testing.T) {
 		output.Reset()
 		_, err = br.WriteLineTo(&output)
 		if err == nil {
-			output.WriteRune('\n')
+			output.WriteByte('\n')
 			if output.String() != longLineBuilder.String() {
 				t.Errorf("Output line wrong. Line length: %d. Line: %q\nWanted: %q.", output.Len(), output.String(), longLineBuilder.String())
 			}

@@ -85,7 +85,7 @@ func SuffixQuotedPretty(cfg *hex.DumpConfig) func(line []byte) []byte {
 			n := hex.FormattedLen(length, &cfgCopy.FormatConfig) -
 				hex.FormattedLen(len(line), &cfgCopy.FormatConfig)
 			for i := 0; i < n; i++ {
-				buf.WriteRune(' ')
+				buf.WriteByte(' ')
 			}
 		}
 		buf.WriteString(" | ")
