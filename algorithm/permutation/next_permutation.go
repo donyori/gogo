@@ -70,7 +70,7 @@ func (npbsi *nextPermutationBinarySearchInterface) Len() int {
 }
 
 // Equal is not implemented for this struct. Do NOT call it!
-func (npbsi *nextPermutationBinarySearchInterface) Equal(i int, x interface{}) bool {
+func (npbsi *nextPermutationBinarySearchInterface) Equal(int, interface{}) bool {
 	panic(errors.AutoMsg("method Equal not implement"))
 }
 
@@ -79,11 +79,11 @@ func (npbsi *nextPermutationBinarySearchInterface) Equal(i int, x interface{}) b
 //
 // Here, x is just a dummy argument.
 // This method should act as a Greater() because the Data is in descending order.
-func (npbsi *nextPermutationBinarySearchInterface) Less(i int, x interface{}) bool {
+func (npbsi *nextPermutationBinarySearchInterface) Less(i int, _ interface{}) bool {
 	return npbsi.Data.Less(npbsi.Target, i+npbsi.Begin)
 }
 
 // Greater is not implemented for this struct. Do NOT call it!
-func (npbsi *nextPermutationBinarySearchInterface) Greater(i int, x interface{}) bool {
+func (npbsi *nextPermutationBinarySearchInterface) Greater(int, interface{}) bool {
 	panic(errors.AutoMsg("method Greater not implement"))
 }

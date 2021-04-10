@@ -17,8 +17,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Package jobsched provides a framework for job scheduling.
+//
 // It enables the client to execute a lot of jobs on multiple goroutines
 // and achieves load balance.
+//
 // The client can customize the job scheduling algorithm
 // by implementing a JobQueue.
 package jobsched

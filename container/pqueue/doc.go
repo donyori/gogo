@@ -17,6 +17,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Package pqueue provides OOP-style priority queues.
+//
 // There are three priority queue versions in this package:
 // mini version (PriorityQueueMini), standard version (PriorityQueue),
 // and extended version (PriorityQueueEx).
