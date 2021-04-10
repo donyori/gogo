@@ -18,24 +18,38 @@
 
 package sequence
 
-// Array is an interface representing a fixed-length direct-access sequence.
+// Array is an interface representing a direct-access sequence.
 type Array interface {
 	Sequence
 
-	// Get returns the i-th item of the array.
+	// Get returns the item with index i.
+	//
 	// It panics if i is out of range.
 	Get(i int) interface{}
 
-	// Set sets the i-th item to x.
+	// Set sets the item with index i to x.
+	//
 	// It panics if i is out of range.
 	Set(i int, x interface{})
 
-	// Swap exchanges the i-th and j-th items.
+	// Swap exchanges the items with indexes i and j.
+	//
 	// It panics if i or j is out of range.
 	Swap(i, j int)
 
 	// Slice returns a slice from argument begin (inclusive) to
 	// argument end (exclusive) of the array, as an Array.
+	//
 	// It panics if begin or end is out of range, or begin > end.
 	Slice(begin, end int) Array
+}
+
+// OrderedArray is an interface representing a direct-access sequence
+// that can be sorted by integer index.
+type OrderedArray interface {
+	Array
+
+	// Less reports whether the item with index i must sort before
+	// the item with index j.
+	Less(i, j int) bool
 }

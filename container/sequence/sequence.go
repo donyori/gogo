@@ -23,23 +23,27 @@ type Sequence interface {
 	// Len returns the number of items in the sequence.
 	Len() int
 
-	// Front returns the first item of the sequence.
+	// Front returns the first item.
+	//
 	// It panics if the sequence is nil or empty.
 	Front() interface{}
 
 	// SetFront sets the first item to x.
+	//
 	// It panics if the sequence is nil or empty.
 	SetFront(x interface{})
 
-	// Back returns the last item of the sequence.
+	// Back returns the last item.
+	//
 	// It panics if the sequence is nil or empty.
 	Back() interface{}
 
 	// SetBack sets the last item to x.
+	//
 	// It panics if the sequence is nil or empty.
 	SetBack(x interface{})
 
-	// Reverse turns the other way round items of the sequence.
+	// Reverse turns the other way round items in the sequence.
 	Reverse()
 
 	// Range browses the items in the sequence from the first to the last.

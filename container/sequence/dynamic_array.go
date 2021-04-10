@@ -18,75 +18,86 @@
 
 package sequence
 
-// DynamicArray is an interface representing a dynamic array.
-type DynamicArray interface {
-	Array
-
+// dynamicArraySpecific is an interface that groups
+// the dynamic-array-specific methods.
+type dynamicArraySpecific interface {
 	// Cap returns the current capacity of the dynamic array.
 	Cap() int
 
 	// Push adds x to the back of the dynamic array.
 	Push(x interface{})
 
-	// Pop removes and returns the last item of the dynamic array.
+	// Pop removes and returns the last item.
+	//
 	// It panics if the dynamic array is nil or empty.
 	Pop() interface{}
 
 	// Append adds s to the back of the dynamic array.
+	//
 	// s shouldn't be modified during calling this method,
 	// otherwise, unknown error may occur.
 	Append(s Sequence)
 
-	// Truncate removes the i-th and all subsequent items in the dynamic array.
+	// Truncate removes the item with index i and all subsequent items.
+	//
 	// It does nothing if i is out of range.
 	Truncate(i int)
 
-	// Insert adds x as the i-th item in the dynamic array.
+	// Insert adds x as the item with index i.
+	//
 	// It panics if i is out of range, i.e., i < 0 or i > Len().
 	Insert(i int, x interface{})
 
-	// Remove removes and returns the i-th item in the dynamic array.
+	// Remove removes and returns the item with index i.
+	//
 	// It panics if i is out of range, i.e., i < 0 or i >= Len().
 	Remove(i int) interface{}
 
-	// RemoveWithoutOrder removes and returns the i-th item in
-	// the dynamic array, without preserving order.
+	// RemoveWithoutOrder removes and returns the item with index i,
+	// without preserving order.
+	//
 	// It panics if i is out of range, i.e., i < 0 or i >= Len().
 	RemoveWithoutOrder(i int) interface{}
 
-	// InsertSequence inserts s to the front of the i-th item
-	// in the dynamic array.
+	// InsertSequence inserts s to the front of the item with index i.
+	//
 	// It panics if i is out of range, i.e., i < 0 or i > Len().
+	//
 	// s shouldn't be modified during calling this method,
 	// otherwise, unknown error may occur.
 	InsertSequence(i int, s Sequence)
 
 	// Cut removes items from argument begin (inclusive) to
 	// argument end (exclusive) of the dynamic array.
+	//
 	// It panics if begin or end is out of range, or begin > end.
 	Cut(begin, end int)
 
 	// CutWithoutOrder removes items from argument begin (inclusive) to
 	// argument end (exclusive) of the dynamic array, without preserving order.
+	//
 	// It panics if begin or end is out of range, or begin > end.
 	CutWithoutOrder(begin, end int)
 
 	// Extend adds n zero-value items to the back of the dynamic array.
+	//
 	// It panics if n < 0.
 	Extend(n int)
 
-	// Expand inserts n zero-value items to the front of the i-th item
-	// in the dynamic array.
+	// Expand inserts n zero-value items to the front of the item with index i.
+	//
 	// It panics if i is out of range, i.e., i < 0 or i > Len(), or n < 0.
 	Expand(i, n int)
 
 	// Reserve requests that the capacity of the dynamic array
 	// is at least the specified capacity.
+	//
 	// It does nothing if capacity <= Cap().
 	Reserve(capacity int)
 
 	// Shrink reduces the dynamic array to fit, i.e.,
 	// requests Cap() equals to Len().
+	//
 	// Note that it isn't equivalent to operations on slice
 	// like s[:len(s):len(s)],
 	// because it will allocate a new array and copy the content
@@ -102,4 +113,18 @@ type DynamicArray interface {
 	// Its argument filter is a function to report
 	// whether to keep the item x or not.
 	Filter(filter func(x interface{}) (keep bool))
+}
+
+// DynamicArray is an interface representing
+// a dynamic-length direct-access sequence.
+type DynamicArray interface {
+	Array
+	dynamicArraySpecific
+}
+
+// OrderedDynamicArray is an interface representing a dynamic-length
+// direct-access sequence that can be sorted by integer index.
+type OrderedDynamicArray interface {
+	OrderedArray
+	dynamicArraySpecific
 }

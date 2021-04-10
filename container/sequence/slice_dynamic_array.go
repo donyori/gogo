@@ -97,33 +97,39 @@ func (sda *SliceDynamicArray) Len() int {
 	return sda.v.Len()
 }
 
-// Front returns the first item of the array.
+// Front returns the first item.
+//
 // It panics if the array is nil or empty.
 func (sda *SliceDynamicArray) Front() interface{} {
 	return sda.v.Index(0).Interface()
 }
 
 // SetFront sets the first item to x.
+//
 // It panics if the array is nil or empty.
+//
 // If x is nil, a zero value of the array item type will be used.
 func (sda *SliceDynamicArray) SetFront(x interface{}) {
 	sda.v.Index(0).Set(sda.valueOf(x))
 }
 
-// Back returns the last item of the array.
+// Back returns the last item.
+//
 // It panics if the array is nil or empty.
 func (sda *SliceDynamicArray) Back() interface{} {
 	return sda.v.Index(sda.v.Len() - 1).Interface()
 }
 
 // SetBack sets the last item to x.
+//
 // It panics if the array is nil or empty.
+//
 // If x is nil, a zero value of the array item type will be used.
 func (sda *SliceDynamicArray) SetBack(x interface{}) {
 	sda.v.Index(sda.v.Len() - 1).Set(sda.valueOf(x))
 }
 
-// Reverse turns the other way round items of the array.
+// Reverse turns the other way round items in the array.
 func (sda *SliceDynamicArray) Reverse() {
 	if sda == nil {
 		return
@@ -153,20 +159,24 @@ func (sda *SliceDynamicArray) Range(handler func(x interface{}) (cont bool)) {
 	}
 }
 
-// Get returns the i-th item of the array.
+// Get returns the item with index i.
+//
 // It panics if i is out of range.
 func (sda *SliceDynamicArray) Get(i int) interface{} {
 	return sda.v.Index(i).Interface()
 }
 
-// Set sets the i-th item to x.
+// Set sets the item with index i to x.
+//
 // It panics if i is out of range.
+//
 // If x is nil, a zero value of the array item type will be used.
 func (sda *SliceDynamicArray) Set(i int, x interface{}) {
 	sda.v.Index(i).Set(sda.valueOf(x))
 }
 
-// Swap exchanges the i-th and j-th items.
+// Swap exchanges the items with indexes i and j.
+//
 // It panics if i or j is out of range.
 func (sda *SliceDynamicArray) Swap(i, j int) {
 	reflect.Swapper(sda.v.Interface())(i, j)
@@ -174,6 +184,7 @@ func (sda *SliceDynamicArray) Swap(i, j int) {
 
 // Slice returns a slice from argument begin (inclusive) to
 // argument end (exclusive) of the array, as an Array.
+//
 // It panics if begin or end is out of range, or begin > end.
 func (sda *SliceDynamicArray) Slice(begin, end int) Array {
 	p := reflect.New(sda.v.Type())
@@ -195,7 +206,8 @@ func (sda *SliceDynamicArray) Push(x interface{}) {
 	sda.v.Set(reflect.Append(sda.v, sda.valueOf(x)))
 }
 
-// Pop removes and returns the last item of the dynamic array.
+// Pop removes and returns the last item.
+//
 // It panics if the dynamic array is nil or empty.
 func (sda *SliceDynamicArray) Pop() interface{} {
 	back := sda.v.Len() - 1
@@ -207,6 +219,7 @@ func (sda *SliceDynamicArray) Pop() interface{} {
 }
 
 // Append adds s to the back of the dynamic array.
+//
 // s shouldn't be modified during calling this method,
 // otherwise, unknown error may occur.
 func (sda *SliceDynamicArray) Append(s Sequence) {
@@ -231,7 +244,8 @@ func (sda *SliceDynamicArray) Append(s Sequence) {
 	})
 }
 
-// Truncate removes the i-th and all subsequent items in the dynamic array.
+// Truncate removes the item with index i and all subsequent items.
+//
 // It does nothing if i is out of range.
 func (sda *SliceDynamicArray) Truncate(i int) {
 	if sda == nil {
@@ -248,8 +262,10 @@ func (sda *SliceDynamicArray) Truncate(i int) {
 	sda.v.Set(sda.v.Slice(0, i))
 }
 
-// Insert adds x as the i-th item in the dynamic array.
+// Insert adds x as the item with index i.
+//
 // It panics if i is out of range, i.e., i < 0 or i > Len().
+//
 // If x is nil, a zero value of the array item type will be used.
 func (sda *SliceDynamicArray) Insert(i int, x interface{}) {
 	if i == sda.v.Len() {
@@ -263,7 +279,8 @@ func (sda *SliceDynamicArray) Insert(i int, x interface{}) {
 	sda.v.Index(i).Set(sda.valueOf(x))
 }
 
-// Remove removes and returns the i-th item in the dynamic array.
+// Remove removes and returns the item with index i.
+//
 // It panics if i is out of range, i.e., i < 0 or i >= Len().
 func (sda *SliceDynamicArray) Remove(i int) interface{} {
 	back := sda.v.Len() - 1
@@ -278,8 +295,9 @@ func (sda *SliceDynamicArray) Remove(i int) interface{} {
 	return x
 }
 
-// RemoveWithoutOrder removes and returns the i-th item in
-// the dynamic array, without preserving order.
+// RemoveWithoutOrder removes and returns the item with index i,
+// without preserving order.
+//
 // It panics if i is out of range, i.e., i < 0 or i >= Len().
 func (sda *SliceDynamicArray) RemoveWithoutOrder(i int) interface{} {
 	iV := sda.v.Index(i)
@@ -294,9 +312,10 @@ func (sda *SliceDynamicArray) RemoveWithoutOrder(i int) interface{} {
 	return x
 }
 
-// InsertSequence inserts s to the front of the i-th item
-// in the dynamic array.
+// InsertSequence inserts s to the front of the item with index i.
+//
 // It panics if i is out of range, i.e., i < 0 or i > Len().
+//
 // s shouldn't be modified during calling this method,
 // otherwise, unknown error may occur.
 func (sda *SliceDynamicArray) InsertSequence(i int, s Sequence) {
@@ -325,6 +344,7 @@ func (sda *SliceDynamicArray) InsertSequence(i int, s Sequence) {
 
 // Cut removes items from argument begin (inclusive) to
 // argument end (exclusive) of the dynamic array.
+//
 // It panics if begin or end is out of range, or begin > end.
 func (sda *SliceDynamicArray) Cut(begin, end int) {
 	sda.v.Slice(begin, end) // ensure begin and end are valid
@@ -346,6 +366,7 @@ func (sda *SliceDynamicArray) Cut(begin, end int) {
 
 // CutWithoutOrder removes items from argument begin (inclusive) to
 // argument end (exclusive) of the dynamic array, without preserving order.
+//
 // It panics if begin or end is out of range, or begin > end.
 func (sda *SliceDynamicArray) CutWithoutOrder(begin, end int) {
 	sda.v.Slice(begin, end) // ensure begin and end are valid
@@ -370,13 +391,14 @@ func (sda *SliceDynamicArray) CutWithoutOrder(begin, end int) {
 }
 
 // Extend adds n zero-value items to the back of the dynamic array.
+//
 // It panics if n < 0.
 func (sda *SliceDynamicArray) Extend(n int) {
 	sda.v.Set(reflect.AppendSlice(sda.v, reflect.MakeSlice(sda.v.Type(), n, n)))
 }
 
-// Expand inserts n zero-value items to the front of the i-th item
-// in the dynamic array.
+// Expand inserts n zero-value items to the front of the item with index i.
+//
 // It panics if i is out of range, i.e., i < 0 or i > Len(), or n < 0.
 func (sda *SliceDynamicArray) Expand(i, n int) {
 	if i == sda.v.Len() {
@@ -395,6 +417,7 @@ func (sda *SliceDynamicArray) Expand(i, n int) {
 
 // Reserve requests that the capacity of the dynamic array
 // is at least the specified capacity.
+//
 // It does nothing if capacity <= Cap().
 func (sda *SliceDynamicArray) Reserve(capacity int) {
 	if capacity <= sda.Cap() {
@@ -407,6 +430,7 @@ func (sda *SliceDynamicArray) Reserve(capacity int) {
 
 // Shrink reduces the dynamic array to fit, i.e.,
 // requests Cap() equals to Len().
+//
 // Note that it isn't equivalent to operations on slice
 // like s[:len(s):len(s)],
 // because it will allocate a new array and copy the content
@@ -455,8 +479,10 @@ func (sda *SliceDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 }
 
 // valueOf returns the reflect.Value of x.
+//
 // If x is not nil, it returns reflect.ValueOf(x).
 // Otherwise, it returns a zero value of the array item type.
+//
 // It panics if x is not assignable to the item of the dynamic array.
 func (sda *SliceDynamicArray) valueOf(x interface{}) reflect.Value {
 	itemType := sda.v.Type().Elem()

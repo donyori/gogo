@@ -32,31 +32,35 @@ func (ida IntDynamicArray) Len() int {
 	return len(ida)
 }
 
-// Front returns the first item of the array.
+// Front returns the first item.
+//
 // It panics if the array is nil or empty.
 func (ida IntDynamicArray) Front() interface{} {
 	return ida[0]
 }
 
 // SetFront sets the first item to x.
+//
 // It panics if the array is nil or empty.
 func (ida IntDynamicArray) SetFront(x interface{}) {
 	ida[0] = x.(int)
 }
 
-// Back returns the last item of the array.
+// Back returns the last item.
+//
 // It panics if the array is nil or empty.
 func (ida IntDynamicArray) Back() interface{} {
 	return ida[len(ida)-1]
 }
 
 // SetBack sets the last item to x.
+//
 // It panics if the array is nil or empty.
 func (ida IntDynamicArray) SetBack(x interface{}) {
 	ida[len(ida)-1] = x.(int)
 }
 
-// Reverse turns the other way round items of the array.
+// Reverse turns the other way round items in the array.
 func (ida IntDynamicArray) Reverse() {
 	for i, k := 0, len(ida)-1; i < k; i, k = i+1, k-1 {
 		ida[i], ida[k] = ida[k], ida[i]
@@ -75,19 +79,22 @@ func (ida IntDynamicArray) Range(handler func(x interface{}) (cont bool)) {
 	}
 }
 
-// Get returns the i-th item of the array.
+// Get returns the item with index i.
+//
 // It panics if i is out of range.
 func (ida IntDynamicArray) Get(i int) interface{} {
 	return ida[i]
 }
 
-// Set sets the i-th item to x.
+// Set sets the item with index i to x.
+//
 // It panics if i is out of range.
 func (ida IntDynamicArray) Set(i int, x interface{}) {
 	ida[i] = x.(int)
 }
 
-// Swap exchanges the i-th and j-th items.
+// Swap exchanges the items with indexes i and j.
+//
 // It panics if i or j is out of range.
 func (ida IntDynamicArray) Swap(i, j int) {
 	ida[i], ida[j] = ida[j], ida[i]
@@ -95,9 +102,16 @@ func (ida IntDynamicArray) Swap(i, j int) {
 
 // Slice returns a slice from argument begin (inclusive) to
 // argument end (exclusive) of the array, as an Array.
+//
 // It panics if begin or end is out of range, or begin > end.
 func (ida IntDynamicArray) Slice(begin, end int) Array {
 	return ida[begin:end:end]
+}
+
+// Less reports whether the item with index i must sort before
+// the item with index j.
+func (ida IntDynamicArray) Less(i, j int) bool {
+	return ida[i] < ida[j]
 }
 
 // Cap returns the current capacity of the dynamic array.
@@ -110,7 +124,8 @@ func (ida *IntDynamicArray) Push(x interface{}) {
 	*ida = append(*ida, x.(int))
 }
 
-// Pop removes and returns the last item of the dynamic array.
+// Pop removes and returns the last item.
+//
 // It panics if the dynamic array is nil or empty.
 func (ida *IntDynamicArray) Pop() interface{} {
 	back := len(*ida) - 1
@@ -120,6 +135,7 @@ func (ida *IntDynamicArray) Pop() interface{} {
 }
 
 // Append adds s to the back of the dynamic array.
+//
 // s shouldn't be modified during calling this method,
 // otherwise, unknown error may occur.
 func (ida *IntDynamicArray) Append(s Sequence) {
@@ -143,7 +159,8 @@ func (ida *IntDynamicArray) Append(s Sequence) {
 	})
 }
 
-// Truncate removes the i-th and all subsequent items in the dynamic array.
+// Truncate removes the item with index i and all subsequent items.
+//
 // It does nothing if i is out of range.
 func (ida *IntDynamicArray) Truncate(i int) {
 	if i < 0 || i >= len(*ida) {
@@ -152,7 +169,8 @@ func (ida *IntDynamicArray) Truncate(i int) {
 	*ida = (*ida)[:i]
 }
 
-// Insert adds x as the i-th item in the dynamic array.
+// Insert adds x as the item with index i.
+//
 // It panics if i is out of range, i.e., i < 0 or i > Len().
 func (ida *IntDynamicArray) Insert(i int, x interface{}) {
 	if i == len(*ida) {
@@ -165,7 +183,8 @@ func (ida *IntDynamicArray) Insert(i int, x interface{}) {
 	(*ida)[i] = x.(int)
 }
 
-// Remove removes and returns the i-th item in the dynamic array.
+// Remove removes and returns the item with index i.
+//
 // It panics if i is out of range, i.e., i < 0 or i >= Len().
 func (ida *IntDynamicArray) Remove(i int) interface{} {
 	back := len(*ida) - 1
@@ -178,8 +197,9 @@ func (ida *IntDynamicArray) Remove(i int) interface{} {
 	return x
 }
 
-// RemoveWithoutOrder removes and returns the i-th item in
-// the dynamic array, without preserving order.
+// RemoveWithoutOrder removes and returns the item with index i,
+// without preserving order.
+//
 // It panics if i is out of range, i.e., i < 0 or i >= Len().
 func (ida *IntDynamicArray) RemoveWithoutOrder(i int) interface{} {
 	x := (*ida)[i]
@@ -191,9 +211,10 @@ func (ida *IntDynamicArray) RemoveWithoutOrder(i int) interface{} {
 	return x
 }
 
-// InsertSequence inserts s to the front of the i-th item
-// in the dynamic array.
+// InsertSequence inserts s to the front of the item with index i.
+//
 // It panics if i is out of range, i.e., i < 0 or i > Len().
+//
 // s shouldn't be modified during calling this method,
 // otherwise, unknown error may occur.
 func (ida *IntDynamicArray) InsertSequence(i int, s Sequence) {
@@ -221,6 +242,7 @@ func (ida *IntDynamicArray) InsertSequence(i int, s Sequence) {
 
 // Cut removes items from argument begin (inclusive) to
 // argument end (exclusive) of the dynamic array.
+//
 // It panics if begin or end is out of range, or begin > end.
 func (ida *IntDynamicArray) Cut(begin, end int) {
 	_ = (*ida)[begin:end] // ensure begin and end are valid
@@ -237,6 +259,7 @@ func (ida *IntDynamicArray) Cut(begin, end int) {
 
 // CutWithoutOrder removes items from argument begin (inclusive) to
 // argument end (exclusive) of the dynamic array, without preserving order.
+//
 // It panics if begin or end is out of range, or begin > end.
 func (ida *IntDynamicArray) CutWithoutOrder(begin, end int) {
 	_ = (*ida)[begin:end] // ensure begin and end are valid
@@ -256,13 +279,14 @@ func (ida *IntDynamicArray) CutWithoutOrder(begin, end int) {
 }
 
 // Extend adds n zero-value items to the back of the dynamic array.
+//
 // It panics if n < 0.
 func (ida *IntDynamicArray) Extend(n int) {
 	*ida = append(*ida, make([]int, n)...)
 }
 
-// Expand inserts n zero-value items to the front of the i-th item
-// in the dynamic array.
+// Expand inserts n zero-value items to the front of the item with index i.
+//
 // It panics if i is out of range, i.e., i < 0 or i > Len(), or n < 0.
 func (ida *IntDynamicArray) Expand(i, n int) {
 	if i == len(*ida) {
@@ -279,6 +303,7 @@ func (ida *IntDynamicArray) Expand(i, n int) {
 
 // Reserve requests that the capacity of the dynamic array
 // is at least the specified capacity.
+//
 // It does nothing if capacity <= Cap().
 func (ida *IntDynamicArray) Reserve(capacity int) {
 	if capacity <= 0 || (ida != nil && capacity <= cap(*ida)) {
@@ -291,6 +316,7 @@ func (ida *IntDynamicArray) Reserve(capacity int) {
 
 // Shrink reduces the dynamic array to fit, i.e.,
 // requests Cap() equals to Len().
+//
 // Note that it isn't equivalent to operations on slice
 // like s[:len(s):len(s)],
 // because it will allocate a new array and copy the content
@@ -328,9 +354,4 @@ func (ida *IntDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 		}
 	}
 	*ida = (*ida)[:n]
-}
-
-// Less reports whether the i-th item is less than the j-th or not.
-func (ida IntDynamicArray) Less(i, j int) bool {
-	return ida[i] < ida[j]
 }

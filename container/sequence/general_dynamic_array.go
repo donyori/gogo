@@ -33,31 +33,35 @@ func (gda GeneralDynamicArray) Len() int {
 	return len(gda)
 }
 
-// Front returns the first item of the array.
+// Front returns the first item.
+//
 // It panics if the array is nil or empty.
 func (gda GeneralDynamicArray) Front() interface{} {
 	return gda[0]
 }
 
 // SetFront sets the first item to x.
+//
 // It panics if the array is nil or empty.
 func (gda GeneralDynamicArray) SetFront(x interface{}) {
 	gda[0] = x
 }
 
-// Back returns the last item of the array.
+// Back returns the last item.
+//
 // It panics if the array is nil or empty.
 func (gda GeneralDynamicArray) Back() interface{} {
 	return gda[len(gda)-1]
 }
 
 // SetBack sets the last item to x.
+//
 // It panics if the array is nil or empty.
 func (gda GeneralDynamicArray) SetBack(x interface{}) {
 	gda[len(gda)-1] = x
 }
 
-// Reverse turns the other way round items of the array.
+// Reverse turns the other way round items in the array.
 func (gda GeneralDynamicArray) Reverse() {
 	for i, k := 0, len(gda)-1; i < k; i, k = i+1, k-1 {
 		gda[i], gda[k] = gda[k], gda[i]
@@ -76,19 +80,22 @@ func (gda GeneralDynamicArray) Range(handler func(x interface{}) (cont bool)) {
 	}
 }
 
-// Get returns the i-th item of the array.
+// Get returns the item with index i.
+//
 // It panics if i is out of range.
 func (gda GeneralDynamicArray) Get(i int) interface{} {
 	return gda[i]
 }
 
-// Set sets the i-th item to x.
+// Set sets the item with index i to x.
+//
 // It panics if i is out of range.
 func (gda GeneralDynamicArray) Set(i int, x interface{}) {
 	gda[i] = x
 }
 
-// Swap exchanges the i-th and j-th items.
+// Swap exchanges the items with indexes i and j.
+//
 // It panics if i or j is out of range.
 func (gda GeneralDynamicArray) Swap(i, j int) {
 	gda[i], gda[j] = gda[j], gda[i]
@@ -96,6 +103,7 @@ func (gda GeneralDynamicArray) Swap(i, j int) {
 
 // Slice returns a slice from argument begin (inclusive) to
 // argument end (exclusive) of the array, as an Array.
+//
 // It panics if begin or end is out of range, or begin > end.
 func (gda GeneralDynamicArray) Slice(begin, end int) Array {
 	return gda[begin:end:end]
@@ -111,7 +119,8 @@ func (gda *GeneralDynamicArray) Push(x interface{}) {
 	*gda = append(*gda, x)
 }
 
-// Pop removes and returns the last item of the dynamic array.
+// Pop removes and returns the last item.
+//
 // It panics if the dynamic array is nil or empty.
 func (gda *GeneralDynamicArray) Pop() interface{} {
 	back := len(*gda) - 1
@@ -122,6 +131,7 @@ func (gda *GeneralDynamicArray) Pop() interface{} {
 }
 
 // Append adds s to the back of the dynamic array.
+//
 // s shouldn't be modified during calling this method,
 // otherwise, unknown error may occur.
 func (gda *GeneralDynamicArray) Append(s Sequence) {
@@ -145,7 +155,8 @@ func (gda *GeneralDynamicArray) Append(s Sequence) {
 	})
 }
 
-// Truncate removes the i-th and all subsequent items in the dynamic array.
+// Truncate removes the item with index i and all subsequent items.
+//
 // It does nothing if i is out of range.
 func (gda *GeneralDynamicArray) Truncate(i int) {
 	if i < 0 || i >= len(*gda) {
@@ -157,7 +168,8 @@ func (gda *GeneralDynamicArray) Truncate(i int) {
 	*gda = (*gda)[:i]
 }
 
-// Insert adds x as the i-th item in the dynamic array.
+// Insert adds x as the item with index i.
+//
 // It panics if i is out of range, i.e., i < 0 or i > Len().
 func (gda *GeneralDynamicArray) Insert(i int, x interface{}) {
 	if i == len(*gda) {
@@ -170,7 +182,8 @@ func (gda *GeneralDynamicArray) Insert(i int, x interface{}) {
 	(*gda)[i] = x
 }
 
-// Remove removes and returns the i-th item in the dynamic array.
+// Remove removes and returns the item with index i.
+//
 // It panics if i is out of range, i.e., i < 0 or i >= Len().
 func (gda *GeneralDynamicArray) Remove(i int) interface{} {
 	back := len(*gda) - 1
@@ -184,8 +197,9 @@ func (gda *GeneralDynamicArray) Remove(i int) interface{} {
 	return x
 }
 
-// RemoveWithoutOrder removes and returns the i-th item in
-// the dynamic array, without preserving order.
+// RemoveWithoutOrder removes and returns the item with index i,
+// without preserving order.
+//
 // It panics if i is out of range, i.e., i < 0 or i >= Len().
 func (gda *GeneralDynamicArray) RemoveWithoutOrder(i int) interface{} {
 	x := (*gda)[i]
@@ -198,9 +212,10 @@ func (gda *GeneralDynamicArray) RemoveWithoutOrder(i int) interface{} {
 	return x
 }
 
-// InsertSequence inserts s to the front of the i-th item
-// in the dynamic array.
+// InsertSequence inserts s to the front of the item with index i.
+//
 // It panics if i is out of range, i.e., i < 0 or i > Len().
+//
 // s shouldn't be modified during calling this method,
 // otherwise, unknown error may occur.
 func (gda *GeneralDynamicArray) InsertSequence(i int, s Sequence) {
@@ -228,6 +243,7 @@ func (gda *GeneralDynamicArray) InsertSequence(i int, s Sequence) {
 
 // Cut removes items from argument begin (inclusive) to
 // argument end (exclusive) of the dynamic array.
+//
 // It panics if begin or end is out of range, or begin > end.
 func (gda *GeneralDynamicArray) Cut(begin, end int) {
 	_ = (*gda)[begin:end] // ensure begin and end are valid
@@ -247,6 +263,7 @@ func (gda *GeneralDynamicArray) Cut(begin, end int) {
 
 // CutWithoutOrder removes items from argument begin (inclusive) to
 // argument end (exclusive) of the dynamic array, without preserving order.
+//
 // It panics if begin or end is out of range, or begin > end.
 func (gda *GeneralDynamicArray) CutWithoutOrder(begin, end int) {
 	_ = (*gda)[begin:end] // ensure begin and end are valid
@@ -269,13 +286,14 @@ func (gda *GeneralDynamicArray) CutWithoutOrder(begin, end int) {
 }
 
 // Extend adds n zero-value items to the back of the dynamic array.
+//
 // It panics if n < 0.
 func (gda *GeneralDynamicArray) Extend(n int) {
 	*gda = append(*gda, make([]interface{}, n)...)
 }
 
-// Expand inserts n zero-value items to the front of the i-th item
-// in the dynamic array.
+// Expand inserts n zero-value items to the front of the item with index i.
+//
 // It panics if i is out of range, i.e., i < 0 or i > Len(), or n < 0.
 func (gda *GeneralDynamicArray) Expand(i, n int) {
 	if i == len(*gda) {
@@ -292,6 +310,7 @@ func (gda *GeneralDynamicArray) Expand(i, n int) {
 
 // Reserve requests that the capacity of the dynamic array
 // is at least the specified capacity.
+//
 // It does nothing if capacity <= Cap().
 func (gda *GeneralDynamicArray) Reserve(capacity int) {
 	if capacity <= 0 || (gda != nil && capacity <= cap(*gda)) {
@@ -304,6 +323,7 @@ func (gda *GeneralDynamicArray) Reserve(capacity int) {
 
 // Shrink reduces the dynamic array to fit, i.e.,
 // requests Cap() equals to Len().
+//
 // Note that it isn't equivalent to operations on slice
 // like s[:len(s):len(s)],
 // because it will allocate a new array and copy the content
