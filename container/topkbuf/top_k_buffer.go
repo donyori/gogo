@@ -57,7 +57,9 @@ type topKBuffer struct {
 }
 
 // NewTopKBuffer creates a new TopKBuffer.
+//
 // data is the initial items in the buffer.
+//
 // It panics if k <= 0 or less is nil.
 func NewTopKBuffer(k int, less function.LessFunc, data ...interface{}) TopKBuffer {
 	if k <= 0 {

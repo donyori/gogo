@@ -27,8 +27,8 @@ import (
 	"github.com/donyori/gogo/function"
 )
 
-// PriorityQueueMini is an interface representing a basic priority queue.
-// It is called a mini version priority queue.
+// PriorityQueueMini is an interface representing a basic priority queue,
+// also called a mini version priority queue.
 type PriorityQueueMini interface {
 	// Len returns the number of items in the queue.
 	Len() int
@@ -39,6 +39,7 @@ type PriorityQueueMini interface {
 	Enqueue(x ...interface{})
 
 	// Dequeue pops the minimum item in the queue.
+	//
 	// It panics if the queue is nil or empty.
 	//
 	// Time complexity: O(log n), where n = pq.Len().
@@ -56,18 +57,21 @@ type PriorityQueue interface {
 	Clear()
 
 	// Top returns the minimum item in the queue, without popping it.
+	//
 	// It panics if the queue is nil or empty.
 	//
 	// Time complexity: O(1).
 	Top() interface{}
 
 	// ReplaceTop replaces the minimum item with newX.
+	//
 	// It panics if the queue is nil or empty.
 	//
 	// Time complexity: O(log n), where n = pq.Len().
 	ReplaceTop(newX interface{})
 
 	// Maintain safeguards the underlying structure of the priority queue valid.
+	//
 	// It is idempotent with respect to the priority queue.
 	//
 	// Time complexity: O(n), where n = pq.Len().
@@ -84,6 +88,7 @@ type PriorityQueueEx interface {
 	Contain(x interface{}) bool
 
 	// Remove removes the item x in the queue.
+	//
 	// If x is in the queue and has been removed successfully,
 	// it returns true, otherwise false.
 	// If there are multiple items equals to x in the queue,
@@ -94,6 +99,7 @@ type PriorityQueueEx interface {
 	Remove(x interface{}) (ok bool)
 
 	// Replace exchanges oldX in the queue to newX.
+	//
 	// If oldX is in the queue and has been replaced successfully,
 	// it returns true, otherwise false.
 	// If there are multiple items equals to oldX in the queue,
@@ -116,7 +122,9 @@ type priorityQueueMini struct {
 }
 
 // NewPriorityQueueMini creates a new mini version priority queue.
+//
 // data is the initial items in the queue.
+//
 // It panics if less is nil.
 func NewPriorityQueueMini(less function.LessFunc, data ...interface{}) PriorityQueueMini {
 	if less == nil {
@@ -153,6 +161,7 @@ func (pqm *priorityQueueMini) Enqueue(x ...interface{}) {
 }
 
 // Dequeue pops the minimum item in the queue.
+//
 // It panics if the queue is nil or empty.
 //
 // Time complexity: O(log n), where n = pq.Len().
@@ -170,7 +179,9 @@ type priorityQueue struct {
 }
 
 // NewPriorityQueue creates a new standard priority queue.
+//
 // data is the initial items in the queue.
+//
 // It panics if less is nil.
 func NewPriorityQueue(less function.LessFunc, data ...interface{}) PriorityQueue {
 	if less == nil {
@@ -198,6 +209,7 @@ func (pq *priorityQueue) Clear() {
 }
 
 // Top returns the minimum item in the queue, without popping it.
+//
 // It panics if the queue is nil or empty.
 //
 // Time complexity: O(1).
@@ -209,6 +221,7 @@ func (pq *priorityQueue) Top() interface{} {
 }
 
 // ReplaceTop replaces the minimum item with newX.
+//
 // It panics if the queue is nil or empty.
 //
 // Time complexity: O(log n), where n = pq.Len().
@@ -221,6 +234,7 @@ func (pq *priorityQueue) ReplaceTop(newX interface{}) {
 }
 
 // Maintain safeguards the underlying structure of the priority queue valid.
+//
 // It is idempotent with respect to the priority queue.
 //
 // Time complexity: O(n), where n = pq.Len().
@@ -239,8 +253,11 @@ type priorityQueueEx struct {
 }
 
 // NewPriorityQueueEx creates a new extended priority queue.
+//
 // data is the initial items in the queue.
+//
 // It panics if less is nil.
+//
 // equal can be nil. If equal is nil, it will be generated via less.
 func NewPriorityQueueEx(less function.LessFunc, equal function.EqualFunc, data ...interface{}) PriorityQueueEx {
 	if less == nil {
@@ -271,6 +288,7 @@ func (pqx *priorityQueueEx) Contain(x interface{}) bool {
 }
 
 // Remove removes the item x in the queue.
+//
 // If x is in the queue and has been removed successfully,
 // it returns true, otherwise false.
 // If there are multiple items equals to x in the queue,
@@ -288,6 +306,7 @@ func (pqx *priorityQueueEx) Remove(x interface{}) (ok bool) {
 }
 
 // Replace exchanges oldX in the queue to newX.
+//
 // If oldX is in the queue and has been replaced successfully,
 // it returns true, otherwise false.
 // If there are multiple items equals to oldX in the queue,
@@ -316,6 +335,7 @@ func (pqx *priorityQueueEx) ScanWithoutOrder(handler func(x interface{}) (cont b
 }
 
 // find searches item x in the priority queue, and returns its index.
+//
 // If x is not found, it returns -1.
 func (pqx *priorityQueueEx) find(x interface{}) int {
 	if pqx.Len() == 0 {

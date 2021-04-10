@@ -44,8 +44,8 @@ func (ad *ArrayAdapter) Len() int {
 	return ad.Data.Len()
 }
 
-// Less reports whether the item with
-// index i should sort before the item with index j.
+// Less reports whether the item with index i must sort before
+// the item with index j.
 func (ad *ArrayAdapter) Less(i, j int) bool {
 	return ad.LessFn(ad.Data.Get(i), ad.Data.Get(j))
 }

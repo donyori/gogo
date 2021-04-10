@@ -38,8 +38,8 @@ func (a *Array) Len() int {
 	return a.Data.Len()
 }
 
-// Less reports whether the item with
-// index i should sort before the item with index j.
+// Less reports whether the item with index i must sort before
+// the item with index j.
 func (a *Array) Less(i, j int) bool {
 	return a.LessFn(a.Data.Get(i), a.Data.Get(j))
 }

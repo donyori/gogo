@@ -74,11 +74,10 @@ func (npbsi *nextPermutationBinarySearchInterface) Equal(int, interface{}) bool 
 	panic(errors.AutoMsg("method Equal not implement"))
 }
 
-// Less reports whether i-th item is less than x.
-// It panics if i is out of range.
+// Less reports whether the item with index npbsi.Target is less than
+// the item with index i+npbsi.Begin.
 //
-// Here, x is just a dummy argument.
-// This method should act as a Greater() because the Data is in descending order.
+// It panics if i+npbsi.Begin is out of range.
 func (npbsi *nextPermutationBinarySearchInterface) Less(i int, _ interface{}) bool {
 	return npbsi.Data.Less(npbsi.Target, i+npbsi.Begin)
 }

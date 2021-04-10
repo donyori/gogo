@@ -38,8 +38,8 @@ func (da *DynamicArray) Len() int {
 	return da.Data.Len()
 }
 
-// Less reports whether the item with
-// index i should sort before the item with index j.
+// Less reports whether the item with index i must sort before
+// the item with index j.
 func (da *DynamicArray) Less(i, j int) bool {
 	return da.LessFn(da.Data.Get(i), da.Data.Get(j))
 }
