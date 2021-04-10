@@ -64,11 +64,11 @@ func (fda Float64DynamicArray) Reverse() {
 	}
 }
 
-// Scan browses the items in the array from the first to the last.
+// Range browses the items in the array from the first to the last.
 //
 // Its argument handler is a function to deal with the item x in the
 // array and report whether to continue to check the next item or not.
-func (fda Float64DynamicArray) Scan(handler func(x interface{}) (cont bool)) {
+func (fda Float64DynamicArray) Range(handler func(x interface{}) (cont bool)) {
 	for _, x := range fda {
 		if !handler(x) {
 			return
@@ -137,7 +137,7 @@ func (fda *Float64DynamicArray) Append(s Sequence) {
 	}
 	i := len(*fda)
 	*fda = append(*fda, make([]float64, n)...)
-	s.Scan(func(x interface{}) (cont bool) {
+	s.Range(func(x interface{}) (cont bool) {
 		(*fda)[i] = x.(float64)
 		i++
 		return true
@@ -213,7 +213,7 @@ func (fda *Float64DynamicArray) InsertSequence(i int, s Sequence) {
 	*fda = append(*fda, make([]float64, n)...)
 	copy((*fda)[i+n:], (*fda)[i:])
 	k := i
-	s.Scan(func(x interface{}) (cont bool) {
+	s.Range(func(x interface{}) (cont bool) {
 		(*fda)[k] = x.(float64)
 		k++
 		return true

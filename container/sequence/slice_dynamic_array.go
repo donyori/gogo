@@ -138,11 +138,11 @@ func (sda *SliceDynamicArray) Reverse() {
 	}
 }
 
-// Scan browses the items in the array from the first to the last.
+// Range browses the items in the array from the first to the last.
 //
 // Its argument handler is a function to deal with the item x in the
 // array and report whether to continue to check the next item or not.
-func (sda *SliceDynamicArray) Scan(handler func(x interface{}) (cont bool)) {
+func (sda *SliceDynamicArray) Range(handler func(x interface{}) (cont bool)) {
 	if sda == nil {
 		return
 	}
@@ -224,7 +224,7 @@ func (sda *SliceDynamicArray) Append(s Sequence) {
 	}
 	i := sda.v.Len()
 	sda.v.Set(reflect.AppendSlice(sda.v, reflect.MakeSlice(sda.v.Type(), n, n)))
-	s.Scan(func(x interface{}) (cont bool) {
+	s.Range(func(x interface{}) (cont bool) {
 		sda.v.Index(i).Set(sda.valueOf(x))
 		i++
 		return true
@@ -316,7 +316,7 @@ func (sda *SliceDynamicArray) InsertSequence(i int, s Sequence) {
 	end := sda.v.Len()
 	reflect.Copy(sda.v.Slice(i+n, end), sda.v.Slice(i, end))
 	k := i
-	s.Scan(func(x interface{}) (cont bool) {
+	s.Range(func(x interface{}) (cont bool) {
 		sda.v.Index(k).Set(sda.valueOf(x))
 		k++
 		return true

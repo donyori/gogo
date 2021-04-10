@@ -63,11 +63,11 @@ func (ida IntDynamicArray) Reverse() {
 	}
 }
 
-// Scan browses the items in the array from the first to the last.
+// Range browses the items in the array from the first to the last.
 //
 // Its argument handler is a function to deal with the item x in the
 // array and report whether to continue to check the next item or not.
-func (ida IntDynamicArray) Scan(handler func(x interface{}) (cont bool)) {
+func (ida IntDynamicArray) Range(handler func(x interface{}) (cont bool)) {
 	for _, x := range ida {
 		if !handler(x) {
 			return
@@ -136,7 +136,7 @@ func (ida *IntDynamicArray) Append(s Sequence) {
 	}
 	i := len(*ida)
 	*ida = append(*ida, make([]int, n)...)
-	s.Scan(func(x interface{}) (cont bool) {
+	s.Range(func(x interface{}) (cont bool) {
 		(*ida)[i] = x.(int)
 		i++
 		return true
@@ -212,7 +212,7 @@ func (ida *IntDynamicArray) InsertSequence(i int, s Sequence) {
 	*ida = append(*ida, make([]int, n)...)
 	copy((*ida)[i+n:], (*ida)[i:])
 	k := i
-	s.Scan(func(x interface{}) (cont bool) {
+	s.Range(func(x interface{}) (cont bool) {
 		(*ida)[k] = x.(int)
 		k++
 		return true

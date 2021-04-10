@@ -64,11 +64,11 @@ func (sda StringDynamicArray) Reverse() {
 	}
 }
 
-// Scan browses the items in the array from the first to the last.
+// Range browses the items in the array from the first to the last.
 //
 // Its argument handler is a function to deal with the item x in the
 // array and report whether to continue to check the next item or not.
-func (sda StringDynamicArray) Scan(handler func(x interface{}) (cont bool)) {
+func (sda StringDynamicArray) Range(handler func(x interface{}) (cont bool)) {
 	for _, x := range sda {
 		if !handler(x) {
 			return
@@ -138,7 +138,7 @@ func (sda *StringDynamicArray) Append(s Sequence) {
 	}
 	i := len(*sda)
 	*sda = append(*sda, make([]string, n)...)
-	s.Scan(func(x interface{}) (cont bool) {
+	s.Range(func(x interface{}) (cont bool) {
 		(*sda)[i] = x.(string)
 		i++
 		return true
@@ -219,7 +219,7 @@ func (sda *StringDynamicArray) InsertSequence(i int, s Sequence) {
 	*sda = append(*sda, make([]string, n)...)
 	copy((*sda)[i+n:], (*sda)[i:])
 	k := i
-	s.Scan(func(x interface{}) (cont bool) {
+	s.Range(func(x interface{}) (cont bool) {
 		(*sda)[k] = x.(string)
 		k++
 		return true

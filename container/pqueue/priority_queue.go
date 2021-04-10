@@ -312,7 +312,7 @@ func (pqx *priorityQueueEx) ScanWithoutOrder(handler func(x interface{}) (cont b
 	if handler == nil || pqx.Len() == 0 {
 		return
 	}
-	pqx.Heap.Data.Scan(handler)
+	pqx.Heap.Data.Range(handler)
 }
 
 // find searches item x in the priority queue, and returns its index.

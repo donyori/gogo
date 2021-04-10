@@ -42,9 +42,9 @@ type Sequence interface {
 	// Reverse turns the other way round items of the sequence.
 	Reverse()
 
-	// Scan browses the items in the sequence from the first to the last.
+	// Range browses the items in the sequence from the first to the last.
 	//
 	// Its argument handler is a function to deal with the item x in the
 	// sequence and report whether to continue to check the next item or not.
-	Scan(handler func(x interface{}) (cont bool))
+	Range(handler func(x interface{}) (cont bool))
 }

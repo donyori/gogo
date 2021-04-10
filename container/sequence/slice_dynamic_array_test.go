@@ -117,11 +117,11 @@ func TestSliceDynamicArray_Reverse(t *testing.T) {
 	}
 }
 
-func TestSliceDynamicArray_Scan(t *testing.T) {
+func TestSliceDynamicArray_Range(t *testing.T) {
 	s := []interface{}{1, 1, 2, 3}
 	sda := WrapSlice(&s)
 	s2 := make([]interface{}, 0, len(s))
-	sda.Scan(func(x interface{}) (cont bool) {
+	sda.Range(func(x interface{}) (cont bool) {
 		s2 = append(s2, x)
 		return len(s2) < 3
 	})
@@ -172,7 +172,7 @@ func TestSliceDynamicArray_Slice(t *testing.T) {
 	}
 	i := 1
 	count := 0
-	slice.Scan(func(x interface{}) (cont bool) {
+	slice.Range(func(x interface{}) (cont bool) {
 		if i < 3 {
 			if x != s[i] {
 				t.Errorf("slice[%d]: %v != s[1:3][%[1]d]: %[3]v.", count, x, s[i])
@@ -188,7 +188,7 @@ func TestSliceDynamicArray_Slice(t *testing.T) {
 	s[2] = nil
 	i = 1
 	count = 0
-	slice.Scan(func(x interface{}) (cont bool) {
+	slice.Range(func(x interface{}) (cont bool) {
 		if i < 3 {
 			if x != s[i] {
 				t.Errorf("slice[%d]: %v != s[1:3][%[1]d]: %[3]v.", count, x, s[i])

@@ -64,11 +64,11 @@ func (gda GeneralDynamicArray) Reverse() {
 	}
 }
 
-// Scan browses the items in the array from the first to the last.
+// Range browses the items in the array from the first to the last.
 //
 // Its argument handler is a function to deal with the item x in the
 // array and report whether to continue to check the next item or not.
-func (gda GeneralDynamicArray) Scan(handler func(x interface{}) (cont bool)) {
+func (gda GeneralDynamicArray) Range(handler func(x interface{}) (cont bool)) {
 	for _, x := range gda {
 		if !handler(x) {
 			return
@@ -138,7 +138,7 @@ func (gda *GeneralDynamicArray) Append(s Sequence) {
 	}
 	i := len(*gda)
 	*gda = append(*gda, make([]interface{}, n)...)
-	s.Scan(func(x interface{}) (cont bool) {
+	s.Range(func(x interface{}) (cont bool) {
 		(*gda)[i] = x
 		i++
 		return true
@@ -219,7 +219,7 @@ func (gda *GeneralDynamicArray) InsertSequence(i int, s Sequence) {
 	*gda = append(*gda, make([]interface{}, n)...)
 	copy((*gda)[i+n:], (*gda)[i:])
 	k := i
-	s.Scan(func(x interface{}) (cont bool) {
+	s.Range(func(x interface{}) (cont bool) {
 		(*gda)[k] = x
 		k++
 		return true

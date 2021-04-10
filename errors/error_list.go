@@ -58,8 +58,8 @@ type ErrorList interface {
 	// Range calls handler for all items in the list one by one.
 	//
 	// handler has two parameters: i (the index of the error) and
-	// err (the error value),
-	// and returns an indicator cont to report whether to continue the iteration.
+	// err (the error value), and returns an indicator cont to report
+	// whether to continue the iteration.
 	Range(handler func(i int, err error) (cont bool))
 
 	// Append appends errs to the error list.
