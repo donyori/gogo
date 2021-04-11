@@ -252,23 +252,22 @@ func (mc *multiCloser) Close() error {
 			mc.idx--
 		}
 		return nil
-	} else {
-		el := errors.NewErrorList(true)
-		for i := mc.idx - 1; i >= 0; i-- {
-			if mc.cm[mc.cs[i]] {
-				continue
-			}
-			err := mc.cs[i].Close()
-			el.Append(err)
-			if err == nil {
-				mc.cm[mc.cs[i]] = true
-				if !el.Erroneous() {
-					mc.idx = i
-				}
+	}
+	el := errors.NewErrorList(true)
+	for i := mc.idx - 1; i >= 0; i-- {
+		if mc.cm[mc.cs[i]] {
+			continue
+		}
+		err := mc.cs[i].Close()
+		el.Append(err)
+		if err == nil {
+			mc.cm[mc.cs[i]] = true
+			if !el.Erroneous() {
+				mc.idx = i
 			}
 		}
-		return el.ToError() // Don't wrap the error.
 	}
+	return el.ToError() // Don't wrap the error.
 }
 
 // Closed reports whether all its closers are closed successfully.
