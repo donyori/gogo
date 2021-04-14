@@ -23,14 +23,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestVerifyChecksum(t *testing.T) {
-	dir, err := ioutil.TempDir("", "gogo_test_")
+	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}

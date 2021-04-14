@@ -22,7 +22,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -118,7 +117,7 @@ func TestHttpCustomUpdate_ChecksumFailed(t *testing.T) {
 }
 
 func testHttpDownloadFn(t *testing.T, fn func(filename string) error) {
-	dir, err := ioutil.TempDir("", "gogo_test_")
+	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +143,7 @@ func testHttpDownloadFn(t *testing.T, fn func(filename string) error) {
 }
 
 func testHttpUpdateFn(t *testing.T, fn func(filename string, cs ...Checksum) (updated bool, err error)) {
-	dir, err := ioutil.TempDir("", "gogo_test_")
+	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +225,7 @@ func testHttpUpdateFn(t *testing.T, fn func(filename string, cs ...Checksum) (up
 }
 
 func testHttpDownloadFnChecksumFailed(t *testing.T, fn func(filename string, cs ...Checksum) error) {
-	dir, err := ioutil.TempDir("", "gogo_test_")
+	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}

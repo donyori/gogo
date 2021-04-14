@@ -19,6 +19,7 @@
 package file
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -49,7 +50,7 @@ var ErrPatternHasPathSeparator = errors.AutoNewWithStrategy("pattern/prefix/suff
 //
 // The client can use f.Name() to find the path of the file.
 // The client is responsible for removing the file when no longer needed.
-func Tmp(dir, prefix, suffix string, perm os.FileMode) (f *os.File, err error) {
+func Tmp(dir, prefix, suffix string, perm fs.FileMode) (f *os.File, err error) {
 	err = checkTmpPrefixAndSuffix(prefix, suffix)
 	if err != nil {
 		return nil, errors.AutoWrap(err)
@@ -87,7 +88,7 @@ func Tmp(dir, prefix, suffix string, perm os.FileMode) (f *os.File, err error) {
 // Calling this function simultaneously will not choose the same directory.
 //
 // The client is responsible for removing the directory when no longer needed.
-func TmpDir(dir, prefix, suffix string, perm os.FileMode) (name string, err error) {
+func TmpDir(dir, prefix, suffix string, perm fs.FileMode) (name string, err error) {
 	err = checkTmpPrefixAndSuffix(prefix, suffix)
 	if err != nil {
 		return "", errors.AutoWrap(err)

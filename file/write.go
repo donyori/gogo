@@ -22,6 +22,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -180,7 +181,7 @@ type writer struct {
 // this function will copy the specified file to a temporary file,
 // which may cost a lot of time and space resource.
 // Data copied from the specified file won't be written to copies.
-func Write(name string, perm os.FileMode, options *WriteOptions, copies ...io.Writer) (w Writer, err error) {
+func Write(name string, perm fs.FileMode, options *WriteOptions, copies ...io.Writer) (w Writer, err error) {
 	if name == "" {
 		return nil, errors.AutoNew("name is empty")
 	}

@@ -19,14 +19,13 @@
 package file
 
 import (
-	"io/ioutil"
 	"os"
 	"sync"
 	"testing"
 )
 
 func TestTmp(t *testing.T) {
-	tmpRoot, err := ioutil.TempDir("", "gogo_test_")
+	tmpRoot, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +63,7 @@ func TestTmp(t *testing.T) {
 }
 
 func TestTmpDir(t *testing.T) {
-	tmpRoot, err := ioutil.TempDir("", "gogo_test_")
+	tmpRoot, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}

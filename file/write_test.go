@@ -22,7 +22,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"io"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -32,13 +32,13 @@ import (
 )
 
 func TestWrite_TarGz(t *testing.T) {
-	dir, err := ioutil.TempDir("", "gogo_test_")
+	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir) // ignore error
 	filename := filepath.Join(dir, "simple.tar.gz")
-	var perm os.FileMode = 0740
+	var perm fs.FileMode = 0740
 	w, err := Write(filename, perm, &WriteOptions{
 		BufOpen: true,
 		Backup:  true,
@@ -120,7 +120,7 @@ func TestWrite_TarGz(t *testing.T) {
 		if i >= len(files) {
 			t.Fatal("i:", i, ">= len(files):", len(files))
 		}
-		read, err := ioutil.ReadAll(tr)
+		read, err := io.ReadAll(tr)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -139,7 +139,7 @@ func TestWrite_Append(t *testing.T) {
 }
 
 func testWriteAppend(t *testing.T, backup bool) {
-	dir, err := ioutil.TempDir("", "gogo_test_")
+	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +152,7 @@ func testWriteAppend(t *testing.T, backup bool) {
 		Backup: backup,
 		MkDirs: true,
 	}
-	var perm os.FileMode = 0740
+	var perm fs.FileMode = 0740
 	w1, err := Write(filename, perm, options)
 	if err != nil {
 		t.Fatal(err)
@@ -172,7 +172,7 @@ func testWriteAppend(t *testing.T, backup bool) {
 	}
 	w1 = nil
 
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,7 +200,7 @@ func testWriteAppend(t *testing.T, backup bool) {
 	}
 	w2 = nil
 
-	data, err = ioutil.ReadFile(filename)
+	data, err = os.ReadFile(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,7 +228,7 @@ func TestWrite_Error(t *testing.T) {
 }
 
 func testWriteError(t *testing.T, backup, preserveOnFail bool) {
-	dir, err := ioutil.TempDir("", "gogo_test_")
+	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,7 +260,7 @@ func testWriteError(t *testing.T, backup, preserveOnFail bool) {
 		PreserveOnFail: preserveOnFail,
 		MkDirs:         true,
 	}
-	var perm os.FileMode = 0740
+	var perm fs.FileMode = 0740
 	wErr := errors.New("testErrorWriter error")
 	w, err := Write(filename, perm, options, &testErrorWriter{wErr})
 	if err != nil {
@@ -286,7 +286,7 @@ func testWriteError(t *testing.T, backup, preserveOnFail bool) {
 	}
 	w = nil
 
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	var wantedContent string
 	if backup || preserveOnFail {
 		if err != nil {

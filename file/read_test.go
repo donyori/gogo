@@ -23,21 +23,20 @@ import (
 	"compress/gzip"
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestRead_Basic(t *testing.T) {
-	dir, err := ioutil.TempDir("", "gogo_test_")
+	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir) // ignore error
 	data := []byte("Some data in the temporary file.\n")
 	filename := filepath.Join(dir, "basic.txt")
-	err = ioutil.WriteFile(filename, data, 0600)
+	err = os.WriteFile(filename, data, 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +50,7 @@ func TestRead_Basic(t *testing.T) {
 			t.Error(err)
 		}
 	}()
-	read, err := ioutil.ReadAll(reader)
+	read, err := io.ReadAll(reader)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +60,7 @@ func TestRead_Basic(t *testing.T) {
 }
 
 func TestRead_Gzip(t *testing.T) {
-	dir, err := ioutil.TempDir("", "gogo_test_")
+	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +101,7 @@ func TestRead_Gzip(t *testing.T) {
 			t.Error(err)
 		}
 	}()
-	read, err := ioutil.ReadAll(reader)
+	read, err := io.ReadAll(reader)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +111,7 @@ func TestRead_Gzip(t *testing.T) {
 }
 
 func TestRead_Tar(t *testing.T) {
-	dir, err := ioutil.TempDir("", "gogo_test_")
+	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +180,7 @@ func TestRead_Tar(t *testing.T) {
 		if i >= len(files) {
 			t.Fatal("i:", i, ">= len(files):", len(files))
 		}
-		read, err := ioutil.ReadAll(reader)
+		read, err := io.ReadAll(reader)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -195,7 +194,7 @@ func TestRead_Tar(t *testing.T) {
 }
 
 func TestRead_Tgz(t *testing.T) {
-	dir, err := ioutil.TempDir("", "gogo_test_")
+	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -271,7 +270,7 @@ func TestRead_Tgz(t *testing.T) {
 		if i >= len(files) {
 			t.Fatal("i:", i, ">= len(files):", len(files))
 		}
-		read, err := ioutil.ReadAll(reader)
+		read, err := io.ReadAll(reader)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -285,7 +284,7 @@ func TestRead_Tgz(t *testing.T) {
 }
 
 func TestRead_TarGz(t *testing.T) {
-	dir, err := ioutil.TempDir("", "gogo_test_")
+	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +360,7 @@ func TestRead_TarGz(t *testing.T) {
 		if i >= len(files) {
 			t.Fatal("i:", i, ">= len(files):", len(files))
 		}
-		read, err := ioutil.ReadAll(reader)
+		read, err := io.ReadAll(reader)
 		if err != nil {
 			t.Fatal(err)
 		}

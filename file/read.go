@@ -23,6 +23,7 @@ import (
 	"compress/bzip2"
 	"compress/gzip"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -95,7 +96,7 @@ type Reader interface {
 	Filename() string
 
 	// FileInfo returns the information of the file.
-	FileInfo() (info os.FileInfo, err error)
+	FileInfo() (info fs.FileInfo, err error)
 }
 
 // reader is an implementation of interface Reader.
@@ -498,7 +499,7 @@ func (fr *reader) Filename() string {
 }
 
 // FileInfo returns the information of the file.
-func (fr *reader) FileInfo() (info os.FileInfo, err error) {
+func (fr *reader) FileInfo() (info fs.FileInfo, err error) {
 	return fr.f.Stat()
 }
 
