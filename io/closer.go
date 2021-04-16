@@ -34,13 +34,36 @@ type Closer interface {
 	Closed() bool
 }
 
+// noOpCloser is an implementation of interface Closer.
+//
+// Its method Close is a no-op, which does nothing and returns nil.
+type noOpCloser struct {
+	closed bool
+}
+
+// NewNoOpCloser creates a new closer with a no-op method Close.
+func NewNoOpCloser() Closer {
+	return new(noOpCloser)
+}
+
+// Close does nothing and returns nil.
+func (noc *noOpCloser) Close() error {
+	noc.closed = true
+	return nil
+}
+
+// Closed reports whether the method Close has been called.
+func (noc *noOpCloser) Closed() bool {
+	return noc.closed
+}
+
 // noErrorCloser is an implementation of interface Closer.
 //
 // After the first successful call to method Close,
 // method Close will do nothing and return nil.
 type noErrorCloser struct {
-	c  stdio.Closer
-	ok bool // ok is true if the closer is successfully closed.
+	c      stdio.Closer
+	closed bool // closed is true if the closer is successfully closed.
 }
 
 // WrapNoErrorCloser wraps the specified closer into a Closer,
@@ -59,19 +82,19 @@ func WrapNoErrorCloser(closer stdio.Closer) Closer {
 //
 // It does nothing and returns nil after the first successful call.
 func (nec *noErrorCloser) Close() error {
-	if nec.ok {
+	if nec.closed {
 		return nil
 	}
 	err := nec.c.Close()
 	if err == nil {
-		nec.ok = true
+		nec.closed = true
 	}
 	return err // Don't wrap the error.
 }
 
 // Closed reports whether this closer is closed successfully.
 func (nec *noErrorCloser) Closed() bool {
-	return nec.ok
+	return nec.closed
 }
 
 // errorCloser is an implementation of interface Closer.
@@ -79,10 +102,10 @@ func (nec *noErrorCloser) Closed() bool {
 // After the first successful call to method Close,
 // method Close will do nothing and return a *ClosedError.
 type errorCloser struct {
-	c  stdio.Closer
-	ok bool   // ok is true if the closer is successfully closed.
-	dn string // Device name.
-	pe error  // Parent error of the ClosedError.
+	c      stdio.Closer
+	closed bool   // closed is true if the closer is successfully closed.
+	dn     string // Device name.
+	pe     error  // Parent error of the ClosedError.
 }
 
 // WrapErrorCloser wraps the specified closer into a Closer,
@@ -117,19 +140,19 @@ func WrapErrorCloser(closer stdio.Closer, deviceName string, parentErr error) Cl
 //
 // It does nothing and returns a *ClosedError after the first successful call.
 func (ec *errorCloser) Close() error {
-	if ec.ok {
+	if ec.closed {
 		return NewClosedError(ec.dn, ec.pe)
 	}
 	err := ec.c.Close()
 	if err == nil {
-		ec.ok = true
+		ec.closed = true
 	}
 	return err // Don't wrap the error.
 }
 
 // Closed reports whether this closer is closed successfully.
 func (ec *errorCloser) Closed() bool {
-	return ec.ok
+	return ec.closed
 }
 
 // MultiCloser is a device to close multiple closers sequentially.

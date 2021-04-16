@@ -40,6 +40,22 @@ func (tc *testCloser) Close() error {
 	return tc.err
 }
 
+func TestNoOpCloser(t *testing.T) {
+	noc := NewNoOpCloser()
+	if noc.Closed() {
+		t.Error("noc.Closed is true before first call to Close.")
+	}
+	for i := 1; i <= 10; i++ {
+		err := noc.Close()
+		if err != nil {
+			t.Errorf("Error on %d call to Close: %v.", i, err)
+		}
+		if !noc.Closed() {
+			t.Errorf("noc.Closed is false after %d call to Close.", i)
+		}
+	}
+}
+
 func TestNoErrorCloser(t *testing.T) {
 	nec := WrapNoErrorCloser(&testCloser{tb: t})
 	if nec.Closed() {
