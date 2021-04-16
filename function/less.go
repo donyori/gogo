@@ -64,13 +64,13 @@ func intLess(a, b interface{}) bool {
 	if a != nil {
 		ia, ok = a.(int)
 		if !ok {
-			panic(errors.AutoNew("a is not int"))
+			panic(errors.AutoMsg("a is not int"))
 		}
 	}
 	if b != nil {
 		ib, ok = b.(int)
 		if !ok {
-			panic(errors.AutoNew("b is not int"))
+			panic(errors.AutoMsg("b is not int"))
 		}
 	}
 	return ia < ib
@@ -90,13 +90,13 @@ func float64Less(a, b interface{}) bool {
 	if a != nil {
 		fa, ok = a.(float64)
 		if !ok {
-			panic(errors.AutoNew("a is not float64"))
+			panic(errors.AutoMsg("a is not float64"))
 		}
 	}
 	if b != nil {
 		fb, ok = b.(float64)
 		if !ok {
-			panic(errors.AutoNew("b is not float64"))
+			panic(errors.AutoMsg("b is not float64"))
 		}
 	}
 	return fa < fb
@@ -116,13 +116,13 @@ func stringLess(a, b interface{}) bool {
 	if a != nil {
 		sa, ok = a.(string)
 		if !ok {
-			panic(errors.AutoNew("a is not string"))
+			panic(errors.AutoMsg("a is not string"))
 		}
 	}
 	if b != nil {
 		sb, ok = b.(string)
 		if !ok {
-			panic(errors.AutoNew("b is not string"))
+			panic(errors.AutoMsg("b is not string"))
 		}
 	}
 	return sa < sb
@@ -162,7 +162,7 @@ func builtinRealNumberLess(a, b interface{}) bool {
 		flag = 0b00_11
 	case reflect.Invalid:
 	default:
-		panic(errors.AutoNew("a is not a built-in real number"))
+		panic(errors.AutoMsg("a is not a built-in real number"))
 	}
 	switch vb.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -176,7 +176,7 @@ func builtinRealNumberLess(a, b interface{}) bool {
 		flag |= 0b11_00
 	case reflect.Invalid:
 	default:
-		panic(errors.AutoNew("b is not a built-in real number"))
+		panic(errors.AutoMsg("b is not a built-in real number"))
 	}
 
 	switch flag {
@@ -213,6 +213,6 @@ func builtinRealNumberLess(a, b interface{}) bool {
 	default:
 		// This should never happen, but will act as a safeguard for later,
 		// as a default value doesn't make sense here.
-		panic(errors.AutoNew("flag is invalid, which should never happen"))
+		panic(errors.AutoMsg("flag is invalid, which should never happen"))
 	}
 }

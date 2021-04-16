@@ -402,13 +402,13 @@ var testIntsEqualBidirectionalComparison EqualFunc = func(a, b interface{}) bool
 	if a != nil {
 		ia, ok = a.([]int)
 		if !ok {
-			panic(errors.AutoNew("a is not []int"))
+			panic(errors.AutoMsg("a is not []int"))
 		}
 	}
 	if b != nil {
 		ib, ok = b.([]int)
 		if !ok {
-			panic(errors.AutoNew("b is not []int"))
+			panic(errors.AutoMsg("b is not []int"))
 		}
 	}
 	if len(ia) != len(ib) {
@@ -453,9 +453,9 @@ var testBytesEqualBidirectionalComparison EqualFunc = func(a, b interface{}) boo
 			return true
 		}
 	} else {
-		panic(errors.AutoNew("a is neither []byte nor string"))
+		panic(errors.AutoMsg("a is neither []byte nor string"))
 	}
-	panic(errors.AutoNew("b is neither []byte nor string"))
+	panic(errors.AutoMsg("b is neither []byte nor string"))
 }
 
 var testSliceItemEqualBidirectionalComparison EqualFunc = func(a, b interface{}) bool {
@@ -466,14 +466,14 @@ var testSliceItemEqualBidirectionalComparison EqualFunc = func(a, b interface{})
 		na = va.Len()
 	case reflect.Invalid:
 	default:
-		panic(errors.AutoNew("a is neither slice nor string"))
+		panic(errors.AutoMsg("a is neither slice nor string"))
 	}
 	switch vb.Kind() {
 	case reflect.Slice, reflect.String:
 		nb = vb.Len()
 	case reflect.Invalid:
 	default:
-		panic(errors.AutoNew("b is neither slice nor string"))
+		panic(errors.AutoMsg("b is neither slice nor string"))
 	}
 
 	if na != nb {

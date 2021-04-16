@@ -128,9 +128,9 @@ func bytesEqual(a, b interface{}) bool {
 			return true
 		}
 	} else {
-		panic(errors.AutoNew("a is neither []byte nor string"))
+		panic(errors.AutoMsg("a is neither []byte nor string"))
 	}
-	panic(errors.AutoNew("b is neither []byte nor string"))
+	panic(errors.AutoMsg("b is neither []byte nor string"))
 }
 
 // IntsEqual is a prefab EqualFunc for []int.
@@ -150,13 +150,13 @@ func intsEqual(a, b interface{}) bool {
 	if a != nil {
 		ia, ok = a.([]int)
 		if !ok {
-			panic(errors.AutoNew("a is not []int"))
+			panic(errors.AutoMsg("a is not []int"))
 		}
 	}
 	if b != nil {
 		ib, ok = b.([]int)
 		if !ok {
-			panic(errors.AutoNew("b is not []int"))
+			panic(errors.AutoMsg("b is not []int"))
 		}
 	}
 	if len(ia) != len(ib) {
@@ -188,13 +188,13 @@ func float64sEqual(a, b interface{}) bool {
 	if a != nil {
 		fa, ok = a.([]float64)
 		if !ok {
-			panic(errors.AutoNew("a is not []float64"))
+			panic(errors.AutoMsg("a is not []float64"))
 		}
 	}
 	if b != nil {
 		fb, ok = b.([]float64)
 		if !ok {
-			panic(errors.AutoNew("b is not []float64"))
+			panic(errors.AutoMsg("b is not []float64"))
 		}
 	}
 	if len(fa) != len(fb) {
@@ -226,13 +226,13 @@ func stringsEqual(a, b interface{}) bool {
 	if a != nil {
 		sa, ok = a.([]string)
 		if !ok {
-			panic(errors.AutoNew("a is not []string"))
+			panic(errors.AutoMsg("a is not []string"))
 		}
 	}
 	if b != nil {
 		sb, ok = b.([]string)
 		if !ok {
-			panic(errors.AutoNew("b is not []string"))
+			panic(errors.AutoMsg("b is not []string"))
 		}
 	}
 	if len(sa) != len(sb) {
@@ -267,13 +267,13 @@ func generalSliceEqual(a, b interface{}) bool {
 	if a != nil {
 		ia, ok = a.([]interface{})
 		if !ok {
-			panic(errors.AutoNew("a is not []interface{}"))
+			panic(errors.AutoMsg("a is not []interface{}"))
 		}
 	}
 	if b != nil {
 		ib, ok = b.([]interface{})
 		if !ok {
-			panic(errors.AutoNew("b is not []interface{}"))
+			panic(errors.AutoMsg("b is not []interface{}"))
 		}
 	}
 	if len(ia) != len(ib) {
@@ -318,14 +318,14 @@ func sliceItemEqual(a, b interface{}) bool {
 		na = va.Len()
 	case reflect.Invalid:
 	default:
-		panic(errors.AutoNew("a is neither slice nor string"))
+		panic(errors.AutoMsg("a is neither slice nor string"))
 	}
 	switch vb.Kind() {
 	case reflect.Slice, reflect.String:
 		nb = vb.Len()
 	case reflect.Invalid:
 	default:
-		panic(errors.AutoNew("b is neither slice nor string"))
+		panic(errors.AutoMsg("b is neither slice nor string"))
 	}
 
 	if na != nb {
