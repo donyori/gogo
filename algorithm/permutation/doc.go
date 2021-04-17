@@ -17,4 +17,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Package permutation provides algorithms about permutations.
+//
+// For better performance, all functions in this package are unsafe
+// for concurrency unless otherwise specified.
 package permutation

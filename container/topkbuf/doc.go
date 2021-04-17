@@ -18,4 +18,7 @@
 
 // Package topkbuf provides OOP-style buffer
 // for saving the first K smallest items.
+//
+// For better performance, all functions in this package are unsafe
+// for concurrency unless otherwise specified.
 package topkbuf

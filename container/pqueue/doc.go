@@ -21,4 +21,7 @@
 // There are three priority queue versions in this package:
 // mini version (PriorityQueueMini), standard version (PriorityQueue),
 // and extended version (PriorityQueueEx).
+//
+// For better performance, all functions in this package are unsafe
+// for concurrency unless otherwise specified.
 package pqueue

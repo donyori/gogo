@@ -17,4 +17,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Package container provides OOP-style containers.
+//
+// For better performance, all functions in this package and its subpackages
+// are unsafe for concurrency unless otherwise specified.
 package container

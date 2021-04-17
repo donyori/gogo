@@ -17,4 +17,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Package hex provides hexadecimal encoding and decoding functions.
+//
+// For better performance, all functions in this package are unsafe
+// for concurrency unless otherwise specified.
 package hex
