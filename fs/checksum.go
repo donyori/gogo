@@ -16,12 +16,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package file
+package fs
 
 import (
 	"hash"
 	"io"
-	"os"
 
 	"github.com/donyori/gogo/encoding/hex"
 )
@@ -38,17 +37,22 @@ type Checksum struct {
 
 // VerifyChecksum verifies a file by checksum.
 //
-// It returns true if and only if the file can be read
-// and matches all checksums.
-// Note that it returns false if anyone of cs contains a nil HashGen
-// or an empty HexExpSum,
-// and it returns true if len(cs) is 0 and the file can be opened for reading.
-func VerifyChecksum(filename string, cs ...Checksum) bool {
-	f, err := os.Open(filename)
-	if err != nil {
+// To ensure that this function can work as expected,
+// the input file must be ready to be read from the beginning and
+// must not be operated by anyone else during the call to this function.
+//
+// This function will not close file.
+// The client is responsible for closing file after use.
+//
+// It returns true if the file can be read and matches all checksums.
+//
+// Note that it returns false if file is nil,
+// or anyone of cs contains a nil HashGen or an empty HexExpSum.
+// And it returns true if len(cs) is 0.
+func VerifyChecksum(file File, cs ...Checksum) bool {
+	if file == nil {
 		return false
 	}
-	defer f.Close() // ignore error
 	if len(cs) == 0 {
 		return true
 	}
@@ -68,7 +72,7 @@ func VerifyChecksum(filename string, cs ...Checksum) bool {
 	if len(ws) > 1 {
 		w = io.MultiWriter(ws...)
 	}
-	_, err = io.Copy(w, f)
+	_, err := io.Copy(w, file)
 	if err != nil {
 		return false
 	}
@@ -78,4 +82,27 @@ func VerifyChecksum(filename string, cs ...Checksum) bool {
 		}
 	}
 	return true
+}
+
+// VerifyChecksumFromFs verifies a file by checksum,
+// where the file is opened from fsys by the specified name.
+//
+// It returns true if and only if the file can be read
+// and matches all checksums.
+//
+// Note that it returns false if fsys is nil,
+// or anyone of cs contains a nil HashGen or an empty HexExpSum.
+// And it returns true if len(cs) is 0 and the file can be opened for reading.
+func VerifyChecksumFromFs(fsys FS, name string, cs ...Checksum) bool {
+	if fsys == nil {
+		return false
+	}
+	f, err := fsys.Open(name)
+	if err != nil {
+		return false
+	}
+	defer func() {
+		_ = f.Close()
+	}()
+	return VerifyChecksum(f, cs...)
 }

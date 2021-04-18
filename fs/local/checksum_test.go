@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package file
+package local
 
 import (
 	"crypto/sha256"
@@ -26,6 +26,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/donyori/gogo/fs"
 )
 
 func TestVerifyChecksum(t *testing.T) {
@@ -36,13 +38,11 @@ func TestVerifyChecksum(t *testing.T) {
 	defer os.RemoveAll(dir) // ignore error
 	filename := filepath.Join(dir, "testfile.dat")
 
-	v := VerifyChecksum(filename)
-	if v {
+	if VerifyChecksum(filename) {
 		t.Error("True for non-exist file.")
 	}
 
-	// Make test file:
-	filename2 := filepath.Join(dir, "testfile2.dat")
+	// Make test files:
 	fw, err := os.Create(filename)
 	if err != nil {
 		t.Fatal(err)
@@ -52,6 +52,7 @@ func TestVerifyChecksum(t *testing.T) {
 			fw.Close() // ignore error
 		}
 	}()
+	filename2 := filepath.Join(dir, "testfile2.dat")
 	fw2, err := os.Create(filename2)
 	if err != nil {
 		t.Fatal(err)
@@ -86,25 +87,22 @@ func TestVerifyChecksum(t *testing.T) {
 		t.Fatal(err)
 	}
 	fw2 = nil
-	ck := Checksum{
+
+	ck := fs.Checksum{
 		HashGen:   sha256.New,
 		HexExpSum: hex.EncodeToString(h.Sum(nil)),
 	}
 
-	v = VerifyChecksum(filename)
-	if !v {
+	if !VerifyChecksum(filename) {
 		t.Error("False for existing file.")
 	}
-	v = VerifyChecksum(filename, ck)
-	if !v {
+	if !VerifyChecksum(filename, ck) {
 		t.Error("False for intact file.")
 	}
-	v = VerifyChecksum(filename2, ck)
-	if v {
+	if VerifyChecksum(filename2, ck) {
 		t.Error("True for damaged file.")
 	}
-	v = VerifyChecksum(filename, Checksum{})
-	if v {
+	if VerifyChecksum(filename, fs.Checksum{}) {
 		t.Error("True for empty checksum.")
 	}
 }

@@ -16,18 +16,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package file
+package local
 
 import (
 	"archive/tar"
 	"compress/gzip"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/donyori/gogo/errors"
+	"github.com/donyori/gogo/fs"
 	myio "github.com/donyori/gogo/io"
 )
 
@@ -134,22 +134,22 @@ type Writer interface {
 //
 // Use it with function Write.
 type writer struct {
-	err      error
-	options  WriteOptions
-	bw       myio.ResettableBufferedWriter
-	ubw      io.Writer // unbuffered writer
-	tmp      string    // name of the temporary file
-	filename string
-	closed   bool // true if method Close has been called once and no error occurred during that call
-	c        myio.Closer
-	tw       *tar.Writer
+	err    error
+	opts   WriteOptions
+	bw     myio.ResettableBufferedWriter
+	ubw    io.Writer // unbuffered writer
+	tmp    string    // name of the temporary file
+	name   string    // name of the destination file
+	closed bool      // true if method Close has been called once and no error occurred during that call
+	c      myio.Closer
+	tw     *tar.Writer
 }
 
 // Write creates (if necessary) and opens a file
 // with specified name for writing.
 //
 // If name is empty, it does nothing and returns an error.
-// If options is nil, it will use the default write options instead.
+// If opts is nil, it will use the default write options instead.
 // The default write options are shown as follows:
 //  Append: false,
 //  Raw: false,
@@ -181,21 +181,21 @@ type writer struct {
 // this function will copy the specified file to a temporary file,
 // which may cost a lot of time and space resource.
 // Data copied from the specified file won't be written to copies.
-func Write(name string, perm fs.FileMode, options *WriteOptions, copies ...io.Writer) (w Writer, err error) {
+func Write(name string, perm fs.FileMode, opts *WriteOptions, copies ...io.Writer) (w Writer, err error) {
 	if name == "" {
 		return nil, errors.AutoNew("name is empty")
 	}
-	if options == nil {
-		options = defaultWriteOptions
+	if opts == nil {
+		opts = defaultWriteOptions
 	}
 	fw := &writer{
-		options:  *options,
-		filename: name,
+		opts: *opts,
+		name: name,
 	}
 	w = fw
 
 	dir, base := filepath.Split(name)
-	if options.MkDirs {
+	if opts.MkDirs {
 		err = os.MkdirAll(dir, perm)
 		if err != nil {
 			return nil, errors.AutoWrap(err)
@@ -210,7 +210,7 @@ func Write(name string, perm fs.FileMode, options *WriteOptions, copies ...io.Wr
 	}()
 
 	var f *os.File
-	if options.Backup {
+	if opts.Backup {
 		f, err = Tmp(dir, base+".", ".tmp", perm)
 		if err != nil {
 			el.Append(err)
@@ -223,7 +223,7 @@ func Write(name string, perm fs.FileMode, options *WriteOptions, copies ...io.Wr
 				el.Append(os.Remove(fw.tmp))
 			}
 		}()
-		if options.Append {
+		if opts.Append {
 			r, err1 := os.Open(name)
 			if err1 == nil {
 				// Don't use
@@ -245,7 +245,7 @@ func Write(name string, perm fs.FileMode, options *WriteOptions, copies ...io.Wr
 		}
 	} else {
 		flag := os.O_WRONLY | os.O_CREATE
-		if options.Append {
+		if opts.Append {
 			flag |= os.O_APPEND
 		} else {
 			flag |= os.O_TRUNC
@@ -278,14 +278,14 @@ func Write(name string, perm fs.FileMode, options *WriteOptions, copies ...io.Wr
 	if len(copies) > 0 {
 		fw.ubw = io.MultiWriter(append([]io.Writer{fw.ubw}, copies...)...)
 	}
-	if !options.Raw {
+	if !opts.Raw {
 		base = strings.ToLower(base)
 		ext := filepath.Ext(base)
 		loop := true
 		for loop {
 			switch ext {
 			case ".gz", ".tgz":
-				gw, err1 := gzip.NewWriterLevel(fw.ubw, options.GzipLv)
+				gw, err1 := gzip.NewWriterLevel(fw.ubw, opts.GzipLv)
 				if err1 != nil {
 					el.Append(err1)
 					return
@@ -314,8 +314,8 @@ func Write(name string, perm fs.FileMode, options *WriteOptions, copies ...io.Wr
 	} else {
 		fw.c = myio.WrapNoErrorCloser(f)
 	}
-	if options.BufOpen {
-		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.options.BufSize)
+	if opts.BufOpen {
+		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
 	}
 	return
 }
@@ -335,10 +335,10 @@ func (fw *writer) Close() (err error) {
 	defer func() {
 		if !rmDone {
 			var name string
-			if fw.options.Backup {
+			if fw.opts.Backup {
 				name = fw.tmp
-			} else if !fw.options.PreserveOnFail {
-				name = fw.filename
+			} else if !fw.opts.PreserveOnFail {
+				name = fw.name
 			}
 			if name != "" {
 				el.Append(os.Remove(name))
@@ -352,20 +352,20 @@ func (fw *writer) Close() (err error) {
 	}
 	el.Append(fw.c.Close())
 	if fw.err == nil && !el.Erroneous() &&
-		fw.options.VerifyFn != nil && !fw.options.VerifyFn() {
+		fw.opts.VerifyFn != nil && !fw.opts.VerifyFn() {
 		el.Append(ErrVerificationFail)
 	}
-	if fw.options.Backup {
+	if fw.opts.Backup {
 		if fw.err == nil && !el.Erroneous() {
-			el.Append(os.Rename(fw.tmp, fw.filename))
+			el.Append(os.Rename(fw.tmp, fw.name))
 			if el.Erroneous() {
 				el.Append(os.Remove(fw.tmp))
 			}
 		} else {
 			el.Append(os.Remove(fw.tmp))
 		}
-	} else if (fw.err != nil || el.Erroneous()) && !fw.options.PreserveOnFail {
-		el.Append(os.Remove(fw.filename))
+	} else if (fw.err != nil || el.Erroneous()) && !fw.opts.PreserveOnFail {
+		el.Append(os.Remove(fw.name))
 	}
 	err = errors.AutoWrap(el.ToError()) // only return the errors occurred during Close
 	rmDone = true
@@ -420,7 +420,7 @@ func (fw *writer) WriteByte(c byte) error {
 	} else if bw, ok := fw.ubw.(io.ByteWriter); ok {
 		err = bw.WriteByte(c)
 	} else {
-		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.options.BufSize)
+		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
 		err = fw.bw.WriteByte(c)
 	}
 	fw.err = errors.AutoWrap(err)
@@ -466,7 +466,7 @@ func (fw *writer) ReadFrom(r io.Reader) (n int64, err error) {
 	} else if wt, ok := r.(io.WriterTo); ok {
 		n, err = wt.WriteTo(fw.ubw)
 	} else {
-		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.options.BufSize)
+		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
 		n, err = fw.bw.ReadFrom(r)
 	}
 	fw.err = errors.AutoWrap(err)
@@ -528,7 +528,7 @@ func (fw *writer) WriteRune(r rune) (size int, err error) {
 		return 0, fw.err
 	}
 	if fw.bw == nil {
-		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.options.BufSize)
+		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
 	}
 	size, err = fw.bw.WriteRune(r)
 	fw.err = errors.AutoWrap(err)
@@ -553,7 +553,7 @@ func (fw *writer) TarEnabled() bool {
 // (To test whether the error is ErrNotTar, use function errors.Is.)
 func (fw *writer) TarWriteHeader(hdr *tar.Header) error {
 	if !fw.TarEnabled() {
-		return errors.AutoWrap(ErrNotTar)
+		return errors.AutoWrap(fs.ErrNotTar)
 	}
 	if errors.Is(fw.err, myio.ErrWriterClosed) {
 		return fw.err
@@ -574,14 +574,14 @@ func (fw *writer) TarWriteHeader(hdr *tar.Header) error {
 
 // Options returns a copy of options used by this writer.
 func (fw *writer) Options() *WriteOptions {
-	options := new(WriteOptions)
-	*options = fw.options
-	return options
+	opts := new(WriteOptions)
+	*opts = fw.opts
+	return opts
 }
 
 // Filename returns the filename as presented to function Write.
 func (fw *writer) Filename() string {
-	return fw.filename
+	return fw.name
 }
 
 // TmpFilename returns the name of the temporary file created by

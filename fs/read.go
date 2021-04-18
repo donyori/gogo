@@ -16,15 +16,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package file
+package fs
 
 import (
 	"archive/tar"
 	"compress/bzip2"
 	"compress/gzip"
+	"fmt"
 	"io"
-	"io/fs"
-	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -92,43 +92,56 @@ type Reader interface {
 	// Options returns a copy of options used by this reader.
 	Options() *ReadOptions
 
-	// Filename returns the filename as presented to function Read.
-	Filename() string
-
 	// FileInfo returns the information of the file.
-	FileInfo() (info fs.FileInfo, err error)
+	FileInfo() (info FileInfo, err error)
 }
 
 // reader is an implementation of interface Reader.
 //
 // Use it with function Read.
 type reader struct {
-	err     error
-	br      myio.ResettableBufferedReader
-	ubr     io.Reader // unbuffered reader
-	options ReadOptions
-	c       myio.Closer
-	f       *os.File
-	tr      *tar.Reader
+	err  error
+	br   myio.ResettableBufferedReader
+	ubr  io.Reader // unbuffered reader
+	opts ReadOptions
+	c    myio.Closer
+	f    File
+	tr   *tar.Reader
 }
 
-// Read opens a file with specified name for reading.
+// Read creates a reader on the specified file with options opts.
 //
-// If the file is a symlink, it will be evaluated by filepath.EvalSymlinks.
+// To ensure that this function and the returned reader can work as expected,
+// the input file must not be operated by anyone else
+// before closing the returned reader.
+// If the option Offset is non-zero and the file is not an io.Seeker,
+// the file must be ready to be read from the beginning.
 //
-// The file is opened by os.Open;
-// the associated file descriptor has mode syscall.O_RDONLY.
-func Read(name string, options *ReadOptions) (r Reader, err error) {
-	name, err = filepath.EvalSymlinks(name)
+// closeFile indicates whether the reader should close the file
+// when calling its method Close.
+// If closeFile is false, the client is responsible for closing file
+// after closing the reader.
+// If closeFile is true, the client should not close the file,
+// even if this function reports an error.
+// In this case, the file will be closed during the method Close of the reader,
+// and it will also be closed by this function when encountering an error.
+//
+// This function panics if file is nil.
+func Read(file File, opts *ReadOptions, closeFile bool) (r Reader, err error) {
+	if file == nil {
+		panic(errors.AutoMsg("file is nil"))
+	}
+	if opts == nil {
+		opts = new(ReadOptions)
+	}
+	info, err := file.Stat()
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
-	f, err := os.Open(name)
-	if err != nil {
-		return nil, errors.AutoWrap(err)
-	}
-	if options == nil {
-		options = new(ReadOptions)
+	if opts.Offset != 0 {
+		if size := info.Size(); size < opts.Offset || size+opts.Offset < 0 {
+			return nil, errors.AutoNew(fmt.Sprintf("option Offset is out of range, file size: %d, Offset: %d", size, opts.Offset))
+		}
 	}
 	el := errors.NewErrorList(true)
 	defer func() {
@@ -136,8 +149,10 @@ func Read(name string, options *ReadOptions) (r Reader, err error) {
 			r, err = nil, errors.AutoWrapSkip(el.ToError(), 1) // skip = 1 to skip the inner function
 		}
 	}()
-	closers := make([]io.Closer, 1, 2)
-	closers[0] = f
+	closers := make([]io.Closer, 0, 2)
+	if closeFile {
+		closers = append(closers, file)
+	}
 	defer func() {
 		if el.Erroneous() {
 			for i := len(closers) - 1; i >= 0; i-- {
@@ -146,26 +161,36 @@ func Read(name string, options *ReadOptions) (r Reader, err error) {
 		}
 	}()
 	fr := &reader{
-		ubr:     f,
-		options: *options,
-		f:       f,
+		ubr:  file,
+		opts: *opts,
+		f:    file,
 	}
 	r = fr
-	if options.Offset > 0 {
-		_, err = f.Seek(options.Offset, io.SeekStart)
-	} else if options.Offset < 0 {
-		_, err = f.Seek(options.Offset, io.SeekEnd)
+	if opts.Offset > 0 {
+		if seeker, ok := file.(io.Seeker); ok {
+			_, err = seeker.Seek(opts.Offset, io.SeekStart)
+		} else {
+			// Discard opts.Offset bytes.
+			_, err = io.CopyN(io.Discard, file, opts.Offset)
+		}
+	} else if opts.Offset < 0 {
+		if seeker, ok := file.(io.Seeker); ok {
+			_, err = seeker.Seek(opts.Offset, io.SeekEnd)
+		} else {
+			// Discard (size + opts.Offset) bytes.
+			_, err = io.CopyN(io.Discard, file, info.Size()+opts.Offset)
+		}
 	}
 	if err != nil {
 		el.Append(err)
 		return
 	}
-	if options.Limit > 0 {
-		fr.ubr = io.LimitReader(fr.ubr, options.Limit)
+	if opts.Limit > 0 {
+		fr.ubr = io.LimitReader(fr.ubr, opts.Limit)
 	}
-	if !options.Raw {
-		base := strings.ToLower(filepath.Base(name))
-		ext := filepath.Ext(base)
+	if !opts.Raw {
+		base := strings.ToLower(path.Clean(filepath.ToSlash(info.Name())))
+		ext := path.Ext(base)
 		loop := true
 		for loop {
 			switch ext {
@@ -191,21 +216,40 @@ func Read(name string, options *ReadOptions) (r Reader, err error) {
 				loop = false
 			}
 			base = base[:len(base)-len(ext)]
-			ext = filepath.Ext(base)
+			ext = path.Ext(base)
 		}
 	}
-	if len(closers) > 1 {
+	switch len(closers) {
+	case 1:
+		fr.c = myio.WrapNoErrorCloser(closers[0])
+	case 0:
+		fr.c = myio.NewNoOpCloser()
+	default:
 		fr.c = myio.NewMultiCloser(true, true, closers...)
-	} else {
-		fr.c = myio.WrapNoErrorCloser(f)
 	}
-	if options.BufOpen {
+	if opts.BufOpen {
 		fr.createBr()
 	}
 	return
 }
 
-// Close closes all closers used by this reader, including the file.
+// ReadFromFs opens a file from fsys with specified name for reading.
+//
+// The file will be closed when closing the returned reader.
+//
+// This function panics if fsys is nil.
+func ReadFromFs(fsys FS, name string, opts *ReadOptions) (r Reader, err error) {
+	if fsys == nil {
+		panic(errors.AutoMsg("fsys is nil"))
+	}
+	f, err := fsys.Open(name)
+	if err != nil {
+		return nil, errors.AutoWrap(err)
+	}
+	return Read(f, opts, true)
+}
+
+// Close closes all closers used by this reader.
 func (fr *reader) Close() error {
 	if fr.c.Closed() {
 		return nil
@@ -488,18 +532,13 @@ func (fr *reader) TarNext() (header *tar.Header, err error) {
 
 // Options returns a copy of options used by this reader.
 func (fr *reader) Options() *ReadOptions {
-	options := new(ReadOptions)
-	*options = fr.options
-	return options
-}
-
-// Filename returns the filename as presented to function Read.
-func (fr *reader) Filename() string {
-	return fr.f.Name()
+	opts := new(ReadOptions)
+	*opts = fr.opts
+	return opts
 }
 
 // FileInfo returns the information of the file.
-func (fr *reader) FileInfo() (info fs.FileInfo, err error) {
+func (fr *reader) FileInfo() (info FileInfo, err error) {
 	return fr.f.Stat()
 }
 
@@ -507,9 +546,9 @@ func (fr *reader) FileInfo() (info fs.FileInfo, err error) {
 //
 // Caller should guarantee that fr.br == nil.
 func (fr *reader) createBr() {
-	if fr.options.BufSize <= 0 {
+	if fr.opts.BufSize <= 0 {
 		fr.br = myio.NewBufferedReader(fr.ubr)
 	} else {
-		fr.br = myio.NewBufferedReaderSize(fr.ubr, fr.options.BufSize)
+		fr.br = myio.NewBufferedReaderSize(fr.ubr, fr.opts.BufSize)
 	}
 }

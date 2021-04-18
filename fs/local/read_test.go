@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package file
+package local
 
 import (
 	"archive/tar"
@@ -26,6 +26,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/donyori/gogo/fs"
 )
 
 func TestRead_Basic(t *testing.T) {
@@ -59,7 +62,7 @@ func TestRead_Basic(t *testing.T) {
 	}
 }
 
-func TestRead_Gzip(t *testing.T) {
+func TestRead_Gz(t *testing.T) {
 	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
@@ -141,12 +144,12 @@ func TestRead_Tar(t *testing.T) {
 		{"file3.txt", "This is file3."},
 	}
 	for i := range files {
-		hdr := &tar.Header{
-			Name: files[i].name,
-			Mode: 0600,
-			Size: int64(len(files[i].body)),
-		}
-		err = tw.WriteHeader(hdr)
+		err = tw.WriteHeader(&tar.Header{
+			Name:    files[i].name,
+			Size:    int64(len(files[i].body)),
+			Mode:    0600,
+			ModTime: time.Now(),
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -230,12 +233,12 @@ func TestRead_Tgz(t *testing.T) {
 		{"file3.txt", "This is file3."},
 	}
 	for i := range files {
-		hdr := &tar.Header{
-			Name: files[i].name,
-			Mode: 0600,
-			Size: int64(len(files[i].body)),
-		}
-		err = tw.WriteHeader(hdr)
+		err = tw.WriteHeader(&tar.Header{
+			Name:    files[i].name,
+			Size:    int64(len(files[i].body)),
+			Mode:    0600,
+			ModTime: time.Now(),
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -249,7 +252,7 @@ func TestRead_Tgz(t *testing.T) {
 	f.Close()   // ignore error
 	closed = true
 
-	reader, err := Read(filename, &ReadOptions{BufOpen: true})
+	reader, err := Read(filename, &fs.ReadOptions{BufOpen: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,12 +323,12 @@ func TestRead_TarGz(t *testing.T) {
 		{"file3.txt", "This is file3."},
 	}
 	for i := range files {
-		hdr := &tar.Header{
-			Name: files[i].name,
-			Mode: 0600,
-			Size: int64(len(files[i].body)),
-		}
-		err = tw.WriteHeader(hdr)
+		err = tw.WriteHeader(&tar.Header{
+			Name:    files[i].name,
+			Size:    int64(len(files[i].body)),
+			Mode:    0600,
+			ModTime: time.Now(),
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -339,7 +342,7 @@ func TestRead_TarGz(t *testing.T) {
 	f.Close()   // ignore error
 	closed = true
 
-	reader, err := Read(filename, &ReadOptions{BufOpen: true})
+	reader, err := Read(filename, &fs.ReadOptions{BufOpen: true})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -16,17 +16,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package file
+package local
 
 import (
 	"hash"
 	"io"
-	"io/fs"
 	"net/http"
 	"strconv"
 
 	"github.com/donyori/gogo/encoding/hex"
 	"github.com/donyori/gogo/errors"
+	"github.com/donyori/gogo/fs"
 )
 
 // HttpDownload downloads a file from the specified URL via HTTP Get,
@@ -41,7 +41,7 @@ import (
 //
 // It reports an error and downloads nothing if anyone of cs contains
 // a nil HashGen or an empty HexExpSum.
-func HttpDownload(url, filename string, perm fs.FileMode, cs ...Checksum) error {
+func HttpDownload(url, filename string, perm fs.FileMode, cs ...fs.Checksum) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return errors.AutoWrap(err)
@@ -63,7 +63,7 @@ func HttpDownload(url, filename string, perm fs.FileMode, cs ...Checksum) error 
 //
 // It reports an error and downloads nothing if anyone of cs contains
 // a nil HashGen or an empty HexExpSum.
-func HttpCustomDownload(req *http.Request, filename string, perm fs.FileMode, cs ...Checksum) error {
+func HttpCustomDownload(req *http.Request, filename string, perm fs.FileMode, cs ...fs.Checksum) error {
 	if req == nil {
 		return errors.AutoNew("req is nil")
 	}
@@ -78,7 +78,7 @@ func HttpCustomDownload(req *http.Request, filename string, perm fs.FileMode, cs
 //
 // It returns an indicator updated and any error encountered.
 // updated is true if and only if this function has created or edited the file.
-func HttpUpdate(url, filename string, perm fs.FileMode, cs ...Checksum) (updated bool, err error) {
+func HttpUpdate(url, filename string, perm fs.FileMode, cs ...fs.Checksum) (updated bool, err error) {
 	if VerifyChecksum(filename, cs...) {
 		return
 	}
@@ -94,7 +94,7 @@ func HttpUpdate(url, filename string, perm fs.FileMode, cs ...Checksum) (updated
 //
 // It returns an indicator updated and any error encountered.
 // updated is true if and only if this function has created or edited the file.
-func HttpCustomUpdate(req *http.Request, filename string, perm fs.FileMode, cs ...Checksum) (updated bool, err error) {
+func HttpCustomUpdate(req *http.Request, filename string, perm fs.FileMode, cs ...fs.Checksum) (updated bool, err error) {
 	if VerifyChecksum(filename, cs...) {
 		return
 	}
@@ -116,7 +116,7 @@ func HttpCustomUpdate(req *http.Request, filename string, perm fs.FileMode, cs .
 // a nil HashGen or an empty HexExpSum.
 //
 // Caller should guarantee that req != nil.
-func httpRequestDownload(req *http.Request, filename string, perm fs.FileMode, cs ...Checksum) (err error) {
+func httpRequestDownload(req *http.Request, filename string, perm fs.FileMode, cs ...fs.Checksum) (err error) {
 	var hashes []hash.Hash
 	var ws []io.Writer
 	if len(cs) > 0 {
