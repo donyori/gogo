@@ -36,7 +36,11 @@ func TestWrite_Tgz(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir) // ignore error
+	defer func(dir string) {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Error(err)
+		}
+	}(dir)
 	filename := filepath.Join(dir, "simple.tgz")
 	var perm fs.FileMode = 0740
 	w, err := Write(filename, perm, &WriteOptions{
@@ -50,7 +54,9 @@ func TestWrite_Tgz(t *testing.T) {
 	}
 	defer func() {
 		if w != nil {
-			w.Close() // ignore error
+			if err := w.Close(); err != nil {
+				t.Error(err)
+			}
 		}
 	}()
 	files := []struct {
@@ -89,7 +95,11 @@ func TestWrite_Tgz(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close() // ignore error
+	defer func(f *os.File) {
+		if err := f.Close(); err != nil {
+			t.Error(err)
+		}
+	}(f)
 	if runtime.GOOS != "windows" {
 		dirInfo, err := os.Lstat(dir)
 		if err != nil {
@@ -107,12 +117,19 @@ func TestWrite_Tgz(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer gzr.Close() // ignore error
+	defer func(gzr *gzip.Reader) {
+		if err := gzr.Close(); err != nil {
+			t.Error(err)
+		}
+	}(gzr)
 	tr := tar.NewReader(gzr)
 	for i := 0; true; i++ {
 		hdr, err := tr.Next()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
+				if i != len(files) {
+					t.Error("i:", i, "!= len(files):", len(files), "but got EOF.")
+				}
 				break
 			}
 			t.Fatal(err)
@@ -141,9 +158,14 @@ func TestWrite_Append(t *testing.T) {
 func testWriteAppend(t *testing.T, backup bool) {
 	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
-		t.Fatal(err)
+		t.Error("backup:", backup, err)
+		return
 	}
-	defer os.RemoveAll(dir) // ignore error
+	defer func(dir string) {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Error("backup:", backup, err)
+		}
+	}(dir)
 	const content = "gogo test file."
 	filename := filepath.Join(dir, "testfile.dat")
 	options := &WriteOptions{
@@ -155,26 +177,32 @@ func testWriteAppend(t *testing.T, backup bool) {
 	var perm fs.FileMode = 0740
 	w1, err := Write(filename, perm, options)
 	if err != nil {
-		t.Fatal(err)
+		t.Error("backup:", backup, err)
+		return
 	}
 	defer func() {
 		if w1 != nil {
-			w1.Close() // ignore error
+			if err := w1.Close(); err != nil {
+				t.Error("backup:", backup, err)
+			}
 		}
 	}()
 	_, err = w1.WriteString(content)
 	if err != nil {
-		t.Fatal(err)
+		t.Error("backup:", backup, err)
+		return
 	}
 	err = w1.Close()
 	if err != nil {
-		t.Fatal(err)
+		t.Error("backup:", backup, err)
+		return
 	}
 	w1 = nil
 
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		t.Fatal(err)
+		t.Error("backup:", backup, err)
+		return
 	}
 	if string(data) != content {
 		t.Errorf("Backup: %t. After first write, data: %s\nwanted: %s",
@@ -183,26 +211,32 @@ func testWriteAppend(t *testing.T, backup bool) {
 
 	w2, err := Write(filename, perm, options)
 	if err != nil {
-		t.Fatal(err)
+		t.Error("backup:", backup, err)
+		return
 	}
 	defer func() {
 		if w2 != nil {
-			w2.Close() // ignore error
+			if err := w2.Close(); err != nil {
+				t.Error("backup:", backup, err)
+			}
 		}
 	}()
 	_, err = w2.WriteString(content)
 	if err != nil {
-		t.Fatal(err)
+		t.Error("backup:", backup, err)
+		return
 	}
 	err = w2.Close()
 	if err != nil {
-		t.Fatal(err)
+		t.Error("backup:", backup, err)
+		return
 	}
 	w2 = nil
 
 	data, err = os.ReadFile(filename)
 	if err != nil {
-		t.Fatal(err)
+		t.Error("backup:", backup, err)
+		return
 	}
 	if string(data) != content+content {
 		t.Errorf("Backup: %t. After second write, data: %s\nwanted: %s",
@@ -230,27 +264,37 @@ func TestWrite_Error(t *testing.T) {
 func testWriteError(t *testing.T, backup, preserveOnFail bool) {
 	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
-		t.Fatal(err)
+		t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
+		return
 	}
-	defer os.RemoveAll(dir) // ignore error
+	defer func(dir string) {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
+		}
+	}(dir)
 	const content = "gogo test file."
 	filename := filepath.Join(dir, "testfile.dat")
 	fw, err := os.Create(filename)
 	if err != nil {
-		t.Fatal(err)
+		t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
+		return
 	}
 	defer func() {
 		if fw != nil {
-			fw.Close() // ignore error
+			if err := fw.Close(); err != nil {
+				t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
+			}
 		}
 	}()
 	_, err = fw.WriteString(content)
 	if err != nil {
-		t.Fatal(err)
+		t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
+		return
 	}
 	err = fw.Close()
 	if err != nil {
-		t.Fatal(err)
+		t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
+		return
 	}
 	fw = nil
 
@@ -264,11 +308,14 @@ func testWriteError(t *testing.T, backup, preserveOnFail bool) {
 	wErr := errors.New("testErrorWriter error")
 	w, err := Write(filename, perm, options, &testErrorWriter{wErr})
 	if err != nil {
-		t.Fatal(err)
+		t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
+		return
 	}
 	defer func() {
 		if w != nil {
-			w.Close() // ignore error
+			if err := w.Close(); err != nil {
+				t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
+			}
 		}
 	}()
 	_, err = w.WriteString(content + content)

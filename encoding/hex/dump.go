@@ -65,6 +65,7 @@ func DumpTo(w io.Writer, src []byte, cfg *DumpConfig) (n int, err error) {
 	d := NewDumper(w, cfg)
 	defer func() {
 		closeErr := d.Close()
+		// If err != nil, closeErr must be err, so closeErr is ignored in this case.
 		if err == nil {
 			err = closeErr
 		}

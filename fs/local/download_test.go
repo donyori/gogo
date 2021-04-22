@@ -122,7 +122,11 @@ func testHttpDownloadFn(t *testing.T, fn func(filename string) error) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir) // ignore error
+	defer func(dir string) {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Error(err)
+		}
+	}(dir)
 	filename := filepath.Join(dir, "testfile.dat")
 	err = fn(filename)
 	if err != nil {
@@ -132,7 +136,11 @@ func testHttpDownloadFn(t *testing.T, fn func(filename string) error) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close() // ignore error
+	defer func(f *os.File) {
+		if err := f.Close(); err != nil {
+			t.Error(err)
+		}
+	}(f)
 	h := sha256.New()
 	_, err = io.Copy(h, f)
 	if err != nil {
@@ -148,7 +156,11 @@ func testHttpUpdateFn(t *testing.T, fn func(filename string, cs ...fs.Checksum) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir) // ignore error
+	defer func(dir string) {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Error(err)
+		}
+	}(dir)
 	filename := filepath.Join(dir, "testfile.dat")
 	updated, err := fn(filename, testHttpDlChecksum)
 	if err != nil {
@@ -196,7 +208,9 @@ func testHttpUpdateFn(t *testing.T, fn func(filename string, cs ...fs.Checksum) 
 	}
 	defer func() {
 		if f != nil {
-			f.Close() // ignore error
+			if err := f.Close(); err != nil {
+				t.Error(err)
+			}
 		}
 	}()
 	_, err = f.WriteString("abc")
@@ -230,21 +244,31 @@ func testHttpDownloadFnChecksumFailed(t *testing.T, fn func(filename string, cs 
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir) // ignore error
+	defer func(dir string) {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Error(err)
+		}
+	}(dir)
 	filename := filepath.Join(dir, "testfile.dat")
 	var client http.Client
 	resp, err := client.Get(testHttpDlUrl)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close() // ignore error
+	defer func(body io.ReadCloser) {
+		if err := body.Close(); err != nil {
+			t.Error(err)
+		}
+	}(resp.Body)
 	f, err := os.Create(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
 		if f != nil {
-			f.Close() // ignore error
+			if err := f.Close(); err != nil {
+				t.Error(err)
+			}
 		}
 	}()
 	_, err = io.Copy(f, resp.Body)

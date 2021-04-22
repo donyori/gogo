@@ -37,7 +37,11 @@ func TestRead_Basic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir) // ignore error
+	defer func(dir string) {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Error(err)
+		}
+	}(dir)
 	data := []byte("Some data in the temporary file.\n")
 	filename := filepath.Join(dir, "basic.txt")
 	err = os.WriteFile(filename, data, 0600)
@@ -48,11 +52,11 @@ func TestRead_Basic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
+	defer func(r fs.Reader) {
 		if err := r.Close(); err != nil {
 			t.Error(err)
 		}
-	}()
+	}(r)
 	err = iotest.TestReader(r, data)
 	if err != nil {
 		t.Error(err)
@@ -64,42 +68,56 @@ func TestRead_Gz(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir) // ignore error
+	defer func(dir string) {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Error(err)
+		}
+	}(dir)
 	data := []byte("Some data in the temporary gzip file.\n")
 	filename := filepath.Join(dir, "simple.txt.gz")
 	f, err := os.Create(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
-	closed := false
 	defer func() {
-		if !closed {
-			f.Close() // ignore error
+		if f != nil {
+			if err := f.Close(); err != nil {
+				t.Error(err)
+			}
 		}
 	}()
 	gzw := gzip.NewWriter(f)
 	defer func() {
-		if !closed {
-			gzw.Close() // ignore error
+		if gzw != nil {
+			if err := gzw.Close(); err != nil {
+				t.Error(err)
+			}
 		}
 	}()
 	_, err = gzw.Write(data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	gzw.Close() // ignore error
-	f.Close()   // ignore error
-	closed = true
+	err = gzw.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	gzw = nil
+	err = f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f = nil
 
 	r, err := Read(filename, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
+	defer func(r fs.Reader) {
 		if err := r.Close(); err != nil {
 			t.Error(err)
 		}
-	}()
+	}(r)
 	err = iotest.TestReader(r, data)
 	if err != nil {
 		t.Error(err)
@@ -111,22 +129,29 @@ func TestRead_Tar(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir) // ignore error
+	defer func(dir string) {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Error(err)
+		}
+	}(dir)
 	filename := filepath.Join(dir, "simple.tar")
 	f, err := os.Create(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
-	closed := false
 	defer func() {
-		if !closed {
-			f.Close() // ignore error
+		if f != nil {
+			if err := f.Close(); err != nil {
+				t.Error(err)
+			}
 		}
 	}()
 	tw := tar.NewWriter(f)
 	defer func() {
-		if !closed {
-			tw.Close() // ignore error
+		if tw != nil {
+			if err := tw.Close(); err != nil {
+				t.Error(err)
+			}
 		}
 	}()
 	files := []struct {
@@ -152,19 +177,26 @@ func TestRead_Tar(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	tw.Close() // ignore error
-	f.Close()  // ignore error
-	closed = true
+	err = tw.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tw = nil
+	err = f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f = nil
 
 	r, err := Read(filename, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
+	defer func(r fs.Reader) {
 		if err := r.Close(); err != nil {
 			t.Error(err)
 		}
-	}()
+	}(r)
 	for i := 0; true; i++ {
 		hdr, err := r.TarNext()
 		if err != nil {
@@ -200,7 +232,11 @@ func testReadTarGz(t *testing.T, useTgz bool) {
 		t.Error("useTgz:", useTgz, err)
 		return
 	}
-	defer os.RemoveAll(dir) // ignore error
+	defer func(dir string) {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Error("useTgz:", useTgz, err)
+		}
+	}(dir)
 	basename := "simple.tar.gz"
 	if useTgz {
 		basename = "simple.tgz"
@@ -211,22 +247,27 @@ func testReadTarGz(t *testing.T, useTgz bool) {
 		t.Error("useTgz:", useTgz, err)
 		return
 	}
-	closed := false
 	defer func() {
-		if !closed {
-			f.Close() // ignore error
+		if f != nil {
+			if err := f.Close(); err != nil {
+				t.Error("useTgz:", useTgz, err)
+			}
 		}
 	}()
 	gzw := gzip.NewWriter(f)
 	defer func() {
-		if !closed {
-			gzw.Close() // ignore error
+		if gzw != nil {
+			if err := gzw.Close(); err != nil {
+				t.Error("useTgz:", useTgz, err)
+			}
 		}
 	}()
 	tw := tar.NewWriter(gzw)
 	defer func() {
-		if !closed {
-			tw.Close() // ignore error
+		if tw != nil {
+			if err := tw.Close(); err != nil {
+				t.Error("useTgz:", useTgz, err)
+			}
 		}
 	}()
 	files := []struct {
@@ -254,21 +295,35 @@ func testReadTarGz(t *testing.T, useTgz bool) {
 			return
 		}
 	}
-	tw.Close()  // ignore error
-	gzw.Close() // ignore error
-	f.Close()   // ignore error
-	closed = true
+	err = tw.Close()
+	if err != nil {
+		t.Error("useTgz:", useTgz, err)
+		return
+	}
+	tw = nil
+	err = gzw.Close()
+	if err != nil {
+		t.Error("useTgz:", useTgz, err)
+		return
+	}
+	gzw = nil
+	err = f.Close()
+	if err != nil {
+		t.Error("useTgz:", useTgz, err)
+		return
+	}
+	f = nil
 
 	r, err := Read(filename, &fs.ReadOptions{BufOpen: true})
 	if err != nil {
 		t.Error("useTgz:", useTgz, err)
 		return
 	}
-	defer func() {
+	defer func(r fs.Reader) {
 		if err := r.Close(); err != nil {
 			t.Error("useTgz:", useTgz, err)
 		}
-	}()
+	}(r)
 	for i := 0; true; i++ {
 		hdr, err := r.TarNext()
 		if err != nil {

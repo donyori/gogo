@@ -138,12 +138,11 @@ func httpRequestDownload(req *http.Request, filename string, perm fs.FileMode, c
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	defer func() {
-		err1 := resp.Body.Close()
-		if err1 != nil {
+	defer func(body io.ReadCloser) {
+		if err1 := body.Close(); err1 != nil {
 			err = errors.AutoWrapSkip(errors.Combine(err, err1), 1) // skip = 1 to skip the inner function
 		}
-	}()
+	}(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		errMsg := resp.Status
 		if errMsg == "" {
@@ -169,12 +168,11 @@ func httpRequestDownload(req *http.Request, filename string, perm fs.FileMode, c
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	defer func() {
-		err1 := w.Close()
-		if err1 != nil {
+	defer func(w Writer) {
+		if err1 := w.Close(); err1 != nil {
 			err = errors.AutoWrapSkip(errors.Combine(err, err1), 1) // skip = 1 to skip the inner function
 		}
-	}()
+	}(w)
 	_, err = io.Copy(w, resp.Body)
 	return errors.AutoWrap(err)
 }

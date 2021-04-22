@@ -35,7 +35,11 @@ func TestVerifyChecksum(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir) // ignore error
+	defer func(dir string) {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Error(err)
+		}
+	}(dir)
 	filename := filepath.Join(dir, "testfile.dat")
 
 	if VerifyChecksum(filename) {
@@ -49,7 +53,9 @@ func TestVerifyChecksum(t *testing.T) {
 	}
 	defer func() {
 		if fw != nil {
-			_ = fw.Close()
+			if err := fw.Close(); err != nil {
+				t.Error(err)
+			}
 		}
 	}()
 	filename2 := filepath.Join(dir, "testfile2.dat")
@@ -59,7 +65,9 @@ func TestVerifyChecksum(t *testing.T) {
 	}
 	defer func() {
 		if fw2 != nil {
-			_ = fw2.Close()
+			if err := fw2.Close(); err != nil {
+				t.Error(err)
+			}
 		}
 	}()
 	h := sha256.New()

@@ -29,7 +29,11 @@ func TestTmp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(tmpRoot)
+	defer func(dir string) {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Error(err)
+		}
+	}(tmpRoot)
 	var locker sync.Mutex
 	var wg sync.WaitGroup
 	files := make([]string, 0, 10)
@@ -42,7 +46,11 @@ func TestTmp(t *testing.T) {
 				t.Error(no, err)
 				return
 			}
-			defer f.Close() // ignore error
+			defer func(f *os.File) {
+				if err := f.Close(); err != nil {
+					t.Error(no, err)
+				}
+			}(f)
 			locker.Lock()
 			defer locker.Unlock()
 			files = append(files, f.Name())
@@ -67,7 +75,11 @@ func TestTmpDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(tmpRoot)
+	defer func(dir string) {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Error(err)
+		}
+	}(tmpRoot)
 	var locker sync.Mutex
 	var wg sync.WaitGroup
 	dirs := make([]string, 0, 10)
