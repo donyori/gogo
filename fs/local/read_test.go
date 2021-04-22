@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	"github.com/donyori/gogo/fs"
@@ -43,22 +44,18 @@ func TestRead_Basic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reader, err := Read(filename, nil)
+	r, err := Read(filename, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		err := reader.Close()
-		if err != nil {
+		if err := r.Close(); err != nil {
 			t.Error(err)
 		}
 	}()
-	read, err := io.ReadAll(reader)
+	err = iotest.TestReader(r, data)
 	if err != nil {
-		t.Fatal(err)
-	}
-	if string(read) != string(data) {
-		t.Errorf("Got: %q != %q.", read, data)
+		t.Error(err)
 	}
 }
 
@@ -94,22 +91,18 @@ func TestRead_Gz(t *testing.T) {
 	f.Close()   // ignore error
 	closed = true
 
-	reader, err := Read(filename, nil)
+	r, err := Read(filename, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		err := reader.Close()
-		if err != nil {
+		if err := r.Close(); err != nil {
 			t.Error(err)
 		}
 	}()
-	read, err := io.ReadAll(reader)
+	err = iotest.TestReader(r, data)
 	if err != nil {
-		t.Fatal(err)
-	}
-	if string(read) != string(data) {
-		t.Errorf("Got: %q != %q.", read, data)
+		t.Error(err)
 	}
 }
 
@@ -137,11 +130,12 @@ func TestRead_Tar(t *testing.T) {
 		}
 	}()
 	files := []struct {
-		name, body string
+		name string
+		body []byte
 	}{
-		{"file1.txt", "This is file1."},
-		{"file2.txt", "This is file2."},
-		{"file3.txt", "This is file3."},
+		{"file1.txt", []byte("This is file1.")},
+		{"file2.txt", []byte("This is file2.")},
+		{"file3.txt", []byte("This is file3.")},
 	}
 	for i := range files {
 		err = tw.WriteHeader(&tar.Header{
@@ -153,7 +147,7 @@ func TestRead_Tar(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = tw.Write([]byte(files[i].body))
+		_, err = tw.Write(files[i].body)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -162,20 +156,22 @@ func TestRead_Tar(t *testing.T) {
 	f.Close()  // ignore error
 	closed = true
 
-	reader, err := Read(filename, nil)
+	r, err := Read(filename, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		err := reader.Close()
-		if err != nil {
+		if err := r.Close(); err != nil {
 			t.Error(err)
 		}
 	}()
 	for i := 0; true; i++ {
-		hdr, err := reader.TarNext()
+		hdr, err := r.TarNext()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
+				if i != len(files) {
+					t.Error("i:", i, "!= len(files):", len(files), "but got EOF.")
+				}
 				break
 			}
 			t.Fatal(err)
@@ -183,29 +179,37 @@ func TestRead_Tar(t *testing.T) {
 		if i >= len(files) {
 			t.Fatal("i:", i, ">= len(files):", len(files))
 		}
-		read, err := io.ReadAll(reader)
-		if err != nil {
-			t.Fatal(err)
-		}
 		if hdr.Name != files[i].name {
 			t.Errorf("hdr.Name: %q != %q.", hdr.Name, files[i].name)
 		}
-		if string(read) != files[i].body {
-			t.Errorf("Got: %q != %q.", read, files[i].body)
+		err = iotest.TestReader(r, files[i].body)
+		if err != nil {
+			t.Error(err)
 		}
 	}
 }
 
-func TestRead_Tgz(t *testing.T) {
+func TestRead_TarGz_Tgz(t *testing.T) {
+	testReadTarGz(t, false)
+	testReadTarGz(t, true)
+}
+
+func testReadTarGz(t *testing.T, useTgz bool) {
 	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
-		t.Fatal(err)
+		t.Error("useTgz:", useTgz, err)
+		return
 	}
 	defer os.RemoveAll(dir) // ignore error
-	filename := filepath.Join(dir, "simple.tgz")
+	basename := "simple.tar.gz"
+	if useTgz {
+		basename = "simple.tgz"
+	}
+	filename := filepath.Join(dir, basename)
 	f, err := os.Create(filename)
 	if err != nil {
-		t.Fatal(err)
+		t.Error("useTgz:", useTgz, err)
+		return
 	}
 	closed := false
 	defer func() {
@@ -226,11 +230,12 @@ func TestRead_Tgz(t *testing.T) {
 		}
 	}()
 	files := []struct {
-		name, body string
+		name string
+		body []byte
 	}{
-		{"file1.txt", "This is file1."},
-		{"file2.txt", "This is file2."},
-		{"file3.txt", "This is file3."},
+		{"file1.txt", []byte("This is file1.")},
+		{"file2.txt", []byte("This is file2.")},
+		{"file3.txt", []byte("This is file3.")},
 	}
 	for i := range files {
 		err = tw.WriteHeader(&tar.Header{
@@ -240,11 +245,13 @@ func TestRead_Tgz(t *testing.T) {
 			ModTime: time.Now(),
 		})
 		if err != nil {
-			t.Fatal(err)
+			t.Error("useTgz:", useTgz, err)
+			return
 		}
-		_, err = tw.Write([]byte(files[i].body))
+		_, err = tw.Write(files[i].body)
 		if err != nil {
-			t.Fatal(err)
+			t.Error("useTgz:", useTgz, err)
+			return
 		}
 	}
 	tw.Close()  // ignore error
@@ -252,126 +259,38 @@ func TestRead_Tgz(t *testing.T) {
 	f.Close()   // ignore error
 	closed = true
 
-	reader, err := Read(filename, &fs.ReadOptions{BufOpen: true})
+	r, err := Read(filename, &fs.ReadOptions{BufOpen: true})
 	if err != nil {
-		t.Fatal(err)
+		t.Error("useTgz:", useTgz, err)
+		return
 	}
 	defer func() {
-		err := reader.Close()
-		if err != nil {
-			t.Error(err)
+		if err := r.Close(); err != nil {
+			t.Error("useTgz:", useTgz, err)
 		}
 	}()
 	for i := 0; true; i++ {
-		hdr, err := reader.TarNext()
+		hdr, err := r.TarNext()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
+				if i != len(files) {
+					t.Error("useTgz:", useTgz, "i:", i, "!= len(files):", len(files), "but got EOF.")
+				}
 				break
 			}
-			t.Fatal(err)
+			t.Error("useTgz:", useTgz, err)
+			return
 		}
 		if i >= len(files) {
-			t.Fatal("i:", i, ">= len(files):", len(files))
-		}
-		read, err := io.ReadAll(reader)
-		if err != nil {
-			t.Fatal(err)
+			t.Error("useTgz:", useTgz, "i:", i, ">= len(files):", len(files))
+			return
 		}
 		if hdr.Name != files[i].name {
-			t.Errorf("hdr.Name: %q != %q.", hdr.Name, files[i].name)
+			t.Errorf("useTgz: %t hdr.Name: %q != %q.", useTgz, hdr.Name, files[i].name)
 		}
-		if string(read) != files[i].body {
-			t.Errorf("Got: %q != %q.", read, files[i].body)
-		}
-	}
-}
-
-func TestRead_TarGz(t *testing.T) {
-	dir, err := os.MkdirTemp("", "gogo_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir) // ignore error
-	filename := filepath.Join(dir, "simple.tar.gz")
-	f, err := os.Create(filename)
-	if err != nil {
-		t.Fatal(err)
-	}
-	closed := false
-	defer func() {
-		if !closed {
-			f.Close() // ignore error
-		}
-	}()
-	gzw := gzip.NewWriter(f)
-	defer func() {
-		if !closed {
-			gzw.Close() // ignore error
-		}
-	}()
-	tw := tar.NewWriter(gzw)
-	defer func() {
-		if !closed {
-			tw.Close() // ignore error
-		}
-	}()
-	files := []struct {
-		name, body string
-	}{
-		{"file1.txt", "This is file1."},
-		{"file2.txt", "This is file2."},
-		{"file3.txt", "This is file3."},
-	}
-	for i := range files {
-		err = tw.WriteHeader(&tar.Header{
-			Name:    files[i].name,
-			Size:    int64(len(files[i].body)),
-			Mode:    0600,
-			ModTime: time.Now(),
-		})
+		err = iotest.TestReader(r, files[i].body)
 		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = tw.Write([]byte(files[i].body))
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-	tw.Close()  // ignore error
-	gzw.Close() // ignore error
-	f.Close()   // ignore error
-	closed = true
-
-	reader, err := Read(filename, &fs.ReadOptions{BufOpen: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		err := reader.Close()
-		if err != nil {
-			t.Error(err)
-		}
-	}()
-	for i := 0; true; i++ {
-		hdr, err := reader.TarNext()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			t.Fatal(err)
-		}
-		if i >= len(files) {
-			t.Fatal("i:", i, ">= len(files):", len(files))
-		}
-		read, err := io.ReadAll(reader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if hdr.Name != files[i].name {
-			t.Errorf("hdr.Name: %q != %q.", hdr.Name, files[i].name)
-		}
-		if string(read) != files[i].body {
-			t.Errorf("Got: %q != %q.", read, files[i].body)
+			t.Error("useTgz:", useTgz, err)
 		}
 	}
 }

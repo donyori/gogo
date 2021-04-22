@@ -33,51 +33,45 @@ import (
 	"time"
 )
 
-var testFsTarFiles = []struct{ name, body string }{
-	{"tarfile1.txt", "This is tar file 1."},
-	{"tarfile2.txt", "Here is tar file 2!"},
-	{name: "tarfile3.dat"}, // body will be set by init function.
-}
+var (
+	testFs fstest.MapFS
 
-var testFs = fstest.MapFS{
-	"testFile1.txt": {
-		Data:    []byte("This is test file 1."),
-		ModTime: time.Now(),
-	},
-	"testFile2.txt": {
-		Data:    []byte("Here is test file 2!"),
-		ModTime: time.Now(),
-	},
-	"dir1/testFile1.txt": {
-		Data:    []byte("This is test file 1."),
-		ModTime: time.Now(),
-	},
-	"dir1/testFile2.txt": {
-		Data:    []byte("Here is test file 2!"),
-		ModTime: time.Now(),
-	},
-	// More files will be added by init function.
-}
+	testFsTarFiles []struct{ name, body string }
 
-var testFsFilenames, testFsBasicFilenames, testFsGzFilenames, testFsTarFilenames, testFsTgzFilenames []string
+	testFsFilenames      []string
+	testFsBasicFilenames []string
+	testFsGzFilenames    []string
+	testFsTarFilenames   []string
+	testFsTgzFilenames   []string
 
-var testFsChecksumMap map[string][]Checksum
+	testFsChecksumMap map[string][]Checksum
+)
 
 func init() {
+	testFs = fstest.MapFS{
+		"testFile1.txt": {
+			Data:    []byte("This is test file 1."),
+			ModTime: time.Now(),
+		},
+		"testFile2.txt": {
+			Data:    []byte("Here is test file 2!"),
+			ModTime: time.Now(),
+		},
+	}
+
 	var sb strings.Builder
 	sb.Grow(100_000)
 	for i := 0; i < 100_000; i++ {
 		sb.WriteByte(byte(i % (1 << 8)))
 	}
-	testFsTarFiles[len(testFsTarFiles)-1].body = sb.String()
-
 	testFs["big.dat"] = &fstest.MapFile{
 		Data:    []byte(sb.String()),
 		ModTime: time.Now(),
 	}
-	testFs["dir1/big.dat"] = &fstest.MapFile{
-		Data:    []byte(sb.String()),
-		ModTime: time.Now(),
+	testFsTarFiles = []struct{ name, body string }{
+		{"tarfile1.txt", "This is tar file 1."},
+		{"tarfile2.txt", "Here is tar file 2!"},
+		{"tarfile3.dat", sb.String()},
 	}
 
 	var buf strings.Builder
@@ -94,10 +88,6 @@ func init() {
 		panic(err)
 	}
 	testFs["gzip.gz"] = &fstest.MapFile{
-		Data:    []byte(buf.String()),
-		ModTime: time.Now(),
-	}
-	testFs["dir1/gzip.gz"] = &fstest.MapFile{
 		Data:    []byte(buf.String()),
 		ModTime: time.Now(),
 	}
@@ -124,10 +114,6 @@ func init() {
 		panic(err)
 	}
 	testFs["tarfile.tar"] = &fstest.MapFile{
-		Data:    []byte(buf.String()),
-		ModTime: time.Now(),
-	}
-	testFs["dir1/tarfile.tar"] = &fstest.MapFile{
 		Data:    []byte(buf.String()),
 		ModTime: time.Now(),
 	}
@@ -165,15 +151,7 @@ func init() {
 		Data:    []byte(buf.String()),
 		ModTime: time.Now(),
 	}
-	testFs["dir1/targzip.tgz"] = &fstest.MapFile{
-		Data:    []byte(buf.String()),
-		ModTime: time.Now(),
-	}
 	testFs["targzip.tar.gz"] = &fstest.MapFile{
-		Data:    []byte(buf.String()),
-		ModTime: time.Now(),
-	}
-	testFs["dir1/targzip.tar.gz"] = &fstest.MapFile{
 		Data:    []byte(buf.String()),
 		ModTime: time.Now(),
 	}

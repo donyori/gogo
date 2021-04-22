@@ -27,6 +27,7 @@ import (
 	"math"
 	"strings"
 	"testing"
+	"testing/iotest"
 )
 
 func TestRead_NotCloseFile(t *testing.T) {
@@ -46,23 +47,19 @@ func TestRead_NotCloseFile(t *testing.T) {
 	}
 	halfSize := int64(len(testFs[name].Data) / 2)
 	hr := io.LimitReader(r, halfSize)
-	data, err := io.ReadAll(hr)
+	err = iotest.TestReader(hr, testFs[name].Data[:halfSize])
 	if err != nil {
-		t.Fatalf("read all from reader, %v.", err)
-	}
-	wanted := testFs[name].Data[:halfSize]
-	if !bytes.Equal(data, wanted) {
-		t.Errorf("read all from reader, got: %s, wanted: %s.", data, wanted)
+		t.Errorf("test read a half, %v.", err)
 	}
 	err = r.Close()
 	if err != nil {
 		t.Fatalf("close reader, %v.", err)
 	}
-	data, err = io.ReadAll(file)
+	data, err := io.ReadAll(file)
 	if err != nil {
 		t.Fatalf("read all from rest part, %v.", err)
 	}
-	wanted = testFs[name].Data[halfSize:]
+	wanted := testFs[name].Data[halfSize:]
 	if !bytes.Equal(data, wanted) {
 		t.Errorf("read all from rest part, got: %s, wanted: %s.", data, wanted)
 	}
@@ -110,14 +107,9 @@ func TestReadFromFs_Raw(t *testing.T) {
 					t.Errorf("file: %s, close, %v.", name, err)
 				}
 			}()
-			data, err := io.ReadAll(r)
+			err = iotest.TestReader(r, testFs[name].Data)
 			if err != nil {
-				t.Errorf("file: %s, read all, %v.", name, err)
-				return
-			}
-			wanted := testFs[name].Data
-			if !bytes.Equal(data, wanted) {
-				t.Errorf("file: %s, data unequal\n  got: %s\n  wanted: %s", name, data, wanted)
+				t.Errorf("file: %s, test read, %v.", name, err)
 			}
 		}(name)
 	}
@@ -136,14 +128,9 @@ func TestReadFromFs_Basic(t *testing.T) {
 					t.Errorf("file: %s, close, %v.", name, err)
 				}
 			}()
-			data, err := io.ReadAll(r)
+			err = iotest.TestReader(r, testFs[name].Data)
 			if err != nil {
-				t.Errorf("file: %s, read all, %v.", name, err)
-				return
-			}
-			wanted := testFs[name].Data
-			if !bytes.Equal(data, wanted) {
-				t.Errorf("file: %s, data unequal\n  got: %s\n  wanted: %s", name, data, wanted)
+				t.Errorf("file: %s, test read, %v.", name, err)
 			}
 		}(name)
 	}
@@ -162,11 +149,6 @@ func TestReadFromFs_Gz(t *testing.T) {
 					t.Errorf("file: %s, close, %v.", name, err)
 				}
 			}()
-			data, err := io.ReadAll(r)
-			if err != nil {
-				t.Errorf("file: %s, read all, %v.", name, err)
-				return
-			}
 			gr, err := gzip.NewReader(bytes.NewReader(testFs[name].Data))
 			if err != nil {
 				t.Errorf("file: %s, create gzip reader, %v.", name, err)
@@ -177,8 +159,9 @@ func TestReadFromFs_Gz(t *testing.T) {
 				t.Errorf("file: %s, decompress gzip, %v.", name, err)
 				return
 			}
-			if !bytes.Equal(data, wanted) {
-				t.Errorf("file: %s, data unequal\n  got: %s\n  wanted: %s", name, data, wanted)
+			err = iotest.TestReader(r, wanted)
+			if err != nil {
+				t.Errorf("file: %s, test read, %v.", name, err)
 			}
 		}(name)
 	}
@@ -201,6 +184,9 @@ func TestReadFromFs_Tar_Tgz(t *testing.T) {
 				hdr, err := r.TarNext()
 				if err != nil {
 					if errors.Is(err, io.EOF) {
+						if i != len(testFsTarFiles) {
+							t.Errorf("file: %s, tar header number: %d != %d, but got EOF.", name, i, len(testFsTarFiles))
+						}
 						break
 					}
 					t.Errorf("file: %s, read No.%d tar header, %v.", name, i, err)
@@ -210,16 +196,12 @@ func TestReadFromFs_Tar_Tgz(t *testing.T) {
 					t.Errorf("file: %s, tar headers more than %d.", name, len(testFsTarFiles))
 					return
 				}
-				body, err := io.ReadAll(r)
-				if err != nil {
-					t.Errorf("file: %s, No.%d tar read all, %v.", name, i, err)
-					return
-				}
 				if hdr.Name != testFsTarFiles[i].name {
 					t.Errorf("file: %s, No.%d tar header name unequal, got: %s, wanted: %s.", name, i, hdr.Name, testFsTarFiles[i].name)
 				}
-				if string(body) != testFsTarFiles[i].body {
-					t.Errorf("file: %s, No.%d tar body unequal\n  got: %s\n  wanted: %s", name, i, body, testFsTarFiles[i].body)
+				err = iotest.TestReader(r, []byte(testFsTarFiles[i].body))
+				if err != nil {
+					t.Errorf("file: %s, No.%d tar test read, %v.", name, i, err)
 				}
 			}
 		}(name)
@@ -251,14 +233,9 @@ func TestReadFromFs_Offset(t *testing.T) {
 					t.Errorf("offset: %d, close, %v.", offset, err)
 				}
 			}()
-			data, err := io.ReadAll(r)
+			err = iotest.TestReader(r, fileData[pos:])
 			if err != nil {
-				t.Errorf("offset: %d, read all, %v.", offset, err)
-				return
-			}
-			wanted := fileData[pos:]
-			if !bytes.Equal(data, wanted) {
-				t.Errorf("offset: %d, data unequal, got: %s, wanted: %s.", offset, data, wanted)
+				t.Errorf("offset: %d, test read, %v.", offset, err)
 			}
 		}(offset, pos)
 	}

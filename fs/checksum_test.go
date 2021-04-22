@@ -52,6 +52,12 @@ func TestVerifyChecksumFromFs(t *testing.T) {
 		if VerifyChecksumFromFs(testFs, name, Checksum{}) {
 			t.Errorf("file: %s, only empty checksum, true for empty checksum.", name)
 		}
+		if VerifyChecksumFromFs(testFs, name, Checksum{HashGen: sha256.New}) {
+			t.Errorf("file: %s, only empty checksum HexExpSum, true for empty checksum HexExpSum.", name)
+		}
+		if VerifyChecksumFromFs(testFs, name, Checksum{HexExpSum: testFsChecksumMap[name][0].HexExpSum}) {
+			t.Errorf("file: %s, only nil checksum HashGen, true for nil checksum HashGen.", name)
+		}
 		if VerifyChecksumFromFs(testFs, name, testFsChecksumMap[name][0], Checksum{}) {
 			t.Errorf("file: %s, empty checksum, true for empty checksum.", name)
 		}

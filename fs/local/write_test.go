@@ -31,13 +31,13 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-func TestWrite_TarGz(t *testing.T) {
+func TestWrite_Tgz(t *testing.T) {
 	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir) // ignore error
-	filename := filepath.Join(dir, "simple.tar.gz")
+	filename := filepath.Join(dir, "simple.tgz")
 	var perm fs.FileMode = 0740
 	w, err := Write(filename, perm, &WriteOptions{
 		BufOpen: true,
@@ -100,7 +100,7 @@ func TestWrite_TarGz(t *testing.T) {
 			t.Fatal(err)
 		}
 		if p := info.Mode().Perm(); p != dirInfo.Mode().Perm()&perm {
-			t.Errorf("Permission: %o != %o.", p, perm)
+			t.Errorf("Permission: %3o != %3o.", p, perm)
 		}
 	}
 	gzr, err := gzip.NewReader(f)

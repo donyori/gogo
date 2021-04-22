@@ -49,7 +49,7 @@ func TestVerifyChecksum(t *testing.T) {
 	}
 	defer func() {
 		if fw != nil {
-			fw.Close() // ignore error
+			_ = fw.Close()
 		}
 	}()
 	filename2 := filepath.Join(dir, "testfile2.dat")
@@ -59,7 +59,7 @@ func TestVerifyChecksum(t *testing.T) {
 	}
 	defer func() {
 		if fw2 != nil {
-			fw2.Close() // ignore error
+			_ = fw2.Close()
 		}
 	}()
 	h := sha256.New()
@@ -104,5 +104,11 @@ func TestVerifyChecksum(t *testing.T) {
 	}
 	if VerifyChecksum(filename, fs.Checksum{}) {
 		t.Error("True for empty checksum.")
+	}
+	if VerifyChecksum(filename, fs.Checksum{HashGen: sha256.New}) {
+		t.Error("True for empty checksum HexExpSum.")
+	}
+	if VerifyChecksum(filename, fs.Checksum{HexExpSum: ck.HexExpSum}) {
+		t.Error("True for nil checksum HashGen.")
 	}
 }

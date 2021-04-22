@@ -25,10 +25,11 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"testing/iotest"
 )
 
 func TestNewBufferedReaderSize(t *testing.T) {
-	r := bytes.NewReader([]byte("123456"))
+	r := strings.NewReader("123456")
 	bufr := bufio.NewReader(r)
 	bufr128 := bufio.NewReaderSize(r, 128)
 	bufr64 := bufio.NewReaderSize(r, 64)
@@ -68,6 +69,33 @@ func TestNewBufferedReaderSize(t *testing.T) {
 	b = NewBufferedReaderSize(r, 0)
 	if n := b.Size(); n != minReadBufferSize {
 		t.Errorf("(on r, size 0) size: %d != minReadBufferSize (%d).", n, minReadBufferSize)
+	}
+}
+
+func TestBufferedReader_Basic(t *testing.T) {
+	content := `die Ruinenstadt ist immer noch schön
+ich warte lange Zeit auf deine Rückkehr
+in der Hand ein Vergissmeinnicht
+Regentropfen sind meine Tränen
+Wind ist mein Atem und mein Erzählung
+Zweige und Blätter sind meine Hände
+denn mein Körper ist in Wurzeln gehüllt
+wenn die Jahreszeit des Tauens kommt
+werde ich wach und singe ein Lied
+das Vergissmeinnicht,das du mir gegeben
+hast ist hier
+erinnerst du dich noch?
+erinnerst du dich noch
+an dein Wort Das du mir gegeben hast?
+erinnerst du dich noch?
+erinnerst du dich noch an den Tag Andem du mir
+wenn die Jahreszeit des Vergissmeinnichts kommt,
+singe ich ein Lied
+wenn die Jahreszeit des Vergissmeinnichts kommt,
+rufe ich dich`
+	r := NewBufferedReader(strings.NewReader(content))
+	if err := iotest.TestReader(r, []byte(content)); err != nil {
+		t.Error(err)
 	}
 }
 
