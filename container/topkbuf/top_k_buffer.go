@@ -58,6 +58,15 @@ type topKBuffer struct {
 
 // NewTopKBuffer creates a new TopKBuffer.
 //
+// less is a function to report whether a < b.
+// It must describe a transitive ordering:
+//  - if both less(a, b) and less(b, c) are true, then less(a, c) must be true as well.
+//  - if both less(a, b) and less(b, c) are false, then less(a, c) must be false as well.
+//
+// Note that floating-point comparison
+// (the < operator on float32 or float64 values)
+// is not a transitive ordering when not-a-number (NaN) values are involved.
+//
 // data is the initial items in the buffer.
 //
 // It panics if k <= 0 or less is nil.

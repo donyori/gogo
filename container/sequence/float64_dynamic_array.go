@@ -111,8 +111,15 @@ func (fda Float64DynamicArray) Slice(begin, end int) Array {
 
 // Less reports whether the item with index i must sort before
 // the item with index j.
+//
+// It implements a transitive ordering:
+//  - if both Less(i, j) and Less(j, k) are true, then Less(i, k) must be true as well.
+//  - if both Less(i, j) and Less(j, k) are false, then Less(i, k) must be false as well.
+// It treats NaN values as less than any others.
+//
+// It panics if i or j is out of range.
 func (fda Float64DynamicArray) Less(i, j int) bool {
-	return fda[i] < fda[j]
+	return fda[i] < fda[j] || (isNaN(fda[i]) && !isNaN(fda[j]))
 }
 
 // Cap returns the current capacity of the dynamic array.
@@ -355,4 +362,9 @@ func (fda *Float64DynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 		}
 	}
 	*fda = (*fda)[:n]
+}
+
+// isNaN is a copy of math.IsNaN to avoid a dependency on the math package.
+func isNaN(f float64) bool {
+	return f != f
 }

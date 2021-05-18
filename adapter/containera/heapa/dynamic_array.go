@@ -25,6 +25,14 @@ import (
 
 // DynamicArray is an adapter for:
 // sequence.DynamicArray + function.LessFunc -> container/heap.Interface.
+//
+// Its LessFn must describe a transitive ordering:
+//  - if both LessFn(a, b) and LessFn(b, c) are true, then LessFn(a, c) must be true as well.
+//  - if both LessFn(a, b) and LessFn(b, c) are false, then LessFn(a, c) must be false as well.
+//
+// Note that floating-point comparison
+// (the < operator on float32 or float64 values)
+// is not a transitive ordering when not-a-number (NaN) values are involved.
 type DynamicArray struct {
 	Data   sequence.DynamicArray
 	LessFn function.LessFunc
@@ -40,6 +48,8 @@ func (da *DynamicArray) Len() int {
 
 // Less reports whether the item with index i must sort before
 // the item with index j.
+//
+// It will implement a transitive ordering if its LessFn does so.
 func (da *DynamicArray) Less(i, j int) bool {
 	return da.LessFn(da.Data.Get(i), da.Data.Get(j))
 }

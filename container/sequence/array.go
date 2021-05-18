@@ -51,5 +51,15 @@ type OrderedArray interface {
 
 	// Less reports whether the item with index i must sort before
 	// the item with index j.
+	//
+	// Less must describe a transitive ordering:
+	//  - if both Less(i, j) and Less(j, k) are true, then Less(i, k) must be true as well.
+	//  - if both Less(i, j) and Less(j, k) are false, then Less(i, k) must be false as well.
+	//
+	// Note that floating-point comparison
+	// (the < operator on float32 or float64 values)
+	// is not a transitive ordering when not-a-number (NaN) values are involved.
+	//
+	// It panics if i or j is out of range.
 	Less(i, j int) bool
 }

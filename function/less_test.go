@@ -44,7 +44,7 @@ func TestFloat64Less(t *testing.T) {
 		{math.NaN(), math.Inf(-1)}, {math.Inf(-1), math.NaN()},
 	}
 	for _, pair := range floatPairs {
-		if r := Float64Less(pair[0], pair[1]); r != (pair[0] < pair[1]) {
+		if r := Float64Less(pair[0], pair[1]); r != (pair[0] < pair[1] || (math.IsNaN(pair[0]) && !math.IsNaN(pair[1]))) {
 			t.Errorf("Float64Less(%f, %f): %t.", pair[0], pair[1], r)
 		}
 	}
@@ -63,6 +63,7 @@ func TestStringLess(t *testing.T) {
 
 func TestBuiltinRealNumberLess(t *testing.T) {
 	groups := [][]interface{}{
+		{math.NaN()},
 		{math.Inf(-1)},
 		{-math.MaxFloat64},
 		{float32(-math.MaxFloat32), -math.MaxFloat32},

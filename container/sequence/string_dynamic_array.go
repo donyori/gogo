@@ -111,6 +111,8 @@ func (sda StringDynamicArray) Slice(begin, end int) Array {
 
 // Less reports whether the item with index i must sort before
 // the item with index j.
+//
+// It panics if i or j is out of range.
 func (sda StringDynamicArray) Less(i, j int) bool {
 	return sda[i] < sda[j]
 }

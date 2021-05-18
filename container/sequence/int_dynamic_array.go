@@ -110,6 +110,8 @@ func (ida IntDynamicArray) Slice(begin, end int) Array {
 
 // Less reports whether the item with index i must sort before
 // the item with index j.
+//
+// It panics if i or j is out of range.
 func (ida IntDynamicArray) Less(i, j int) bool {
 	return ida[i] < ida[j]
 }

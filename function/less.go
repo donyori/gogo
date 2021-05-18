@@ -25,6 +25,13 @@ import (
 )
 
 // LessFunc is a function to test whether a < b.
+//
+// To use LessFunc in cases where a transitive ordering is required,
+// such as sorting, it must implement a transitive ordering.
+//
+// Note that floating-point comparison
+// (the < operator on float32 or float64 values)
+// is not a transitive ordering when not-a-number (NaN) values are involved.
 type LessFunc func(a, b interface{}) bool
 
 // Not returns a negative function to test whether !(a < b).
@@ -78,6 +85,11 @@ func intLess(a, b interface{}) bool {
 
 // Float64Less is a prefab LessFunc for float64.
 //
+// It implements a transitive ordering:
+//  - if both Float64Less(a, b) and Float64Less(b, c) are true, then Float64Less(a, c) must be true as well.
+//  - if both Float64Less(a, b) and Float64Less(b, c) are false, then Float64Less(a, c) must be false as well.
+// It treats NaN values as less than any others.
+//
 // The nil interface{} is treated as a zero float64 0.0 for convenience.
 //
 // It panics if any non-nil input variable is not float64.
@@ -99,7 +111,7 @@ func float64Less(a, b interface{}) bool {
 			panic(errors.AutoMsg("b is not float64"))
 		}
 	}
-	return fa < fb
+	return fa < fb || (isNaN(fa) && !isNaN(fb))
 }
 
 // StringLess is a prefab LessFunc for string.
@@ -135,6 +147,11 @@ func stringLess(a, b interface{}) bool {
 //  float32, float64,
 //  byte, // an alias for uint8
 //  rune. // an alias for int32
+//
+// It implements a transitive ordering:
+//  - if both BuiltinRealNumberLess(a, b) and BuiltinRealNumberLess(b, c) are true, then BuiltinRealNumberLess(a, c) must be true as well.
+//  - if both BuiltinRealNumberLess(a, b) and BuiltinRealNumberLess(b, c) are false, then BuiltinRealNumberLess(a, c) must be false as well.
+// It treats NaN values as less than any others.
 //
 // The nil interface{} is treated as a zero real number for convenience.
 //
@@ -185,7 +202,7 @@ func builtinRealNumberLess(a, b interface{}) bool {
 	case 0b00_01:
 		return ia < 0
 	case 0b00_11:
-		return fa < 0.
+		return fa < 0. || isNaN(fa)
 	case 0b01_00:
 		return ib > 0
 	case 0b01_01:
@@ -193,7 +210,7 @@ func builtinRealNumberLess(a, b interface{}) bool {
 	case 0b01_10:
 		return ib > 0 && ua < uint64(ib)
 	case 0b01_11:
-		return fa < float64(ib)
+		return fa < float64(ib) || isNaN(fa)
 	case 0b10_00:
 		return ub > 0
 	case 0b10_01:
@@ -201,7 +218,7 @@ func builtinRealNumberLess(a, b interface{}) bool {
 	case 0b10_10:
 		return ua < ub
 	case 0b10_11:
-		return fa < float64(ub)
+		return fa < float64(ub) || isNaN(fa)
 	case 0b11_00:
 		return fb > 0.
 	case 0b11_01:
@@ -209,10 +226,15 @@ func builtinRealNumberLess(a, b interface{}) bool {
 	case 0b11_10:
 		return float64(ua) < fb
 	case 0b11_11:
-		return fa < fb
+		return fa < fb || (isNaN(fa) && !isNaN(fb))
 	default:
 		// This should never happen, but will act as a safeguard for later,
 		// as a default value doesn't make sense here.
 		panic(errors.AutoMsg("flag is invalid, which should never happen"))
 	}
+}
+
+// isNaN is a copy of math.IsNaN to avoid a dependency on the math package.
+func isNaN(f float64) bool {
+	return f != f
 }

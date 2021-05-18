@@ -25,6 +25,14 @@ import (
 
 // Array is an adapter for:
 // sequence.Array + function.LessFunc -> sort.Interface.
+//
+// Its LessFn must describe a transitive ordering:
+//  - if both LessFn(a, b) and LessFn(b, c) are true, then LessFn(a, c) must be true as well.
+//  - if both LessFn(a, b) and LessFn(b, c) are false, then LessFn(a, c) must be false as well.
+//
+// Note that floating-point comparison
+// (the < operator on float32 or float64 values)
+// is not a transitive ordering when not-a-number (NaN) values are involved.
 type Array struct {
 	Data   sequence.Array
 	LessFn function.LessFunc
@@ -40,6 +48,8 @@ func (a *Array) Len() int {
 
 // Less reports whether the item with index i must sort before
 // the item with index j.
+//
+// It will implement a transitive ordering if its LessFn does so.
 func (a *Array) Less(i, j int) bool {
 	return a.LessFn(a.Data.Get(i), a.Data.Get(j))
 }

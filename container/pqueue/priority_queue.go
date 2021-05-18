@@ -123,6 +123,15 @@ type priorityQueueMini struct {
 
 // NewPriorityQueueMini creates a new mini version priority queue.
 //
+// less is a function to report whether a < b.
+// It must describe a transitive ordering:
+//  - if both less(a, b) and less(b, c) are true, then less(a, c) must be true as well.
+//  - if both less(a, b) and less(b, c) are false, then less(a, c) must be false as well.
+//
+// Note that floating-point comparison
+// (the < operator on float32 or float64 values)
+// is not a transitive ordering when not-a-number (NaN) values are involved.
+//
 // data is the initial items in the queue.
 //
 // It panics if less is nil.
@@ -179,6 +188,15 @@ type priorityQueue struct {
 }
 
 // NewPriorityQueue creates a new standard priority queue.
+//
+// less is a function to report whether a < b.
+// It must describe a transitive ordering:
+//  - if both less(a, b) and less(b, c) are true, then less(a, c) must be true as well.
+//  - if both less(a, b) and less(b, c) are false, then less(a, c) must be false as well.
+//
+// Note that floating-point comparison
+// (the < operator on float32 or float64 values)
+// is not a transitive ordering when not-a-number (NaN) values are involved.
 //
 // data is the initial items in the queue.
 //
@@ -253,6 +271,15 @@ type priorityQueueEx struct {
 }
 
 // NewPriorityQueueEx creates a new extended priority queue.
+//
+// less is a function to report whether a < b.
+// It must describe a transitive ordering:
+//  - if both less(a, b) and less(b, c) are true, then less(a, c) must be true as well.
+//  - if both less(a, b) and less(b, c) are false, then less(a, c) must be false as well.
+//
+// Note that floating-point comparison
+// (the < operator on float32 or float64 values)
+// is not a transitive ordering when not-a-number (NaN) values are involved.
 //
 // data is the initial items in the queue.
 //
