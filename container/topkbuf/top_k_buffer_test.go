@@ -22,12 +22,12 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/donyori/gogo/function"
+	"github.com/donyori/gogo/function/compare"
 )
 
 func TestNewTopKBuffer(t *testing.T) {
 	k := 5
-	tkb := NewTopKBuffer(k, function.IntLess, 3, 2, 5)
+	tkb := NewTopKBuffer(k, compare.IntLess, 3, 2, 5)
 	y := []int{2, 3, 5}
 	x := tkb.Drain()
 	if len(x) == len(y) {
@@ -39,7 +39,7 @@ func TestNewTopKBuffer(t *testing.T) {
 	} else {
 		t.Errorf("test1: len(x): %d != len(y): %d", len(x), len(y))
 	}
-	tkb = NewTopKBuffer(k, function.IntLess, 3, 2, 5, 1, 0, 7, 9, 3)
+	tkb = NewTopKBuffer(k, compare.IntLess, 3, 2, 5, 1, 0, 7, 9, 3)
 	y = []int{0, 1, 2, 3, 3}
 	x = tkb.Drain()
 	if len(x) == len(y) {
@@ -56,7 +56,7 @@ func TestNewTopKBuffer(t *testing.T) {
 func TestTopKBuffer(t *testing.T) {
 	k := 5
 	samples := []interface{}{3, 2, 5, 1, 0, 7, 9, 0, 3}
-	tkb := NewTopKBuffer(k, function.IntLess)
+	tkb := NewTopKBuffer(k, compare.IntLess)
 	if x := tkb.K(); x != k {
 		t.Errorf("tkb.K(): %d != %d", x, k)
 	}

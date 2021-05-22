@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/donyori/gogo/container/sequence"
-	"github.com/donyori/gogo/function"
+	"github.com/donyori/gogo/function/compare"
 )
 
 func TestBinarySearch(t *testing.T) {
@@ -38,8 +38,8 @@ func TestBinarySearchMaxLess(t *testing.T) {
 	data := sequence.GeneralDynamicArray{1, 1, 1, 2, 2, 2, 4, 4, 4}
 	itf := &BinarySearchArrayAdapter{
 		Data:    data,
-		EqualFn: function.Equal,
-		LessFn:  function.IntLess,
+		EqualFn: compare.Equal,
+		LessFn:  compare.IntLess,
 	}
 	cases := []struct {
 		Target int
@@ -64,8 +64,8 @@ func TestBinarySearchMinGreater(t *testing.T) {
 	data := sequence.GeneralDynamicArray{1, 1, 1, 2, 2, 2, 4, 4, 4}
 	itf := &BinarySearchArrayAdapter{
 		Data:    data,
-		EqualFn: function.Equal,
-		LessFn:  function.IntLess,
+		EqualFn: compare.Equal,
+		LessFn:  compare.IntLess,
 	}
 	cases := []struct {
 		Target int
@@ -91,12 +91,12 @@ func testBinarySearch(t *testing.T, data, negativeSamples []int) {
 	for i, n := 0, len(data); i < n; i++ {
 		s[i] = &data[i]
 	}
-	var less function.LessFunc = func(a, b interface{}) bool {
+	var less compare.LessFunc = func(a, b interface{}) bool {
 		return *(a.(*int)) < *(b.(*int))
 	}
 	itf1 := &BinarySearchArrayAdapter{
 		Data:    s,
-		EqualFn: function.Equal,
+		EqualFn: compare.Equal,
 		LessFn:  less,
 	}
 	itf2 := &BinarySearchArrayAdapter{

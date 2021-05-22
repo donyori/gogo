@@ -23,7 +23,7 @@ import (
 
 	"github.com/donyori/gogo/container/pqueue"
 	"github.com/donyori/gogo/errors"
-	"github.com/donyori/gogo/function"
+	"github.com/donyori/gogo/function/compare"
 )
 
 // TopKBuffer is a buffer for saving the first K smallest items.
@@ -52,7 +52,7 @@ type TopKBuffer interface {
 // based on github.com/donyori/gogo/container/pqueue.PriorityQueue.
 type topKBuffer struct {
 	ParamK    int
-	GreaterFn function.LessFunc
+	GreaterFn compare.LessFunc
 	Pq        pqueue.PriorityQueue
 }
 
@@ -70,7 +70,7 @@ type topKBuffer struct {
 // data is the initial items in the buffer.
 //
 // It panics if k <= 0 or less is nil.
-func NewTopKBuffer(k int, less function.LessFunc, data ...interface{}) TopKBuffer {
+func NewTopKBuffer(k int, less compare.LessFunc, data ...interface{}) TopKBuffer {
 	if k <= 0 {
 		panic(errors.AutoMsg(fmt.Sprintf("k: %d <= 0", k)))
 	}

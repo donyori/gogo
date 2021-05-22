@@ -20,7 +20,7 @@ package sequence
 
 import (
 	"github.com/donyori/gogo/container/sequence"
-	"github.com/donyori/gogo/function"
+	"github.com/donyori/gogo/function/compare"
 )
 
 // EqualButNotTarget is an integer used as a return value of
@@ -221,7 +221,7 @@ func BinarySearchMinGreater(data BinarySearchInterface, target interface{}) int 
 }
 
 // BinarySearchArrayAdapter is an adapter for:
-// sequence.Array + function.EqualFunc + function.LessFunc -> BinarySearchInterface.
+// sequence.Array + compare.EqualFunc + compare.LessFunc -> BinarySearchInterface.
 //
 // Note that EqualFn should return true if and only if
 // the item is the search target.
@@ -229,8 +229,8 @@ func BinarySearchMinGreater(data BinarySearchInterface, target interface{}) int 
 // EqualFn should return false.
 type BinarySearchArrayAdapter struct {
 	Data    sequence.Array
-	EqualFn function.EqualFunc
-	LessFn  function.LessFunc
+	EqualFn compare.EqualFunc
+	LessFn  compare.LessFunc
 
 	target interface{}
 }

@@ -20,11 +20,11 @@ package heapa
 
 import (
 	"github.com/donyori/gogo/container/sequence"
-	"github.com/donyori/gogo/function"
+	"github.com/donyori/gogo/function/compare"
 )
 
 // DynamicArray is an adapter for:
-// sequence.DynamicArray + function.LessFunc -> container/heap.Interface.
+// sequence.DynamicArray + compare.LessFunc -> container/heap.Interface.
 //
 // Its LessFn must describe a transitive ordering:
 //  - if both LessFn(a, b) and LessFn(b, c) are true, then LessFn(a, c) must be true as well.
@@ -35,7 +35,7 @@ import (
 // is not a transitive ordering when not-a-number (NaN) values are involved.
 type DynamicArray struct {
 	Data   sequence.DynamicArray
-	LessFn function.LessFunc
+	LessFn compare.LessFunc
 }
 
 // Len returns the number of items in the dynamic array.

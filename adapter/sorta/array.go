@@ -20,11 +20,11 @@ package sorta
 
 import (
 	"github.com/donyori/gogo/container/sequence"
-	"github.com/donyori/gogo/function"
+	"github.com/donyori/gogo/function/compare"
 )
 
 // Array is an adapter for:
-// sequence.Array + function.LessFunc -> sort.Interface.
+// sequence.Array + compare.LessFunc -> sort.Interface.
 //
 // Its LessFn must describe a transitive ordering:
 //  - if both LessFn(a, b) and LessFn(b, c) are true, then LessFn(a, c) must be true as well.
@@ -35,7 +35,7 @@ import (
 // is not a transitive ordering when not-a-number (NaN) values are involved.
 type Array struct {
 	Data   sequence.Array
-	LessFn function.LessFunc
+	LessFn compare.LessFunc
 }
 
 // Len returns the number of items in the array.

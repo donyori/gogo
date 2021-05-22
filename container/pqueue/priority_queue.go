@@ -24,7 +24,7 @@ import (
 	"github.com/donyori/gogo/adapter/containera/heapa"
 	"github.com/donyori/gogo/container/sequence"
 	"github.com/donyori/gogo/errors"
-	"github.com/donyori/gogo/function"
+	"github.com/donyori/gogo/function/compare"
 )
 
 // PriorityQueueMini is an interface representing a basic priority queue,
@@ -135,7 +135,7 @@ type priorityQueueMini struct {
 // data is the initial items in the queue.
 //
 // It panics if less is nil.
-func NewPriorityQueueMini(less function.LessFunc, data ...interface{}) PriorityQueueMini {
+func NewPriorityQueueMini(less compare.LessFunc, data ...interface{}) PriorityQueueMini {
 	if less == nil {
 		panic(errors.AutoMsg("less is nil"))
 	}
@@ -201,7 +201,7 @@ type priorityQueue struct {
 // data is the initial items in the queue.
 //
 // It panics if less is nil.
-func NewPriorityQueue(less function.LessFunc, data ...interface{}) PriorityQueue {
+func NewPriorityQueue(less compare.LessFunc, data ...interface{}) PriorityQueue {
 	if less == nil {
 		panic(errors.AutoMsg("less is nil"))
 	}
@@ -267,7 +267,7 @@ func (pq *priorityQueue) Maintain() {
 // based on container/heap.
 type priorityQueueEx struct {
 	priorityQueue
-	EqualFn function.EqualFunc
+	EqualFn compare.EqualFunc
 }
 
 // NewPriorityQueueEx creates a new extended priority queue.
@@ -286,7 +286,7 @@ type priorityQueueEx struct {
 // It panics if less is nil.
 //
 // equal can be nil. If equal is nil, it will be generated via less.
-func NewPriorityQueueEx(less function.LessFunc, equal function.EqualFunc, data ...interface{}) PriorityQueueEx {
+func NewPriorityQueueEx(less compare.LessFunc, equal compare.EqualFunc, data ...interface{}) PriorityQueueEx {
 	if less == nil {
 		panic(errors.AutoMsg("less is nil"))
 	}
