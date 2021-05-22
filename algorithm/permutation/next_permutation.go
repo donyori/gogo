@@ -18,10 +18,32 @@
 
 package permutation
 
-import (
-	"github.com/donyori/gogo/algorithm/search/sequence"
-	"github.com/donyori/gogo/errors"
-)
+import "github.com/donyori/gogo/algorithm/search/sequence"
+
+// Interface represents an integer-indexed permutation with method Less.
+type Interface interface {
+	// Len returns the number of items in the permutation.
+	Len() int
+
+	// Less reports whether the item with index i
+	// is less than the item with index j.
+	//
+	// Less must describe a transitive ordering:
+	//  - if both Less(i, j) and Less(j, k) are true, then Less(i, k) must be true as well.
+	//  - if both Less(i, j) and Less(j, k) are false, then Less(i, k) must be false as well.
+	//
+	// Note that floating-point comparison
+	// (the < operator on float32 or float64 values)
+	// is not a transitive ordering when not-a-number (NaN) values are involved.
+	//
+	// It panics if i or j is out of range.
+	Less(i, j int) bool
+
+	// Swap exchanges the items with indexes i and j.
+	//
+	// It panics if i or j is out of range.
+	Swap(i, j int)
+}
 
 // NextPermutation transforms data to its next permutation in lexical order.
 // It returns false if data.Len() == 0 or the permutations are exhausted,
@@ -39,12 +61,11 @@ func NextPermutation(data Interface) bool {
 		return false
 	}
 	npbsi := &nextPermutationBinarySearchInterface{
-		Data:   data,
-		Target: i,
-		Begin:  i + 1,
-		End:    data.Len(),
+		Data:  data,
+		Begin: i + 1,
+		End:   data.Len(),
 	}
-	j := npbsi.Begin + sequence.BinarySearchMaxLess(npbsi, nil) // target is set in npbsi.
+	j := npbsi.Begin + sequence.BinarySearchMaxLess(npbsi, i)
 	data.Swap(i, j)
 	for i, j = i+1, data.Len()-1; i < j; i, j = i+1, j-1 {
 		data.Swap(i, j)
@@ -54,14 +75,23 @@ func NextPermutation(data Interface) bool {
 
 // nextPermutationBinarySearchInterface is an implementation of
 // interface BinarySearchInterface.
+//
+// As this implementation is designed to find the last item
+// that is greater than the search target in a descending sequence,
+// if the item is greater than the search target,
+// it is treated as "less" than the target in the binary search algorithm.
+// Otherwise, it is treated as "greater" than the target.
 type nextPermutationBinarySearchInterface struct {
-	Data   Interface
-	Target int
-	Begin  int
-	End    int
+	Data  Interface
+	Begin int
+	End   int
+
+	target int
 }
 
 // Len returns the number of items in the sequence.
+//
+// The sequence is a slice of the permutation.
 func (npbsi *nextPermutationBinarySearchInterface) Len() int {
 	if npbsi == nil || npbsi.Data == nil {
 		return 0
@@ -69,20 +99,29 @@ func (npbsi *nextPermutationBinarySearchInterface) Len() int {
 	return npbsi.End - npbsi.Begin
 }
 
-// Equal is not implemented for this struct. Do NOT call it!
-func (npbsi *nextPermutationBinarySearchInterface) Equal(int, interface{}) bool {
-	panic(errors.AutoMsg("method Equal not implement"))
-}
-
-// Less reports whether the item with index npbsi.Target is less than
-// the item with index i+npbsi.Begin.
+// SetTarget sets the search target.
 //
-// It panics if i+npbsi.Begin is out of range.
-func (npbsi *nextPermutationBinarySearchInterface) Less(i int, _ interface{}) bool {
-	return npbsi.Data.Less(npbsi.Target, i+npbsi.Begin)
+// It will be called once at the beginning of the search function.
+//
+// In this implementation, target is the index of the search target
+// in the permutation.
+func (npbsi *nextPermutationBinarySearchInterface) SetTarget(target interface{}) {
+	npbsi.target = target.(int)
 }
 
-// Greater is not implemented for this struct. Do NOT call it!
-func (npbsi *nextPermutationBinarySearchInterface) Greater(int, interface{}) bool {
-	panic(errors.AutoMsg("method Greater not implement"))
+// Cmp compares the item with index i in the sequence and the search target.
+//
+// It returns -1 if the item is greater than the target
+// (in this case, the item is treated as "less" than
+// the target in the binary search algorithm).
+//
+// Otherwise, it returns 1 (corresponding to the case where
+// the item is "greater" than the target in the binary search algorithm).
+//
+// It panics if i is out of range.
+func (npbsi *nextPermutationBinarySearchInterface) Cmp(i int) int {
+	if npbsi.Data.Less(npbsi.target, i+npbsi.Begin) {
+		return -1
+	}
+	return 1
 }

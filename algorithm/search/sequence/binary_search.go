@@ -23,75 +23,100 @@ import (
 	"github.com/donyori/gogo/function"
 )
 
+// EqualButNotTarget is an integer used as a return value of
+// the method Cmp of interface BinarySearchInterface.
+//
+// It stands for that the item is equal to the search target but not the target.
+const EqualButNotTarget int = 7
+
 // BinarySearchInterface represents an integer-indexed sequence
 // used in the binary search algorithm.
 type BinarySearchInterface interface {
 	// Len returns the number of items in the sequence.
 	Len() int
 
-	// Equal reports whether the item with index i equals to x.
+	// SetTarget sets the search target.
 	//
-	// It panics if i is out of range.
-	Equal(i int, x interface{}) bool
+	// It will be called once at the beginning of the search function.
+	SetTarget(target interface{})
 
-	// Less reports whether the item with index i is less than x.
+	// Cmp compares the item with index i and the search target.
+	//
+	// It returns 0 if the item with index i is the search target.
+	//
+	// It returns a positive integer except EqualButNotTarget (value: 7)
+	// if the item with index i is greater than the search target.
+	//
+	// It returns a negative integer
+	// if the item with index i is less than the search target.
+	//
+	// It returns EqualButNotTarget (value: 7) if the item with index i
+	// is equal to the search target but is not the target.
 	//
 	// It panics if i is out of range.
-	Less(i int, x interface{}) bool
-
-	// Greater reports whether the item with index i is greater than x.
-	//
-	// It panics if i is out of range.
-	Greater(i int, x interface{}) bool
+	Cmp(i int) int
 }
 
 // BinarySearch finds target in data using binary search algorithm,
 // and returns its index.
 //
 // data must be sorted in ascending order!
-// (If data is in descending order, you can exchange the behavior
-// of Less and Greater methods of BinarySearchInterface.)
+// (If data is in descending order,
+// you can change the behavior of method Cmp of BinarySearchInterface such that
+// it returns a positive integer except EqualButNotTarget
+// if the item is less than the search target, and returns a negative integer
+// if the item is greater than the search target.)
 // This function won't check whether data is sorted.
 // You must sort data before calling this function,
 // otherwise, target may not be found as expected.
 //
-// If multiple items equal to target, it returns the index of one of them.
+// If Cmp returns 0 for multiple items, it returns the index of one of them.
+//
 // It returns -1 if target is not found.
 //
-// target is only used to call the methods of data (BinarySearchInterface).
+// target is only used to call the method SetTarget
+// of data (BinarySearchInterface).
 // It's OK to handle target in your implementation of BinarySearchInterface,
 // and set target to an arbitrary value, such as nil.
 //
 // Time complexity: O(log n + m), where n = data.Len(),
-// m = the number of items that satisfy:
-// !Equal(...) && !Less(...) && !Greater(...).
+// m is the number of items that let the method Cmp return EqualButNotTarget.
 func BinarySearch(data BinarySearchInterface, target interface{}) int {
-	if data.Len() == 0 {
+	data.SetTarget(target)
+	n := data.Len()
+	if n == 0 {
 		return -1
 	}
-	low, high := 0, data.Len()
-	mid := (low + high) / 2
-	for low != mid {
-		if data.Less(mid, target) {
-			low = mid
-		} else if data.Greater(mid, target) {
-			high = mid
+	// Define: data.Cmp(-1) < 0,
+	//         data.Cmp(n) > 0 && data.Cmp(n) != EqualButNotTarget
+	// Invariant: data.Cmp(low-1) < 0,
+	//            data.Cmp(high) > 0 && data.Cmp(high) != EqualButNotTarget
+	low, high := 0, n
+	for low < high {
+		mid := avg(low, high)
+		cmp := data.Cmp(mid)
+		if cmp < 0 {
+			low = mid + 1 // Preserve: data.Cmp(low-1) < 0
+		} else if cmp > 0 {
+			if cmp == EqualButNotTarget {
+				for i := mid - 1; i >= low && cmp == EqualButNotTarget; i-- {
+					cmp = data.Cmp(i)
+					if cmp == 0 {
+						return i
+					}
+				}
+				cmp = EqualButNotTarget // Restore cmp to data.Cmp(mid).
+				for i := mid + 1; i < high && cmp == EqualButNotTarget; i++ {
+					cmp = data.Cmp(i)
+					if cmp == 0 {
+						return i
+					}
+				}
+				return -1
+			}
+			high = mid // Preserve: data.Cmp(high) > 0 && data.Cmp(high) != EqualButNotTarget
 		} else {
-			break
-		}
-		mid = (low + high) / 2
-	}
-	if data.Equal(mid, target) {
-		return mid
-	}
-	for i := mid - 1; i >= low && !data.Less(i, target); i-- {
-		if data.Equal(i, target) {
-			return i
-		}
-	}
-	for i := mid + 1; i < high && !data.Greater(i, target); i++ {
-		if data.Equal(i, target) {
-			return i
+			return mid
 		}
 	}
 	return -1
@@ -101,103 +126,113 @@ func BinarySearch(data BinarySearchInterface, target interface{}) int {
 // using binary search algorithm, and returns its index.
 //
 // data must be sorted in ascending order!
-// (If data is in descending order, you can exchange the behavior
-// of Less and Greater methods of BinarySearchInterface, and then
-// use BinarySearchMinGreater instead of this function.)
+// (If data is in descending order,
+// you can change the behavior of method Cmp of BinarySearchInterface such that
+// it returns a positive integer except EqualButNotTarget
+// if the item is less than the search target, and returns a negative integer
+// if the item is greater than the search target,
+// and then use function BinarySearchMinGreater instead of this function.)
 // This function won't check whether data is sorted.
 // You must sort data before calling this function,
 // otherwise, the item may not be found as expected.
 //
 // If multiple items satisfy the condition,
 // it returns the index of the last one of them.
+//
 // It returns -1 if no such item in data.
 //
-// Only Len and Less are used in this function,
-// and it's OK to leave Equal and Greater as no-ops.
-//
-// target is only used to call the method Less of data (BinarySearchInterface).
+// target is only used to call the method SetTarget
+// of data (BinarySearchInterface).
 // It's OK to handle target in your implementation of BinarySearchInterface,
 // and set target to an arbitrary value, such as nil.
 //
 // Time complexity: O(log n), where n = data.Len().
 func BinarySearchMaxLess(data BinarySearchInterface, target interface{}) int {
+	data.SetTarget(target)
 	n := data.Len()
 	if n == 0 {
 		return -1
 	}
-	if !data.Less(0, target) {
-		return -1
-	}
-	if data.Less(n-1, target) {
-		return n - 1
-	}
+	// Define: data.Cmp(-1) < 0,
+	//         data.Cmp(n) >= 0
+	// Invariant: data.Cmp(low-1) < 0,
+	//            data.Cmp(high) >= 0
 	low, high := 0, n
-	mid := (low + high) / 2
-	for low != mid {
-		if data.Less(mid, target) {
-			low = mid
+	for low < high {
+		mid := avg(low, high)
+		if data.Cmp(mid) < 0 {
+			low = mid + 1 // Preserve: data.Cmp(low-1) < 0
 		} else {
-			high = mid
+			high = mid // Preserve: data.Cmp(high) >= 0
 		}
-		mid = (low + high) / 2
 	}
-	return low
+	return low - 1
 }
 
 // BinarySearchMinGreater finds the minimum item greater than target in data
 // using binary search algorithm, and returns its index.
 //
 // data must be sorted in ascending order!
-// (If data is in descending order, you can exchange the behavior
-// of Less and Greater methods of BinarySearchInterface, and then
-// use BinarySearchMaxLess instead of this function.)
+// (If data is in descending order,
+// you can change the behavior of method Cmp of BinarySearchInterface such that
+// it returns a positive integer except EqualButNotTarget
+// if the item is less than the search target, and returns a negative integer
+// if the item is greater than the search target,
+// and then use function BinarySearchMaxLess instead of this function.)
 // This function won't check whether data is sorted.
 // You must sort data before calling this function,
 // otherwise, the item may not be found as expected.
 //
 // If multiple items satisfy the condition,
 // it returns the index of the first one of them.
+//
 // It returns -1 if no such item in data.
 //
-// Only Len and Greater are used in this function,
-// and it's OK to leave Equal and Less as no-ops.
-//
-// target is only used to call the method Greater of
-// data (BinarySearchInterface).
+// target is only used to call the method SetTarget
+// of data (BinarySearchInterface).
 // It's OK to handle target in your implementation of BinarySearchInterface,
 // and set target to an arbitrary value, such as nil.
 //
 // Time complexity: O(log n), where n = data.Len().
 func BinarySearchMinGreater(data BinarySearchInterface, target interface{}) int {
+	data.SetTarget(target)
 	n := data.Len()
 	if n == 0 {
 		return -1
 	}
-	if data.Greater(0, target) {
-		return 0
-	}
-	if !data.Greater(n-1, target) {
-		return -1
-	}
+	// Define: data.Cmp(-1) <= 0 || data.Cmp(-1) == EqualButNotTarget,
+	//         data.Cmp(n) > 0 && data.Cmp(n) != EqualButNotTarget
+	// Invariant: data.Cmp(low-1) <= 0 || data.Cmp(low-1) == EqualButNotTarget,
+	//            data.Cmp(high) > 0 && data.Cmp(high) != EqualButNotTarget
 	low, high := 0, n
-	mid := (low + high) / 2
-	for low != mid {
-		if data.Greater(mid, target) {
-			high = mid
+	for low < high {
+		mid := avg(low, high)
+		cmp := data.Cmp(mid)
+		if cmp > 0 && cmp != EqualButNotTarget {
+			high = mid // Preserve: data.Cmp(high) > 0 && data.Cmp(high) != EqualButNotTarget
 		} else {
-			low = mid
+			low = mid + 1 // Preserve: data.Cmp(low-1) <= 0 || data.Cmp(low-1) == EqualButNotTarget
 		}
-		mid = (low + high) / 2
 	}
-	return high
+	if high < n {
+		return high
+	}
+	return -1
 }
 
 // BinarySearchArrayAdapter is an adapter for:
 // sequence.Array + function.EqualFunc + function.LessFunc -> BinarySearchInterface.
+//
+// Note that EqualFn should return true if and only if
+// the item is the search target.
+// If the item is equal to the target but is not the target,
+// EqualFn should return false.
 type BinarySearchArrayAdapter struct {
 	Data    sequence.Array
 	EqualFn function.EqualFunc
 	LessFn  function.LessFunc
+
+	target interface{}
 }
 
 // Len returns the number of items in the sequence.
@@ -208,26 +243,48 @@ func (bsad *BinarySearchArrayAdapter) Len() int {
 	return bsad.Data.Len()
 }
 
-// Equal reports whether the item with index i equals to x.
+// SetTarget sets the search target.
+//
+// It will be called once at the beginning of the search function.
+func (bsad *BinarySearchArrayAdapter) SetTarget(target interface{}) {
+	bsad.target = target
+}
+
+// Cmp compares the item with index i and the search target.
+//
+// It returns 0 if the item with index i is the search target.
+//
+// It returns a positive integer except EqualButNotTarget (value: 7)
+// if the item with index i is greater than the search target.
+//
+// It returns a negative integer
+// if the item with index i is less than the search target.
+//
+// It returns EqualButNotTarget (value: 7) if the item with index i
+// is equal to the search target but is not the target.
 //
 // It panics if i is out of range.
-func (bsad *BinarySearchArrayAdapter) Equal(i int, x interface{}) bool {
-	if bsad.EqualFn == nil && bsad.LessFn != nil {
-		bsad.EqualFn = bsad.LessFn.ToEqual()
+func (bsad *BinarySearchArrayAdapter) Cmp(i int) int {
+	item := bsad.Data.Get(i)
+	if bsad.LessFn(item, bsad.target) {
+		return -1
 	}
-	return bsad.EqualFn(bsad.Data.Get(i), x)
+	if bsad.LessFn(bsad.target, item) {
+		return 1
+	}
+	if bsad.EqualFn(item, bsad.target) {
+		return 0
+	}
+	return EqualButNotTarget
 }
 
-// Less reports whether the item with index i is less than x.
+// avg returns the average of two non-negative integers a and b.
 //
-// It panics if i is out of range.
-func (bsad *BinarySearchArrayAdapter) Less(i int, x interface{}) bool {
-	return bsad.LessFn(bsad.Data.Get(i), x)
-}
-
-// Greater reports whether the item with index i is greater than x.
+// It avoids overflow when computing the average.
 //
-// It panics if i is out of range.
-func (bsad *BinarySearchArrayAdapter) Greater(i int, x interface{}) bool {
-	return bsad.LessFn(x, bsad.Data.Get(i))
+// The return value (denoted by c) satisfies a <= c < b.
+//
+// Caller should guarantee that a and b are non-negative.
+func avg(a, b int) int {
+	return int(uint(a+b) >> 1)
 }
