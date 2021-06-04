@@ -45,30 +45,29 @@ type Interface interface {
 	Swap(i, j int)
 }
 
-// NextPermutation transforms data to its next permutation in lexical order.
-// It returns false if data.Len() == 0 or the permutations are exhausted,
+// NextPermutation transforms itf to its next permutation in lexical order.
+// It returns false if itf.Len() == 0 or the permutations are exhausted,
 // and true otherwise.
-// Time complexity: O(n), where n = data.Len().
-func NextPermutation(data Interface) bool {
-	if data == nil {
+// Time complexity: O(n), where n = itf.Len().
+func NextPermutation(itf Interface) bool {
+	if itf == nil {
 		return false
 	}
-	i := data.Len() - 2
-	for i >= 0 && !data.Less(i, i+1) {
+	i := itf.Len() - 2
+	for i >= 0 && !itf.Less(i, i+1) {
 		i--
 	}
 	if i < 0 {
 		return false
 	}
 	npbsi := &nextPermutationBinarySearchInterface{
-		Data:  data,
+		Data:  itf,
 		Begin: i + 1,
-		End:   data.Len(),
 	}
 	j := npbsi.Begin + sequence.BinarySearchMaxLess(npbsi, i)
-	data.Swap(i, j)
-	for i, j = i+1, data.Len()-1; i < j; i, j = i+1, j-1 {
-		data.Swap(i, j)
+	itf.Swap(i, j)
+	for i, j = i+1, itf.Len()-1; i < j; i, j = i+1, j-1 {
+		itf.Swap(i, j)
 	}
 	return true
 }
@@ -84,7 +83,6 @@ func NextPermutation(data Interface) bool {
 type nextPermutationBinarySearchInterface struct {
 	Data  Interface
 	Begin int
-	End   int
 
 	target int
 }
@@ -96,7 +94,7 @@ func (npbsi *nextPermutationBinarySearchInterface) Len() int {
 	if npbsi == nil || npbsi.Data == nil {
 		return 0
 	}
-	return npbsi.End - npbsi.Begin
+	return npbsi.Data.Len() - npbsi.Begin
 }
 
 // SetTarget sets the search target.

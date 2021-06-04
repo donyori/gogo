@@ -57,64 +57,59 @@ type BinarySearchInterface interface {
 	Cmp(i int) int
 }
 
-// BinarySearch finds target in data using binary search algorithm,
+// BinarySearch finds target in itf using binary search algorithm,
 // and returns its index.
 //
-// data must be sorted in ascending order!
-// (If data is in descending order,
+// itf must be sorted in ascending order!
+// (If itf is in descending order,
 // you can change the behavior of method Cmp of BinarySearchInterface such that
 // it returns a positive integer except EqualButNotTarget
 // if the item is less than the search target, and returns a negative integer
 // if the item is greater than the search target.)
-// This function won't check whether data is sorted.
-// You must sort data before calling this function,
+// This function won't check whether itf is sorted.
+// You must sort itf before calling this function,
 // otherwise, target may not be found as expected.
 //
 // If Cmp returns 0 for multiple items, it returns the index of one of them.
 //
 // It returns -1 if target is not found.
 //
-// target is only used to call the method SetTarget
-// of data (BinarySearchInterface).
+// target is only used to call the method SetTarget of itf.
 // It's OK to handle target in your implementation of BinarySearchInterface,
 // and set target to an arbitrary value, such as nil.
 //
-// Time complexity: O(log n + m), where n = data.Len(),
+// Time complexity: O(log n + m), where n = itf.Len(),
 // m is the number of items that let the method Cmp return EqualButNotTarget.
-func BinarySearch(data BinarySearchInterface, target interface{}) int {
-	data.SetTarget(target)
-	n := data.Len()
-	if n == 0 {
-		return -1
-	}
-	// Define: data.Cmp(-1) < 0,
-	//         data.Cmp(n) > 0 && data.Cmp(n) != EqualButNotTarget
-	// Invariant: data.Cmp(low-1) < 0,
-	//            data.Cmp(high) > 0 && data.Cmp(high) != EqualButNotTarget
-	low, high := 0, n
+func BinarySearch(itf BinarySearchInterface, target interface{}) int {
+	itf.SetTarget(target)
+	// Define: itf.Cmp(-1) < 0,
+	//         itf.Cmp(itf.Len()) > 0 && itf.Cmp(itf.Len()) != EqualButNotTarget
+	// Invariant: itf.Cmp(low-1) < 0,
+	//            itf.Cmp(high) > 0 && itf.Cmp(high) != EqualButNotTarget
+	low, high := 0, itf.Len()
 	for low < high {
 		mid := avg(low, high)
-		cmp := data.Cmp(mid)
+		cmp := itf.Cmp(mid)
 		if cmp < 0 {
-			low = mid + 1 // Preserve: data.Cmp(low-1) < 0
+			low = mid + 1 // Preserve: itf.Cmp(low-1) < 0
 		} else if cmp > 0 {
 			if cmp == EqualButNotTarget {
 				for i := mid - 1; i >= low && cmp == EqualButNotTarget; i-- {
-					cmp = data.Cmp(i)
+					cmp = itf.Cmp(i)
 					if cmp == 0 {
 						return i
 					}
 				}
-				cmp = EqualButNotTarget // Restore cmp to data.Cmp(mid).
+				cmp = EqualButNotTarget // Restore cmp to itf.Cmp(mid).
 				for i := mid + 1; i < high && cmp == EqualButNotTarget; i++ {
-					cmp = data.Cmp(i)
+					cmp = itf.Cmp(i)
 					if cmp == 0 {
 						return i
 					}
 				}
 				return -1
 			}
-			high = mid // Preserve: data.Cmp(high) > 0 && data.Cmp(high) != EqualButNotTarget
+			high = mid // Preserve: itf.Cmp(high) > 0 && itf.Cmp(high) != EqualButNotTarget
 		} else {
 			return mid
 		}
@@ -122,99 +117,89 @@ func BinarySearch(data BinarySearchInterface, target interface{}) int {
 	return -1
 }
 
-// BinarySearchMaxLess finds the maximum item less than target in data
+// BinarySearchMaxLess finds the maximum item less than target in itf
 // using binary search algorithm, and returns its index.
 //
-// data must be sorted in ascending order!
-// (If data is in descending order,
+// itf must be sorted in ascending order!
+// (If itf is in descending order,
 // you can change the behavior of method Cmp of BinarySearchInterface such that
 // it returns a positive integer except EqualButNotTarget
 // if the item is less than the search target, and returns a negative integer
 // if the item is greater than the search target,
 // and then use function BinarySearchMinGreater instead of this function.)
-// This function won't check whether data is sorted.
-// You must sort data before calling this function,
+// This function won't check whether itf is sorted.
+// You must sort itf before calling this function,
 // otherwise, the item may not be found as expected.
 //
 // If multiple items satisfy the condition,
 // it returns the index of the last one of them.
 //
-// It returns -1 if no such item in data.
+// It returns -1 if no such item in itf.
 //
-// target is only used to call the method SetTarget
-// of data (BinarySearchInterface).
+// target is only used to call the method SetTarget of itf.
 // It's OK to handle target in your implementation of BinarySearchInterface,
 // and set target to an arbitrary value, such as nil.
 //
-// Time complexity: O(log n), where n = data.Len().
-func BinarySearchMaxLess(data BinarySearchInterface, target interface{}) int {
-	data.SetTarget(target)
-	n := data.Len()
-	if n == 0 {
-		return -1
-	}
-	// Define: data.Cmp(-1) < 0,
-	//         data.Cmp(n) >= 0
-	// Invariant: data.Cmp(low-1) < 0,
-	//            data.Cmp(high) >= 0
-	low, high := 0, n
+// Time complexity: O(log n), where n = itf.Len().
+func BinarySearchMaxLess(itf BinarySearchInterface, target interface{}) int {
+	itf.SetTarget(target)
+	// Define: itf.Cmp(-1) < 0,
+	//         itf.Cmp(itf.Len()) >= 0
+	// Invariant: itf.Cmp(low-1) < 0,
+	//            itf.Cmp(high) >= 0
+	low, high := 0, itf.Len()
 	for low < high {
 		mid := avg(low, high)
-		if data.Cmp(mid) < 0 {
-			low = mid + 1 // Preserve: data.Cmp(low-1) < 0
+		if itf.Cmp(mid) < 0 {
+			low = mid + 1 // Preserve: itf.Cmp(low-1) < 0
 		} else {
-			high = mid // Preserve: data.Cmp(high) >= 0
+			high = mid // Preserve: itf.Cmp(high) >= 0
 		}
 	}
 	return low - 1
 }
 
-// BinarySearchMinGreater finds the minimum item greater than target in data
+// BinarySearchMinGreater finds the minimum item greater than target in itf
 // using binary search algorithm, and returns its index.
 //
-// data must be sorted in ascending order!
-// (If data is in descending order,
+// itf must be sorted in ascending order!
+// (If itf is in descending order,
 // you can change the behavior of method Cmp of BinarySearchInterface such that
 // it returns a positive integer except EqualButNotTarget
 // if the item is less than the search target, and returns a negative integer
 // if the item is greater than the search target,
 // and then use function BinarySearchMaxLess instead of this function.)
-// This function won't check whether data is sorted.
-// You must sort data before calling this function,
+// This function won't check whether itf is sorted.
+// You must sort itf before calling this function,
 // otherwise, the item may not be found as expected.
 //
 // If multiple items satisfy the condition,
 // it returns the index of the first one of them.
 //
-// It returns -1 if no such item in data.
+// It returns -1 if no such item in itf.
 //
-// target is only used to call the method SetTarget
-// of data (BinarySearchInterface).
+// target is only used to call the method SetTarget of itf.
 // It's OK to handle target in your implementation of BinarySearchInterface,
 // and set target to an arbitrary value, such as nil.
 //
-// Time complexity: O(log n), where n = data.Len().
-func BinarySearchMinGreater(data BinarySearchInterface, target interface{}) int {
-	data.SetTarget(target)
-	n := data.Len()
-	if n == 0 {
-		return -1
-	}
-	// Define: data.Cmp(-1) <= 0 || data.Cmp(-1) == EqualButNotTarget,
-	//         data.Cmp(n) > 0 && data.Cmp(n) != EqualButNotTarget
-	// Invariant: data.Cmp(low-1) <= 0 || data.Cmp(low-1) == EqualButNotTarget,
-	//            data.Cmp(high) > 0 && data.Cmp(high) != EqualButNotTarget
-	low, high := 0, n
+// Time complexity: O(log n), where n = itf.Len().
+func BinarySearchMinGreater(itf BinarySearchInterface, target interface{}) int {
+	itf.SetTarget(target)
+	// Define: itf.Cmp(-1) <= 0 || itf.Cmp(-1) == EqualButNotTarget,
+	//         itf.Cmp(itf.Len()) > 0 && itf.Cmp(itf.Len()) != EqualButNotTarget
+	// Invariant: itf.Cmp(low-1) <= 0 || itf.Cmp(low-1) == EqualButNotTarget,
+	//            itf.Cmp(high) > 0 && itf.Cmp(high) != EqualButNotTarget
+	low, high := 0, itf.Len()
 	for low < high {
 		mid := avg(low, high)
-		cmp := data.Cmp(mid)
+		cmp := itf.Cmp(mid)
 		if cmp > 0 && cmp != EqualButNotTarget {
-			high = mid // Preserve: data.Cmp(high) > 0 && data.Cmp(high) != EqualButNotTarget
+			high = mid // Preserve: itf.Cmp(high) > 0 && itf.Cmp(high) != EqualButNotTarget
 		} else {
-			low = mid + 1 // Preserve: data.Cmp(low-1) <= 0 || data.Cmp(low-1) == EqualButNotTarget
+			low = mid + 1 // Preserve: itf.Cmp(low-1) <= 0 || itf.Cmp(low-1) == EqualButNotTarget
 		}
 	}
-	if high < n {
+	if high < itf.Len() {
 		return high
 	}
 	return -1
