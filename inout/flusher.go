@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package io
+package inout
 
 // Flusher is an interface that wraps the method Flush,
 // which writes any buffered data to the underlying writer.

@@ -16,21 +16,29 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package fs
+package local
 
-import "io/fs"
+import (
+	"os"
 
-// Export types from package io/fs for convenience.
-type (
-	// FileMode is an alias for io/fs.FileMode.
-	FileMode = fs.FileMode
-
-	// FileInfo is an alias for io/fs.FileInfo.
-	FileInfo = fs.FileInfo
-
-	// File is an alias for io/fs.File.
-	File = fs.File
-
-	// FS is an alias for io/fs.FS.
-	FS = fs.FS
+	"github.com/donyori/gogo/filesys"
 )
+
+// VerifyChecksum verifies a local file by checksum.
+//
+// It returns true if and only if the file can be read
+// and matches all checksums.
+//
+// Note that it returns false if anyone of cs contains a nil HashGen
+// or an empty HexExpSum.
+// And it returns true if len(cs) is 0 and the file can be opened for reading.
+func VerifyChecksum(filename string, cs ...filesys.Checksum) bool {
+	f, err := os.Open(filename)
+	if err != nil {
+		return false
+	}
+	defer func(f *os.File) {
+		_ = f.Close()
+	}(f)
+	return filesys.VerifyChecksum(f, cs...)
+}

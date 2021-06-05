@@ -27,8 +27,8 @@ import (
 	"strings"
 
 	"github.com/donyori/gogo/errors"
-	"github.com/donyori/gogo/fs"
-	myio "github.com/donyori/gogo/io"
+	"github.com/donyori/gogo/filesys"
+	"github.com/donyori/gogo/inout"
 )
 
 // ErrVerificationFail is an error indicating that the file verification failed.
@@ -99,8 +99,8 @@ var defaultWriteOptions = &WriteOptions{
 // The written file will be removed by its method Close if any error occurs
 // during writing and the option PreserveOnFail is disabled.
 type Writer interface {
-	myio.Closer
-	myio.BufferedWriter
+	inout.Closer
+	inout.BufferedWriter
 
 	// TarEnabled returns true if the file is archived by tar
 	// (i.e., tape archive) and is not opened in raw mode.
@@ -136,12 +136,12 @@ type Writer interface {
 type writer struct {
 	err    error
 	opts   WriteOptions
-	bw     myio.ResettableBufferedWriter
+	bw     inout.ResettableBufferedWriter
 	ubw    io.Writer // unbuffered writer
 	tmp    string    // name of the temporary file
 	name   string    // name of the destination file
 	closed bool      // true if method Close has been called once and no error occurred during that call
-	c      myio.Closer
+	c      inout.Closer
 	tw     *tar.Writer
 }
 
@@ -181,7 +181,7 @@ type writer struct {
 // this function will copy the specified file to a temporary file,
 // which may cost a lot of time and space resource.
 // Data copied from the specified file won't be written to copies.
-func Write(name string, perm fs.FileMode, opts *WriteOptions, copies ...io.Writer) (w Writer, err error) {
+func Write(name string, perm filesys.FileMode, opts *WriteOptions, copies ...io.Writer) (w Writer, err error) {
 	if name == "" {
 		return nil, errors.AutoNew("name is empty")
 	}
@@ -310,12 +310,12 @@ func Write(name string, perm fs.FileMode, opts *WriteOptions, copies ...io.Write
 	}
 
 	if len(closers) > 1 {
-		fw.c = myio.NewMultiCloser(true, true, closers...)
+		fw.c = inout.NewMultiCloser(true, true, closers...)
 	} else {
-		fw.c = myio.WrapNoErrorCloser(f)
+		fw.c = inout.WrapNoErrorCloser(f)
 	}
 	if opts.BufOpen {
-		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
+		fw.bw = inout.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
 	}
 	return
 }
@@ -371,7 +371,7 @@ func (fw *writer) Close() (err error) {
 	rmDone = true
 	if fw.err == nil {
 		if err == nil {
-			fw.err = errors.AutoWrap(myio.ErrWriterClosed)
+			fw.err = errors.AutoWrap(inout.ErrWriterClosed)
 		} else {
 			fw.err = err
 		}
@@ -420,7 +420,7 @@ func (fw *writer) WriteByte(c byte) error {
 	} else if bw, ok := fw.ubw.(io.ByteWriter); ok {
 		err = bw.WriteByte(c)
 	} else {
-		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
+		fw.bw = inout.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
 		err = fw.bw.WriteByte(c)
 	}
 	fw.err = errors.AutoWrap(err)
@@ -466,7 +466,7 @@ func (fw *writer) ReadFrom(r io.Reader) (n int64, err error) {
 	} else if wt, ok := r.(io.WriterTo); ok {
 		n, err = wt.WriteTo(fw.ubw)
 	} else {
-		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
+		fw.bw = inout.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
 		n, err = fw.bw.ReadFrom(r)
 	}
 	fw.err = errors.AutoWrap(err)
@@ -528,7 +528,7 @@ func (fw *writer) WriteRune(r rune) (size int, err error) {
 		return 0, fw.err
 	}
 	if fw.bw == nil {
-		fw.bw = myio.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
+		fw.bw = inout.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
 	}
 	size, err = fw.bw.WriteRune(r)
 	fw.err = errors.AutoWrap(err)
@@ -553,9 +553,9 @@ func (fw *writer) TarEnabled() bool {
 // (To test whether the error is ErrNotTar, use function errors.Is.)
 func (fw *writer) TarWriteHeader(hdr *tar.Header) error {
 	if !fw.TarEnabled() {
-		return errors.AutoWrap(fs.ErrNotTar)
+		return errors.AutoWrap(filesys.ErrNotTar)
 	}
-	if errors.Is(fw.err, myio.ErrWriterClosed) {
+	if errors.Is(fw.err, inout.ErrWriterClosed) {
 		return fw.err
 	}
 	if fw.bw != nil {

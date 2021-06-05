@@ -16,10 +16,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package io
+package inout
 
 import (
-	stdio "io"
+	"io"
 	"testing"
 
 	"github.com/donyori/gogo/errors"
@@ -106,7 +106,7 @@ func TestMultiCloser(t *testing.T) {
 
 func testMultiCloser(t *testing.T, tryAll, noError bool) {
 	failErr := errors.New("an error to simulate a failed call to Close")
-	closers := []stdio.Closer{
+	closers := []io.Closer{
 		&testCloser{tb: t, err: failErr},
 		&testCloser{tb: t},
 		&testCloser{tb: t, err: failErr},
@@ -152,7 +152,7 @@ func testMultiCloser(t *testing.T, tryAll, noError bool) {
 	testMultiCloserOneCall(t, tryAll, noError, failErr, closers, anotherCloser, mc, 3)
 }
 
-func testMultiCloserOneCall(t *testing.T, tryAll, noError bool, failErr error, closers []stdio.Closer, anotherCloser stdio.Closer, mc MultiCloser, callNo int) {
+func testMultiCloserOneCall(t *testing.T, tryAll, noError bool, failErr error, closers []io.Closer, anotherCloser io.Closer, mc MultiCloser, callNo int) {
 	err := mc.Close()
 	var wantedErr error
 	var wantedClosed bool

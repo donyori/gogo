@@ -16,9 +16,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package io
+package inout
 
-import stdio "io"
+import "io"
 
 // LineReader is an interface that wraps method ReadLine.
 //
@@ -47,5 +47,5 @@ type LineWriterTo interface {
 	// It stops writing data if an error occurs.
 	//
 	// It returns the number of bytes written to w and any error encountered.
-	WriteLineTo(w stdio.Writer) (n int64, err error)
+	WriteLineTo(w io.Writer) (n int64, err error)
 }

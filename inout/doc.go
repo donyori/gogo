@@ -16,12 +16,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package fs provides functions to operate general files and file systems.
+// Package inout provides interfaces for I/O.
 //
-// The functions in this package are for abstract files and file systems
-// defined in package io/fs.
-// To get functions for local files and file systems, see its subpackage local.
-//
-// For better performance, all functions in this package and its subpackages
-// are unsafe for concurrency unless otherwise specified.
-package fs
+// For better performance, all functions in this package are unsafe
+// for concurrency unless otherwise specified.
+package inout

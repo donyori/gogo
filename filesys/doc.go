@@ -16,32 +16,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package local
-
-import (
-	"os"
-	"path/filepath"
-
-	"github.com/donyori/gogo/errors"
-	"github.com/donyori/gogo/fs"
-)
-
-// Read opens a file with specified name for reading.
+// Package filesys provides functions to operate general files and file systems.
 //
-// The file will be closed when closing the returned reader.
+// The functions in this package are for abstract files and file systems
+// defined in package io/fs.
+// To get functions for local files and file systems, see its subpackage local.
 //
-// If the file is a symlink, it will be evaluated by filepath.EvalSymlinks.
-//
-// The file is opened by os.Open;
-// the associated file descriptor has mode syscall.O_RDONLY.
-func Read(name string, opts *fs.ReadOptions) (r fs.Reader, err error) {
-	name, err = filepath.EvalSymlinks(name)
-	if err != nil {
-		return nil, errors.AutoWrap(err)
-	}
-	f, err := os.Open(name)
-	if err != nil {
-		return nil, errors.AutoWrap(err)
-	}
-	return fs.Read(f, opts, true)
-}
+// For better performance, all functions in this package and its subpackages
+// are unsafe for concurrency unless otherwise specified.
+package filesys

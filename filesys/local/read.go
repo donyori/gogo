@@ -20,25 +20,28 @@ package local
 
 import (
 	"os"
+	"path/filepath"
 
-	"github.com/donyori/gogo/fs"
+	"github.com/donyori/gogo/errors"
+	"github.com/donyori/gogo/filesys"
 )
 
-// VerifyChecksum verifies a local file by checksum.
+// Read opens a file with specified name for reading.
 //
-// It returns true if and only if the file can be read
-// and matches all checksums.
+// The file will be closed when closing the returned reader.
 //
-// Note that it returns false if anyone of cs contains a nil HashGen
-// or an empty HexExpSum.
-// And it returns true if len(cs) is 0 and the file can be opened for reading.
-func VerifyChecksum(filename string, cs ...fs.Checksum) bool {
-	f, err := os.Open(filename)
+// If the file is a symlink, it will be evaluated by filepath.EvalSymlinks.
+//
+// The file is opened by os.Open;
+// the associated file descriptor has mode syscall.O_RDONLY.
+func Read(name string, opts *filesys.ReadOptions) (r filesys.Reader, err error) {
+	name, err = filepath.EvalSymlinks(name)
 	if err != nil {
-		return false
+		return nil, errors.AutoWrap(err)
 	}
-	defer func(f *os.File) {
-		_ = f.Close()
-	}(f)
-	return fs.VerifyChecksum(f, cs...)
+	f, err := os.Open(name)
+	if err != nil {
+		return nil, errors.AutoWrap(err)
+	}
+	return filesys.Read(f, opts, true)
 }

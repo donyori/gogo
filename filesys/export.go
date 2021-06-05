@@ -16,8 +16,21 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package io provides interfaces for I/O.
-//
-// For better performance, all functions in this package are unsafe
-// for concurrency unless otherwise specified.
-package io
+package filesys
+
+import "io/fs"
+
+// Export types from package io/fs for convenience.
+type (
+	// FileMode is an alias for io/fs.FileMode.
+	FileMode = fs.FileMode
+
+	// FileInfo is an alias for io/fs.FileInfo.
+	FileInfo = fs.FileInfo
+
+	// File is an alias for io/fs.File.
+	File = fs.File
+
+	// FS is an alias for io/fs.FS.
+	FS = fs.FS
+)

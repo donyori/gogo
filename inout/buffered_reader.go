@@ -16,11 +16,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package io
+package inout
 
 import (
 	"bufio"
-	stdio "io"
+	"io"
 
 	"github.com/donyori/gogo/errors"
 )
@@ -30,10 +30,10 @@ import (
 // To get a BufferedReader, use function NewBufferedReader
 // or NewBufferedReaderSize.
 type BufferedReader interface {
-	stdio.Reader
-	stdio.ByteScanner
-	stdio.RuneScanner
-	stdio.WriterTo
+	io.Reader
+	io.ByteScanner
+	io.RuneScanner
+	io.WriterTo
 	LineReader
 	LineWriterTo
 
@@ -91,7 +91,7 @@ type resettableBufferedReader struct {
 
 // NewBufferedReader creates a ResettableBufferedReader on r,
 // whose buffer has at least the default size (4096 bytes).
-func NewBufferedReader(r stdio.Reader) ResettableBufferedReader {
+func NewBufferedReader(r io.Reader) ResettableBufferedReader {
 	return NewBufferedReaderSize(r, defaultBufferSize)
 }
 
@@ -102,7 +102,7 @@ func NewBufferedReader(r stdio.Reader) ResettableBufferedReader {
 //
 // If r is a ResettableBufferedReader with a large enough buffer,
 // it returns r directly.
-func NewBufferedReaderSize(r stdio.Reader, size int) ResettableBufferedReader {
+func NewBufferedReaderSize(r io.Reader, size int) ResettableBufferedReader {
 	if size < minReadBufferSize {
 		size = minReadBufferSize
 	}
@@ -182,7 +182,7 @@ func (rbr *resettableBufferedReader) UnreadRune() error {
 //
 // If the underlying reader supports the WriteTo method,
 // this calls the underlying WriteTo without buffering.
-func (rbr *resettableBufferedReader) WriteTo(w stdio.Writer) (n int64, err error) {
+func (rbr *resettableBufferedReader) WriteTo(w io.Writer) (n int64, err error) {
 	n, err = rbr.br.WriteTo(w)
 	return n, errors.AutoWrap(err)
 }
@@ -209,7 +209,7 @@ func (rbr *resettableBufferedReader) ReadLine() (line []byte, more bool, err err
 // It stops writing data if an error occurs.
 //
 // It returns the number of bytes written to w and any error encountered.
-func (rbr *resettableBufferedReader) WriteLineTo(w stdio.Writer) (n int64, err error) {
+func (rbr *resettableBufferedReader) WriteLineTo(w io.Writer) (n int64, err error) {
 	var line []byte
 	var written int
 	errList := errors.NewErrorList(true)
@@ -271,6 +271,6 @@ func (rbr *resettableBufferedReader) Discard(n int) (discarded int, err error) {
 }
 
 // Reset resets all states and switches to read from r.
-func (rbr *resettableBufferedReader) Reset(r stdio.Reader) {
+func (rbr *resettableBufferedReader) Reset(r io.Reader) {
 	rbr.br.Reset(r)
 }

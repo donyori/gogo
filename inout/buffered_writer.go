@@ -16,11 +16,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package io
+package inout
 
 import (
 	"bufio"
-	stdio "io"
+	"io"
 
 	"github.com/donyori/gogo/errors"
 )
@@ -34,10 +34,10 @@ import (
 // To get a BufferedWriter, use function NewBufferedWriter
 // or NewBufferedWriterSize.
 type BufferedWriter interface {
-	stdio.Writer
-	stdio.ByteWriter
-	stdio.StringWriter
-	stdio.ReaderFrom
+	io.Writer
+	io.ByteWriter
+	io.StringWriter
+	io.ReaderFrom
 	Flusher
 
 	// Size returns the size of the underlying buffer in bytes.
@@ -74,7 +74,7 @@ type resettableBufferedWriter struct {
 
 // NewBufferedWriter creates a ResettableBufferedWriter on w,
 // whose buffer has at least the default size (4096 bytes).
-func NewBufferedWriter(w stdio.Writer) ResettableBufferedWriter {
+func NewBufferedWriter(w io.Writer) ResettableBufferedWriter {
 	return NewBufferedWriterSize(w, defaultBufferSize)
 }
 
@@ -85,7 +85,7 @@ func NewBufferedWriter(w stdio.Writer) ResettableBufferedWriter {
 //
 // If w is a ResettableBufferedWriter with a large enough buffer,
 // it returns w directly.
-func NewBufferedWriterSize(w stdio.Writer, size int) ResettableBufferedWriter {
+func NewBufferedWriterSize(w io.Writer, size int) ResettableBufferedWriter {
 	if size <= 0 {
 		size = defaultBufferSize
 	}
@@ -137,7 +137,7 @@ func (rbw *resettableBufferedWriter) WriteString(s string) (n int, err error) {
 // If the underlying writer supports the ReadFrom method,
 // and this buffered writer has no buffered data yet,
 // it calls the underlying ReadFrom without buffering.
-func (rbw *resettableBufferedWriter) ReadFrom(r stdio.Reader) (n int64, err error) {
+func (rbw *resettableBufferedWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	n, err = rbw.bw.ReadFrom(r)
 	return n, errors.AutoWrap(err)
 }
@@ -175,6 +175,6 @@ func (rbw *resettableBufferedWriter) WriteRune(r rune) (size int, err error) {
 
 // Reset discards any unflushed data, resets all states,
 // and switches to write to w.
-func (rbw *resettableBufferedWriter) Reset(w stdio.Writer) {
+func (rbw *resettableBufferedWriter) Reset(w io.Writer) {
 	rbw.bw.Reset(w)
 }

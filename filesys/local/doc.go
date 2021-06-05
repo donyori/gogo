@@ -16,7 +16,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package local provides functions to operate local files.
+// Package local provides functions to operate local files
+// and local file systems.
 //
 // For better performance, all functions in this package are unsafe
 // for concurrency unless otherwise specified.

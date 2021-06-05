@@ -29,7 +29,7 @@ import (
 	"testing/iotest"
 	"time"
 
-	"github.com/donyori/gogo/fs"
+	"github.com/donyori/gogo/filesys"
 )
 
 func TestRead_Basic(t *testing.T) {
@@ -52,7 +52,7 @@ func TestRead_Basic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func(r fs.Reader) {
+	defer func(r filesys.Reader) {
 		if err := r.Close(); err != nil {
 			t.Error(err)
 		}
@@ -113,7 +113,7 @@ func TestRead_Gz(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func(r fs.Reader) {
+	defer func(r filesys.Reader) {
 		if err := r.Close(); err != nil {
 			t.Error(err)
 		}
@@ -192,7 +192,7 @@ func TestRead_Tar(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func(r fs.Reader) {
+	defer func(r filesys.Reader) {
 		if err := r.Close(); err != nil {
 			t.Error(err)
 		}
@@ -314,12 +314,12 @@ func testReadTarGz(t *testing.T, useTgz bool) {
 	}
 	f = nil
 
-	r, err := Read(filename, &fs.ReadOptions{BufOpen: true})
+	r, err := Read(filename, &filesys.ReadOptions{BufOpen: true})
 	if err != nil {
 		t.Error("useTgz:", useTgz, err)
 		return
 	}
-	defer func(r fs.Reader) {
+	defer func(r filesys.Reader) {
 		if err := r.Close(); err != nil {
 			t.Error("useTgz:", useTgz, err)
 		}

@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/donyori/gogo/errors"
-	myio "github.com/donyori/gogo/io"
+	"github.com/donyori/gogo/inout"
 )
 
 // DumpConfig is a configuration for hexadecimal dumping.
@@ -90,7 +90,7 @@ type Dumper interface {
 	io.ByteWriter
 	io.ReaderFrom
 	io.Closer
-	myio.Flusher
+	inout.Flusher
 
 	// DumpDst returns the destination writer of this dumper.
 	// It returns nil if the dumper is closed successfully.
@@ -231,7 +231,7 @@ func (d *dumper) ReadFrom(r io.Reader) (n int64, err error) {
 // Calling the method Close on a closed dumper will perform nothing
 // and report no error.
 func (d *dumper) Close() error {
-	if errors.Is(d.err, myio.ErrWriterClosed) {
+	if errors.Is(d.err, inout.ErrWriterClosed) {
 		return nil
 	}
 	if d.err != nil {
@@ -279,7 +279,7 @@ func (d *dumper) Close() error {
 	}
 	d.w = nil
 	d.line = nil
-	d.err = errors.AutoWrap(myio.ErrWriterClosed)
+	d.err = errors.AutoWrap(inout.ErrWriterClosed)
 	d.buf = nil
 	d.idx = 0
 	d.written = 0

@@ -23,7 +23,7 @@ import (
 	"io"
 
 	"github.com/donyori/gogo/errors"
-	myio "github.com/donyori/gogo/io"
+	"github.com/donyori/gogo/inout"
 )
 
 // FormatConfig is a configuration for hexadecimal formatting.
@@ -126,7 +126,7 @@ type Formatter interface {
 	io.ByteWriter
 	io.ReaderFrom
 	io.Closer
-	myio.Flusher
+	inout.Flusher
 
 	// FormatDst returns the destination writer of this formatter.
 	// It returns nil if the formatter is closed successfully.
@@ -267,7 +267,7 @@ func (f *formatter) ReadFrom(r io.Reader) (n int64, err error) {
 // Calling the method Close on a closed formatter will perform nothing
 // and report no error.
 func (f *formatter) Close() error {
-	if errors.Is(f.err, myio.ErrWriterClosed) {
+	if errors.Is(f.err, inout.ErrWriterClosed) {
 		return nil
 	}
 	if f.err != nil {
@@ -279,7 +279,7 @@ func (f *formatter) Close() error {
 		return f.err
 	}
 	f.w = nil
-	f.err = errors.AutoWrap(myio.ErrWriterClosed)
+	f.err = errors.AutoWrap(inout.ErrWriterClosed)
 	f.sepCd = 0
 	return nil
 }

@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package fs
+package filesys
 
 import (
 	"archive/tar"
@@ -29,7 +29,7 @@ import (
 	"strings"
 
 	"github.com/donyori/gogo/errors"
-	myio "github.com/donyori/gogo/io"
+	"github.com/donyori/gogo/inout"
 )
 
 // ErrNotTar is an error indicating that the file is not archived by tar,
@@ -69,8 +69,8 @@ type ReadOptions struct {
 // After successfully closing this reader,
 // its method Close will do nothing and return nil.
 type Reader interface {
-	myio.Closer
-	myio.BufferedReader
+	inout.Closer
+	inout.BufferedReader
 
 	// TarEnabled returns true if the file is archived by tar
 	// (i.e., tape archive) and is not opened in raw mode.
@@ -101,10 +101,10 @@ type Reader interface {
 // Use it with function Read.
 type reader struct {
 	err  error
-	br   myio.ResettableBufferedReader
+	br   inout.ResettableBufferedReader
 	ubr  io.Reader // unbuffered reader
 	opts ReadOptions
-	c    myio.Closer
+	c    inout.Closer
 	f    File
 	tr   *tar.Reader
 }
@@ -221,11 +221,11 @@ func Read(file File, opts *ReadOptions, closeFile bool) (r Reader, err error) {
 	}
 	switch len(closers) {
 	case 1:
-		fr.c = myio.WrapNoErrorCloser(closers[0])
+		fr.c = inout.WrapNoErrorCloser(closers[0])
 	case 0:
-		fr.c = myio.NewNoOpCloser()
+		fr.c = inout.NewNoOpCloser()
 	default:
-		fr.c = myio.NewMultiCloser(true, true, closers...)
+		fr.c = inout.NewMultiCloser(true, true, closers...)
 	}
 	if opts.BufOpen {
 		fr.createBr()
@@ -257,7 +257,7 @@ func (fr *reader) Close() error {
 	err := errors.AutoWrap(fr.c.Close())
 	if fr.err == nil {
 		if fr.c.Closed() {
-			fr.err = errors.AutoWrap(myio.ErrReaderClosed)
+			fr.err = errors.AutoWrap(inout.ErrReaderClosed)
 		} else {
 			fr.err = err
 		}
@@ -514,7 +514,7 @@ func (fr *reader) TarNext() (header *tar.Header, err error) {
 	if !fr.TarEnabled() {
 		return nil, errors.AutoWrap(ErrNotTar)
 	}
-	if errors.Is(fr.err, myio.ErrReaderClosed) {
+	if errors.Is(fr.err, inout.ErrReaderClosed) {
 		return nil, fr.err
 	}
 	header, err = fr.tr.Next()
@@ -547,8 +547,8 @@ func (fr *reader) FileInfo() (info FileInfo, err error) {
 // Caller should guarantee that fr.br == nil.
 func (fr *reader) createBr() {
 	if fr.opts.BufSize <= 0 {
-		fr.br = myio.NewBufferedReader(fr.ubr)
+		fr.br = inout.NewBufferedReader(fr.ubr)
 	} else {
-		fr.br = myio.NewBufferedReaderSize(fr.ubr, fr.opts.BufSize)
+		fr.br = inout.NewBufferedReaderSize(fr.ubr, fr.opts.BufSize)
 	}
 }

@@ -27,7 +27,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/donyori/gogo/fs"
+	"github.com/donyori/gogo/filesys"
 )
 
 func TestVerifyChecksum(t *testing.T) {
@@ -96,7 +96,7 @@ func TestVerifyChecksum(t *testing.T) {
 	}
 	fw2 = nil
 
-	ck := fs.Checksum{
+	ck := filesys.Checksum{
 		HashGen:   sha256.New,
 		HexExpSum: hex.EncodeToString(h.Sum(nil)),
 	}
@@ -110,13 +110,13 @@ func TestVerifyChecksum(t *testing.T) {
 	if VerifyChecksum(filename2, ck) {
 		t.Error("True for damaged file.")
 	}
-	if VerifyChecksum(filename, fs.Checksum{}) {
+	if VerifyChecksum(filename, filesys.Checksum{}) {
 		t.Error("True for empty checksum.")
 	}
-	if VerifyChecksum(filename, fs.Checksum{HashGen: sha256.New}) {
+	if VerifyChecksum(filename, filesys.Checksum{HashGen: sha256.New}) {
 		t.Error("True for empty checksum HexExpSum.")
 	}
-	if VerifyChecksum(filename, fs.Checksum{HexExpSum: ck.HexExpSum}) {
+	if VerifyChecksum(filename, filesys.Checksum{HexExpSum: ck.HexExpSum}) {
 		t.Error("True for nil checksum HashGen.")
 	}
 }

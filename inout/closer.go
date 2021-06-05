@@ -16,10 +16,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package io
+package inout
 
 import (
-	stdio "io"
+	"io"
 
 	"github.com/donyori/gogo/errors"
 )
@@ -28,7 +28,7 @@ import (
 //
 // Method Closed reports whether this closer is closed.
 type Closer interface {
-	stdio.Closer
+	io.Closer
 
 	// Closed reports whether this closer is closed successfully.
 	Closed() bool
@@ -62,7 +62,7 @@ func (noc *noOpCloser) Closed() bool {
 // After the first successful call to method Close,
 // method Close will do nothing and return nil.
 type noErrorCloser struct {
-	c      stdio.Closer
+	c      io.Closer
 	closed bool // closed is true if the closer is successfully closed.
 }
 
@@ -71,7 +71,7 @@ type noErrorCloser struct {
 // after the first successful call.
 //
 // It panics if closer is nil.
-func WrapNoErrorCloser(closer stdio.Closer) Closer {
+func WrapNoErrorCloser(closer io.Closer) Closer {
 	if closer == nil {
 		panic(errors.AutoMsg("closer is nil"))
 	}
@@ -102,7 +102,7 @@ func (nec *noErrorCloser) Closed() bool {
 // After the first successful call to method Close,
 // method Close will do nothing and return a *ClosedError.
 type errorCloser struct {
-	c      stdio.Closer
+	c      io.Closer
 	closed bool   // closed is true if the closer is successfully closed.
 	dn     string // Device name.
 	pe     error  // Parent error of the ClosedError.
@@ -119,7 +119,7 @@ type errorCloser struct {
 //
 // parentErr is the parent error of the ClosedError returned by method Close.
 // If parentErr is nil, it will use ErrClosed instead.
-func WrapErrorCloser(closer stdio.Closer, deviceName string, parentErr error) Closer {
+func WrapErrorCloser(closer io.Closer, deviceName string, parentErr error) Closer {
 	if closer == nil {
 		panic(errors.AutoMsg("closer is nil"))
 	}
@@ -184,7 +184,7 @@ type MultiCloser interface {
 	// closed reports whether the specified closer
 	// has been successfully closed by this MultiCloser.
 	// ok reports whether the specified closer is in this MultiCloser.
-	CloserClosed(closer stdio.Closer) (closed, ok bool)
+	CloserClosed(closer io.Closer) (closed, ok bool)
 }
 
 // Masks for the field flag of struct multiCloser.
@@ -195,8 +195,8 @@ const (
 
 // multiCloser is an implementation of interface MultiCloser.
 type multiCloser struct {
-	cm   map[stdio.Closer]bool // Closed map, to record whether the closer is closed successfully.
-	cs   []stdio.Closer
+	cm   map[io.Closer]bool // Closed map, to record whether the closer is closed successfully.
+	cs   []io.Closer
 	idx  int   // Index of the last successfully closed closer. (It equals to len(cs) initially.)
 	flag uint8 // The first bit (0x01) is the option tryAll, and the second bit (0x02) is the option noError.
 }
@@ -221,10 +221,10 @@ type multiCloser struct {
 // All nil closers will be ignored.
 // If there is no non-nil closer,
 // the MultiCloser will perform as an already closed closer.
-func NewMultiCloser(tryAll, noError bool, closers ...stdio.Closer) MultiCloser {
+func NewMultiCloser(tryAll, noError bool, closers ...io.Closer) MultiCloser {
 	mc := &multiCloser{
-		cm: make(map[stdio.Closer]bool),
-		cs: make([]stdio.Closer, 0, len(closers)),
+		cm: make(map[io.Closer]bool),
+		cs: make([]io.Closer, 0, len(closers)),
 	}
 	for _, c := range closers {
 		if c != nil {
@@ -304,7 +304,7 @@ func (mc *multiCloser) Closed() bool {
 // closed reports whether the specified closer
 // has been successfully closed by this MultiCloser.
 // ok reports whether the specified closer is in this MultiCloser.
-func (mc *multiCloser) CloserClosed(closer stdio.Closer) (closed, ok bool) {
+func (mc *multiCloser) CloserClosed(closer io.Closer) (closed, ok bool) {
 	closed, ok = mc.cm[closer]
 	return
 }

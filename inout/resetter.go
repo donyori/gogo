@@ -16,9 +16,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package io
+package inout
 
-import stdio "io"
+import "io"
 
 // Resetter is an interface that wraps method Reset,
 // which resets all states of its instance.
@@ -32,7 +32,7 @@ type Resetter interface {
 // switches to read from the reader r.
 type ReaderResetter interface {
 	// Reset resets all states and switches to read from r.
-	Reset(r stdio.Reader)
+	Reset(r io.Reader)
 }
 
 // WriterResetter is an interface that wraps method Reset,
@@ -41,5 +41,5 @@ type ReaderResetter interface {
 type WriterResetter interface {
 	// Reset discards any unflushed data, resets all states,
 	// and switches to write to w.
-	Reset(w stdio.Writer)
+	Reset(w io.Writer)
 }
