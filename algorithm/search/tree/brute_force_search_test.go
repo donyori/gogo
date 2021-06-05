@@ -21,9 +21,9 @@ package tree
 import "testing"
 
 type testTree struct {
-	Data         [][2]int
-	Target       interface{}
-	VisitHistory []interface{}
+	Data          [][2]int
+	Target        interface{}
+	AccessHistory []interface{}
 }
 
 func (tt *testTree) Root() interface{} {
@@ -49,14 +49,14 @@ func (tt *testTree) NextSibling(node interface{}) interface{} {
 	return idx
 }
 
-// SetTarget sets the search target as well as resets the visit history.
+// SetTarget sets the search target as well as resets the access history.
 func (tt *testTree) SetTarget(target interface{}) {
 	tt.Target = target
-	tt.VisitHistory = tt.VisitHistory[:0] // Reuse the underlying array.
+	tt.AccessHistory = tt.AccessHistory[:0] // Reuse the underlying array.
 }
 
-func (tt *testTree) Visit(node interface{}) (found bool) {
-	tt.VisitHistory = append(tt.VisitHistory, node)
+func (tt *testTree) Access(node interface{}) (found bool) {
+	tt.AccessHistory = append(tt.AccessHistory, node)
 	if tt.Target == nil {
 		return false
 	}
@@ -106,24 +106,24 @@ func testBruteForceSearch(t *testing.T, name string, f func(itf Interface, targe
 		if r != node {
 			t.Errorf("%s returns %v != %v.", name, r, node)
 		}
-		testVisitHistoryCheck(t, tt, order[:1+i])
+		testAccessHistoryCheck(t, tt, order[:1+i])
 	}
 	// Traverse all nodes:
 	r := f(tt, nil)
 	if r != nil {
 		t.Errorf("%s returns %v != nil.", name, r)
 	}
-	testVisitHistoryCheck(t, tt, order)
+	testAccessHistoryCheck(t, tt, order)
 }
 
-func testVisitHistoryCheck(t *testing.T, tt *testTree, wanted []int) {
-	if len(tt.VisitHistory) != len(wanted) {
-		t.Errorf("Visit history: %v\nwanted: %v", tt.VisitHistory, wanted)
+func testAccessHistoryCheck(t *testing.T, tt *testTree, wanted []int) {
+	if len(tt.AccessHistory) != len(wanted) {
+		t.Errorf("Access history: %v\nwanted: %v", tt.AccessHistory, wanted)
 		return
 	}
-	for i := range tt.VisitHistory {
-		if tt.VisitHistory[i] != wanted[i] {
-			t.Errorf("Visit history: %v\nwanted: %v", tt.VisitHistory, wanted)
+	for i := range tt.AccessHistory {
+		if tt.AccessHistory[i] != wanted[i] {
+			t.Errorf("Access history: %v\nwanted: %v", tt.AccessHistory, wanted)
 			return
 		}
 	}

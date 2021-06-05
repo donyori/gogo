@@ -40,11 +40,11 @@ type Interface interface {
 	// It will be called once at the beginning of the search function.
 	SetTarget(target interface{})
 
-	// Visit handles the specified node.
+	// Access examines the specified node.
 	//
 	// It returns an indicator found to reports whether the specified node
 	// is the search target.
-	Visit(node interface{}) (found bool)
+	Access(node interface{}) (found bool)
 }
 
 // Dfs finds target in itf using depth-first search algorithm,
@@ -64,10 +64,14 @@ func Dfs(itf Interface, target interface{}) interface{} {
 	stack, idx := []interface{}{node}, 0
 	for idx >= 0 {
 		node = stack[idx]
-		if itf.Visit(node) {
+		if itf.Access(node) {
 			return node
 		}
 		ns, fc := itf.NextSibling(node), itf.FirstChild(node)
+		// Following code is a simplification of the procedure:
+		//  1. Pop the current node from the stack;
+		//  2. Push the next sibling of the current node to the stack if exists;
+		//  3. Push the first child of the current node to the stack if exists.
 		if ns != nil {
 			stack[idx] = ns
 			if fc != nil {
@@ -102,7 +106,7 @@ func Bfs(itf Interface, target interface{}) interface{} {
 	for len(queue) > 0 {
 		node, queue = queue[0], queue[1:]
 		for node != nil {
-			if itf.Visit(node) {
+			if itf.Access(node) {
 				return node
 			}
 			if n := itf.FirstChild(node); n != nil {
