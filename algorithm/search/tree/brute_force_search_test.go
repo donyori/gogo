@@ -91,12 +91,37 @@ var testTreeData = [][2]int{
 	{-1, -1}, // node 11
 }
 
+// testTreeDataNodePath is a list of paths from the root
+// to each node of testTreeData.
+var testTreeDataNodePath = [][]int{
+	{0},
+	{0, 1},
+	{0, 2},
+	{0, 3},
+	{0, 1, 4},
+	{0, 1, 5},
+	{0, 3, 6},
+	{0, 3, 7},
+	{0, 1, 4, 8},
+	{0, 1, 4, 9},
+	{0, 3, 6, 10},
+	{0, 3, 6, 11},
+}
+
 func TestDfs(t *testing.T) {
 	testBruteForceSearch(t, "Dfs", Dfs, []int{0, 1, 4, 8, 9, 5, 2, 3, 6, 10, 11, 7})
 }
 
 func TestBfs(t *testing.T) {
 	testBruteForceSearch(t, "Bfs", Bfs, []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11})
+}
+
+func TestDfsPath(t *testing.T) {
+	testBruteForceSearchPath(t, "DfsPath", DfsPath, []int{0, 1, 4, 8, 9, 5, 2, 3, 6, 10, 11, 7})
+}
+
+func TestBfsPath(t *testing.T) {
+	testBruteForceSearchPath(t, "BfsPath", BfsPath, []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11})
 }
 
 func testBruteForceSearch(t *testing.T, name string, f func(itf Interface, target interface{}) interface{}, order []int) {
@@ -106,24 +131,59 @@ func testBruteForceSearch(t *testing.T, name string, f func(itf Interface, targe
 		if r != node {
 			t.Errorf("%s returns %v != %v.", name, r, node)
 		}
-		testAccessHistoryCheck(t, tt, order[:1+i])
+		testCheckAccessHistory(t, name, tt, order[:1+i])
 	}
-	// Traverse all nodes:
-	r := f(tt, nil)
-	if r != nil {
-		t.Errorf("%s returns %v != nil.", name, r)
+	// Non-existent nodes:
+	for _, target := range []interface{}{nil, -1, 1.2} {
+		r := f(tt, target)
+		if r != nil {
+			t.Errorf("%s returns %v != nil.", name, r)
+		}
+		testCheckAccessHistory(t, name, tt, order)
 	}
-	testAccessHistoryCheck(t, tt, order)
 }
 
-func testAccessHistoryCheck(t *testing.T, tt *testTree, wanted []int) {
+func testBruteForceSearchPath(t *testing.T, name string, f func(itf Interface, target interface{}) []interface{}, order []int) {
+	tt := &testTree{Data: testTreeData}
+	for i, node := range order {
+		list := f(tt, node)
+		testCheckNodePath(t, name, node, list)
+		testCheckAccessHistory(t, name, tt, order[:1+i])
+	}
+	// Non-existent nodes:
+	for _, target := range []interface{}{nil, -1, 1.2} {
+		list := f(tt, target)
+		testCheckNodePath(t, name, target, list)
+		testCheckAccessHistory(t, name, tt, order)
+	}
+}
+
+func testCheckAccessHistory(t *testing.T, name string, tt *testTree, wanted []int) {
 	if len(tt.AccessHistory) != len(wanted) {
-		t.Errorf("Access history: %v\nwanted: %v", tt.AccessHistory, wanted)
+		t.Errorf("%s - Access history: %v\nwanted: %v", name, tt.AccessHistory, wanted)
 		return
 	}
-	for i := range tt.AccessHistory {
+	for i := range wanted {
 		if tt.AccessHistory[i] != wanted[i] {
-			t.Errorf("Access history: %v\nwanted: %v", tt.AccessHistory, wanted)
+			t.Errorf("%s - Access history: %v\nwanted: %v", name, tt.AccessHistory, wanted)
+			return
+		}
+	}
+}
+
+func testCheckNodePath(t *testing.T, name string, node interface{}, nodePathList []interface{}) {
+	var p []int
+	idx, ok := node.(int)
+	if ok && idx >= 0 && idx < len(testTreeDataNodePath) {
+		p = testTreeDataNodePath[idx]
+	}
+	if len(p) != len(nodePathList) {
+		t.Errorf("%s - NodePath of %v: %v\nwanted: %v", name, node, nodePathList, p)
+		return
+	}
+	for i := range p {
+		if nodePathList[i] != p[i] {
+			t.Errorf("%s - NodePath of %v: %v\nwanted: %v", name, node, nodePathList, p)
 			return
 		}
 	}

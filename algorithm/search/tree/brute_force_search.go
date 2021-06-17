@@ -18,6 +18,8 @@
 
 package tree
 
+import "github.com/donyori/gogo/algorithm/search/internal"
+
 // Interface represents a tree used in the tree search algorithm.
 type Interface interface {
 	// Root returns the root of the tree.
@@ -37,7 +39,7 @@ type Interface interface {
 
 	// SetTarget sets the search target.
 	//
-	// It will be called once at the beginning of the search function.
+	// It will be called once at the beginning of the search functions.
 	SetTarget(target interface{})
 
 	// Access examines the specified node.
@@ -77,12 +79,10 @@ func Dfs(itf Interface, target interface{}) interface{} {
 			if fc != nil {
 				stack, idx = append(stack, fc), idx+1
 			}
+		} else if fc != nil {
+			stack[idx] = fc
 		} else {
-			if fc != nil {
-				stack[idx] = fc
-			} else {
-				stack, idx = stack[:idx], idx-1
-			}
+			stack, idx = stack[:idx], idx-1
 		}
 	}
 	return nil
@@ -109,10 +109,83 @@ func Bfs(itf Interface, target interface{}) interface{} {
 			if itf.Access(node) {
 				return node
 			}
-			if n := itf.FirstChild(node); n != nil {
-				queue = append(queue, n)
+			if fc := itf.FirstChild(node); fc != nil {
+				queue = append(queue, fc)
 			}
 			node = itf.NextSibling(node)
+		}
+	}
+	return nil
+}
+
+// DfsPath finds target in itf using depth-first search algorithm,
+// and returns the path from the root of itf to the target node found.
+//
+// It returns nil if target is not found.
+//
+// target is only used to call the method SetTarget of itf.
+// It's OK to handle target in your implementation of Interface,
+// and set target to an arbitrary value, such as nil.
+func DfsPath(itf Interface, target interface{}) []interface{} {
+	itf.SetTarget(target)
+	node := itf.Root()
+	if node == nil {
+		return nil
+	}
+	// It is similar to function Dfs, but the item of the stack is NodePath instead of the node.
+	np := &internal.NodePath{N: node}
+	stack, idx := []*internal.NodePath{np}, 0
+	for idx >= 0 {
+		np = stack[idx]
+		if itf.Access(np.N) {
+			return np.ToList()
+		}
+		ns, fc := itf.NextSibling(np.N), itf.FirstChild(np.N)
+		if ns != nil {
+			stack[idx] = &internal.NodePath{N: ns, P: np.P} // Do not replace np.N with ns! Create a new NodePath.
+			if fc != nil {
+				stack, idx = append(stack, &internal.NodePath{N: fc, P: np}), idx+1
+			}
+		} else if fc != nil {
+			stack[idx] = &internal.NodePath{N: fc, P: np} // Do not replace np.N and np.P with fc and np! Create a new NodePath.
+		} else {
+			stack, idx = stack[:idx], idx-1
+		}
+	}
+	return nil
+}
+
+// BfsPath finds target in itf using breadth-first search algorithm,
+// and returns the path from the root of itf to the target node found.
+//
+// It returns nil if target is not found.
+//
+// target is only used to call the method SetTarget of itf.
+// It's OK to handle target in your implementation of Interface,
+// and set target to an arbitrary value, such as nil.
+func BfsPath(itf Interface, target interface{}) []interface{} {
+	itf.SetTarget(target)
+	node := itf.Root()
+	if node == nil {
+		return nil
+	}
+	// It is similar to function Bfs, but the item of the queue is NodePath instead of the node.
+	np := &internal.NodePath{N: node}
+	queue := []*internal.NodePath{np}
+	for len(queue) > 0 {
+		np, queue = queue[0], queue[1:]
+		for {
+			if itf.Access(np.N) {
+				return np.ToList()
+			}
+			if fc := itf.FirstChild(np.N); fc != nil {
+				queue = append(queue, &internal.NodePath{N: fc, P: np})
+			}
+			node = itf.NextSibling(np.N)
+			if node == nil {
+				break
+			}
+			np = &internal.NodePath{N: node, P: np.P} // Do not replace np.N with node! Create a new NodePath.
 		}
 	}
 	return nil
