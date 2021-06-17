@@ -99,7 +99,7 @@ func (npbsi *nextPermutationBinarySearchInterface) Len() int {
 
 // SetTarget sets the search target.
 //
-// It will be called once at the beginning of the search function.
+// It will be called once at the beginning of the search functions.
 //
 // In this implementation, target is the index of the search target
 // in the permutation.

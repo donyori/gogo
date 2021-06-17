@@ -37,7 +37,7 @@ type BinarySearchInterface interface {
 
 	// SetTarget sets the search target.
 	//
-	// It will be called once at the beginning of the search function.
+	// It will be called once at the beginning of the search functions.
 	SetTarget(target interface{})
 
 	// Cmp compares the item with index i and the search target.
@@ -230,7 +230,7 @@ func (bsad *BinarySearchArrayAdapter) Len() int {
 
 // SetTarget sets the search target.
 //
-// It will be called once at the beginning of the search function.
+// It will be called once at the beginning of the search functions.
 func (bsad *BinarySearchArrayAdapter) SetTarget(target interface{}) {
 	bsad.target = target
 }
