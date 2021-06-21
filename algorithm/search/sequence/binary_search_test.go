@@ -42,8 +42,8 @@ func TestBinarySearchMaxLess(t *testing.T) {
 		LessFn:  compare.IntLess,
 	}
 	cases := []struct {
-		Target int
-		Index  int
+		Goal  int
+		Index int
 	}{
 		{0, -1},
 		{1, -1},
@@ -53,9 +53,9 @@ func TestBinarySearchMaxLess(t *testing.T) {
 		{5, 8},
 	}
 	for _, c := range cases {
-		idx := BinarySearchMaxLess(itf, c.Target)
+		idx := BinarySearchMaxLess(itf, c.Goal)
 		if idx != c.Index {
-			t.Errorf("BinarySearchMaxLess(%v, %d): %d != %d.", data, c.Target, idx, c.Index)
+			t.Errorf("BinarySearchMaxLess(%v, %d): %d != %d.", data, c.Goal, idx, c.Index)
 		}
 	}
 }
@@ -68,8 +68,8 @@ func TestBinarySearchMinGreater(t *testing.T) {
 		LessFn:  compare.IntLess,
 	}
 	cases := []struct {
-		Target int
-		Index  int
+		Goal  int
+		Index int
 	}{
 		{0, 0},
 		{1, 3},
@@ -79,9 +79,9 @@ func TestBinarySearchMinGreater(t *testing.T) {
 		{5, -1},
 	}
 	for _, c := range cases {
-		idx := BinarySearchMinGreater(itf, c.Target)
+		idx := BinarySearchMinGreater(itf, c.Goal)
 		if idx != c.Index {
-			t.Errorf("BinarySearchMinGreater(%v, %d): %d != %d.", data, c.Target, idx, c.Index)
+			t.Errorf("BinarySearchMinGreater(%v, %d): %d != %d.", data, c.Goal, idx, c.Index)
 		}
 	}
 }

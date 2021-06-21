@@ -23,11 +23,11 @@ import (
 	"github.com/donyori/gogo/function/compare"
 )
 
-// EqualButNotTarget is an integer used as a return value of
+// EqualButNotGoal is an integer used as a return value of
 // the method Cmp of interface BinarySearchInterface.
 //
-// It stands for that the item is equal to the search target but not the target.
-const EqualButNotTarget int = 7
+// It stands for that the item is equal to the search goal but not the goal.
+const EqualButNotGoal int = 7
 
 // BinarySearchInterface represents an integer-indexed sequence
 // used in the binary search algorithm.
@@ -35,57 +35,59 @@ type BinarySearchInterface interface {
 	// Len returns the number of items in the sequence.
 	Len() int
 
-	// SetTarget sets the search target.
+	// SetGoal sets the search goal.
 	//
 	// It will be called once at the beginning of the search functions.
-	SetTarget(target interface{})
+	//
+	// Its implementation can do initialization for each search in this method.
+	SetGoal(goal interface{})
 
-	// Cmp compares the item with index i and the search target.
+	// Cmp compares the item with index i and the search goal.
 	//
-	// It returns 0 if the item with index i is the search target.
+	// It returns 0 if the item with index i is the search goal.
 	//
-	// It returns a positive integer except EqualButNotTarget (value: 7)
-	// if the item with index i is greater than the search target.
+	// It returns a positive integer except EqualButNotGoal (value: 7)
+	// if the item with index i is greater than the search goal.
 	//
 	// It returns a negative integer
-	// if the item with index i is less than the search target.
+	// if the item with index i is less than the search goal.
 	//
-	// It returns EqualButNotTarget (value: 7) if the item with index i
-	// is equal to the search target but is not the target.
+	// It returns EqualButNotGoal (value: 7) if the item with index i
+	// is equal to the search goal but is not the goal.
 	//
 	// It panics if i is out of range.
 	Cmp(i int) int
 }
 
-// BinarySearch finds target in itf using binary search algorithm,
+// BinarySearch finds goal in itf using binary search algorithm,
 // and returns its index.
 //
 // itf must be sorted in ascending order!
 // (If itf is in descending order,
 // you can change the behavior of method Cmp of BinarySearchInterface such that
-// it returns a positive integer except EqualButNotTarget
-// if the item is less than the search target, and returns a negative integer
-// if the item is greater than the search target.)
+// it returns a positive integer except EqualButNotGoal
+// if the item is less than the search goal, and returns a negative integer
+// if the item is greater than the search goal.)
 // This function won't check whether itf is sorted.
 // You must sort itf before calling this function,
-// otherwise, target may not be found as expected.
+// otherwise, goal may not be found as expected.
 //
 // If Cmp returns 0 for multiple items, it returns the index of one of them.
 //
-// It returns -1 if target is not found.
+// It returns -1 if goal is not found.
 //
-// target is only used to call the method SetTarget of itf.
-// It's OK to handle target in your implementation of BinarySearchInterface,
-// and set target to an arbitrary value, such as nil.
+// goal is only used to call the method SetGoal of itf.
+// It's OK to handle goal in your implementation of BinarySearchInterface,
+// and set goal to an arbitrary value, such as nil.
 //
 // Time complexity: O(log n + m), where n = itf.Len(),
-// m is the number of items that let the method Cmp return EqualButNotTarget.
-func BinarySearch(itf BinarySearchInterface, target interface{}) int {
-	itf.SetTarget(target)
+// m is the number of items that let the method Cmp return EqualButNotGoal.
+func BinarySearch(itf BinarySearchInterface, goal interface{}) int {
+	itf.SetGoal(goal)
 	// Define: itf.Cmp(-1) < 0,
-	//         itf.Cmp(itf.Len()) > 0 && itf.Cmp(itf.Len()) != EqualButNotTarget
+	//         itf.Cmp(itf.Len()) > 0 && itf.Cmp(itf.Len()) != EqualButNotGoal
 	// Invariant: itf.Cmp(low-1) < 0,
-	//            itf.Cmp(high) > 0 && itf.Cmp(high) != EqualButNotTarget
+	//            itf.Cmp(high) > 0 && itf.Cmp(high) != EqualButNotGoal
 	low, high := 0, itf.Len()
 	for low < high {
 		mid := avg(low, high)
@@ -93,15 +95,15 @@ func BinarySearch(itf BinarySearchInterface, target interface{}) int {
 		if cmp < 0 {
 			low = mid + 1 // Preserve: itf.Cmp(low-1) < 0
 		} else if cmp > 0 {
-			if cmp == EqualButNotTarget {
-				for i := mid - 1; i >= low && cmp == EqualButNotTarget; i-- {
+			if cmp == EqualButNotGoal {
+				for i := mid - 1; i >= low && cmp == EqualButNotGoal; i-- {
 					cmp = itf.Cmp(i)
 					if cmp == 0 {
 						return i
 					}
 				}
-				cmp = EqualButNotTarget // Restore cmp to itf.Cmp(mid).
-				for i := mid + 1; i < high && cmp == EqualButNotTarget; i++ {
+				cmp = EqualButNotGoal // Restore cmp to itf.Cmp(mid).
+				for i := mid + 1; i < high && cmp == EqualButNotGoal; i++ {
 					cmp = itf.Cmp(i)
 					if cmp == 0 {
 						return i
@@ -109,7 +111,7 @@ func BinarySearch(itf BinarySearchInterface, target interface{}) int {
 				}
 				return -1
 			}
-			high = mid // Preserve: itf.Cmp(high) > 0 && itf.Cmp(high) != EqualButNotTarget
+			high = mid // Preserve: itf.Cmp(high) > 0 && itf.Cmp(high) != EqualButNotGoal
 		} else {
 			return mid
 		}
@@ -117,15 +119,15 @@ func BinarySearch(itf BinarySearchInterface, target interface{}) int {
 	return -1
 }
 
-// BinarySearchMaxLess finds the maximum item less than target in itf
+// BinarySearchMaxLess finds the maximum item less than goal in itf
 // using binary search algorithm, and returns its index.
 //
 // itf must be sorted in ascending order!
 // (If itf is in descending order,
 // you can change the behavior of method Cmp of BinarySearchInterface such that
-// it returns a positive integer except EqualButNotTarget
-// if the item is less than the search target, and returns a negative integer
-// if the item is greater than the search target,
+// it returns a positive integer except EqualButNotGoal
+// if the item is less than the search goal, and returns a negative integer
+// if the item is greater than the search goal,
 // and then use function BinarySearchMinGreater instead of this function.)
 // This function won't check whether itf is sorted.
 // You must sort itf before calling this function,
@@ -136,13 +138,13 @@ func BinarySearch(itf BinarySearchInterface, target interface{}) int {
 //
 // It returns -1 if no such item in itf.
 //
-// target is only used to call the method SetTarget of itf.
-// It's OK to handle target in your implementation of BinarySearchInterface,
-// and set target to an arbitrary value, such as nil.
+// goal is only used to call the method SetGoal of itf.
+// It's OK to handle goal in your implementation of BinarySearchInterface,
+// and set goal to an arbitrary value, such as nil.
 //
 // Time complexity: O(log n), where n = itf.Len().
-func BinarySearchMaxLess(itf BinarySearchInterface, target interface{}) int {
-	itf.SetTarget(target)
+func BinarySearchMaxLess(itf BinarySearchInterface, goal interface{}) int {
+	itf.SetGoal(goal)
 	// Define: itf.Cmp(-1) < 0,
 	//         itf.Cmp(itf.Len()) >= 0
 	// Invariant: itf.Cmp(low-1) < 0,
@@ -159,15 +161,15 @@ func BinarySearchMaxLess(itf BinarySearchInterface, target interface{}) int {
 	return low - 1
 }
 
-// BinarySearchMinGreater finds the minimum item greater than target in itf
+// BinarySearchMinGreater finds the minimum item greater than goal in itf
 // using binary search algorithm, and returns its index.
 //
 // itf must be sorted in ascending order!
 // (If itf is in descending order,
 // you can change the behavior of method Cmp of BinarySearchInterface such that
-// it returns a positive integer except EqualButNotTarget
-// if the item is less than the search target, and returns a negative integer
-// if the item is greater than the search target,
+// it returns a positive integer except EqualButNotGoal
+// if the item is less than the search goal, and returns a negative integer
+// if the item is greater than the search goal,
 // and then use function BinarySearchMaxLess instead of this function.)
 // This function won't check whether itf is sorted.
 // You must sort itf before calling this function,
@@ -178,25 +180,25 @@ func BinarySearchMaxLess(itf BinarySearchInterface, target interface{}) int {
 //
 // It returns -1 if no such item in itf.
 //
-// target is only used to call the method SetTarget of itf.
-// It's OK to handle target in your implementation of BinarySearchInterface,
-// and set target to an arbitrary value, such as nil.
+// goal is only used to call the method SetGoal of itf.
+// It's OK to handle goal in your implementation of BinarySearchInterface,
+// and set goal to an arbitrary value, such as nil.
 //
 // Time complexity: O(log n), where n = itf.Len().
-func BinarySearchMinGreater(itf BinarySearchInterface, target interface{}) int {
-	itf.SetTarget(target)
-	// Define: itf.Cmp(-1) <= 0 || itf.Cmp(-1) == EqualButNotTarget,
-	//         itf.Cmp(itf.Len()) > 0 && itf.Cmp(itf.Len()) != EqualButNotTarget
-	// Invariant: itf.Cmp(low-1) <= 0 || itf.Cmp(low-1) == EqualButNotTarget,
-	//            itf.Cmp(high) > 0 && itf.Cmp(high) != EqualButNotTarget
+func BinarySearchMinGreater(itf BinarySearchInterface, goal interface{}) int {
+	itf.SetGoal(goal)
+	// Define: itf.Cmp(-1) <= 0 || itf.Cmp(-1) == EqualButNotGoal,
+	//         itf.Cmp(itf.Len()) > 0 && itf.Cmp(itf.Len()) != EqualButNotGoal
+	// Invariant: itf.Cmp(low-1) <= 0 || itf.Cmp(low-1) == EqualButNotGoal,
+	//            itf.Cmp(high) > 0 && itf.Cmp(high) != EqualButNotGoal
 	low, high := 0, itf.Len()
 	for low < high {
 		mid := avg(low, high)
 		cmp := itf.Cmp(mid)
-		if cmp > 0 && cmp != EqualButNotTarget {
-			high = mid // Preserve: itf.Cmp(high) > 0 && itf.Cmp(high) != EqualButNotTarget
+		if cmp > 0 && cmp != EqualButNotGoal {
+			high = mid // Preserve: itf.Cmp(high) > 0 && itf.Cmp(high) != EqualButNotGoal
 		} else {
-			low = mid + 1 // Preserve: itf.Cmp(low-1) <= 0 || itf.Cmp(low-1) == EqualButNotTarget
+			low = mid + 1 // Preserve: itf.Cmp(low-1) <= 0 || itf.Cmp(low-1) == EqualButNotGoal
 		}
 	}
 	if high < itf.Len() {
@@ -209,15 +211,15 @@ func BinarySearchMinGreater(itf BinarySearchInterface, target interface{}) int {
 // sequence.Array + compare.EqualFunc + compare.LessFunc -> BinarySearchInterface.
 //
 // Note that EqualFn should return true if and only if
-// the item is the search target.
-// If the item is equal to the target but is not the target,
+// the item is the search goal.
+// If the item is equal to the goal but is not the goal,
 // EqualFn should return false.
 type BinarySearchArrayAdapter struct {
 	Data    sequence.Array
 	EqualFn compare.EqualFunc
 	LessFn  compare.LessFunc
 
-	target interface{}
+	goal interface{}
 }
 
 // Len returns the number of items in the sequence.
@@ -228,39 +230,39 @@ func (bsad *BinarySearchArrayAdapter) Len() int {
 	return bsad.Data.Len()
 }
 
-// SetTarget sets the search target.
+// SetGoal sets the search goal.
 //
 // It will be called once at the beginning of the search functions.
-func (bsad *BinarySearchArrayAdapter) SetTarget(target interface{}) {
-	bsad.target = target
+func (bsad *BinarySearchArrayAdapter) SetGoal(goal interface{}) {
+	bsad.goal = goal
 }
 
-// Cmp compares the item with index i and the search target.
+// Cmp compares the item with index i and the search goal.
 //
-// It returns 0 if the item with index i is the search target.
+// It returns 0 if the item with index i is the search goal.
 //
-// It returns a positive integer except EqualButNotTarget (value: 7)
-// if the item with index i is greater than the search target.
+// It returns a positive integer except EqualButNotGoal (value: 7)
+// if the item with index i is greater than the search goal.
 //
 // It returns a negative integer
-// if the item with index i is less than the search target.
+// if the item with index i is less than the search goal.
 //
-// It returns EqualButNotTarget (value: 7) if the item with index i
-// is equal to the search target but is not the target.
+// It returns EqualButNotGoal (value: 7) if the item with index i
+// is equal to the search goal but is not the goal.
 //
 // It panics if i is out of range.
 func (bsad *BinarySearchArrayAdapter) Cmp(i int) int {
 	item := bsad.Data.Get(i)
-	if bsad.LessFn(item, bsad.target) {
+	if bsad.LessFn(item, bsad.goal) {
 		return -1
 	}
-	if bsad.LessFn(bsad.target, item) {
+	if bsad.LessFn(bsad.goal, item) {
 		return 1
 	}
-	if bsad.EqualFn(item, bsad.target) {
+	if bsad.EqualFn(item, bsad.goal) {
 		return 0
 	}
-	return EqualButNotTarget
+	return EqualButNotGoal
 }
 
 // avg returns the average of two non-negative integers a and b.

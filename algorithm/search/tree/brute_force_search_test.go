@@ -22,7 +22,7 @@ import "testing"
 
 type testTree struct {
 	Data          [][2]int
-	Target        interface{}
+	Goal          interface{}
 	AccessHistory []interface{}
 }
 
@@ -49,18 +49,18 @@ func (tt *testTree) NextSibling(node interface{}) interface{} {
 	return idx
 }
 
-// SetTarget sets the search target as well as resets the access history.
-func (tt *testTree) SetTarget(target interface{}) {
-	tt.Target = target
+// SetGoal sets the search goal as well as resets the access history.
+func (tt *testTree) SetGoal(goal interface{}) {
+	tt.Goal = goal
 	tt.AccessHistory = tt.AccessHistory[:0] // Reuse the underlying array.
 }
 
 func (tt *testTree) Access(node interface{}) (found bool) {
 	tt.AccessHistory = append(tt.AccessHistory, node)
-	if tt.Target == nil {
+	if tt.Goal == nil {
 		return false
 	}
-	return node == tt.Target
+	return node == tt.Goal
 }
 
 // testTreeData represents a tree as follows:
@@ -124,7 +124,7 @@ func TestBfsPath(t *testing.T) {
 	testBruteForceSearchPath(t, "BfsPath", BfsPath, []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11})
 }
 
-func testBruteForceSearch(t *testing.T, name string, f func(itf Interface, target interface{}) interface{}, order []int) {
+func testBruteForceSearch(t *testing.T, name string, f func(itf Interface, goal interface{}) interface{}, order []int) {
 	tt := &testTree{Data: testTreeData}
 	for i, node := range order {
 		r := f(tt, node)
@@ -134,8 +134,8 @@ func testBruteForceSearch(t *testing.T, name string, f func(itf Interface, targe
 		testCheckAccessHistory(t, name, tt, order[:1+i])
 	}
 	// Non-existent nodes:
-	for _, target := range []interface{}{nil, -1, 1.2} {
-		r := f(tt, target)
+	for _, goal := range []interface{}{nil, -1, 1.2} {
+		r := f(tt, goal)
 		if r != nil {
 			t.Errorf("%s returns %v != nil.", name, r)
 		}
@@ -143,7 +143,7 @@ func testBruteForceSearch(t *testing.T, name string, f func(itf Interface, targe
 	}
 }
 
-func testBruteForceSearchPath(t *testing.T, name string, f func(itf Interface, target interface{}) []interface{}, order []int) {
+func testBruteForceSearchPath(t *testing.T, name string, f func(itf Interface, goal interface{}) []interface{}, order []int) {
 	tt := &testTree{Data: testTreeData}
 	for i, node := range order {
 		list := f(tt, node)
@@ -151,9 +151,9 @@ func testBruteForceSearchPath(t *testing.T, name string, f func(itf Interface, t
 		testCheckAccessHistory(t, name, tt, order[:1+i])
 	}
 	// Non-existent nodes:
-	for _, target := range []interface{}{nil, -1, 1.2} {
-		list := f(tt, target)
-		testCheckNodePath(t, name, target, list)
+	for _, goal := range []interface{}{nil, -1, 1.2} {
+		list := f(tt, goal)
+		testCheckNodePath(t, name, goal, list)
 		testCheckAccessHistory(t, name, tt, order)
 	}
 }

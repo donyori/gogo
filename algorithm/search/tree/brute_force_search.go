@@ -37,28 +37,30 @@ type Interface interface {
 	// NextSibling returns nil.
 	NextSibling(node interface{}) interface{}
 
-	// SetTarget sets the search target.
+	// SetGoal sets the search goal.
 	//
 	// It will be called once at the beginning of the search functions.
-	SetTarget(target interface{})
+	//
+	// Its implementation can do initialization for each search in this method.
+	SetGoal(goal interface{})
 
 	// Access examines the specified node.
 	//
 	// It returns an indicator found to reports whether the specified node
-	// is the search target.
+	// is the search goal.
 	Access(node interface{}) (found bool)
 }
 
-// Dfs finds target in itf using depth-first search algorithm,
-// and returns the target node found.
+// Dfs finds goal in itf using depth-first search algorithm,
+// and returns the goal node found.
 //
-// It returns nil if target is not found.
+// It returns nil if goal is not found.
 //
-// target is only used to call the method SetTarget of itf.
-// It's OK to handle target in your implementation of Interface,
-// and set target to an arbitrary value, such as nil.
-func Dfs(itf Interface, target interface{}) interface{} {
-	itf.SetTarget(target)
+// goal is only used to call the method SetGoal of itf.
+// It's OK to handle goal in your implementation of Interface,
+// and set goal to an arbitrary value, such as nil.
+func Dfs(itf Interface, goal interface{}) interface{} {
+	itf.SetGoal(goal)
 	node := itf.Root()
 	if node == nil {
 		return nil
@@ -88,16 +90,16 @@ func Dfs(itf Interface, target interface{}) interface{} {
 	return nil
 }
 
-// Bfs finds target in itf using breadth-first search algorithm,
-// and returns the target node found.
+// Bfs finds goal in itf using breadth-first search algorithm,
+// and returns the goal node found.
 //
-// It returns nil if target is not found.
+// It returns nil if goal is not found.
 //
-// target is only used to call the method SetTarget of itf.
-// It's OK to handle target in your implementation of Interface,
-// and set target to an arbitrary value, such as nil.
-func Bfs(itf Interface, target interface{}) interface{} {
-	itf.SetTarget(target)
+// goal is only used to call the method SetGoal of itf.
+// It's OK to handle goal in your implementation of Interface,
+// and set goal to an arbitrary value, such as nil.
+func Bfs(itf Interface, goal interface{}) interface{} {
+	itf.SetGoal(goal)
 	node := itf.Root()
 	if node == nil {
 		return nil
@@ -118,16 +120,16 @@ func Bfs(itf Interface, target interface{}) interface{} {
 	return nil
 }
 
-// DfsPath finds target in itf using depth-first search algorithm,
-// and returns the path from the root of itf to the target node found.
+// DfsPath finds goal in itf using depth-first search algorithm,
+// and returns the path from the root of itf to the goal node found.
 //
-// It returns nil if target is not found.
+// It returns nil if goal is not found.
 //
-// target is only used to call the method SetTarget of itf.
-// It's OK to handle target in your implementation of Interface,
-// and set target to an arbitrary value, such as nil.
-func DfsPath(itf Interface, target interface{}) []interface{} {
-	itf.SetTarget(target)
+// goal is only used to call the method SetGoal of itf.
+// It's OK to handle goal in your implementation of Interface,
+// and set goal to an arbitrary value, such as nil.
+func DfsPath(itf Interface, goal interface{}) []interface{} {
+	itf.SetGoal(goal)
 	node := itf.Root()
 	if node == nil {
 		return nil
@@ -155,16 +157,16 @@ func DfsPath(itf Interface, target interface{}) []interface{} {
 	return nil
 }
 
-// BfsPath finds target in itf using breadth-first search algorithm,
-// and returns the path from the root of itf to the target node found.
+// BfsPath finds goal in itf using breadth-first search algorithm,
+// and returns the path from the root of itf to the goal node found.
 //
-// It returns nil if target is not found.
+// It returns nil if goal is not found.
 //
-// target is only used to call the method SetTarget of itf.
-// It's OK to handle target in your implementation of Interface,
-// and set target to an arbitrary value, such as nil.
-func BfsPath(itf Interface, target interface{}) []interface{} {
-	itf.SetTarget(target)
+// goal is only used to call the method SetGoal of itf.
+// It's OK to handle goal in your implementation of Interface,
+// and set goal to an arbitrary value, such as nil.
+func BfsPath(itf Interface, goal interface{}) []interface{} {
+	itf.SetGoal(goal)
 	node := itf.Root()
 	if node == nil {
 		return nil
