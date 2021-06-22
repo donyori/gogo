@@ -18,25 +18,28 @@
 
 package internal
 
-// NodePath recursively represents a path of nodes.
+// Path recursively represents a path.
 //
-// The path represented by this NodePath is constructed by
-// extending path P with node N.
-type NodePath struct {
-	N interface{}
-	P *NodePath
+// The path represented by this Path is constructed by
+// extending path P with element X.
+type Path struct {
+	X interface{}
+	P *Path
 }
 
-// ToList describes the path represented by this NodePath as a node list,
-// whose items are the nodes along the path, from the start node to the end.
-func (np *NodePath) ToList() []interface{} {
+// ToList describes the path represented by this Path as a list,
+// whose items are the elements along the path, from the start to the end.
+//
+// The client should guarantee that there is no change along the path
+// during the call to this method.
+func (p *Path) ToList() []interface{} {
 	var length int
-	for x := np; x != nil; x = x.P {
+	for x := p; x != nil; x = x.P {
 		length++
 	}
 	list := make([]interface{}, length)
-	for i, x := length-1, np; i >= 0; i, x = i-1, x.P {
-		list[i] = x.N
+	for i, x := length-1, p; i >= 0; i, x = i-1, x.P {
+		list[i] = x.X
 	}
 	return list
 }

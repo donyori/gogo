@@ -147,13 +147,13 @@ func testBruteForceSearchPath(t *testing.T, name string, f func(itf Interface, g
 	tt := &testTree{Data: testTreeData}
 	for i, node := range order {
 		list := f(tt, node)
-		testCheckNodePath(t, name, node, list)
+		testCheckPath(t, name, node, list)
 		testCheckAccessHistory(t, name, tt, order[:1+i])
 	}
 	// Non-existent nodes:
 	for _, goal := range []interface{}{nil, -1, 1.2} {
 		list := f(tt, goal)
-		testCheckNodePath(t, name, goal, list)
+		testCheckPath(t, name, goal, list)
 		testCheckAccessHistory(t, name, tt, order)
 	}
 }
@@ -171,19 +171,19 @@ func testCheckAccessHistory(t *testing.T, name string, tt *testTree, wanted []in
 	}
 }
 
-func testCheckNodePath(t *testing.T, name string, node interface{}, nodePathList []interface{}) {
+func testCheckPath(t *testing.T, name string, node interface{}, pathList []interface{}) {
 	var p []int
 	idx, ok := node.(int)
 	if ok && idx >= 0 && idx < len(testTreeDataNodePath) {
 		p = testTreeDataNodePath[idx]
 	}
-	if len(p) != len(nodePathList) {
-		t.Errorf("%s - NodePath of %v: %v\nwanted: %v", name, node, nodePathList, p)
+	if len(p) != len(pathList) {
+		t.Errorf("%s - Path of %v: %v\nwanted: %v", name, node, pathList, p)
 		return
 	}
 	for i := range p {
-		if nodePathList[i] != p[i] {
-			t.Errorf("%s - NodePath of %v: %v\nwanted: %v", name, node, nodePathList, p)
+		if pathList[i] != p[i] {
+			t.Errorf("%s - Path of %v: %v\nwanted: %v", name, node, pathList, p)
 			return
 		}
 	}

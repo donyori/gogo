@@ -134,22 +134,22 @@ func DfsPath(itf Interface, goal interface{}) []interface{} {
 	if node == nil {
 		return nil
 	}
-	// It is similar to function Dfs, but the item of the stack is NodePath instead of the node.
-	np := &internal.NodePath{N: node}
-	stack, idx := []*internal.NodePath{np}, 0
+	// It is similar to function Dfs, but the item of the stack is Path instead of the node.
+	p := &internal.Path{X: node}
+	stack, idx := []*internal.Path{p}, 0
 	for idx >= 0 {
-		np = stack[idx]
-		if itf.Access(np.N) {
-			return np.ToList()
+		p = stack[idx]
+		if itf.Access(p.X) {
+			return p.ToList()
 		}
-		ns, fc := itf.NextSibling(np.N), itf.FirstChild(np.N)
+		ns, fc := itf.NextSibling(p.X), itf.FirstChild(p.X)
 		if ns != nil {
-			stack[idx] = &internal.NodePath{N: ns, P: np.P} // Do not replace np.N with ns! Create a new NodePath.
+			stack[idx] = &internal.Path{X: ns, P: p.P} // Do not replace p.X with ns! Create a new Path.
 			if fc != nil {
-				stack, idx = append(stack, &internal.NodePath{N: fc, P: np}), idx+1
+				stack, idx = append(stack, &internal.Path{X: fc, P: p}), idx+1
 			}
 		} else if fc != nil {
-			stack[idx] = &internal.NodePath{N: fc, P: np} // Do not replace np.N and np.P with fc and np! Create a new NodePath.
+			stack[idx] = &internal.Path{X: fc, P: p} // Do not replace p.X and p.P with fc and p! Create a new Path.
 		} else {
 			stack, idx = stack[:idx], idx-1
 		}
@@ -171,23 +171,23 @@ func BfsPath(itf Interface, goal interface{}) []interface{} {
 	if node == nil {
 		return nil
 	}
-	// It is similar to function Bfs, but the item of the queue is NodePath instead of the node.
-	np := &internal.NodePath{N: node}
-	queue := []*internal.NodePath{np}
+	// It is similar to function Bfs, but the item of the queue is Path instead of the node.
+	p := &internal.Path{X: node}
+	queue := []*internal.Path{p}
 	for len(queue) > 0 {
-		np, queue = queue[0], queue[1:]
+		p, queue = queue[0], queue[1:]
 		for {
-			if itf.Access(np.N) {
-				return np.ToList()
+			if itf.Access(p.X) {
+				return p.ToList()
 			}
-			if fc := itf.FirstChild(np.N); fc != nil {
-				queue = append(queue, &internal.NodePath{N: fc, P: np})
+			if fc := itf.FirstChild(p.X); fc != nil {
+				queue = append(queue, &internal.Path{X: fc, P: p})
 			}
-			node = itf.NextSibling(np.N)
+			node = itf.NextSibling(p.X)
 			if node == nil {
 				break
 			}
-			np = &internal.NodePath{N: node, P: np.P} // Do not replace np.N with node! Create a new NodePath.
+			p = &internal.Path{X: node, P: p.P} // Do not replace p.X with node! Create a new Path.
 		}
 	}
 	return nil
