@@ -170,8 +170,7 @@ func TestSliceDynamicArray_Slice(t *testing.T) {
 	if n := slice.Len(); n != 2 {
 		t.Errorf("slice.Len(): %d != 2.", n)
 	}
-	i := 1
-	count := 0
+	i, count := 1, 0
 	slice.Range(func(x interface{}) (cont bool) {
 		if i < 3 {
 			if x != s[i] {
@@ -186,8 +185,7 @@ func TestSliceDynamicArray_Slice(t *testing.T) {
 	})
 	// To test underlying arrays are the same, modify one item and check again:
 	s[2] = nil
-	i = 1
-	count = 0
+	i, count = 1, 0
 	slice.Range(func(x interface{}) (cont bool) {
 		if i < 3 {
 			if x != s[i] {

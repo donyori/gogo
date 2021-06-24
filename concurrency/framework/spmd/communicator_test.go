@@ -110,8 +110,7 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 			})
 			defer timer.Stop()
 			// Goroutine 6 is a progress monitor.
-			var i int
-			for i = 1; i <= 4; i++ {
+			for i := 1; i <= 4; i++ {
 				t.Logf("Part %d starts at %v.", i, time.Now())
 				if i < 4 && !world.Barrier() {
 					return

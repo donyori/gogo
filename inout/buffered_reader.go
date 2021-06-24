@@ -211,16 +211,14 @@ func (rbr *resettableBufferedReader) ReadLine() (line []byte, more bool, err err
 // It returns the number of bytes written to w and any error encountered.
 func (rbr *resettableBufferedReader) WriteLineTo(w io.Writer) (n int64, err error) {
 	var line []byte
-	var written int
-	errList := errors.NewErrorList(true)
-	more := true
+	errList, more := errors.NewErrorList(true), true
 	for more {
 		line, more, err = rbr.ReadLine()
 		if err != nil {
 			errList.Append(err)
 		}
 		if len(line) > 0 {
-			written, err = w.Write(line)
+			written, err := w.Write(line)
 			n += int64(written)
 			if err != nil {
 				errList.Append(err)

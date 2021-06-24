@@ -352,9 +352,9 @@ func TestAutoWrapExcludeAndExclusions(t *testing.T) {
 	if len(exclusions) != len(el) {
 		t.Fatalf("AutoWrapExclusions: %v, len != %d.", exclusions, len(el))
 	}
-	failed := false
+	var failed bool
 	for _, err := range el {
-		found := false
+		var found bool
 		for _, e := range exclusions {
 			if err == e {
 				found = true
@@ -375,7 +375,7 @@ func TestAutoWrapExcludeAndExclusions(t *testing.T) {
 		t.Fatalf("After excluding el again, AutoWrapExclusions: %v, len != %d.", exclusions, len(el))
 	}
 	for _, err := range el {
-		found := false
+		var found bool
 		for _, e := range exclusions {
 			if err == e {
 				found = true

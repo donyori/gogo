@@ -273,7 +273,7 @@ func encodeInt64(buf []byte, x int64, upper bool, digits int) (idx int) {
 	if upper {
 		ht = uppercaseHexTable
 	}
-	isNeg := false
+	var isNeg bool
 	if x < 0 {
 		isNeg = true
 		x = -x

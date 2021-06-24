@@ -232,10 +232,9 @@ func (f *formatter) ReadFrom(r io.Reader) (n int64, err error) {
 	bufp := sourceBufferPool.Get().(*[]byte)
 	defer sourceBufferPool.Put(bufp)
 	buf := *bufp
-	var readLen int
-	var readErr, writeErr error
 	for {
-		readLen, readErr = r.Read(buf)
+		readLen, readErr := r.Read(buf)
+		var writeErr error
 		if readLen > 0 {
 			n += int64(readLen)
 			_, writeErr = f.write(ht, buf[:readLen])
@@ -396,7 +395,7 @@ func (f *formatter) write(ht string, p []byte) (n int, err error) {
 // Caller should guarantee that len(dst) >= FormattedLen(len(src), cfg).
 func format(dst, src []byte, cfg *FormatConfig) int {
 	if cfg.formatCfgNotValid() {
-		upper := false
+		var upper bool
 		if cfg != nil {
 			upper = cfg.Upper
 		}

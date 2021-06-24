@@ -331,7 +331,7 @@ func (fw *writer) Close() (err error) {
 		return
 	}
 	el := errors.NewErrorList(true) // el records the errors occurred during Close.
-	rmDone := false
+	var rmDone bool
 	defer func() {
 		if !rmDone {
 			var name string

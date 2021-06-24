@@ -64,7 +64,7 @@ var groupIdPattern = regexp.MustCompile(`[a-z0-9][a-z0-9_]*`)
 // Duplicated numbers will be ignored.
 // Out-of-range numbers (i.e., < 0 or >= n) will cause a panic.
 // A nil or empty group will also cause a panic.
-// Every group has its own communicator for each goroutine.
+// Each group has its own communicator for each goroutine.
 // The rank of the communicator depends on the order of the world ranks
 // in the list.
 // The client can get the communicators of custom groups via argument commMap
@@ -89,11 +89,6 @@ func New(n int, biz BusinessFunc, groupMap map[string][]int) framework.Controlle
 		worldRanks[i] = i
 	}
 	ctrl.World = newContext(ctrl, "_world", worldRanks)
-	var (
-		set map[int]bool
-		g   sequence.IntDynamicArray
-		ctx *context
-	)
 	for id, group := range groupMap {
 		if !groupIdPattern.MatchString(id) {
 			panic(errors.AutoMsg("group ID is illegal: " + id))
@@ -101,8 +96,8 @@ func New(n int, biz BusinessFunc, groupMap map[string][]int) framework.Controlle
 		if len(group) == 0 {
 			panic(errors.AutoMsg("group is nil or empty"))
 		}
-		set = make(map[int]bool)
-		g = group
+		g, set := sequence.IntDynamicArray(group), make(map[int]bool, len(group))
+		// Deduplicate:
 		g.Filter(func(x interface{}) (keep bool) {
 			i := x.(int)
 			if i < 0 || i >= n {
@@ -114,7 +109,7 @@ func New(n int, biz BusinessFunc, groupMap map[string][]int) framework.Controlle
 			set[i] = true
 			return true
 		})
-		ctx = newContext(ctrl, id, g)
+		ctx := newContext(ctrl, id, g)
 		for r, wr := range ctx.WorldRanks {
 			if ctrl.lnchCommMaps[wr] == nil {
 				ctrl.lnchCommMaps[wr] = make(map[string]Communicator)
@@ -183,8 +178,7 @@ func (ctrl *controller) Quit() {
 // with the same parameters.
 func (ctrl *controller) Launch() {
 	ctrl.lnchOi.Do(func() {
-		n := len(ctrl.World.Comms)
-		commMaps := ctrl.lnchCommMaps
+		n, commMaps := len(ctrl.World.Comms), ctrl.lnchCommMaps
 		ctrl.wg.Add(n)
 		for i := 0; i < n; i++ {
 			go func(rank int) {

@@ -425,14 +425,13 @@ func (comm *communicator) SendAny(msg interface{}) int {
 		},
 		RxC: rxC,
 	}
-	n := len(comm.Ctx.Comms)
-	quitChan := comm.Ctx.Ctrl.Qd.QuitChan()
-	var dst, idx int
+	quitChan, n := comm.Ctx.Ctrl.Qd.QuitChan(), len(comm.Ctx.Comms)
 	poll := func() int {
-		for dst = 0; dst < n; dst++ {
+		for dst := 0; dst < n; dst++ {
 			if dst == comm.rank {
 				dst++
 			}
+			var idx int
 			if comm.rank > dst {
 				idx = comm.rank - 1
 			} else {
@@ -728,12 +727,12 @@ func (comm *communicator) Scatter(root int, x sequence.Sequence) (msg sequence.A
 		n, idx, cIdx := len(comm.Ctx.Comms), 0, 0
 		q, r := size/n, size%n
 		chunkLen := q + 1
-		var chunk sequence.Array
 		for i := 0; i < n; i++ {
 			if i == r {
 				chunkLen--
 			}
-			chunk, idx = a.Slice(idx, idx+chunkLen), idx+chunkLen
+			chunk := a.Slice(idx, idx+chunkLen)
+			idx += chunkLen
 			if i != root {
 				// Send this chunk to the target goroutine.
 				select {

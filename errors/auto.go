@@ -198,8 +198,7 @@ func (aw *autoWrapper) Exclude(exclusions ...error) {
 			aw.exclusions[errMsg] = []error{err}
 			continue
 		}
-		list := aw.exclusions[errMsg]
-		skip := false
+		list, skip := aw.exclusions[errMsg], false
 		for _, item := range list {
 			if Is(err, item) {
 				skip = true

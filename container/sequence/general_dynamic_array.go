@@ -353,7 +353,7 @@ func (gda *GeneralDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 	if gda == nil || len(*gda) == 0 {
 		return
 	}
-	n := 0
+	var n int
 	for _, x := range *gda {
 		if filter(x) {
 			(*gda)[n] = x

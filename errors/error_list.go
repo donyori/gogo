@@ -29,7 +29,7 @@ import (
 // If it is empty, it reports "no error".
 // If there is only one item, it performs the same as this item.
 // If there are two or more items, it reports the number of errors,
-// followed by an error array, in which every item is quoted.
+// followed by an error array, in which each item is quoted.
 //
 // Note that *ErrorList, not ErrorList,
 // is the implementation of interface error.
@@ -105,7 +105,7 @@ func (el *errorList) Error() string {
 // it returns t.Error() if t != nil, or returns "<nil>" otherwise.
 //
 // If there are two or more items, it returns the number of errors,
-// followed by an error array, in which every item is double-quoted
+// followed by an error array, in which each item is double-quoted
 // in Go string literal.
 // Especially, nil error item will be "<nil>".
 func (el *errorList) String() string {
@@ -217,8 +217,7 @@ func (el *errorList) Deduplicate() {
 	if len(el.list) == 0 {
 		return
 	}
-	set := make(map[string]bool)
-	n := 0
+	set, n := make(map[string]bool), 0
 	for i := 0; i < len(el.list); i++ {
 		x := el.list[i]
 		if x != nil {

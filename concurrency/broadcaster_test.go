@@ -59,8 +59,7 @@ func TestBroadcaster_Broadcast(t *testing.T) {
 		go func(rank int) {
 			defer wg.Done()
 			var recv [NumMessage]int
-			idx := 0
-			c := bcast.Subscribe(-1)
+			c, idx := bcast.Subscribe(-1), 0
 			barriers[idx].Done()
 			for msg := range c {
 				if idx >= NumMessage {
@@ -116,8 +115,7 @@ func TestBroadcaster_Unsubscribe(t *testing.T) {
 		go func(rank int) {
 			defer wg.Done()
 			var recv [NumMessage]int
-			idx := 0
-			c := bcast.Subscribe(-1)
+			c, idx := bcast.Subscribe(-1), 0
 			ready.Done()
 			for msg := range c {
 				if idx >= NumMessage {

@@ -306,10 +306,8 @@ func (ctrl *controller) allocatorProc() {
 		jobData = ctrl.jq.Dequeue()
 		dqc = ctrl.dqc // Enable dqc.
 	}
-	var jobs []*Job
 	ctr := 1 // Counter for available input sources. 1 at the beginning stands for the client.
-	quitChan := ctrl.qd.QuitChan()
-	wsoiC := ctrl.wsoi.C()
+	quitChan, wsoiC := ctrl.qd.QuitChan(), ctrl.wsoi.C()
 	for ctr > 0 || dqc != nil {
 		select {
 		case <-quitChan:
@@ -317,11 +315,11 @@ func (ctrl *controller) allocatorProc() {
 		case <-wsoiC:
 			wsoiC = nil // Disable this channel to avoid receiving twice.
 			ctr--
-		case jobs = <-ctrl.ic:
+		case jobs := <-ctrl.ic:
 			if len(jobs) > 0 {
 				ctrl.jq.Enqueue(jobs...)
 			}
-		case jobs = <-ctrl.eqc:
+		case jobs := <-ctrl.eqc:
 			ctr--
 			if len(jobs) > 0 {
 				ctrl.jq.Enqueue(jobs...)
@@ -344,30 +342,26 @@ func (ctrl *controller) allocatorProc() {
 
 // workerProc is the worker main process, without panic checking and wg.Done().
 func (ctrl *controller) workerProc() {
-	var jobData interface{}
-	var ok, needUpdateNow bool
-	var jobs []*Job
-	var now time.Time
 	quitChan := ctrl.qd.QuitChan()
 	for {
+		var jobs []*Job
 		select {
 		case <-quitChan:
 			return
-		case jobData, ok = <-ctrl.dqc:
+		case jobData, ok := <-ctrl.dqc:
 			if !ok {
 				return
 			}
 			jobs = ctrl.h(jobData, ctrl.qd)
-			needUpdateNow = true
+			var now time.Time
 			for i, job := range jobs {
 				if job == nil {
 					job = new(Job)
 					jobs[i] = job
 				}
 				if job.Ct.IsZero() {
-					if needUpdateNow {
+					if now.IsZero() {
 						now = time.Now()
-						needUpdateNow = false
 					}
 					job.Ct = now
 				}

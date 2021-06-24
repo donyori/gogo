@@ -26,7 +26,7 @@ import (
 	"testing"
 )
 
-var testErrors []error
+var testErrors []error // It will be set in function init.
 
 func init() {
 	testErrors = make([]error, 3)

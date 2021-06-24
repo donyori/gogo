@@ -196,10 +196,9 @@ func (d *dumper) ReadFrom(r io.Reader) (n int64, err error) {
 	bufp := sourceBufferPool.Get().(*[]byte)
 	defer sourceBufferPool.Put(bufp)
 	buf := *bufp
-	var readLen int
-	var readErr, writeErr error
 	for {
-		readLen, readErr = r.Read(buf)
+		readLen, readErr := r.Read(buf)
+		var writeErr error
 		if readLen > 0 {
 			n += int64(readLen)
 			_, writeErr = d.write(ht, buf[:readLen])

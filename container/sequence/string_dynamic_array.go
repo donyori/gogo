@@ -361,7 +361,7 @@ func (sda *StringDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 	if sda == nil || len(*sda) == 0 {
 		return
 	}
-	n := 0
+	var n int
 	for _, x := range *sda {
 		if filter(x) {
 			(*sda)[n] = x

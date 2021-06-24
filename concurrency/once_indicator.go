@@ -75,7 +75,7 @@ type onceIndicator struct {
 // If the client wants to do nothing but trigger this indicator,
 // just set f to nil (no panic will happen).
 func (oi *onceIndicator) Do(f func()) bool {
-	r := false
+	var r bool
 	oi.once.Do(func() {
 		r = true
 		defer close(oi.c)

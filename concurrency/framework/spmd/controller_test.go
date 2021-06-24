@@ -44,8 +44,7 @@ func TestNew_lnchCommMaps(t *testing.T) {
 	}
 	// Verify that all items in groupMap have corresponding communicators.
 	for id, group := range groupMap {
-		set := make(map[int]bool)
-		r := 0
+		set, r := make(map[int]bool), 0
 		for _, wr := range group {
 			if set[wr] {
 				continue

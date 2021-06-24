@@ -162,8 +162,7 @@ func (b *broadcaster) Broadcast(x interface{}) {
 	// the list by modifying "head" and "next".
 	// When the list is empty, the broadcast finishes.
 	n := len(unsent)
-	head := 0
-	next := make([]int, n)
+	next, head := make([]int, n), 0
 	for i := range next {
 		next[i] = i + 1
 	}
@@ -248,8 +247,7 @@ func (b *broadcaster) Subscribe(bufSize int) <-chan interface{} {
 // before unsubscribing, in order of the broadcaster sending them.
 func (b *broadcaster) Unsubscribe(c <-chan interface{}) []interface{} {
 	var r []interface{}
-	inC := c
-	unlocked := true
+	inC, unlocked := c, true
 	for unlocked {
 		select {
 		case <-b.m.C():

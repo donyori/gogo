@@ -51,7 +51,7 @@ func TestOnceIndicator_Do(t *testing.T) {
 	if *o != 1 {
 		t.Errorf("Once failed: %d != 1.", *o)
 	}
-	ctr := 0
+	var ctr int
 	for _, r := range rs {
 		if r {
 			ctr++

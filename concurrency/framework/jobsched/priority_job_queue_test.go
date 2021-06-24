@@ -37,7 +37,6 @@ func TestPriorityJobQueue(t *testing.T) {
 		return wanted[i] > wanted[j]
 	})
 	pjq := new(PriorityJobQueueMaker).New()
-	var dqs [N]uint
 	for epoch := 0; epoch < 2; epoch++ {
 		// Test twice on one job queue.
 		var idx int
@@ -51,6 +50,7 @@ func TestPriorityJobQueue(t *testing.T) {
 		if n := pjq.Len(); n != idx {
 			t.Errorf("pjq.Len(): %d != %d.", n, idx)
 		}
+		var dqs [N]uint
 		for i := range dqs {
 			dqs[i] = pjq.Dequeue().(uint)
 		}

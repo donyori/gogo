@@ -103,8 +103,7 @@ func init() {
 										builder.Write(prefixFn())
 									}
 									var line []byte
-									p := s
-									t := src
+									p, t := s, src
 									var j int
 									for len(p) > 0 {
 										if !cfg.dumpCfgLineNotValid() && j > 0 && j%blocksPerLine == 0 && prefixFn != nil {

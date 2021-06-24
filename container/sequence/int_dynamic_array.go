@@ -348,7 +348,7 @@ func (ida *IntDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 	if ida == nil || len(*ida) == 0 {
 		return
 	}
-	n := 0
+	var n int
 	for _, x := range *ida {
 		if filter(x) {
 			(*ida)[n] = x

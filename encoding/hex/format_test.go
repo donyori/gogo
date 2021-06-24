@@ -55,7 +55,7 @@ func init() {
 					if upper {
 						s = strings.ToUpper(s)
 					}
-					capacity := 0
+					var capacity int
 					if blockLen > 0 {
 						capacity = (len(src) + blockLen - 1) / blockLen
 					}

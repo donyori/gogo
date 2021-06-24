@@ -336,7 +336,7 @@ func TestExampleDumpConfig(t *testing.T) {
 	for b.Len() < 527 {
 		b.WriteString("Hello world! 你好，世界！") // "Hello world! 你好，世界！" contains 31 bytes.
 	}
-	idx := 0
+	var idx int
 	for _, upper := range []bool{false, true} {
 		for _, bytesPerLine := range []int{-1, 0, 8, 15, 64} {
 			cfg := ExampleDumpConfig(upper, bytesPerLine)

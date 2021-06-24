@@ -56,7 +56,7 @@ func TestEqualFunc_Not(t *testing.T) {
 		{1, 1.},
 		{1., 1},
 	}
-	var eq = Equal
+	eq := Equal
 	nEq := eq.Not()
 	for _, pair := range pairs {
 		r1 := !eq(pair[0], pair[1])

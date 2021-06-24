@@ -354,7 +354,7 @@ func (fda *Float64DynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 	if fda == nil || len(*fda) == 0 {
 		return
 	}
-	n := 0
+	var n int
 	for _, x := range *fda {
 		if filter(x) {
 			(*fda)[n] = x

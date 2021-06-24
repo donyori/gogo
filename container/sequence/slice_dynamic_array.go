@@ -460,7 +460,7 @@ func (sda *SliceDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 	if sda.Len() == 0 {
 		return
 	}
-	n := 0
+	var n int
 	for i := 0; i < sda.v.Len(); i++ {
 		xV := sda.v.Index(i)
 		if filter(xV.Interface()) {
