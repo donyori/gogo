@@ -64,17 +64,20 @@ func (tt *testTree) Access(node interface{}) (found bool) {
 }
 
 // testTreeData represents a tree as follows:
-//         0
-//       / | \
-//      1  2  3
-//     /|     |\
-//    4 5     6 7
-//   /|       |\
-//  8 9      10 11
+//        0
+//       /|\
+//      1 2 3
+//     /|   |\
+//    4 5   6 7
+//   /|     |\
+//  8 9    10 11
 //
-// Expected DFS order:
+// Assuming that the left edges are chosen before the right edges,
+// the expected orderings are as follows:
+//
+// Expected DFS ordering:
 //  0, 1, 4, 8, 9, 5, 2, 3, 6, 10, 11, 7
-// Expected BFS order:
+// Expected BFS ordering:
 //  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
 var testTreeData = [][2]int{
 	{1, -1},  // node 0
@@ -89,6 +92,17 @@ var testTreeData = [][2]int{
 	{-1, -1}, // node 9
 	{-1, 11}, // node 10
 	{-1, -1}, // node 11
+}
+
+// testTreeDataOrderingMap is a mapping from algorithm short names
+// to the expected node access orderings of testTreeData.
+//
+// Valid keys:
+//  dfs
+//  bfs
+var testTreeDataOrderingMap = map[string][]int{
+	"dfs": {0, 1, 4, 8, 9, 5, 2, 3, 6, 10, 11, 7},
+	"bfs": {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
 }
 
 // testTreeDataNodePath is a list of paths from the root
@@ -109,52 +123,80 @@ var testTreeDataNodePath = [][]int{
 }
 
 func TestDfs(t *testing.T) {
-	testBruteForceSearch(t, "Dfs", Dfs, []int{0, 1, 4, 8, 9, 5, 2, 3, 6, 10, 11, 7})
+	testBruteForceSearch(t, "Dfs")
 }
 
 func TestBfs(t *testing.T) {
-	testBruteForceSearch(t, "Bfs", Bfs, []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11})
+	testBruteForceSearch(t, "Bfs")
 }
 
 func TestDfsPath(t *testing.T) {
-	testBruteForceSearchPath(t, "DfsPath", DfsPath, []int{0, 1, 4, 8, 9, 5, 2, 3, 6, 10, 11, 7})
+	testBruteForceSearchPath(t, "DfsPath")
 }
 
 func TestBfsPath(t *testing.T) {
-	testBruteForceSearchPath(t, "BfsPath", BfsPath, []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11})
+	testBruteForceSearchPath(t, "BfsPath")
 }
 
-func testBruteForceSearch(t *testing.T, name string, f func(itf Interface, goal interface{}) interface{}, order []int) {
+func testBruteForceSearch(t *testing.T, name string) {
+	var f func(itf Interface, goal interface{}) interface{}
+	var ordering []int
+	switch name {
+	case "Dfs":
+		f = Dfs
+		ordering = testTreeDataOrderingMap["dfs"]
+	case "Bfs":
+		f = Bfs
+		ordering = testTreeDataOrderingMap["bfs"]
+	default:
+		t.Error("Unacceptable name:", name)
+		return
+	}
+
 	tt := &testTree{Data: testTreeData}
-	for i, node := range order {
+	for i, node := range ordering {
 		r := f(tt, node)
 		if r != node {
 			t.Errorf("%s returns %v != %v.", name, r, node)
 		}
-		testCheckAccessHistory(t, name, tt, order[:1+i])
+		testCheckAccessHistory(t, name, tt, ordering[:1+i])
 	}
 	// Non-existent nodes:
-	for _, goal := range []interface{}{nil, -1, 1.2} {
+	for _, goal := range []interface{}{nil, -1, len(testTreeData), 1.2} {
 		r := f(tt, goal)
 		if r != nil {
 			t.Errorf("%s returns %v != nil.", name, r)
 		}
-		testCheckAccessHistory(t, name, tt, order)
+		testCheckAccessHistory(t, name, tt, ordering)
 	}
 }
 
-func testBruteForceSearchPath(t *testing.T, name string, f func(itf Interface, goal interface{}) []interface{}, order []int) {
+func testBruteForceSearchPath(t *testing.T, name string) {
+	var f func(itf Interface, goal interface{}) []interface{}
+	var ordering []int
+	switch name {
+	case "DfsPath":
+		f = DfsPath
+		ordering = testTreeDataOrderingMap["dfs"]
+	case "BfsPath":
+		f = BfsPath
+		ordering = testTreeDataOrderingMap["bfs"]
+	default:
+		t.Error("Unacceptable name:", name)
+		return
+	}
+
 	tt := &testTree{Data: testTreeData}
-	for i, node := range order {
+	for i, node := range ordering {
 		list := f(tt, node)
 		testCheckPath(t, name, node, list)
-		testCheckAccessHistory(t, name, tt, order[:1+i])
+		testCheckAccessHistory(t, name, tt, ordering[:1+i])
 	}
 	// Non-existent nodes:
-	for _, goal := range []interface{}{nil, -1, 1.2} {
+	for _, goal := range []interface{}{nil, -1, len(testTreeData), 1.2} {
 		list := f(tt, goal)
 		testCheckPath(t, name, goal, list)
-		testCheckAccessHistory(t, name, tt, order)
+		testCheckAccessHistory(t, name, tt, ordering)
 	}
 }
 
@@ -177,7 +219,7 @@ func testCheckPath(t *testing.T, name string, node interface{}, pathList []inter
 	if ok && idx >= 0 && idx < len(testTreeDataNodePath) {
 		p = testTreeDataNodePath[idx]
 	}
-	if len(p) != len(pathList) {
+	if len(pathList) != len(p) {
 		t.Errorf("%s - Path of %v: %v\nwanted: %v", name, node, pathList, p)
 		return
 	}
