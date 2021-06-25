@@ -20,7 +20,9 @@ package graphv
 
 import "testing"
 
-type testGraph struct {
+// testGraphBase implements all methods of interface IdsInterface
+// except Adjacency.
+type testGraphBase struct {
 	Data          [][]int
 	Goal          interface{}
 	AccessHistory []interface{}
@@ -30,11 +32,70 @@ type testGraph struct {
 	head int
 }
 
-func (tg *testGraph) Root() interface{} {
+func (tg *testGraphBase) Root() interface{} {
 	return 0
 }
 
-func (tg *testGraph) Adjacency(vertex interface{}) []interface{} {
+// SetGoal sets the search goal as well as resets the access history.
+func (tg *testGraphBase) SetGoal(goal interface{}) {
+	tg.Goal = goal
+	tg.AccessHistory = tg.AccessHistory[:0] // Reuse the underlying array.
+	tg.head = 0
+}
+
+func (tg *testGraphBase) Access(vertex interface{}) (found bool) {
+	tg.AccessHistory = append(tg.AccessHistory, vertex)
+	if tg.Goal == nil {
+		return false
+	}
+	return vertex == tg.Goal
+}
+
+// Discovered reports whether the specified vertex
+// has been examined by the method Access
+// via checking the access history.
+//
+// It may be time-consuming,
+// but it doesn't matter because the test graph is very small.
+func (tg *testGraphBase) Discovered(vertex interface{}) bool {
+	for i := tg.head; i < len(tg.AccessHistory); i++ {
+		if tg.AccessHistory[i] == vertex {
+			return true
+		}
+	}
+	return false
+}
+
+func (tg *testGraphBase) ResetSearchState() {
+	tg.head = len(tg.AccessHistory)
+}
+
+// testGraphNormal attaches the method Adjacency with normal performance
+// to testGraphBase.
+type testGraphNormal struct {
+	testGraphBase
+}
+
+func (tg *testGraphNormal) Adjacency(vertex interface{}) []interface{} {
+	list := tg.Data[vertex.(int)]
+	if len(list) == 0 {
+		return nil
+	}
+	adj := make([]interface{}, len(list))
+	for i := range list {
+		adj[i] = list[i]
+	}
+	return adj
+}
+
+// testGraphNilAdjacentVertices attaches the method Adjacency to testGraphBase.
+// Its method Adjacency returns an adjacency list with
+// some additional nil vertices.
+type testGraphNilAdjacentVertices struct {
+	testGraphBase
+}
+
+func (tg *testGraphNilAdjacentVertices) Adjacency(vertex interface{}) []interface{} {
 	list := tg.Data[vertex.(int)]
 	if len(list) == 0 {
 		return nil
@@ -59,40 +120,6 @@ func (tg *testGraph) Adjacency(vertex interface{}) []interface{} {
 		adj[len(adj)-1] = list[len(list)-1]
 	}
 	return adj
-}
-
-// SetGoal sets the search goal as well as resets the access history.
-func (tg *testGraph) SetGoal(goal interface{}) {
-	tg.Goal = goal
-	tg.AccessHistory = tg.AccessHistory[:0] // Reuse the underlying array.
-	tg.head = 0
-}
-
-func (tg *testGraph) Access(vertex interface{}) (found bool) {
-	tg.AccessHistory = append(tg.AccessHistory, vertex)
-	if tg.Goal == nil {
-		return false
-	}
-	return vertex == tg.Goal
-}
-
-// Discovered reports whether the specified vertex
-// has been examined by the method Access
-// via checking the access history.
-//
-// It may be time-consuming,
-// but it doesn't matter because the test graph is very small.
-func (tg *testGraph) Discovered(vertex interface{}) bool {
-	for i := tg.head; i < len(tg.AccessHistory); i++ {
-		if tg.AccessHistory[i] == vertex {
-			return true
-		}
-	}
-	return false
-}
-
-func (tg *testGraph) ResetSearchState() {
-	tg.head = len(tg.AccessHistory)
 }
 
 // testUndirectedGraphData represents an undirected graph as follows:
@@ -174,14 +201,12 @@ var testUndirectedGraphDataVertexPathMap = map[string][][]int{
 	},
 	"dls-0": {
 		{0},
-		nil, nil, nil, nil, nil, nil, // nil means the corresponding vertex has not been accessed.
 	},
 	"dls-1": {
 		{0},
 		{0, 1},
 		{0, 2},
 		{0, 3},
-		nil, nil, nil, // nil means the corresponding vertex has not been accessed.
 	},
 	"dls-2": nil, // It is the same as bfs and will be set in function init.
 	"dls-3": nil, // It is the same as dfs and will be set in function init.
@@ -286,26 +311,42 @@ func testBruteForceSearch(t *testing.T, name string) {
 		return
 	}
 
-	tg := &testGraph{Data: testUndirectedGraphData}
-	tested := make([]bool, len(testUndirectedGraphData))
-	for i, v := range ordering {
-		if tested[v] {
-			continue
+	for _, tg := range []IdsInterface{
+		&testGraphNormal{testGraphBase{Data: testUndirectedGraphData}},
+		&testGraphNilAdjacentVertices{testGraphBase{Data: testUndirectedGraphData}},
+	} {
+		var tgb *testGraphBase
+		switch tg.(type) {
+		case *testGraphNormal:
+			tgb = &tg.(*testGraphNormal).testGraphBase
+		case *testGraphNilAdjacentVertices:
+			tgb = &tg.(*testGraphNilAdjacentVertices).testGraphBase
+		default:
+			// This should never happen, but will act as a safeguard for later,
+			// as a default value doesn't make sense here.
+			t.Errorf("tg is neither of type *testGraphNormal nor of type *testGraphNilAdjacentVertices, type: %T", tg)
+			return
 		}
-		tested[v] = true
-		r := f(tg, v)
-		if r != v {
-			t.Errorf("%s returns %v != %v.", name, r, v)
+		tested := make([]bool, len(testUndirectedGraphData))
+		for i, v := range ordering {
+			if tested[v] {
+				continue
+			}
+			tested[v] = true
+			r := f(tg, v)
+			if r != v {
+				t.Errorf("%s returns %v != %v.", name, r, v)
+			}
+			testCheckAccessHistory(t, name, tgb, ordering[:1+i])
 		}
-		testCheckAccessHistory(t, name, tg, ordering[:1+i])
-	}
-	// Non-existent nodes:
-	for _, goal := range []interface{}{nil, -1, len(testUndirectedGraphData), 1.2} {
-		r := f(tg, goal)
-		if r != nil {
-			t.Errorf("%s returns %v != nil.", name, r)
+		// Non-existent nodes:
+		for _, goal := range []interface{}{nil, -1, len(testUndirectedGraphData), 1.2} {
+			r := f(tg, goal)
+			if r != nil {
+				t.Errorf("%s returns %v != nil.", name, r)
+			}
+			testCheckAccessHistory(t, name, tgb, ordering)
 		}
-		testCheckAccessHistory(t, name, tg, ordering)
 	}
 }
 
@@ -361,26 +402,42 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		return
 	}
 
-	tg := &testGraph{Data: testUndirectedGraphData}
-	tested := make([]bool, len(testUndirectedGraphData))
-	for i, v := range ordering {
-		if tested[v] {
-			continue
+	for _, tg := range []IdsInterface{
+		&testGraphNormal{testGraphBase{Data: testUndirectedGraphData}},
+		&testGraphNilAdjacentVertices{testGraphBase{Data: testUndirectedGraphData}},
+	} {
+		var tgb *testGraphBase
+		switch tg.(type) {
+		case *testGraphNormal:
+			tgb = &tg.(*testGraphNormal).testGraphBase
+		case *testGraphNilAdjacentVertices:
+			tgb = &tg.(*testGraphNilAdjacentVertices).testGraphBase
+		default:
+			// This should never happen, but will act as a safeguard for later,
+			// as a default value doesn't make sense here.
+			t.Errorf("tg is neither of type *testGraphNormal nor of type *testGraphNilAdjacentVertices, type: %T", tg)
+			return
 		}
-		tested[v] = true
-		list := f(tg, v)
-		testCheckPath(t, name, v, list)
-		testCheckAccessHistory(t, name, tg, ordering[:1+i])
-	}
-	// Non-existent nodes:
-	for _, goal := range []interface{}{nil, -1, len(testUndirectedGraphData), 1.2} {
-		list := f(tg, goal)
-		testCheckPath(t, name, goal, list)
-		testCheckAccessHistory(t, name, tg, ordering)
+		tested := make([]bool, len(testUndirectedGraphData))
+		for i, v := range ordering {
+			if tested[v] {
+				continue
+			}
+			tested[v] = true
+			list := f(tg, v)
+			testCheckPath(t, name, v, list)
+			testCheckAccessHistory(t, name, tgb, ordering[:1+i])
+		}
+		// Non-existent nodes:
+		for _, goal := range []interface{}{nil, -1, len(testUndirectedGraphData), 1.2} {
+			list := f(tg, goal)
+			testCheckPath(t, name, goal, list)
+			testCheckAccessHistory(t, name, tgb, ordering)
+		}
 	}
 }
 
-func testCheckAccessHistory(t *testing.T, name string, tg *testGraph, wanted []int) {
+func testCheckAccessHistory(t *testing.T, name string, tg *testGraphBase, wanted []int) {
 	if len(tg.AccessHistory) != len(wanted) {
 		t.Errorf("%s - Access history: %v\nwanted: %v", name, tg.AccessHistory, wanted)
 		return

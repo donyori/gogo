@@ -414,7 +414,8 @@ func dlsPath(itf BasicInterface, root interface{}, limit int) (pathFound []inter
 	return
 }
 
-// IdsInterface extends interface BasicInterface for function Ids.
+// IdsInterface extends interface BasicInterface for
+// functions Ids and IdsPath.
 //
 // It contains a new method ResetSearchState to reset
 // the search state for each iteration.
@@ -449,16 +450,17 @@ func Ids(itf IdsInterface, goal interface{}, initialLimit int) interface{} {
 	if root == nil {
 		return nil
 	}
-	for limit := initialLimit; true; limit++ { // The loop ends when more is false.
+	limit := initialLimit
+	for { // The loop ends when goal is found or more is false.
 		vertexFound, more := dls(itf, root, limit)
 		if vertexFound != nil {
 			return vertexFound
 		} else if !more {
-			break
+			return nil
 		}
 		itf.ResetSearchState()
+		limit++
 	}
-	return nil
 }
 
 // IdsPath is similar to function Ids,
@@ -472,14 +474,15 @@ func IdsPath(itf IdsInterface, goal interface{}, initialLimit int) []interface{}
 	if root == nil {
 		return nil
 	}
-	for limit := initialLimit; true; limit++ { // The loop ends when more is false.
+	limit := initialLimit
+	for { // The loop ends when goal is found or more is false.
 		pathFound, more := dlsPath(itf, root, limit)
 		if pathFound != nil {
 			return pathFound
 		} else if !more {
-			break
+			return nil
 		}
 		itf.ResetSearchState()
+		limit++
 	}
-	return nil
 }
