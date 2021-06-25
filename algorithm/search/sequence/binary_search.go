@@ -46,7 +46,7 @@ type BinarySearchInterface interface {
 	//
 	// It returns 0 if the item with index i is the search goal.
 	//
-	// It returns a positive integer except EqualButNotGoal (value: 7)
+	// It returns a positive integer except for EqualButNotGoal (value: 7)
 	// if the item with index i is greater than the search goal.
 	//
 	// It returns a negative integer
@@ -65,7 +65,7 @@ type BinarySearchInterface interface {
 // itf must be sorted in ascending order!
 // (If itf is in descending order,
 // you can change the behavior of method Cmp of BinarySearchInterface such that
-// it returns a positive integer except EqualButNotGoal
+// it returns a positive integer except for EqualButNotGoal
 // if the item is less than the search goal, and returns a negative integer
 // if the item is greater than the search goal.)
 // This function won't check whether itf is sorted.
@@ -125,7 +125,7 @@ func BinarySearch(itf BinarySearchInterface, goal interface{}) int {
 // itf must be sorted in ascending order!
 // (If itf is in descending order,
 // you can change the behavior of method Cmp of BinarySearchInterface such that
-// it returns a positive integer except EqualButNotGoal
+// it returns a positive integer except for EqualButNotGoal
 // if the item is less than the search goal, and returns a negative integer
 // if the item is greater than the search goal,
 // and then use function BinarySearchMinGreater instead of this function.)
@@ -167,7 +167,7 @@ func BinarySearchMaxLess(itf BinarySearchInterface, goal interface{}) int {
 // itf must be sorted in ascending order!
 // (If itf is in descending order,
 // you can change the behavior of method Cmp of BinarySearchInterface such that
-// it returns a positive integer except EqualButNotGoal
+// it returns a positive integer except for EqualButNotGoal
 // if the item is less than the search goal, and returns a negative integer
 // if the item is greater than the search goal,
 // and then use function BinarySearchMaxLess instead of this function.)
@@ -241,7 +241,7 @@ func (bsad *BinarySearchArrayAdapter) SetGoal(goal interface{}) {
 //
 // It returns 0 if the item with index i is the search goal.
 //
-// It returns a positive integer except EqualButNotGoal (value: 7)
+// It returns a positive integer except for EqualButNotGoal (value: 7)
 // if the item with index i is greater than the search goal.
 //
 // It returns a negative integer
