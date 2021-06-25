@@ -274,7 +274,7 @@ func TestSliceItemEqual(t *testing.T) {
 // An item in eqPairs consists of two equal elements.
 // An item in neqPairs consists of two unequal elements.
 //
-// eqGroups contain the groups of equivalent elements.
+// eqGroups consist of groups of equivalent elements.
 // Items in the same group are equal to each other.
 // Items in the different groups are unequal to each other.
 //

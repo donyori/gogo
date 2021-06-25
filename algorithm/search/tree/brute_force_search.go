@@ -92,14 +92,11 @@ func Dfs(itf Interface, goal interface{}) interface{} {
 	return nil
 }
 
-// DfsPath finds goal in itf using depth-first search algorithm,
-// and returns the path from the root of itf to the goal node found.
+// DfsPath is similar to function Dfs,
+// except that it returns the path from the root of itf
+// to the goal node found, instead of only the goal node.
 //
 // It returns nil if goal is not found.
-//
-// goal is only used to call the method SetGoal of itf.
-// It's OK to handle goal in your implementation of Interface,
-// and set goal to an arbitrary value, such as nil.
 func DfsPath(itf Interface, goal interface{}) []interface{} {
 	itf.SetGoal(goal)
 	node := itf.Root()
@@ -158,14 +155,11 @@ func Bfs(itf Interface, goal interface{}) interface{} {
 	return nil
 }
 
-// BfsPath finds goal in itf using breadth-first search algorithm,
-// and returns the path from the root of itf to the goal node found.
+// BfsPath is similar to function Bfs,
+// except that it returns the path from the root of itf
+// to the goal node found, instead of only the goal node.
 //
 // It returns nil if goal is not found.
-//
-// goal is only used to call the method SetGoal of itf.
-// It's OK to handle goal in your implementation of Interface,
-// and set goal to an arbitrary value, such as nil.
 func BfsPath(itf Interface, goal interface{}) []interface{} {
 	itf.SetGoal(goal)
 	node := itf.Root()

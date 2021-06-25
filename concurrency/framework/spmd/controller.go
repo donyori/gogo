@@ -35,7 +35,7 @@ import (
 // BusinessFunc is a function to achieve the user business.
 //
 // The first argument is the communicator of the group World,
-// which is the default group and contains all goroutines to process the job.
+// which is the default group and includes all goroutines to process the job.
 //
 // The second argument is the map of communicators of custom groups.
 // The key of the map is the ID of the custom group.

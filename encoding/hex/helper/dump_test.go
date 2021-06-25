@@ -334,7 +334,7 @@ var testExampleDumpOutputs = [...]string{
 func TestExampleDumpConfig(t *testing.T) {
 	b := bytes.NewBuffer(make([]byte, 0, 527))
 	for b.Len() < 527 {
-		b.WriteString("Hello world! 你好，世界！") // "Hello world! 你好，世界！" contains 31 bytes.
+		b.WriteString("Hello world! 你好，世界！") // "Hello world! 你好，世界！" has 31 bytes.
 	}
 	var idx int
 	for _, upper := range []bool{false, true} {
