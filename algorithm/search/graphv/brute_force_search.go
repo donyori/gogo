@@ -286,7 +286,7 @@ type dlsStackItem struct {
 // The client should guarantee that root is itf.Root() and root != nil.
 func dls(itf BasicInterface, root interface{}, limit int) (vertexFound interface{}, more bool) {
 	if limit < 0 {
-		return
+		return nil, true // There must be an undiscovered vertex because of the depth limit: the root.
 	}
 	// It is similar to function Dfs,
 	// except that it examines the depth before pushing a new item to the stack
@@ -362,7 +362,7 @@ type dlsPathStackItem struct {
 // The client should guarantee that root is itf.Root() and root != nil.
 func dlsPath(itf BasicInterface, root interface{}, limit int) (pathFound []interface{}, more bool) {
 	if limit < 0 {
-		return
+		return nil, true // There must be an undiscovered vertex because of the depth limit: the root.
 	}
 	// It is similar to function dls, but the item of the stack contains
 	// the list of Path instead of the adjacency list.
@@ -451,6 +451,9 @@ func Ids(itf IdsInterface, goal interface{}, initialLimit int) interface{} {
 		return nil
 	}
 	limit := initialLimit
+	if limit < 0 {
+		limit = 0
+	}
 	for { // The loop ends when goal is found or more is false.
 		vertexFound, more := dls(itf, root, limit)
 		if vertexFound != nil {
@@ -475,6 +478,9 @@ func IdsPath(itf IdsInterface, goal interface{}, initialLimit int) []interface{}
 		return nil
 	}
 	limit := initialLimit
+	if limit < 0 {
+		limit = 0
+	}
 	for { // The loop ends when goal is found or more is false.
 		pathFound, more := dlsPath(itf, root, limit)
 		if pathFound != nil {

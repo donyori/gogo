@@ -242,6 +242,7 @@ func TestDls(t *testing.T) {
 	testBruteForceSearch(t, "Dls-1")
 	testBruteForceSearch(t, "Dls-2")
 	testBruteForceSearch(t, "Dls-3")
+	testBruteForceSearch(t, "Dls-m1")
 }
 
 func TestDlsPath(t *testing.T) {
@@ -249,14 +250,17 @@ func TestDlsPath(t *testing.T) {
 	testBruteForceSearchPath(t, "DlsPath-1")
 	testBruteForceSearchPath(t, "DlsPath-2")
 	testBruteForceSearchPath(t, "DlsPath-3")
+	testBruteForceSearchPath(t, "DlsPath-m1")
 }
 
 func TestIds(t *testing.T) {
 	testBruteForceSearch(t, "Ids")
+	testBruteForceSearch(t, "Ids-m")
 }
 
 func TestIdsPath(t *testing.T) {
 	testBruteForceSearchPath(t, "IdsPath")
+	testBruteForceSearchPath(t, "IdsPath-m")
 }
 
 func testBruteForceSearch(t *testing.T, name string) {
@@ -301,9 +305,23 @@ func testBruteForceSearch(t *testing.T, name string) {
 			return v
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-3"]
+	case "Dls-m1":
+		f = func(itf BasicInterface, goal interface{}) interface{} {
+			v, more := Dls(itf, goal, -1)
+			if v == nil && !more {
+				t.Error("Dls-m1 - more is false but there are undiscovered vertices.")
+			}
+			return v
+		}
+		ordering = []int{}
 	case "Ids":
 		f = func(itf BasicInterface, goal interface{}) interface{} {
 			return Ids(itf.(IdsInterface), goal, 0)
+		}
+		ordering = testUndirectedGraphDataOrderingMap["ids"]
+	case "Ids-m":
+		f = func(itf BasicInterface, goal interface{}) interface{} {
+			return Ids(itf.(IdsInterface), goal, -1)
 		}
 		ordering = testUndirectedGraphDataOrderingMap["ids"]
 	default:
@@ -392,9 +410,23 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 			return p
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-3"]
+	case "DlsPath-m1":
+		f = func(itf BasicInterface, goal interface{}) []interface{} {
+			p, more := DlsPath(itf, goal, -1)
+			if p == nil && !more {
+				t.Error("DlsPath-m1 - more is false but there are undiscovered vertices.")
+			}
+			return p
+		}
+		ordering = []int{}
 	case "IdsPath":
 		f = func(itf BasicInterface, goal interface{}) []interface{} {
 			return IdsPath(itf.(IdsInterface), goal, 0)
+		}
+		ordering = testUndirectedGraphDataOrderingMap["ids"]
+	case "IdsPath-m":
+		f = func(itf BasicInterface, goal interface{}) []interface{} {
+			return IdsPath(itf.(IdsInterface), goal, -1)
 		}
 		ordering = testUndirectedGraphDataOrderingMap["ids"]
 	default:
@@ -466,7 +498,9 @@ func testCheckPath(t *testing.T, name string, vertex interface{}, pathList []int
 		list = testUndirectedGraphDataVertexPathMap["dls-2"]
 	case "DlsPath-3":
 		list = testUndirectedGraphDataVertexPathMap["dls-3"]
-	case "IdsPath":
+	case "DlsPath-m1":
+		list = [][]int{}
+	case "IdsPath", "IdsPath-m":
 		list = testUndirectedGraphDataVertexPathMap["ids"]
 	default:
 		// This should never happen, but will act as a safeguard for later,
