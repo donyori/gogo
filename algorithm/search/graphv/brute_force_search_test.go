@@ -122,6 +122,10 @@ func (tg *testGraphNilAdjacentVertices) Adjacency(vertex interface{}) []interfac
 	return adj
 }
 
+// testNumUndirectedGraphVertices is the number of vertices
+// in testUndirectedGraphData.
+const testNumUndirectedGraphVertices int = 7
+
 // testUndirectedGraphData represents an undirected graph as follows:
 //      0
 //     /|\
@@ -158,15 +162,17 @@ var testUndirectedGraphData = [][]int{
 //  dls-1
 //  dls-2
 //  dls-3
+//  dls-m1
 //  ids
 var testUndirectedGraphDataOrderingMap = map[string][]int{
-	"dfs":   {0, 1, 4, 5, 3, 2, 6},
-	"bfs":   {0, 1, 2, 3, 4, 5, 6},
-	"dls-0": {0},
-	"dls-1": {0, 1, 2, 3},
-	"dls-2": {0, 1, 4, 5, 2, 6, 3},
-	"dls-3": nil, // It is the same as dfs and will be set in function init.
-	"ids":   {0, 0, 1, 2, 3, 0, 1, 4, 5, 2, 6, 3, 0, 1, 4, 5, 3, 2, 6},
+	"dfs":    {0, 1, 4, 5, 3, 2, 6},
+	"bfs":    {0, 1, 2, 3, 4, 5, 6},
+	"dls-0":  {0},
+	"dls-1":  {0, 1, 2, 3},
+	"dls-2":  {0, 1, 4, 5, 2, 6, 3},
+	"dls-3":  nil, // It is the same as dfs and will be set in function init.
+	"dls-m1": {},
+	"ids":    {0, 0, 1, 2, 3, 0, 1, 4, 5, 2, 6, 3, 0, 1, 4, 5, 3, 2, 6},
 }
 
 // testUndirectedGraphDataVertexPathMap is a mapping from algorithm short names
@@ -179,6 +185,7 @@ var testUndirectedGraphDataOrderingMap = map[string][]int{
 //  dls-1
 //  dls-2
 //  dls-3
+//  dls-m1
 //  ids
 var testUndirectedGraphDataVertexPathMap = map[string][][]int{
 	"dfs": {
@@ -208,9 +215,10 @@ var testUndirectedGraphDataVertexPathMap = map[string][][]int{
 		{0, 2},
 		{0, 3},
 	},
-	"dls-2": nil, // It is the same as bfs and will be set in function init.
-	"dls-3": nil, // It is the same as dfs and will be set in function init.
-	"ids":   nil, // It is the same as bfs and will be set in function init.
+	"dls-2":  nil, // It is the same as bfs and will be set in function init.
+	"dls-3":  nil, // It is the same as dfs and will be set in function init.
+	"dls-m1": {},
+	"ids":    nil, // It is the same as bfs and will be set in function init.
 }
 
 func init() {
@@ -313,7 +321,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 			}
 			return v
 		}
-		ordering = []int{}
+		ordering = testUndirectedGraphDataOrderingMap["dls-m1"]
 	case "Ids":
 		f = func(itf BasicInterface, goal interface{}) interface{} {
 			return Ids(itf.(IdsInterface), goal, 0)
@@ -345,17 +353,22 @@ func testBruteForceSearch(t *testing.T, name string) {
 			t.Errorf("tg is neither of type *testGraphNormal nor of type *testGraphNilAdjacentVertices, type: %T", tg)
 			return
 		}
-		tested := make([]bool, len(testUndirectedGraphData))
-		for i, v := range ordering {
-			if tested[v] {
-				continue
+		for v := 0; v < testNumUndirectedGraphVertices; v++ {
+			var i int
+			for i < len(ordering) && ordering[i] != v {
+				i++
 			}
-			tested[v] = true
+			var expV interface{} // The vertex expected to be found.
+			expHx := ordering    // Expected history.
+			if i < len(ordering) {
+				expV = v
+				expHx = expHx[:1+i]
+			}
 			r := f(tg, v)
-			if r != v {
-				t.Errorf("%s returns %v != %v.", name, r, v)
+			if r != expV {
+				t.Errorf("%s returns %v != %v.", name, r, expV)
 			}
-			testCheckAccessHistory(t, name, tgb, ordering[:1+i])
+			testCheckAccessHistory(t, name, tgb, expHx)
 		}
 		// Non-existent nodes:
 		for _, goal := range []interface{}{nil, -1, len(testUndirectedGraphData), 1.2} {
@@ -418,7 +431,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 			}
 			return p
 		}
-		ordering = []int{}
+		ordering = testUndirectedGraphDataOrderingMap["dls-m1"]
 	case "IdsPath":
 		f = func(itf BasicInterface, goal interface{}) []interface{} {
 			return IdsPath(itf.(IdsInterface), goal, 0)
@@ -450,20 +463,23 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 			t.Errorf("tg is neither of type *testGraphNormal nor of type *testGraphNilAdjacentVertices, type: %T", tg)
 			return
 		}
-		tested := make([]bool, len(testUndirectedGraphData))
-		for i, v := range ordering {
-			if tested[v] {
-				continue
+		for v := 0; v < testNumUndirectedGraphVertices; v++ {
+			pl := f(tg, v)
+			testCheckPath(t, name, v, pl)
+			var i int
+			for i < len(ordering) && ordering[i] != v {
+				i++
 			}
-			tested[v] = true
-			list := f(tg, v)
-			testCheckPath(t, name, v, list)
-			testCheckAccessHistory(t, name, tgb, ordering[:1+i])
+			expHx := ordering // Expected history.
+			if i < len(ordering) {
+				expHx = expHx[:1+i]
+			}
+			testCheckAccessHistory(t, name, tgb, expHx)
 		}
 		// Non-existent nodes:
 		for _, goal := range []interface{}{nil, -1, len(testUndirectedGraphData), 1.2} {
-			list := f(tg, goal)
-			testCheckPath(t, name, goal, list)
+			pl := f(tg, goal)
+			testCheckPath(t, name, goal, pl)
 			testCheckAccessHistory(t, name, tgb, ordering)
 		}
 	}
@@ -499,7 +515,7 @@ func testCheckPath(t *testing.T, name string, vertex interface{}, pathList []int
 	case "DlsPath-3":
 		list = testUndirectedGraphDataVertexPathMap["dls-3"]
 	case "DlsPath-m1":
-		list = [][]int{}
+		list = testUndirectedGraphDataVertexPathMap["dls-m1"]
 	case "IdsPath", "IdsPath-m":
 		list = testUndirectedGraphDataVertexPathMap["ids"]
 	default:

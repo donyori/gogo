@@ -63,6 +63,9 @@ func (tt *testTree) Access(node interface{}) (found bool) {
 	return node == tt.Goal
 }
 
+// testNumTreeNodes is the number of nodes in testTreeData.
+const testNumTreeNodes int = 12
+
 // testTreeData represents a tree as follows:
 //        0
 //       /|\
@@ -154,12 +157,22 @@ func testBruteForceSearch(t *testing.T, name string) {
 	}
 
 	tt := &testTree{Data: testTreeData}
-	for i, node := range ordering {
-		r := f(tt, node)
-		if r != node {
-			t.Errorf("%s returns %v != %v.", name, r, node)
+	for node := 0; node < testNumTreeNodes; node++ {
+		var i int
+		for i < len(ordering) && ordering[i] != node {
+			i++
 		}
-		testCheckAccessHistory(t, name, tt, ordering[:1+i])
+		var expNode interface{} // The node expected to be found.
+		expHx := ordering       // Expected history.
+		if i < len(ordering) {
+			expNode = node
+			expHx = expHx[:1+i]
+		}
+		r := f(tt, node)
+		if r != expNode {
+			t.Errorf("%s returns %v != %v.", name, r, expNode)
+		}
+		testCheckAccessHistory(t, name, tt, expHx)
 	}
 	// Non-existent nodes:
 	for _, goal := range []interface{}{nil, -1, len(testTreeData), 1.2} {
@@ -187,15 +200,23 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 	}
 
 	tt := &testTree{Data: testTreeData}
-	for i, node := range ordering {
-		list := f(tt, node)
-		testCheckPath(t, name, node, list)
-		testCheckAccessHistory(t, name, tt, ordering[:1+i])
+	for node := 0; node < testNumTreeNodes; node++ {
+		pl := f(tt, node)
+		testCheckPath(t, name, node, pl)
+		var i int
+		for i < len(ordering) && ordering[i] != node {
+			i++
+		}
+		expHx := ordering // Expected history.
+		if i < len(ordering) {
+			expHx = expHx[:1+i]
+		}
+		testCheckAccessHistory(t, name, tt, expHx)
 	}
 	// Non-existent nodes:
 	for _, goal := range []interface{}{nil, -1, len(testTreeData), 1.2} {
-		list := f(tt, goal)
-		testCheckPath(t, name, goal, list)
+		pl := f(tt, goal)
+		testCheckPath(t, name, goal, pl)
 		testCheckAccessHistory(t, name, tt, ordering)
 	}
 }
