@@ -164,6 +164,7 @@ var testUndirectedGraphData = [][]int{
 //  dls-3
 //  dls-m1
 //  ids
+// where dls is followed by the depth limit, and m1 is minus 1 (-1).
 var testUndirectedGraphDataOrderingMap = map[string][]int{
 	"dfs":    {0, 1, 4, 5, 3, 2, 6},
 	"bfs":    {0, 1, 2, 3, 4, 5, 6},
@@ -172,7 +173,7 @@ var testUndirectedGraphDataOrderingMap = map[string][]int{
 	"dls-2":  {0, 1, 4, 5, 2, 6, 3},
 	"dls-3":  nil, // It is the same as dfs and will be set in function init.
 	"dls-m1": {},
-	"ids":    {0, 0, 1, 2, 3, 0, 1, 4, 5, 2, 6, 3, 0, 1, 4, 5, 3, 2, 6},
+	"ids":    {0, 1, 2, 3, 0, 1, 4, 5, 2, 6, 3, 0, 1, 4, 5, 3, 2, 6},
 }
 
 // testUndirectedGraphDataVertexPathMap is a mapping from algorithm short names
@@ -187,6 +188,7 @@ var testUndirectedGraphDataOrderingMap = map[string][]int{
 //  dls-3
 //  dls-m1
 //  ids
+// where dls is followed by the depth limit, and m1 is minus 1 (-1).
 var testUndirectedGraphDataVertexPathMap = map[string][][]int{
 	"dfs": {
 		{0},

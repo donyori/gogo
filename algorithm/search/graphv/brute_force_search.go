@@ -436,23 +436,24 @@ type IdsInterface interface {
 // Ids finds goal in itf using iterative deepening depth-first
 // search algorithm, and returns the goal vertex found.
 //
-// initialLimit is the depth limit used in the first iteration.
+// initLimit is the depth limit used in the first iteration.
 // The depth of the root is 0, of adjacent vertices of the root is 1, and so on.
+// If initLimit < 1, the depth limit in the first iteration will be 1.
 //
 // It returns nil if goal is not found.
 //
 // goal is only used to call the method SetGoal of itf.
 // It's OK to handle goal in your implementation of IdsInterface,
 // and set goal to an arbitrary value, such as nil.
-func Ids(itf IdsInterface, goal interface{}, initialLimit int) interface{} {
+func Ids(itf IdsInterface, goal interface{}, initLimit int) interface{} {
 	itf.SetGoal(goal)
 	root := itf.Root()
 	if root == nil {
 		return nil
 	}
-	limit := initialLimit
-	if limit < 0 {
-		limit = 0
+	limit := initLimit
+	if limit < 1 {
+		limit = 1
 	}
 	for { // The loop ends when goal is found or more is false.
 		vertexFound, more := dls(itf, root, limit)
@@ -471,15 +472,15 @@ func Ids(itf IdsInterface, goal interface{}, initialLimit int) interface{} {
 // to the goal vertex found, instead of only the goal vertex.
 //
 // It returns nil if goal is not found.
-func IdsPath(itf IdsInterface, goal interface{}, initialLimit int) []interface{} {
+func IdsPath(itf IdsInterface, goal interface{}, initLimit int) []interface{} {
 	itf.SetGoal(goal)
 	root := itf.Root()
 	if root == nil {
 		return nil
 	}
-	limit := initialLimit
-	if limit < 0 {
-		limit = 0
+	limit := initLimit
+	if limit < 1 {
+		limit = 1
 	}
 	for { // The loop ends when goal is found or more is false.
 		pathFound, more := dlsPath(itf, root, limit)
