@@ -14,5 +14,5 @@
 # Dependency directories
 vendor/
 
-# GoLand configurations
+# JetBrains IDE configurations
 /.idea/
