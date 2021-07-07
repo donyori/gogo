@@ -274,7 +274,7 @@ func TestIdsPath(t *testing.T) {
 }
 
 func testBruteForceSearch(t *testing.T, name string) {
-	var f func(itf BasicInterface, goal interface{}) interface{}
+	var f func(itf Interface, goal interface{}) interface{}
 	var ordering []int
 	switch name {
 	case "Dfs":
@@ -284,53 +284,53 @@ func testBruteForceSearch(t *testing.T, name string) {
 		f = Bfs
 		ordering = testUndirectedGraphDataOrderingMap["bfs"]
 	case "Dls-0":
-		f = func(itf BasicInterface, goal interface{}) interface{} {
+		f = func(itf Interface, goal interface{}) interface{} {
 			v, more := Dls(itf, goal, 0)
 			if v == nil && !more {
-				t.Error("Dls-0 - more is false but there are undiscovered vertices.")
+				t.Error(name, "- more is false but there are undiscovered vertices.")
 			}
 			return v
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-0"]
 	case "Dls-1":
-		f = func(itf BasicInterface, goal interface{}) interface{} {
+		f = func(itf Interface, goal interface{}) interface{} {
 			v, more := Dls(itf, goal, 1)
 			if v == nil && !more {
-				t.Error("Dls-1 - more is false but there are undiscovered vertices.")
+				t.Error(name, "- more is false but there are undiscovered vertices.")
 			}
 			return v
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-1"]
 	case "Dls-2":
-		f = func(itf BasicInterface, goal interface{}) interface{} {
+		f = func(itf Interface, goal interface{}) interface{} {
 			v, _ := Dls(itf, goal, 2)
 			// Both true and false are acceptable for the second return value.
 			return v
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-2"]
 	case "Dls-3":
-		f = func(itf BasicInterface, goal interface{}) interface{} {
+		f = func(itf Interface, goal interface{}) interface{} {
 			v, _ := Dls(itf, goal, 3)
 			// Both true and false are acceptable for the second return value.
 			return v
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-3"]
 	case "Dls-m1":
-		f = func(itf BasicInterface, goal interface{}) interface{} {
+		f = func(itf Interface, goal interface{}) interface{} {
 			v, more := Dls(itf, goal, -1)
 			if v == nil && !more {
-				t.Error("Dls-m1 - more is false but there are undiscovered vertices.")
+				t.Error(name, "- more is false but there are undiscovered vertices.")
 			}
 			return v
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-m1"]
 	case "Ids":
-		f = func(itf BasicInterface, goal interface{}) interface{} {
-			return Ids(itf.(IdsInterface), goal, 0)
+		f = func(itf Interface, goal interface{}) interface{} {
+			return Ids(itf.(IdsInterface), goal, 1)
 		}
 		ordering = testUndirectedGraphDataOrderingMap["ids"]
 	case "Ids-m":
-		f = func(itf BasicInterface, goal interface{}) interface{} {
+		f = func(itf Interface, goal interface{}) interface{} {
 			return Ids(itf.(IdsInterface), goal, -1)
 		}
 		ordering = testUndirectedGraphDataOrderingMap["ids"]
@@ -384,7 +384,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 }
 
 func testBruteForceSearchPath(t *testing.T, name string) {
-	var f func(itf BasicInterface, goal interface{}) []interface{}
+	var f func(itf Interface, goal interface{}) []interface{}
 	var ordering []int
 	switch name {
 	case "DfsPath":
@@ -394,53 +394,53 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		f = BfsPath
 		ordering = testUndirectedGraphDataOrderingMap["bfs"]
 	case "DlsPath-0":
-		f = func(itf BasicInterface, goal interface{}) []interface{} {
+		f = func(itf Interface, goal interface{}) []interface{} {
 			p, more := DlsPath(itf, goal, 0)
 			if p == nil && !more {
-				t.Error("DlsPath-0 - more is false but there are undiscovered vertices.")
+				t.Error(name, "- more is false but there are undiscovered vertices.")
 			}
 			return p
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-0"]
 	case "DlsPath-1":
-		f = func(itf BasicInterface, goal interface{}) []interface{} {
+		f = func(itf Interface, goal interface{}) []interface{} {
 			p, more := DlsPath(itf, goal, 1)
 			if p == nil && !more {
-				t.Error("DlsPath-1 - more is false but there are undiscovered vertices.")
+				t.Error(name, "- more is false but there are undiscovered vertices.")
 			}
 			return p
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-1"]
 	case "DlsPath-2":
-		f = func(itf BasicInterface, goal interface{}) []interface{} {
+		f = func(itf Interface, goal interface{}) []interface{} {
 			p, _ := DlsPath(itf, goal, 2)
 			// Both true and false are acceptable for the second return value.
 			return p
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-2"]
 	case "DlsPath-3":
-		f = func(itf BasicInterface, goal interface{}) []interface{} {
+		f = func(itf Interface, goal interface{}) []interface{} {
 			p, _ := DlsPath(itf, goal, 3)
 			// Both true and false are acceptable for the second return value.
 			return p
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-3"]
 	case "DlsPath-m1":
-		f = func(itf BasicInterface, goal interface{}) []interface{} {
+		f = func(itf Interface, goal interface{}) []interface{} {
 			p, more := DlsPath(itf, goal, -1)
 			if p == nil && !more {
-				t.Error("DlsPath-m1 - more is false but there are undiscovered vertices.")
+				t.Error(name, "- more is false but there are undiscovered vertices.")
 			}
 			return p
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-m1"]
 	case "IdsPath":
-		f = func(itf BasicInterface, goal interface{}) []interface{} {
-			return IdsPath(itf.(IdsInterface), goal, 0)
+		f = func(itf Interface, goal interface{}) []interface{} {
+			return IdsPath(itf.(IdsInterface), goal, 1)
 		}
 		ordering = testUndirectedGraphDataOrderingMap["ids"]
 	case "IdsPath-m":
-		f = func(itf BasicInterface, goal interface{}) []interface{} {
+		f = func(itf Interface, goal interface{}) []interface{} {
 			return IdsPath(itf.(IdsInterface), goal, -1)
 		}
 		ordering = testUndirectedGraphDataOrderingMap["ids"]

@@ -20,11 +20,11 @@ package graphv
 
 import "github.com/donyori/gogo/algorithm/search/internal"
 
-// BasicInterface represents a graph used in the graph search algorithm,
+// Interface represents a graph used in the graph search algorithm,
 // where only the vertices are concerned.
 //
 // It contains the basic methods required by every graph search algorithm.
-type BasicInterface interface {
+type Interface interface {
 	// Root returns the vertex of the graph where the search algorithms start.
 	//
 	// It returns only one vertex because the search starts at
@@ -70,15 +70,18 @@ type BasicInterface interface {
 	Discovered(vertex interface{}) bool
 }
 
+// BasicInterface is an alias for Interface.
+type BasicInterface = Interface
+
 // Dfs finds goal in itf using depth-first search algorithm,
 // and returns the goal vertex found.
 //
 // It returns nil if goal is not found.
 //
 // goal is only used to call the method SetGoal of itf.
-// It's OK to handle goal in your implementation of BasicInterface,
+// It's OK to handle goal in your implementation of Interface,
 // and set goal to an arbitrary value, such as nil.
-func Dfs(itf BasicInterface, goal interface{}) interface{} {
+func Dfs(itf Interface, goal interface{}) interface{} {
 	itf.SetGoal(goal)
 	v := itf.Root()
 	if v == nil {
@@ -125,7 +128,7 @@ func Dfs(itf BasicInterface, goal interface{}) interface{} {
 // to the goal vertex found, instead of only the goal vertex.
 //
 // It returns nil if goal is not found.
-func DfsPath(itf BasicInterface, goal interface{}) []interface{} {
+func DfsPath(itf Interface, goal interface{}) []interface{} {
 	itf.SetGoal(goal)
 	v := itf.Root()
 	if v == nil {
@@ -154,7 +157,10 @@ func DfsPath(itf BasicInterface, goal interface{}) []interface{} {
 			vAdjPathList = make([]*internal.Path, 0, len(vAdj))
 			for _, x := range vAdj {
 				if x != nil {
-					vAdjPathList = append(vAdjPathList, &internal.Path{X: x, P: p})
+					vAdjPathList = append(
+						vAdjPathList,
+						&internal.Path{X: x, P: p},
+					)
 				}
 			}
 		}
@@ -178,9 +184,9 @@ func DfsPath(itf BasicInterface, goal interface{}) []interface{} {
 // It returns nil if goal is not found.
 //
 // goal is only used to call the method SetGoal of itf.
-// It's OK to handle goal in your implementation of BasicInterface,
+// It's OK to handle goal in your implementation of Interface,
 // and set goal to an arbitrary value, such as nil.
-func Bfs(itf BasicInterface, goal interface{}) interface{} {
+func Bfs(itf Interface, goal interface{}) interface{} {
 	itf.SetGoal(goal)
 	v := itf.Root()
 	if v == nil {
@@ -210,7 +216,7 @@ func Bfs(itf BasicInterface, goal interface{}) interface{} {
 // to the goal vertex found, instead of only the goal vertex.
 //
 // It returns nil if goal is not found.
-func BfsPath(itf BasicInterface, goal interface{}) []interface{} {
+func BfsPath(itf Interface, goal interface{}) []interface{} {
 	itf.SetGoal(goal)
 	v := itf.Root()
 	if v == nil {
@@ -232,7 +238,10 @@ func BfsPath(itf BasicInterface, goal interface{}) []interface{} {
 				vAdjPathList := make([]*internal.Path, 0, len(vAdj))
 				for _, x := range vAdj {
 					if x != nil {
-						vAdjPathList = append(vAdjPathList, &internal.Path{X: x, P: p})
+						vAdjPathList = append(
+							vAdjPathList,
+							&internal.Path{X: x, P: p},
+						)
 					}
 				}
 				if len(vAdjPathList) > 0 {
@@ -260,9 +269,9 @@ func BfsPath(itf BasicInterface, goal interface{}) []interface{} {
 // because the vertex may be discovered in another search path.
 //
 // goal is only used to call the method SetGoal of itf.
-// It's OK to handle goal in your implementation of BasicInterface,
+// It's OK to handle goal in your implementation of Interface,
 // and set goal to an arbitrary value, such as nil.
-func Dls(itf BasicInterface, goal interface{}, limit int) (vertexFound interface{}, more bool) {
+func Dls(itf Interface, goal interface{}, limit int) (vertexFound interface{}, more bool) {
 	itf.SetGoal(goal)
 	root := itf.Root()
 	if root == nil {
@@ -284,14 +293,16 @@ type dlsStackItem struct {
 // It requires the root to avoid redundant calls to itf.Root
 // in some functions such as Ids.
 // The client should guarantee that root is itf.Root() and root != nil.
-func dls(itf BasicInterface, root interface{}, limit int) (vertexFound interface{}, more bool) {
+func dls(itf Interface, root interface{}, limit int) (vertexFound interface{}, more bool) {
 	if limit < 0 {
 		return nil, true // There must be an undiscovered vertex because of the depth limit: the root.
 	}
 	// It is similar to function Dfs,
 	// except that it examines the depth before pushing a new item to the stack
 	// to guarantee that the depth does not exceed the limit.
-	stack, idx := []dlsStackItem{{Adjacency: []interface{}{root}}}, 0 // Neither idx nor len(stack) is the depth.
+	stack, idx := []dlsStackItem{
+		{Adjacency: []interface{}{root}},
+	}, 0 // Neither idx nor len(stack) is the depth.
 	for idx >= 0 {
 		adj, i := stack[idx].Adjacency, 0
 		for i < len(adj) && (adj[i] == nil || itf.Discovered(adj[i])) {
@@ -316,7 +327,10 @@ func dls(itf BasicInterface, root interface{}, limit int) (vertexFound interface
 		if len(vAdj) > 0 {
 			if depth < limit {
 				// If the depth is less than the limit, push a new item.
-				stack, idx = append(stack, dlsStackItem{Adjacency: vAdj, Depth: depth + 1}), idx+1
+				stack, idx = append(
+					stack,
+					dlsStackItem{Adjacency: vAdj, Depth: depth + 1},
+				), idx+1
 			} else if !more {
 				// If the depth reaches the limit,
 				// examine whether there is any more undiscovered vertex
@@ -338,7 +352,7 @@ func dls(itf BasicInterface, root interface{}, limit int) (vertexFound interface
 // to the goal vertex found, instead of only the goal vertex.
 //
 // It returns nil for the path if goal is not found.
-func DlsPath(itf BasicInterface, goal interface{}, limit int) (pathFound []interface{}, more bool) {
+func DlsPath(itf Interface, goal interface{}, limit int) (pathFound []interface{}, more bool) {
 	itf.SetGoal(goal)
 	root := itf.Root()
 	if root == nil {
@@ -360,13 +374,15 @@ type dlsPathStackItem struct {
 // It requires the root to avoid redundant calls to itf.Root
 // in some functions such as IdsPath.
 // The client should guarantee that root is itf.Root() and root != nil.
-func dlsPath(itf BasicInterface, root interface{}, limit int) (pathFound []interface{}, more bool) {
+func dlsPath(itf Interface, root interface{}, limit int) (pathFound []interface{}, more bool) {
 	if limit < 0 {
 		return nil, true // There must be an undiscovered vertex because of the depth limit: the root.
 	}
 	// It is similar to function dls, but the item of the stack contains
 	// the list of Path instead of the adjacency list.
-	stack, idx := []dlsPathStackItem{{PathList: []*internal.Path{{X: root}}}}, 0 // Neither idx nor len(stack) is the depth.
+	stack, idx := []dlsPathStackItem{
+		{PathList: []*internal.Path{{X: root}}},
+	}, 0 // Neither idx nor len(stack) is the depth.
 	for idx >= 0 {
 		pl, i := stack[idx].PathList, 0
 		// Unlike in function dls, pl[i].X here must be non-nil.
@@ -394,13 +410,19 @@ func dlsPath(itf BasicInterface, root interface{}, limit int) (pathFound []inter
 			vAdjPathList = make([]*internal.Path, 0, len(vAdj))
 			for _, x := range vAdj {
 				if x != nil {
-					vAdjPathList = append(vAdjPathList, &internal.Path{X: x, P: p})
+					vAdjPathList = append(
+						vAdjPathList,
+						&internal.Path{X: x, P: p},
+					)
 				}
 			}
 		}
 		if len(vAdjPathList) > 0 {
 			if depth < limit {
-				stack, idx = append(stack, dlsPathStackItem{PathList: vAdjPathList, Depth: depth + 1}), idx+1
+				stack, idx = append(
+					stack,
+					dlsPathStackItem{PathList: vAdjPathList, Depth: depth + 1},
+				), idx+1
 			} else if !more {
 				for _, a := range vAdjPathList {
 					if !itf.Discovered(a.X) {
@@ -414,17 +436,17 @@ func dlsPath(itf BasicInterface, root interface{}, limit int) (pathFound []inter
 	return
 }
 
-// IdsInterface extends interface BasicInterface for
+// IdsInterface extends interface Interface for
 // functions Ids and IdsPath.
 //
 // It contains a new method ResetSearchState to reset
 // the search state for each iteration.
 type IdsInterface interface {
-	BasicInterface
+	Interface
 
 	// ResetSearchState resets the search state for the next iteration.
 	//
-	// It will be called before each iteration in function Ids,
+	// It will be called before each iteration in functions Ids and IdsPath,
 	// except for the first iteration.
 	//
 	// Its implementation must reset all the vertices to undiscovered,
@@ -459,7 +481,8 @@ func Ids(itf IdsInterface, goal interface{}, initLimit int) interface{} {
 		vertexFound, more := dls(itf, root, limit)
 		if vertexFound != nil {
 			return vertexFound
-		} else if !more {
+		}
+		if !more {
 			return nil
 		}
 		itf.ResetSearchState()
@@ -486,7 +509,8 @@ func IdsPath(itf IdsInterface, goal interface{}, initLimit int) []interface{} {
 		pathFound, more := dlsPath(itf, root, limit)
 		if pathFound != nil {
 			return pathFound
-		} else if !more {
+		}
+		if !more {
 			return nil
 		}
 		itf.ResetSearchState()
