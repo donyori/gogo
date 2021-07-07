@@ -103,9 +103,22 @@ var testTreeData = [][2]int{
 // Valid keys:
 //  dfs
 //  bfs
+//  dls-0
+//  dls-1
+//  dls-2
+//  dls-3
+//  dls-m1
+//  ids
+// where dls is followed by the depth limit, and m1 is minus 1 (-1).
 var testTreeDataOrderingMap = map[string][]int{
-	"dfs": {0, 1, 4, 8, 9, 5, 2, 3, 6, 10, 11, 7},
-	"bfs": {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
+	"dfs":    {0, 1, 4, 8, 9, 5, 2, 3, 6, 10, 11, 7},
+	"bfs":    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
+	"dls-0":  {0},
+	"dls-1":  {0, 1, 2, 3},
+	"dls-2":  {0, 1, 4, 5, 2, 3, 6, 7},
+	"dls-3":  nil, // It is the same as dfs and will be set in function init.
+	"dls-m1": {},
+	"ids":    {0, 1, 2, 3, 0, 1, 4, 5, 2, 3, 6, 7, 0, 1, 4, 8, 9, 5, 2, 3, 6, 10, 11, 7},
 }
 
 // testTreeDataNodePath is a list of paths from the root
@@ -125,20 +138,50 @@ var testTreeDataNodePath = [][]int{
 	{0, 3, 6, 11},
 }
 
-func TestDfs(t *testing.T) {
-	testBruteForceSearch(t, "Dfs")
+func init() {
+	testTreeDataOrderingMap["dls-3"] = testTreeDataOrderingMap["dfs"]
 }
 
-func TestBfs(t *testing.T) {
-	testBruteForceSearch(t, "Bfs")
+func TestDfs(t *testing.T) {
+	testBruteForceSearch(t, "Dfs")
 }
 
 func TestDfsPath(t *testing.T) {
 	testBruteForceSearchPath(t, "DfsPath")
 }
 
+func TestBfs(t *testing.T) {
+	testBruteForceSearch(t, "Bfs")
+}
+
 func TestBfsPath(t *testing.T) {
 	testBruteForceSearchPath(t, "BfsPath")
+}
+
+func TestDls(t *testing.T) {
+	testBruteForceSearch(t, "Dls-0")
+	testBruteForceSearch(t, "Dls-1")
+	testBruteForceSearch(t, "Dls-2")
+	testBruteForceSearch(t, "Dls-3")
+	testBruteForceSearch(t, "Dls-m1")
+}
+
+func TestDlsPath(t *testing.T) {
+	testBruteForceSearchPath(t, "DlsPath-0")
+	testBruteForceSearchPath(t, "DlsPath-1")
+	testBruteForceSearchPath(t, "DlsPath-2")
+	testBruteForceSearchPath(t, "DlsPath-3")
+	testBruteForceSearchPath(t, "DlsPath-m1")
+}
+
+func TestIds(t *testing.T) {
+	testBruteForceSearch(t, "Ids")
+	testBruteForceSearch(t, "Ids-m")
+}
+
+func TestIdsPath(t *testing.T) {
+	testBruteForceSearchPath(t, "IdsPath")
+	testBruteForceSearchPath(t, "IdsPath-m")
 }
 
 func testBruteForceSearch(t *testing.T, name string) {
@@ -151,6 +194,59 @@ func testBruteForceSearch(t *testing.T, name string) {
 	case "Bfs":
 		f = Bfs
 		ordering = testTreeDataOrderingMap["bfs"]
+	case "Dls-0":
+		f = func(itf Interface, goal interface{}) interface{} {
+			node, more := Dls(itf, goal, 0)
+			if node == nil && !more {
+				t.Error(name, "- more is false but there are undiscovered vertices.")
+			}
+			return node
+		}
+		ordering = testTreeDataOrderingMap["dls-0"]
+	case "Dls-1":
+		f = func(itf Interface, goal interface{}) interface{} {
+			node, more := Dls(itf, goal, 1)
+			if node == nil && !more {
+				t.Error(name, "- more is false but there are undiscovered vertices.")
+			}
+			return node
+		}
+		ordering = testTreeDataOrderingMap["dls-1"]
+	case "Dls-2":
+		f = func(itf Interface, goal interface{}) interface{} {
+			node, more := Dls(itf, goal, 2)
+			if node == nil && !more {
+				t.Error(name, "- more is false but there are undiscovered vertices.")
+			}
+			return node
+		}
+		ordering = testTreeDataOrderingMap["dls-2"]
+	case "Dls-3":
+		f = func(itf Interface, goal interface{}) interface{} {
+			node, _ := Dls(itf, goal, 3)
+			// Both true and false are acceptable for the second return value.
+			return node
+		}
+		ordering = testTreeDataOrderingMap["dls-3"]
+	case "Dls-m1":
+		f = func(itf Interface, goal interface{}) interface{} {
+			node, more := Dls(itf, goal, -1)
+			if node == nil && !more {
+				t.Error(name, "- more is false but there are undiscovered vertices.")
+			}
+			return node
+		}
+		ordering = testTreeDataOrderingMap["dls-m1"]
+	case "Ids":
+		f = func(itf Interface, goal interface{}) interface{} {
+			return Ids(itf, goal, 1)
+		}
+		ordering = testTreeDataOrderingMap["ids"]
+	case "Ids-m":
+		f = func(itf Interface, goal interface{}) interface{} {
+			return Ids(itf, goal, -1)
+		}
+		ordering = testTreeDataOrderingMap["ids"]
 	default:
 		t.Error("Unacceptable name:", name)
 		return
@@ -194,6 +290,59 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 	case "BfsPath":
 		f = BfsPath
 		ordering = testTreeDataOrderingMap["bfs"]
+	case "DlsPath-0":
+		f = func(itf Interface, goal interface{}) []interface{} {
+			p, more := DlsPath(itf, goal, 0)
+			if p == nil && !more {
+				t.Error(name, "- more is false but there are undiscovered vertices.")
+			}
+			return p
+		}
+		ordering = testTreeDataOrderingMap["dls-0"]
+	case "DlsPath-1":
+		f = func(itf Interface, goal interface{}) []interface{} {
+			p, more := DlsPath(itf, goal, 1)
+			if p == nil && !more {
+				t.Error(name, "- more is false but there are undiscovered vertices.")
+			}
+			return p
+		}
+		ordering = testTreeDataOrderingMap["dls-1"]
+	case "DlsPath-2":
+		f = func(itf Interface, goal interface{}) []interface{} {
+			p, more := DlsPath(itf, goal, 2)
+			if p == nil && !more {
+				t.Error(name, "- more is false but there are undiscovered vertices.")
+			}
+			return p
+		}
+		ordering = testTreeDataOrderingMap["dls-2"]
+	case "DlsPath-3":
+		f = func(itf Interface, goal interface{}) []interface{} {
+			p, _ := DlsPath(itf, goal, 3)
+			// Both true and false are acceptable for the second return value.
+			return p
+		}
+		ordering = testTreeDataOrderingMap["dls-3"]
+	case "DlsPath-m1":
+		f = func(itf Interface, goal interface{}) []interface{} {
+			p, more := DlsPath(itf, goal, -1)
+			if p == nil && !more {
+				t.Error(name, "- more is false but there are undiscovered vertices.")
+			}
+			return p
+		}
+		ordering = testTreeDataOrderingMap["dls-m1"]
+	case "IdsPath":
+		f = func(itf Interface, goal interface{}) []interface{} {
+			return IdsPath(itf, goal, 1)
+		}
+		ordering = testTreeDataOrderingMap["ids"]
+	case "IdsPath-m":
+		f = func(itf Interface, goal interface{}) []interface{} {
+			return IdsPath(itf, goal, -1)
+		}
+		ordering = testTreeDataOrderingMap["ids"]
 	default:
 		t.Error("Unacceptable name:", name)
 		return
@@ -236,9 +385,38 @@ func testCheckAccessHistory(t *testing.T, name string, tt *testTree, wanted []in
 
 func testCheckPath(t *testing.T, name string, node interface{}, pathList []interface{}) {
 	var p []int
-	idx, ok := node.(int)
-	if ok && idx >= 0 && idx < len(testTreeDataNodePath) {
-		p = testTreeDataNodePath[idx]
+	var ordering []int
+	switch name {
+	case "DfsPath":
+		ordering = testTreeDataOrderingMap["dfs"]
+	case "BfsPath":
+		ordering = testTreeDataOrderingMap["bfs"]
+	case "DlsPath-0":
+		ordering = testTreeDataOrderingMap["dls-0"]
+	case "DlsPath-1":
+		ordering = testTreeDataOrderingMap["dls-1"]
+	case "DlsPath-2":
+		ordering = testTreeDataOrderingMap["dls-2"]
+	case "DlsPath-3":
+		ordering = testTreeDataOrderingMap["dls-3"]
+	case "DlsPath-m1":
+		ordering = testTreeDataOrderingMap["dls-m1"]
+	case "IdsPath", "IdsPath-m":
+		ordering = testTreeDataOrderingMap["ids"]
+	default:
+		// This should never happen, but will act as a safeguard for later,
+		// as a default value doesn't make sense here.
+		t.Error("Unacceptable name:", name)
+		return
+	}
+	for _, n := range ordering {
+		if n == node {
+			idx, ok := node.(int)
+			if ok && idx >= 0 && idx < len(testTreeDataNodePath) {
+				p = testTreeDataNodePath[idx]
+			}
+			break
+		}
 	}
 	if len(pathList) != len(p) {
 		t.Errorf("%s - Path of %v: %v\nwanted: %v", name, node, pathList, p)
