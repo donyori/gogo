@@ -1,5 +1,5 @@
 // gogo. A Golang toolbox.
-// Copyright (C) 2019-2021 Yuan Gao
+// Copyright (C) 2019-2022 Yuan Gao
 //
 // This file is part of gogo.
 //
