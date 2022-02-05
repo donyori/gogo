@@ -135,7 +135,7 @@ type controller struct {
 	loi  concurrency.OnceIndicator // For launching the job.
 	wsoi concurrency.OnceIndicator // For indicating the start of the effective first call of the method Wait.
 	m    sync.Mutex                // Lock to avoid the race condition on jq when calling Launch and Input at the same time.
-	lsi  bool                      // An indicator to report whether the method Launch is started or not.
+	lsi  bool                      // An indicator to report whether the method Launch is started.
 }
 
 // QuitChan returns the channel for the quit signal.
@@ -369,7 +369,7 @@ func (ctrl *controller) workerProc() {
 		}
 
 		// Always send jobs to the allocator,
-		// regardless of whether jobs is empty or not.
+		// regardless of whether jobs are empty.
 		select {
 		case <-quitChan:
 			return

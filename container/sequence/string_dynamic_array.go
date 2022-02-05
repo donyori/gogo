@@ -71,7 +71,7 @@ func (sda StringDynamicArray) Reverse() {
 // Range browses the items in the array from the first to the last.
 //
 // Its argument handler is a function to deal with the item x in the
-// array and report whether to continue to check the next item or not.
+// array and report whether to continue to check the next item.
 func (sda StringDynamicArray) Range(handler func(x interface{}) (cont bool)) {
 	for _, x := range sda {
 		if !handler(x) {
@@ -356,7 +356,7 @@ func (sda *StringDynamicArray) Clear() {
 // Filter refines items in the dynamic array (in place).
 //
 // Its argument filter is a function to report
-// whether to keep the item x or not.
+// whether to keep the item x.
 func (sda *StringDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 	if sda == nil || len(*sda) == 0 {
 		return

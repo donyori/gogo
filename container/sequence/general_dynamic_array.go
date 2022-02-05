@@ -71,7 +71,7 @@ func (gda GeneralDynamicArray) Reverse() {
 // Range browses the items in the array from the first to the last.
 //
 // Its argument handler is a function to deal with the item x in the
-// array and report whether to continue to check the next item or not.
+// array and report whether to continue to check the next item.
 func (gda GeneralDynamicArray) Range(handler func(x interface{}) (cont bool)) {
 	for _, x := range gda {
 		if !handler(x) {
@@ -348,7 +348,7 @@ func (gda *GeneralDynamicArray) Clear() {
 // Filter refines items in the dynamic array (in place).
 //
 // Its argument filter is a function to report
-// whether to keep the item x or not.
+// whether to keep the item x.
 func (gda *GeneralDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 	if gda == nil || len(*gda) == 0 {
 		return

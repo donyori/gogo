@@ -21,7 +21,7 @@ package concurrency
 import "sync"
 
 // OnceIndicator is an object that performs exactly one action, like sync.Once.
-// Moreover, it can indicate whether the action has been performed or not,
+// Moreover, it can indicate whether the action has been performed,
 // and enable the client on another goroutine to wait for the action to finish.
 type OnceIndicator interface {
 	// Do performs the same as the method Do of sync.Once, and indicate whether
@@ -45,7 +45,7 @@ type OnceIndicator interface {
 	// on another goroutine to finish.
 	Wait()
 
-	// Test reports whether the method Do for this instance is called or not.
+	// Test reports whether the method Do for this instance is called.
 	//
 	// It returns true if and only if the first call of the method Do
 	// for this instance has finished.
@@ -98,7 +98,7 @@ func (oi *onceIndicator) Wait() {
 	<-oi.c
 }
 
-// Test reports whether the method Do for this instance is called or not.
+// Test reports whether the method Do for this instance is called.
 //
 // It returns true if and only if the first call of the method Do
 // for this instance has finished.

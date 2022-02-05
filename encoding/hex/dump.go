@@ -113,7 +113,7 @@ type dumper struct {
 	written      int    // Index of already written to w.
 	sepCd        int    // Countdown for writing a separator, negative if formatCfgNotValid(cfg).
 	lineCd       int    // Countdown for writing a separator, negative if dumpCfgLineNotValid(cfg).
-	used         bool   // Indicate whether anything has been asked to be written to the dumper or not.
+	used         bool   // Indicate whether anything has been asked to be written to the dumper.
 }
 
 // NewDumper creates a dumper to dump hexadecimal characters to w.

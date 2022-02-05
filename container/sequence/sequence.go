@@ -49,6 +49,6 @@ type Sequence interface {
 	// Range browses the items in the sequence from the first to the last.
 	//
 	// Its argument handler is a function to deal with the item x in the
-	// sequence and report whether to continue to check the next item or not.
+	// sequence and report whether to continue to check the next item.
 	Range(handler func(x interface{}) (cont bool))
 }

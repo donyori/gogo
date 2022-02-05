@@ -70,7 +70,7 @@ func (ida IntDynamicArray) Reverse() {
 // Range browses the items in the array from the first to the last.
 //
 // Its argument handler is a function to deal with the item x in the
-// array and report whether to continue to check the next item or not.
+// array and report whether to continue to check the next item.
 func (ida IntDynamicArray) Range(handler func(x interface{}) (cont bool)) {
 	for _, x := range ida {
 		if !handler(x) {
@@ -343,7 +343,7 @@ func (ida *IntDynamicArray) Clear() {
 // Filter refines items in the dynamic array (in place).
 //
 // Its argument filter is a function to report
-// whether to keep the item x or not.
+// whether to keep the item x.
 func (ida *IntDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 	if ida == nil || len(*ida) == 0 {
 		return

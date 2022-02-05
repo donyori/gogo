@@ -82,7 +82,7 @@ type PriorityQueue interface {
 type PriorityQueueEx interface {
 	PriorityQueue
 
-	// Contain reports whether x is in the queue or not.
+	// Contain reports whether x is in the queue.
 	//
 	// Time complexity: O(n), where n = pq.Len().
 	Contain(x interface{}) bool
@@ -307,7 +307,7 @@ func NewPriorityQueueEx(less compare.LessFunc, equal compare.EqualFunc, data ...
 	return pq
 }
 
-// Contain reports whether x is in the queue or not.
+// Contain reports whether x is in the queue.
 //
 // Time complexity: O(n), where n = pq.Len().
 func (pqx *priorityQueueEx) Contain(x interface{}) bool {

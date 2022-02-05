@@ -71,7 +71,7 @@ func (fda Float64DynamicArray) Reverse() {
 // Range browses the items in the array from the first to the last.
 //
 // Its argument handler is a function to deal with the item x in the
-// array and report whether to continue to check the next item or not.
+// array and report whether to continue to check the next item.
 func (fda Float64DynamicArray) Range(handler func(x interface{}) (cont bool)) {
 	for _, x := range fda {
 		if !handler(x) {
@@ -349,7 +349,7 @@ func (fda *Float64DynamicArray) Clear() {
 // Filter refines items in the dynamic array (in place).
 //
 // Its argument filter is a function to report
-// whether to keep the item x or not.
+// whether to keep the item x.
 func (fda *Float64DynamicArray) Filter(filter func(x interface{}) (keep bool)) {
 	if fda == nil || len(*fda) == 0 {
 		return

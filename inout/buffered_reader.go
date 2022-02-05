@@ -52,7 +52,7 @@ type BufferedReader interface {
 	// The error is bufio.ErrBufferFull if n is larger than its buffer size.
 	// (To test whether err is bufio.ErrBufferFull, use function errors.Is.)
 	//
-	// Calling Peek prevents a UnreadByte or UnreadRune call from succeeding
+	// Calling Peek prevents an UnreadByte or UnreadRune call from succeeding
 	// until the next read operation.
 	Peek(n int) (data []byte, err error)
 
@@ -250,7 +250,7 @@ func (rbr *resettableBufferedReader) Buffered() int {
 // The error is bufio.ErrBufferFull if n is larger than its buffer size.
 // (To test whether err is bufio.ErrBufferFull, use function errors.Is.)
 //
-// Calling Peek prevents a UnreadByte or UnreadRune call from succeeding
+// Calling Peek prevents an UnreadByte or UnreadRune call from succeeding
 // until the next read operation.
 func (rbr *resettableBufferedReader) Peek(n int) (data []byte, err error) {
 	data, err = rbr.br.Peek(n)

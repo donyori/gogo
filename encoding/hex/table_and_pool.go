@@ -20,7 +20,7 @@ package hex
 
 import "sync"
 
-// uppercaseHexTable is a uppercase character table for hexadecimal encoding.
+// uppercaseHexTable is an uppercase character table for hexadecimal encoding.
 const uppercaseHexTable = "0123456789ABCDEF"
 
 // lowercaseHexTable is a lowercase character table for hexadecimal encoding.
