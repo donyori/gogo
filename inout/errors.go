@@ -55,13 +55,8 @@ func NewClosedError(deviceName string, parentErr error) *ClosedError {
 	return &ClosedError{strings.TrimSpace(deviceName), parentErr}
 }
 
-// Error reports the error message, which performs the same as method String.
+// Error reports the error message.
 func (ce *ClosedError) Error() string {
-	return ce.String()
-}
-
-// String returns the error message, which performs the same as method Error.
-func (ce *ClosedError) String() string {
 	return ce.deviceName + " is already closed"
 }
 
@@ -73,10 +68,13 @@ func (ce *ClosedError) Unwrap() error {
 }
 
 // ErrClosed is an error indicating that the closer is already closed.
-var ErrClosed = errors.AutoWrap(&ClosedError{deviceName: "closer"})
+var ErrClosed = errors.AutoWrapCustom(&ClosedError{deviceName: "closer"},
+	errors.PrependFullPkgName, 0, nil)
 
 // ErrReaderClosed is an error indicating that the reader is already closed.
-var ErrReaderClosed = errors.AutoWrap(&ClosedError{"reader", ErrClosed})
+var ErrReaderClosed = errors.AutoWrapCustom(&ClosedError{"reader", ErrClosed},
+	errors.PrependFullPkgName, 0, nil)
 
 // ErrWriterClosed is an error indicating that the writer is already closed.
-var ErrWriterClosed = errors.AutoWrap(&ClosedError{"writer", ErrClosed})
+var ErrWriterClosed = errors.AutoWrapCustom(&ClosedError{"writer", ErrClosed},
+	errors.PrependFullPkgName, 0, nil)

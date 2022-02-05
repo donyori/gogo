@@ -823,7 +823,7 @@ func (comm *communicator) Gather(root int, msg interface{}) (x []interface{}, ok
 func (comm *communicator) checkRootAndN(root int) bool {
 	n := len(comm.Ctx.Comms)
 	if root < 0 || root >= n {
-		panic(errors.AutoMsgWithStrategy(fmt.Sprintf("root %d is out of range (n: %d)", root, n), -1, 1))
+		panic(errors.AutoMsgCustom(fmt.Sprintf("root %d is out of range (n: %d)", root, n), -1, 1))
 	}
 	return n <= 1
 }

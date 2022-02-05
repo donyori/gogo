@@ -30,8 +30,8 @@ import (
 
 // ErrPatternHasPathSeparator is an error indicating that the pattern,
 // prefix, or suffix contains a path separator.
-var ErrPatternHasPathSeparator = errors.AutoNewWithStrategy("pattern/prefix/suffix contains path separator",
-	errors.PrefixFullPkgName, 0)
+var ErrPatternHasPathSeparator = errors.AutoNewCustom("pattern/prefix/suffix contains path separator",
+	errors.PrependFullPkgName, 0)
 
 // Tmp creates and opens a new temporary file in the directory dir,
 // with specified permission perm (before umask), for reading and writing.

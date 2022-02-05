@@ -25,11 +25,11 @@ type ErrorMessageStrategy int8
 
 // Enumeration of supported error message strategies.
 const (
-	OriginalMsg          ErrorMessageStrategy = iota // OriginalMessage
-	PrefixFullPkgName                                // PrefixFullPackageName
-	PrefixSimplePkgName                              // PrefixSimplePackageName
-	PrefixFullFuncName                               // PrefixFullFunctionName
-	PrefixSimpleFuncName                             // PrefixSimpleFunctionName
+	OriginalMsg           ErrorMessageStrategy = iota // OriginalMessage
+	PrependFullFuncName                               // PrependFullFunctionName
+	PrependFullPkgName                                // PrependFullPackageName
+	PrependSimpleFuncName                             // PrependSimpleFunctionName
+	PrependSimplePkgName                              // PrependSimplePackageName
 )
 
 //go:generate stringer -type=ErrorMessageStrategy -output=error_message_strategy_string.go -linecomment
@@ -38,18 +38,18 @@ const (
 //
 // Known error message strategies are shown as follows:
 //  OriginalMsg: use the error message itself
-//  PrefixFullPkgName: add the full package name before the error message
-//  PrefixSimplePkgName: add the simple package name before the error message
-//  PrefixFullFuncName: add the full function name before the error message
-//  PrefixSimpleFuncName: add the simple function name before the error message
+//  PrependFullFuncName: add the full function name (i.e., the package path-qualified function name) before the error message
+//  PrependFullPkgName: add the full package name before the error message
+//  PrependSimpleFuncName: add the simple function name before the error message
+//  PrependSimplePkgName: add the simple package name before the error message
 func (i ErrorMessageStrategy) Valid() bool {
-	return i >= OriginalMsg && i <= PrefixSimpleFuncName
+	return i >= OriginalMsg && i <= PrependSimplePkgName
 }
 
 // MustValid panics if i is invalid.
 // Otherwise, it does nothing.
 func (i ErrorMessageStrategy) MustValid() {
 	if !i.Valid() {
-		panic(AutoMsgWithStrategy("unknown message strategy: "+strconv.FormatInt(int64(i), 10), defaultMessageStrategy, 1))
+		panic(AutoMsgCustom("unknown message strategy: "+strconv.FormatInt(int64(i), 10), PrependFullFuncName, 1))
 	}
 }

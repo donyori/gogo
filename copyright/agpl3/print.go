@@ -41,7 +41,8 @@ const noticeLayout = "    %s  Copyright (C) %s  %s\n" +
 const noticeWithSourceLayout = noticeLayout + "    Program source: <%[4]s>.\n"
 
 // ErrAuthorMissing is an error for that the author is missing.
-var ErrAuthorMissing = errors.AutoNew("author is missing")
+var ErrAuthorMissing = errors.AutoNewCustom("author is missing",
+	errors.PrependFullPkgName, 0)
 
 // PrintNotice prints a short notice to w,
 // typically used for terminal interaction.

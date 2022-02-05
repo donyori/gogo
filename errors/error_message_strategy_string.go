@@ -9,15 +9,15 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[OriginalMsg-0]
-	_ = x[PrefixFullPkgName-1]
-	_ = x[PrefixSimplePkgName-2]
-	_ = x[PrefixFullFuncName-3]
-	_ = x[PrefixSimpleFuncName-4]
+	_ = x[PrependFullFuncName-1]
+	_ = x[PrependFullPkgName-2]
+	_ = x[PrependSimpleFuncName-3]
+	_ = x[PrependSimplePkgName-4]
 }
 
-const _ErrorMessageStrategy_name = "OriginalMessagePrefixFullPackageNamePrefixSimplePackageNamePrefixFullFunctionNamePrefixSimpleFunctionName"
+const _ErrorMessageStrategy_name = "OriginalMessagePrependFullFunctionNamePrependFullPackageNamePrependSimpleFunctionNamePrependSimplePackageName"
 
-var _ErrorMessageStrategy_index = [...]uint8{0, 15, 36, 59, 81, 105}
+var _ErrorMessageStrategy_index = [...]uint8{0, 15, 38, 60, 85, 109}
 
 func (i ErrorMessageStrategy) String() string {
 	if i < 0 || i >= ErrorMessageStrategy(len(_ErrorMessageStrategy_index)-1) {

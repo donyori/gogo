@@ -101,7 +101,7 @@ func New(n int, biz BusinessFunc, groupMap map[string][]int) framework.Controlle
 		g.Filter(func(x interface{}) (keep bool) {
 			i := x.(int)
 			if i < 0 || i >= n {
-				panic(errors.AutoMsgWithStrategy(fmt.Sprintf("world rank %d is out of range (n: %d)", i, n), -1, 2))
+				panic(errors.AutoMsgCustom(fmt.Sprintf("world rank %d is out of range (n: %d)", i, n), -1, 2))
 			}
 			if set[i] {
 				return false

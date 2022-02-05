@@ -19,240 +19,223 @@
 package errors
 
 import (
-	"errors"
+	stderrors "errors"
 	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 )
 
-var testErrors []error // It will be set in function init.
+var testErrorsForErrorList []error // It will be set in function init.
 
 func init() {
-	testErrors = make([]error, 3)
-	for i := range testErrors {
-		testErrors[i] = fmt.Errorf("test error %d", i)
+	testErrorsForErrorList = make([]error, 3)
+	for i := range testErrorsForErrorList {
+		testErrorsForErrorList[i] = fmt.Errorf("test error %d", i)
 	}
 }
 
 func TestNewErrorList(t *testing.T) {
 	// Only test ErrorList with ignoreNil enabled.
-	cases := []struct {
-		errs   []error
-		wanted []error
+	testCases := []struct {
+		errs []error
+		want []error
 	}{
 		{nil, []error{}},
 		{[]error{}, []error{}},
 		{[]error{nil}, []error{}},
-		{[]error{testErrors[0]}, []error{testErrors[0]}},
-		{append(testErrors[:0:0], testErrors...), testErrors},
-		{[]error{testErrors[0], testErrors[0]}, []error{testErrors[0], testErrors[0]}},
-		{[]error{testErrors[0], errors.New(testErrors[0].Error())}, nil}, // this case, wanted will be set later
-		{[]error{testErrors[0], nil}, testErrors[:1]},
-		{[]error{nil, testErrors[0]}, testErrors[:1]},
-		{append(testErrors, testErrors...), append(testErrors, testErrors...)},
-		{append([]error{nil}, testErrors...), testErrors},
-		{append(testErrors, nil), testErrors},
-		{append(testErrors[:2:2], append([]error{nil}, testErrors[2:]...)...), testErrors},
+		{[]error{testErrorsForErrorList[0]}, []error{testErrorsForErrorList[0]}},
+		{append(testErrorsForErrorList[:0:0], testErrorsForErrorList...), testErrorsForErrorList},
+		{[]error{testErrorsForErrorList[0], testErrorsForErrorList[0]}, []error{testErrorsForErrorList[0], testErrorsForErrorList[0]}},
+		{[]error{testErrorsForErrorList[0], stderrors.New(testErrorsForErrorList[0].Error())}, nil}, // this case, want will be set later
+		{[]error{testErrorsForErrorList[0], nil}, testErrorsForErrorList[:1]},
+		{[]error{nil, testErrorsForErrorList[0]}, testErrorsForErrorList[:1]},
+		{append(testErrorsForErrorList, testErrorsForErrorList...), append(testErrorsForErrorList, testErrorsForErrorList...)},
+		{append([]error{nil}, testErrorsForErrorList...), testErrorsForErrorList},
+		{append(testErrorsForErrorList, nil), testErrorsForErrorList},
+		{append(testErrorsForErrorList[:2:2], append([]error{nil}, testErrorsForErrorList[2:]...)...), testErrorsForErrorList},
 	}
-	cases[6].wanted = append([]error{}, cases[6].errs...)
-	for _, c := range cases {
-		el := NewErrorList(true, c.errs...)
-		if el == nil {
-			t.Errorf("NewErrorList returns a nil error list, errs: %v.", c.errs)
-		} else {
-			e := el.(*errorList)
-			if errorsNotEqual(e.list, c.wanted) {
-				t.Errorf("NewErrorList: %v != %v, errs: %v.", e.list, c.wanted, c.errs)
+	testCases[6].want = append([]error{}, testCases[6].errs...)
+
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
+			el := NewErrorList(true, tc.errs...)
+			if el == nil {
+				t.Error("got a nil error list")
+			} else {
+				e := el.(*errorList)
+				if errorsNotEqual(e.list, tc.want) {
+					t.Errorf("got %v; want %v", e.list, tc.want)
+				}
 			}
-		}
+		})
 	}
 }
 
 func TestErrorList_Append(t *testing.T) {
 	// Only test ErrorList with ignoreNil enabled.
-	cases := []struct {
-		errs   []error
-		wanted []error
+	testCases := []struct {
+		errs []error
+		want []error
 	}{
 		{nil, nil},
 		{[]error{}, nil},
 		{[]error{nil}, nil},
-		{[]error{testErrors[0]}, []error{testErrors[0]}},
-		{append(testErrors[:0:0], testErrors...), testErrors},
-		{[]error{testErrors[0], testErrors[0]}, []error{testErrors[0], testErrors[0]}},
-		{[]error{testErrors[0], errors.New(testErrors[0].Error())}, nil}, // this case, wanted will be set later
-		{[]error{testErrors[0], nil}, testErrors[:1]},
-		{[]error{nil, testErrors[0]}, testErrors[:1]},
-		{append(testErrors, testErrors...), append(testErrors, testErrors...)},
-		{append([]error{nil}, testErrors...), testErrors},
-		{append(testErrors, nil), testErrors},
-		{append(testErrors[:2:2], append([]error{nil}, testErrors[2:]...)...), testErrors},
+		{[]error{testErrorsForErrorList[0]}, []error{testErrorsForErrorList[0]}},
+		{append(testErrorsForErrorList[:0:0], testErrorsForErrorList...), testErrorsForErrorList},
+		{[]error{testErrorsForErrorList[0], testErrorsForErrorList[0]}, []error{testErrorsForErrorList[0], testErrorsForErrorList[0]}},
+		{[]error{testErrorsForErrorList[0], stderrors.New(testErrorsForErrorList[0].Error())}, nil}, // this case, want will be set later
+		{[]error{testErrorsForErrorList[0], nil}, testErrorsForErrorList[:1]},
+		{[]error{nil, testErrorsForErrorList[0]}, testErrorsForErrorList[:1]},
+		{append(testErrorsForErrorList, testErrorsForErrorList...), append(testErrorsForErrorList, testErrorsForErrorList...)},
+		{append([]error{nil}, testErrorsForErrorList...), testErrorsForErrorList},
+		{append(testErrorsForErrorList, nil), testErrorsForErrorList},
+		{append(testErrorsForErrorList[:2:2], append([]error{nil}, testErrorsForErrorList[2:]...)...), testErrorsForErrorList},
 	}
-	cases[6].wanted = cases[6].errs
-	for _, c := range cases {
-		el := NewErrorList(true).(*errorList)
-		el.Append(c.errs...)
-		if errorsNotEqual(el.list, c.wanted) {
-			t.Errorf("Append: %v != %v, errs: %v.", el.list, c.wanted, c.errs)
-		}
+	testCases[6].want = testCases[6].errs
+
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
+			el := NewErrorList(true).(*errorList)
+			el.Append(tc.errs...)
+			if errorsNotEqual(el.list, tc.want) {
+				t.Errorf("got %v; want %v", el.list, tc.want)
+			}
+		})
 	}
 }
 
 func TestErrorList_ToError(t *testing.T) {
-	cases := []struct {
-		el  ErrorList
+	testCases := []struct {
+		el  *errorList
 		err error
 	}{
-		{NewErrorList(true), nil},
-		{NewErrorList(true, []error{}...), nil},
-		{NewErrorList(true, nil), nil},
-		{NewErrorList(true, testErrors[0]), testErrors[0]},
-		{NewErrorList(true, testErrors...), nil}, // this case, err will be set later
+		{NewErrorList(true).(*errorList), nil},
+		{NewErrorList(true, []error{}...).(*errorList), nil},
+		{NewErrorList(true, nil).(*errorList), nil},
+		{NewErrorList(true, testErrorsForErrorList[0]).(*errorList), testErrorsForErrorList[0]},
+		{NewErrorList(true, testErrorsForErrorList...).(*errorList), nil}, // this case, err will be set later
 	}
-	cases[4].err = cases[4].el
-	for _, c := range cases {
-		err := c.el.ToError()
-		if !reflect.DeepEqual(err, c.err) {
-			t.Errorf("el.ToError(): %v != %v, el: %v.", err, c.err, c.el)
-		}
+	testCases[4].err = testCases[4].el
+
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.el.list), func(t *testing.T) {
+			err := tc.el.ToError()
+			if !reflect.DeepEqual(err, tc.err) {
+				t.Errorf("got %v; want %v", err, tc.err)
+			}
+		})
 	}
 }
 
 func TestErrorList_Deduplicate(t *testing.T) {
-	cases := []struct {
-		errs   []error
-		wanted []error
+	testCases := []struct {
+		errs []error
+		want []error
 	}{
 		{nil, nil},
 		{[]error{}, nil},
 		{[]error{nil}, nil},
-		{[]error{testErrors[0]}, testErrors[:1]},
-		{append(testErrors[:0:0], testErrors...), testErrors},
-		{[]error{testErrors[0], testErrors[0]}, testErrors[:1]},
-		{[]error{testErrors[0], errors.New(testErrors[0].Error())}, testErrors[:1]},
-		{[]error{testErrors[0], nil}, testErrors[:1]},
-		{[]error{nil, testErrors[0]}, testErrors[:1]},
-		{append(testErrors, testErrors...), testErrors},
-		{append([]error{nil}, testErrors...), testErrors},
-		{append(testErrors, nil), testErrors},
-		{append(testErrors[:2:2], append([]error{nil}, testErrors[2:]...)...), testErrors},
+		{[]error{testErrorsForErrorList[0]}, testErrorsForErrorList[:1]},
+		{append(testErrorsForErrorList[:0:0], testErrorsForErrorList...), testErrorsForErrorList},
+		{[]error{testErrorsForErrorList[0], testErrorsForErrorList[0]}, testErrorsForErrorList[:1]},
+		{[]error{testErrorsForErrorList[0], stderrors.New(testErrorsForErrorList[0].Error())}, testErrorsForErrorList[:1]},
+		{[]error{testErrorsForErrorList[0], nil}, testErrorsForErrorList[:1]},
+		{[]error{nil, testErrorsForErrorList[0]}, testErrorsForErrorList[:1]},
+		{append(testErrorsForErrorList, testErrorsForErrorList...), testErrorsForErrorList},
+		{append([]error{nil}, testErrorsForErrorList...), testErrorsForErrorList},
+		{append(testErrorsForErrorList, nil), testErrorsForErrorList},
+		{append(testErrorsForErrorList[:2:2], append([]error{nil}, testErrorsForErrorList[2:]...)...), testErrorsForErrorList},
 	}
-	for _, c := range cases {
-		el := NewErrorList(false, c.errs...)
-		el.Deduplicate()
-		if errorsNotEqual(el.(*errorList).list, c.wanted) {
-			t.Errorf("el after deduplicate: %v != %v, errs: %v.", el, c.wanted, c.errs)
-		}
+
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
+			el := NewErrorList(false, tc.errs...)
+			el.Deduplicate()
+			if errorsNotEqual(el.(*errorList).list, tc.want) {
+				t.Errorf("el after deduplicate: %v; want %v", el, tc.want)
+			}
+		})
 	}
 }
 
 func TestErrorList_Error(t *testing.T) {
-	cases := []struct {
+	testCases := []struct {
 		errs []error
-		s    string
+		want string
 	}{
 		{nil, "no error"},
 		{[]error{}, "no error"},
 		{[]error{nil}, fmt.Sprintf("%v", error(nil))},
-		{[]error{testErrors[0]}, fmt.Sprintf("%v", testErrors[0])},
-		{append(testErrors[:0:0], testErrors...), ""},
-		{append(testErrors, nil), ""},
-		{append([]error{nil}, testErrors...), ""},
-		{append(testErrors[:2:2], append([]error{nil}, testErrors[2:]...)...), ""},
+		{[]error{testErrorsForErrorList[0]}, fmt.Sprintf("%v", testErrorsForErrorList[0])},
+		{append(testErrorsForErrorList[:0:0], testErrorsForErrorList...), ""},
+		{append(testErrorsForErrorList, nil), ""},
+		{append([]error{nil}, testErrorsForErrorList...), ""},
+		{append(testErrorsForErrorList[:2:2], append([]error{nil}, testErrorsForErrorList[2:]...)...), ""},
 	}
-	for i := 4; i < len(cases); i++ {
-		strs := make([]string, len(cases[i].errs))
-		for j, err := range cases[i].errs {
+	for i := 4; i < len(testCases); i++ {
+		strs := make([]string, len(testCases[i].errs))
+		for j, err := range testCases[i].errs {
 			if err != nil {
-				strs[j] = fmt.Sprintf("%q", cases[i].errs[j].Error())
+				strs[j] = fmt.Sprintf("%q", testCases[i].errs[j].Error())
 			} else {
 				strs[j] = `"<nil>"`
 			}
 		}
-		cases[i].s = fmt.Sprintf("%d errors: [%s]", len(cases[i].errs), strings.Join(strs, ", "))
+		testCases[i].want = fmt.Sprintf("%d errors: [%s]", len(testCases[i].errs), strings.Join(strs, ", "))
 	}
-	for _, c := range cases {
-		el := NewErrorList(false, c.errs...)
-		s := el.Error()
-		if s != c.s {
-			t.Errorf("el.Error(): %q != %q, errs: %v.", s, c.s, c.errs)
-		}
-	}
-}
 
-func TestErrorList_String(t *testing.T) {
-	cases := []struct {
-		errs []error
-		s    string
-	}{
-		{nil, "no error"},
-		{[]error{}, "no error"},
-		{[]error{nil}, fmt.Sprintf("%v", error(nil))},
-		{[]error{testErrors[0]}, fmt.Sprintf("%v", testErrors[0])},
-		{append(testErrors[:0:0], testErrors...), ""},
-		{append(testErrors, nil), ""},
-		{append([]error{nil}, testErrors...), ""},
-		{append(testErrors[:2:2], append([]error{nil}, testErrors[2:]...)...), ""},
-	}
-	for i := 4; i < len(cases); i++ {
-		strs := make([]string, len(cases[i].errs))
-		for j, err := range cases[i].errs {
-			if err != nil {
-				strs[j] = fmt.Sprintf("%q", cases[i].errs[j].Error())
-			} else {
-				strs[j] = `"<nil>"`
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
+			el := NewErrorList(false, tc.errs...)
+			s := el.Error()
+			if s != tc.want {
+				t.Errorf("got %q; want %q", s, tc.want)
 			}
-		}
-		cases[i].s = fmt.Sprintf("%d errors: [%s]", len(cases[i].errs), strings.Join(strs, ", "))
-	}
-	t.Log("String() example:\n" + cases[len(cases)-1].s)
-	for _, c := range cases {
-		el := NewErrorList(false, c.errs...)
-		s := el.String()
-		if s != c.s {
-			t.Errorf("el.String(): %q != %q, errs: %v.", s, c.s, c.errs)
-		}
+		})
 	}
 }
 
 func TestCombine(t *testing.T) {
-	cases := []struct {
-		errs   []error
-		wanted []error
+	testCases := []struct {
+		errs []error
+		want []error
 	}{
 		{nil, nil},
 		{[]error{}, nil},
 		{[]error{nil}, nil},
-		{[]error{testErrors[0]}, []error{testErrors[0]}},
-		{append(testErrors[:0:0], testErrors...), testErrors},
-		{[]error{testErrors[0], testErrors[0]}, []error{testErrors[0], testErrors[0]}},
-		{[]error{testErrors[0], errors.New(testErrors[0].Error())}, nil}, // this case, wanted will be set later
-		{[]error{testErrors[0], nil}, testErrors[:1]},
-		{[]error{nil, testErrors[0]}, testErrors[:1]},
-		{append(testErrors, testErrors...), append(testErrors, testErrors...)},
-		{append([]error{nil}, testErrors...), testErrors},
-		{append(testErrors, nil), testErrors},
-		{append(testErrors[:2:2], append([]error{nil}, testErrors[2:]...)...), testErrors},
+		{[]error{testErrorsForErrorList[0]}, []error{testErrorsForErrorList[0]}},
+		{append(testErrorsForErrorList[:0:0], testErrorsForErrorList...), testErrorsForErrorList},
+		{[]error{testErrorsForErrorList[0], testErrorsForErrorList[0]}, []error{testErrorsForErrorList[0], testErrorsForErrorList[0]}},
+		{[]error{testErrorsForErrorList[0], stderrors.New(testErrorsForErrorList[0].Error())}, nil}, // this case, want will be set later
+		{[]error{testErrorsForErrorList[0], nil}, testErrorsForErrorList[:1]},
+		{[]error{nil, testErrorsForErrorList[0]}, testErrorsForErrorList[:1]},
+		{append(testErrorsForErrorList, testErrorsForErrorList...), append(testErrorsForErrorList, testErrorsForErrorList...)},
+		{append([]error{nil}, testErrorsForErrorList...), testErrorsForErrorList},
+		{append(testErrorsForErrorList, nil), testErrorsForErrorList},
+		{append(testErrorsForErrorList[:2:2], append([]error{nil}, testErrorsForErrorList[2:]...)...), testErrorsForErrorList},
 	}
-	cases[6].wanted = cases[6].errs
-	for _, c := range cases {
-		err := Combine(c.errs...)
-		if el, ok := err.(*errorList); ok {
-			if errorsNotEqual(el.list, c.wanted) {
-				t.Errorf("Combine: %v != %v, errs: %v.", el.list, c.wanted, c.errs)
+	testCases[6].want = testCases[6].errs
+
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
+			err := Combine(tc.errs...)
+			if el, ok := err.(*errorList); ok {
+				if errorsNotEqual(el.list, tc.want) {
+					t.Errorf("got %v; want %v", el.list, tc.want)
+				}
+			} else if len(tc.want) > 1 {
+				t.Errorf("got %v; want multiple errors in a list: %v", err, tc.want)
+			} else if len(tc.want) == 1 {
+				if err != tc.want[0] {
+					t.Errorf("got %v; want %v", err, tc.want[0])
+				}
+			} else {
+				if err != nil {
+					t.Errorf("got %v; want nil", err)
+				}
 			}
-		} else if len(c.wanted) > 1 {
-			t.Errorf("Combine: %v, want multiple errors in a list: %v, errs: %v.", err, c.wanted, c.errs)
-		} else if len(c.wanted) == 1 {
-			if err != c.wanted[0] {
-				t.Errorf("Combine: %v != %v. errs: %v.", err, c.wanted[0], c.errs)
-			}
-		} else {
-			if err != nil {
-				t.Errorf("Combine: %v != nil. errs: %v.", err, c.errs)
-			}
-		}
+		})
 	}
 }
 

@@ -21,36 +21,42 @@ package errors
 // Interfaces combining error and other methods (Unwrap, Is, As)
 // supported since Go 1.13.
 
-// WrappingError is an error with method Unwrap,
+// ErrorUnwrap is an error with method Unwrap,
 // to simplify working with errors that contain other errors since Go 1.13.
+//
 // For more details, see <https://blog.golang.org/go1.13-errors>.
-type WrappingError interface {
+type ErrorUnwrap interface {
 	error
 
 	// Unwrap returns the contained error.
 	// It returns nil if it contains no error.
+	//
 	// See errors.Unwrap for detail.
 	Unwrap() error
 }
 
 // ErrorIs is an error with method Is, to custom the behavior of errors.Is.
+//
 // For more details, see <https://blog.golang.org/go1.13-errors>.
 type ErrorIs interface {
 	error
 
-	// Is reports whether any error in its error chain matches target.
+	// Is reports whether any error in its Unwrap error chain matches target.
+	//
 	// See errors.Is for detail.
 	Is(target error) bool
 }
 
 // ErrorAs is an error with method As, to custom the behavior of errors.As.
+//
 // For more details, see <https://blog.golang.org/go1.13-errors>.
 type ErrorAs interface {
 	error
 
-	// As finds the first error in its error chain that matches target,
+	// As finds the first error in its Unwrap error chain that matches target,
 	// and if so, sets target to that error value and returns true.
 	// Otherwise, it returns false.
+	//
 	// See errors.As for detail.
 	As(target interface{}) bool
 }

@@ -19,7 +19,6 @@
 package errors
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -31,11 +30,11 @@ import (
 // If there are two or more items, it reports the number of errors,
 // followed by an error array, in which each item is quoted.
 //
-// Note that *ErrorList, not ErrorList,
-// is the implementation of interface error.
+// It is designed to log errors that occur during a process and
+// report them after exiting the process.
+// Therefore, it only supports append operation, not delete operation.
 type ErrorList interface {
 	error
-	fmt.Stringer
 
 	// Len returns the number of errors in the error list.
 	Len() int
@@ -55,7 +54,7 @@ type ErrorList interface {
 	// Otherwise, it returns the error list itself.
 	ToError() error
 
-	// Range calls handler for all items in the list one by one.
+	// Range calls handler on all items in the list one by one.
 	//
 	// handler has two parameters: i (the index of the error) and
 	// err (the error value), and returns an indicator cont to report
@@ -92,12 +91,7 @@ func NewErrorList(ignoreNil bool, errs ...error) ErrorList {
 	return el
 }
 
-// Error returns the same as el.String().
-func (el *errorList) Error() string {
-	return el.String()
-}
-
-// String returns the error message of this error list, as follows:
+// Error returns the error message of this error list, as follows:
 //
 // If the error list is empty, it returns "no error".
 //
@@ -107,8 +101,8 @@ func (el *errorList) Error() string {
 // If there are two or more items, it returns the number of errors,
 // followed by an error array, in which each item is double-quoted
 // in Go string literal.
-// Especially, nil error item will be "<nil>".
-func (el *errorList) String() string {
+// In particular, nil error item will be "<nil>".
+func (el *errorList) Error() string {
 	if len(el.list) == 0 {
 		return "no error"
 	}
@@ -184,15 +178,12 @@ func (el *errorList) ToError() error {
 	}
 }
 
-// Range calls handler for all items in the list one by one.
+// Range calls handler on all items in the list one by one.
 //
 // handler has two parameters: i (the index of the error) and
 // err (the error value),
 // and returns an indicator cont to report whether to continue the iteration.
 func (el *errorList) Range(handler func(i int, err error) (cont bool)) {
-	if len(el.list) == 0 {
-		return
-	}
 	for i, err := range el.list {
 		if !handler(i, err) {
 			return

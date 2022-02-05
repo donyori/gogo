@@ -36,8 +36,8 @@ import (
 // or is opened in raw mode.
 //
 // The client should use errors.Is to test whether an error is ErrNotTar.
-var ErrNotTar = errors.AutoNewWithStrategy("file is not archived by tar, or is opened in raw mode",
-	errors.PrefixFullPkgName, 0)
+var ErrNotTar = errors.AutoNewCustom("file is not archived by tar, or is opened in raw mode",
+	errors.PrependFullPkgName, 0)
 
 // ReadOptions are options for function Read.
 type ReadOptions struct {
@@ -461,7 +461,7 @@ func (fr *reader) Buffered() int {
 // The error is bufio.ErrBufferFull if n is larger than its buffer size.
 // (To test whether err is bufio.ErrBufferFull, use function errors.Is.)
 //
-// Calling Peek prevents a UnreadByte or UnreadRune call from succeeding
+// Calling Peek prevents an UnreadByte or UnreadRune call from succeeding
 // until the next read operation.
 func (fr *reader) Peek(n int) (data []byte, err error) {
 	if fr.err != nil {

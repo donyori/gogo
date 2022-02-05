@@ -30,17 +30,13 @@ type PanicRec struct {
 	Content interface{} // The parameter passed to function panic.
 }
 
-// String formats the panic record into a string.
-func (pr PanicRec) String() string {
+// Error formats the panic record into a string
+// and reports it as an error message.
+func (pr PanicRec) Error() string {
 	if pr.Content == nil {
 		return "no panic"
 	}
 	return fmt.Sprintf("panic on Goroutine %s: %v", pr.Name, pr.Content)
-}
-
-// Error reports the error message, which is the same as pr.String().
-func (pr PanicRec) Error() string {
-	return pr.String()
 }
 
 // PanicRecords are panic records, used by the framework codes.
