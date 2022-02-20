@@ -89,9 +89,8 @@ func EncodeInt64(dst []byte, x int64, upper bool, digits int) int {
 	}
 
 	// Other cases:
-	bufp := int64BufferPool.Get().(*[]byte)
-	defer int64BufferPool.Put(bufp)
-	buf := *bufp
+	buf := int64BufferPool.Get().(*[int64BufferLen]byte)
+	defer int64BufferPool.Put(buf)
 	bufIdx := encodeInt64(buf, x, upper, digits)
 	if digits < int64BufferLen {
 		if len(dst) < int64BufferLen-bufIdx {
@@ -144,9 +143,8 @@ func EncodeInt64ToString(x int64, upper bool, digits int) string {
 	}
 
 	// Other cases:
-	bufp := int64BufferPool.Get().(*[]byte)
-	defer int64BufferPool.Put(bufp)
-	buf := *bufp
+	buf := int64BufferPool.Get().(*[int64BufferLen]byte)
+	defer int64BufferPool.Put(buf)
 	idx := encodeInt64(buf, x, upper, digits)
 	if digits < int64BufferLen {
 		return string(buf[idx:])
@@ -180,9 +178,8 @@ func EncodeInt64To(w io.Writer, x int64, upper bool, digits int) (written int, e
 		panic(errors.AutoMsg("w is nil"))
 	}
 
-	bufp := int64BufferPool.Get().(*[]byte)
-	defer int64BufferPool.Put(bufp)
-	buf := *bufp
+	buf := int64BufferPool.Get().(*[int64BufferLen]byte)
+	defer int64BufferPool.Put(buf)
 
 	// Special cases for 0 and -0x8000000000000000 (minimum value of int64):
 	if x == 0 && digits <= 1 {
@@ -203,7 +200,7 @@ func EncodeInt64To(w io.Writer, x int64, upper bool, digits int) (written int, e
 			if sw, ok := w.(io.StringWriter); ok {
 				written, err = sw.WriteString(minInt64Hex)
 			} else {
-				n := copy(buf, minInt64Hex)
+				n := copy(buf[:], minInt64Hex)
 				written, err = w.Write(buf[:n])
 			}
 			return written, errors.AutoWrap(err)
@@ -268,7 +265,7 @@ func EncodeInt64To(w io.Writer, x int64, upper bool, digits int) (written int, e
 // Caller should guarantee that (x != 0 || digits > 1) and
 // x != math.MinInt64 (= -0x8000000000000000).
 // These two special cases should be handled by the caller.
-func encodeInt64(buf []byte, x int64, upper bool, digits int) (idx int) {
+func encodeInt64(buf *[int64BufferLen]byte, x int64, upper bool, digits int) (idx int) {
 	ht := lowercaseHexTable
 	if upper {
 		ht = uppercaseHexTable
@@ -313,7 +310,7 @@ func encodeInt64(buf []byte, x int64, upper bool, digits int) (idx int) {
 //
 // Caller should guarantee that w != nil, digits >= int64BufferLen,
 // and buf != nil.
-func writeSignAndLeadingZerosTo(w io.Writer, x int64, digits int, buf []byte) (written int, err error) {
+func writeSignAndLeadingZerosTo(w io.Writer, x int64, digits int, buf *[int64BufferLen]byte) (written int, err error) {
 	if x >= 0 {
 		buf[0] = '0'
 	} else {
@@ -328,7 +325,7 @@ func writeSignAndLeadingZerosTo(w io.Writer, x int64, digits int, buf []byte) (w
 			written, err = w.Write(buf[:ctr+1])
 			return written, errors.AutoWrap(err)
 		}
-		written, err = w.Write(buf)
+		written, err = w.Write(buf[:])
 		buf[0] = '0'
 		if err != nil {
 			return written, errors.AutoWrap(err)
@@ -338,7 +335,7 @@ func writeSignAndLeadingZerosTo(w io.Writer, x int64, digits int, buf []byte) (w
 	var n int // For the return value of w.Write.
 	for ctr > 0 {
 		if ctr > int64BufferLen {
-			n, err = w.Write(buf)
+			n, err = w.Write(buf[:])
 		} else {
 			n, err = w.Write(buf[:ctr])
 		}

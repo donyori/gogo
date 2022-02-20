@@ -142,10 +142,10 @@ type formatter struct {
 	w       io.Writer
 	cfg     FormatConfig
 	err     error
-	bufp    *[]byte // Pointer of the buffer to store formatted characters.
-	idx     int     // Index of unused buffer.
-	written int     // Index of already written to w.
-	sepCd   int     // Countdown for writing a separator, negative if formatCfgNotValid(cfg).
+	buf     *[formatBufferLen]byte // Buffer to store formatted characters.
+	idx     int                    // Index of unused buffer.
+	written int                    // Index of already written to w.
+	sepCd   int                    // Countdown for writing a separator, negative if formatCfgNotValid(cfg).
 }
 
 // NewFormatter creates a formatter to write hexadecimal characters
@@ -180,8 +180,8 @@ func (f *formatter) Write(p []byte) (n int, err error) {
 	if f.err != nil {
 		return 0, f.err
 	}
-	if f.bufp == nil {
-		f.bufp = formatBufferPool.Get().(*[]byte)
+	if f.buf == nil {
+		f.buf = formatBufferPool.Get().(*[formatBufferLen]byte)
 		f.idx, f.written = 0, 0
 	}
 	ht := lowercaseHexTable
@@ -201,8 +201,8 @@ func (f *formatter) WriteByte(c byte) error {
 	if f.err != nil {
 		return f.err
 	}
-	if f.bufp == nil {
-		f.bufp = formatBufferPool.Get().(*[]byte)
+	if f.buf == nil {
+		f.buf = formatBufferPool.Get().(*[formatBufferLen]byte)
 		f.idx, f.written = 0, 0
 	}
 	ht := lowercaseHexTable
@@ -221,19 +221,18 @@ func (f *formatter) ReadFrom(r io.Reader) (n int64, err error) {
 	if f.err != nil {
 		return 0, f.err
 	}
-	if f.bufp == nil {
-		f.bufp = formatBufferPool.Get().(*[]byte)
+	if f.buf == nil {
+		f.buf = formatBufferPool.Get().(*[formatBufferLen]byte)
 		f.idx, f.written = 0, 0
 	}
 	ht := lowercaseHexTable
 	if f.cfg.Upper {
 		ht = uppercaseHexTable
 	}
-	bufp := sourceBufferPool.Get().(*[]byte)
-	defer sourceBufferPool.Put(bufp)
-	buf := *bufp
+	buf := sourceBufferPool.Get().(*[sourceBufferLen]byte)
+	defer sourceBufferPool.Put(buf)
 	for {
-		readLen, readErr := r.Read(buf)
+		readLen, readErr := r.Read(buf[:])
 		var writeErr error
 		if readLen > 0 {
 			n += int64(readLen)
@@ -316,14 +315,14 @@ func (f *formatter) FormatCfg() *FormatConfig {
 //
 // Caller should guarantee that f != nil and f.w != nil.
 func (f *formatter) flush() error {
-	if f.bufp == nil {
+	if f.buf == nil {
 		return nil
 	}
-	n, err := f.w.Write((*f.bufp)[f.written:f.idx])
+	n, err := f.w.Write((*f.buf)[f.written:f.idx])
 	f.written += n
 	if err == nil {
-		formatBufferPool.Put(f.bufp)
-		f.bufp = nil
+		formatBufferPool.Put(f.buf)
+		f.buf = nil
 		f.idx, f.written = 0, 0
 	}
 	return err
@@ -337,8 +336,8 @@ func (f *formatter) flush() error {
 // Caller should guarantee that f != nil and f.w != nil.
 func (f *formatter) flushAndGetBuffer() error {
 	err := f.flush()
-	if err == nil && f.bufp == nil {
-		f.bufp = formatBufferPool.Get().(*[]byte)
+	if err == nil && f.buf == nil {
+		f.buf = formatBufferPool.Get().(*[formatBufferLen]byte)
 	}
 	return err
 }
@@ -346,27 +345,26 @@ func (f *formatter) flushAndGetBuffer() error {
 // writeByte writes hexadecimal representation of c,
 // in the specified format, to the destination writer.
 //
-// Caller should guarantee that f != nil, f.w != nil and f.bufp != nil.
+// Caller should guarantee that f != nil, f.w != nil and f.buf != nil.
 func (f *formatter) writeByte(ht string, b byte) error {
-	buf := *f.bufp
 	if f.sepCd == 0 {
-		if len(buf)-f.idx < len(f.cfg.Sep) {
+		if formatBufferLen-f.idx < len(f.cfg.Sep) {
 			err := f.flushAndGetBuffer()
 			if err != nil {
 				return err
 			}
 		}
-		f.idx += copy(buf[f.idx:], f.cfg.Sep)
+		f.idx += copy(f.buf[f.idx:], f.cfg.Sep)
 		f.sepCd = f.cfg.BlockLen
 	}
-	if len(buf)-f.idx < 2 {
+	if formatBufferLen-f.idx < 2 {
 		err := f.flushAndGetBuffer()
 		if err != nil {
 			return err
 		}
 	}
-	buf[f.idx] = ht[b>>4]
-	buf[f.idx+1] = ht[b&0x0f]
+	f.buf[f.idx] = ht[b>>4]
+	f.buf[f.idx+1] = ht[b&0x0f]
 	f.idx += 2
 	if f.sepCd > 0 {
 		f.sepCd--
@@ -377,7 +375,7 @@ func (f *formatter) writeByte(ht string, b byte) error {
 // write writes hexadecimal representation of p,
 // in the specified format, to the destination writer.
 //
-// Caller should guarantee that f != nil, f.w != nil and f.bufp != nil.
+// Caller should guarantee that f != nil, f.w != nil and f.buf != nil.
 func (f *formatter) write(ht string, p []byte) (n int, err error) {
 	for _, b := range p {
 		err = f.writeByte(ht, b)

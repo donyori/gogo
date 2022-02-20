@@ -105,15 +105,14 @@ func NewEncoder(w io.Writer, upper bool) Encoder {
 //
 // It conforms to interface io.Writer.
 func (e *encoder) Write(p []byte) (n int, err error) {
-	bufp := encodeBufferPool.Get().(*[]byte)
-	defer encodeBufferPool.Put(bufp)
-	buf := *bufp
+	buf := encodeBufferPool.Get().(*[sourceBufferLen * 2]byte)
+	defer encodeBufferPool.Put(buf)
 	size := sourceBufferLen
 	for len(p) > 0 && err == nil {
 		if len(p) < size {
 			size = len(p)
 		}
-		encoded := encode(buf, p[:size], e.upper)
+		encoded := encode(buf[:], p[:size], e.upper)
 		var written int
 		written, err = e.w.Write(buf[:encoded])
 		n += DecodedLen(written)
@@ -126,9 +125,8 @@ func (e *encoder) Write(p []byte) (n int, err error) {
 //
 // It conforms to interface io.ByteWriter.
 func (e *encoder) WriteByte(c byte) error {
-	bufp := encodeBufferPool.Get().(*[]byte)
-	defer encodeBufferPool.Put(bufp)
-	buf := *bufp
+	buf := encodeBufferPool.Get().(*[sourceBufferLen * 2]byte)
+	defer encodeBufferPool.Put(buf)
 	buf[0] = c
 	encoded := encode(buf[1:], buf[:1], e.upper)
 	_, err := e.w.Write(buf[1 : 1+encoded])
@@ -140,11 +138,10 @@ func (e *encoder) WriteByte(c byte) error {
 //
 // It conforms to interface io.ReaderFrom.
 func (e *encoder) ReadFrom(r io.Reader) (n int64, err error) {
-	bufp := sourceBufferPool.Get().(*[]byte)
-	defer sourceBufferPool.Put(bufp)
-	buf := *bufp
+	buf := sourceBufferPool.Get().(*[sourceBufferLen]byte)
+	defer sourceBufferPool.Put(buf)
 	for {
-		readLen, readErr := r.Read(buf)
+		readLen, readErr := r.Read(buf[:])
 		var writeErr error
 		if readLen > 0 {
 			n += int64(readLen)
