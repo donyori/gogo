@@ -46,7 +46,7 @@ type Interface interface {
 
 	// Access examines the specified node.
 	//
-	// It returns an indicator found to reports whether the specified node
+	// It returns an indicator found to report whether the specified node
 	// is the search goal.
 	//
 	// Sometimes it is also referred to as "visit".

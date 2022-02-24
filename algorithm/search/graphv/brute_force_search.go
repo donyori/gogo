@@ -48,7 +48,7 @@ type Interface interface {
 
 	// Access examines the specified vertex.
 	//
-	// It returns an indicator found to reports whether the specified vertex
+	// It returns an indicator found to report whether the specified vertex
 	// is the search goal.
 	//
 	// Sometimes it is also referred to as "visit".
