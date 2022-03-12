@@ -70,9 +70,6 @@ type Interface interface {
 	Discovered(vertex interface{}) bool
 }
 
-// BasicInterface is an alias for Interface.
-type BasicInterface = Interface
-
 // Dfs finds goal in itf using depth-first search algorithm,
 // and returns the goal vertex found.
 //
@@ -439,7 +436,7 @@ func dlsPath(itf Interface, root interface{}, limit int) (pathFound []interface{
 // IdsInterface extends interface Interface for
 // functions Ids and IdsPath.
 //
-// It contains a new method ResetSearchState to reset
+// It appends a new method ResetSearchState to reset
 // the search state for each iteration.
 type IdsInterface interface {
 	Interface

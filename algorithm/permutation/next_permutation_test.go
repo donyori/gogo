@@ -19,6 +19,7 @@
 package permutation
 
 import (
+	"fmt"
 	"sort"
 	"testing"
 )
@@ -38,26 +39,32 @@ func TestNextPermutation(t *testing.T) {
 		{3, 1, 0, 1},
 		{3, 1, 1, 0},
 	}
-	p := ps[0]
-	itf := sort.IntSlice(p[:])
-	for i, n := 1, len(ps); i < n; i++ {
-		if r := NextPermutation(itf); !r {
-			t.Fatalf("No %d. NextPermutationArray returns false before exhausted.", i)
+	for i := 0; i < len(ps)-1; i++ {
+		p := ps[i]
+		t.Run(fmt.Sprintf("p=%v", p), func(t *testing.T) {
+			itf := sort.IntSlice(p[:])
+			if more := NextPermutation(itf); !more {
+				t.Fatal("return false before exhausted")
+			}
+			if p != ps[i+1] {
+				t.Errorf("got %v; want %v", p, ps[i+1])
+			}
+		})
+	}
+
+	final := ps[len(ps)-1]
+	falseCases := []sort.IntSlice{final[:], nil, {}, {1}}
+	for _, itf := range falseCases {
+		var name string
+		if itf != nil {
+			name = fmt.Sprintf("false case?p=%v", itf)
+		} else {
+			name = "false case?p=<nil>"
 		}
-		if p != ps[i] {
-			t.Errorf("No %d. Wrong permutation, want %v, got %v.", i, ps[i], p)
-		}
-	}
-	if r := NextPermutation(itf); r {
-		t.Error("NextPermutationArray returns true after exhausted.")
-	}
-	if r := NextPermutation(nil); r {
-		t.Error("NextPermutationArray returns true for nil Interface.")
-	}
-	if r := NextPermutation(sort.IntSlice{}); r {
-		t.Error("NextPermutationArray returns true for empty Interface.")
-	}
-	if r := NextPermutation(sort.IntSlice{1}); r {
-		t.Error("NextPermutationArray returns true for one-element Interface.")
+		t.Run(name, func(t *testing.T) {
+			if more := NextPermutation(itf); more {
+				t.Error("return true")
+			}
+		})
 	}
 }

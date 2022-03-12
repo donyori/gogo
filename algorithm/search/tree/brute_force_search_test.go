@@ -18,7 +18,10 @@
 
 package tree
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 type testTree struct {
 	Data          [][2]int
@@ -159,29 +162,49 @@ func TestBfsPath(t *testing.T) {
 }
 
 func TestDls(t *testing.T) {
-	testBruteForceSearch(t, "Dls-0")
-	testBruteForceSearch(t, "Dls-1")
-	testBruteForceSearch(t, "Dls-2")
-	testBruteForceSearch(t, "Dls-3")
-	testBruteForceSearch(t, "Dls-m1")
+	for _, limit := range []int{0, 1, 2, 3, -1} {
+		var name string
+		if limit >= 0 {
+			name = fmt.Sprintf("Dls-%d", limit)
+		} else {
+			name = fmt.Sprintf("Dls-m%d", -limit)
+		}
+		t.Run(fmt.Sprintf("limit=%d", limit), func(t *testing.T) {
+			testBruteForceSearch(t, name)
+		})
+	}
 }
 
 func TestDlsPath(t *testing.T) {
-	testBruteForceSearchPath(t, "DlsPath-0")
-	testBruteForceSearchPath(t, "DlsPath-1")
-	testBruteForceSearchPath(t, "DlsPath-2")
-	testBruteForceSearchPath(t, "DlsPath-3")
-	testBruteForceSearchPath(t, "DlsPath-m1")
+	for _, limit := range []int{0, 1, 2, 3, -1} {
+		var name string
+		if limit >= 0 {
+			name = fmt.Sprintf("DlsPath-%d", limit)
+		} else {
+			name = fmt.Sprintf("DlsPath-m%d", -limit)
+		}
+		t.Run(fmt.Sprintf("limit=%d", limit), func(t *testing.T) {
+			testBruteForceSearchPath(t, name)
+		})
+	}
 }
 
 func TestIds(t *testing.T) {
-	testBruteForceSearch(t, "Ids")
-	testBruteForceSearch(t, "Ids-m")
+	t.Run("initLimit=1", func(t *testing.T) {
+		testBruteForceSearch(t, "Ids")
+	})
+	t.Run("initLimit=-1", func(t *testing.T) {
+		testBruteForceSearch(t, "Ids-m")
+	})
 }
 
 func TestIdsPath(t *testing.T) {
-	testBruteForceSearchPath(t, "IdsPath")
-	testBruteForceSearchPath(t, "IdsPath-m")
+	t.Run("initLimit=1", func(t *testing.T) {
+		testBruteForceSearchPath(t, "IdsPath")
+	})
+	t.Run("initLimit=-1", func(t *testing.T) {
+		testBruteForceSearchPath(t, "IdsPath-m")
+	})
 }
 
 func testBruteForceSearch(t *testing.T, name string) {
@@ -198,7 +221,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 		f = func(itf Interface, goal interface{}) interface{} {
 			node, more := Dls(itf, goal, 0)
 			if node == nil && !more {
-				t.Error(name, "- more is false but there are undiscovered vertices.")
+				t.Error("more is false but there are undiscovered vertices")
 			}
 			return node
 		}
@@ -207,7 +230,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 		f = func(itf Interface, goal interface{}) interface{} {
 			node, more := Dls(itf, goal, 1)
 			if node == nil && !more {
-				t.Error(name, "- more is false but there are undiscovered vertices.")
+				t.Error("more is false but there are undiscovered vertices")
 			}
 			return node
 		}
@@ -216,7 +239,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 		f = func(itf Interface, goal interface{}) interface{} {
 			node, more := Dls(itf, goal, 2)
 			if node == nil && !more {
-				t.Error(name, "- more is false but there are undiscovered vertices.")
+				t.Error("more is false but there are undiscovered vertices")
 			}
 			return node
 		}
@@ -232,7 +255,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 		f = func(itf Interface, goal interface{}) interface{} {
 			node, more := Dls(itf, goal, -1)
 			if node == nil && !more {
-				t.Error(name, "- more is false but there are undiscovered vertices.")
+				t.Error("more is false but there are undiscovered vertices")
 			}
 			return node
 		}
@@ -248,7 +271,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 		}
 		ordering = testTreeDataOrderingMap["ids"]
 	default:
-		t.Error("Unacceptable name:", name)
+		t.Errorf("unacceptable name %q", name)
 		return
 	}
 
@@ -258,25 +281,25 @@ func testBruteForceSearch(t *testing.T, name string) {
 		for i < len(ordering) && ordering[i] != node {
 			i++
 		}
-		var expNode interface{} // The node expected to be found.
-		expHx := ordering       // Expected history.
+		var wantNode interface{} // The node expected to be found.
+		wantHx := ordering       // Expected history.
 		if i < len(ordering) {
-			expNode = node
-			expHx = expHx[:1+i]
+			wantNode = node
+			wantHx = wantHx[:1+i]
 		}
 		r := f(tt, node)
-		if r != expNode {
-			t.Errorf("%s returns %v != %v.", name, r, expNode)
+		if r != wantNode {
+			t.Errorf("got %v; want %v", r, wantNode)
 		}
-		testCheckAccessHistory(t, name, tt, expHx)
+		testCheckAccessHistory(t, tt, wantHx)
 	}
 	// Non-existent nodes:
 	for _, goal := range []interface{}{nil, -1, len(testTreeData), 1.2} {
 		r := f(tt, goal)
 		if r != nil {
-			t.Errorf("%s returns %v != nil.", name, r)
+			t.Errorf("got %v; want <nil>", r)
 		}
-		testCheckAccessHistory(t, name, tt, ordering)
+		testCheckAccessHistory(t, tt, ordering)
 	}
 }
 
@@ -294,7 +317,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		f = func(itf Interface, goal interface{}) []interface{} {
 			p, more := DlsPath(itf, goal, 0)
 			if p == nil && !more {
-				t.Error(name, "- more is false but there are undiscovered vertices.")
+				t.Error("more is false but there are undiscovered vertices")
 			}
 			return p
 		}
@@ -303,7 +326,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		f = func(itf Interface, goal interface{}) []interface{} {
 			p, more := DlsPath(itf, goal, 1)
 			if p == nil && !more {
-				t.Error(name, "- more is false but there are undiscovered vertices.")
+				t.Error("more is false but there are undiscovered vertices")
 			}
 			return p
 		}
@@ -312,7 +335,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		f = func(itf Interface, goal interface{}) []interface{} {
 			p, more := DlsPath(itf, goal, 2)
 			if p == nil && !more {
-				t.Error(name, "- more is false but there are undiscovered vertices.")
+				t.Error("more is false but there are undiscovered vertices")
 			}
 			return p
 		}
@@ -328,7 +351,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		f = func(itf Interface, goal interface{}) []interface{} {
 			p, more := DlsPath(itf, goal, -1)
 			if p == nil && !more {
-				t.Error(name, "- more is false but there are undiscovered vertices.")
+				t.Error("more is false but there are undiscovered vertices")
 			}
 			return p
 		}
@@ -344,7 +367,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		}
 		ordering = testTreeDataOrderingMap["ids"]
 	default:
-		t.Error("Unacceptable name:", name)
+		t.Errorf("unacceptable name %q", name)
 		return
 	}
 
@@ -356,35 +379,35 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		for i < len(ordering) && ordering[i] != node {
 			i++
 		}
-		expHx := ordering // Expected history.
+		wantHx := ordering // Expected history.
 		if i < len(ordering) {
-			expHx = expHx[:1+i]
+			wantHx = wantHx[:1+i]
 		}
-		testCheckAccessHistory(t, name, tt, expHx)
+		testCheckAccessHistory(t, tt, wantHx)
 	}
 	// Non-existent nodes:
 	for _, goal := range []interface{}{nil, -1, len(testTreeData), 1.2} {
 		pl := f(tt, goal)
 		testCheckPath(t, name, goal, pl)
-		testCheckAccessHistory(t, name, tt, ordering)
+		testCheckAccessHistory(t, tt, ordering)
 	}
 }
 
-func testCheckAccessHistory(t *testing.T, name string, tt *testTree, wanted []int) {
-	if len(tt.AccessHistory) != len(wanted) {
-		t.Errorf("%s - Access history: %v\nwanted: %v", name, tt.AccessHistory, wanted)
+func testCheckAccessHistory(t *testing.T, tt *testTree, want []int) {
+	if len(tt.AccessHistory) != len(want) {
+		t.Errorf("got access history %v;\nwant %v", tt.AccessHistory, want)
 		return
 	}
-	for i := range wanted {
-		if tt.AccessHistory[i] != wanted[i] {
-			t.Errorf("%s - Access history: %v\nwanted: %v", name, tt.AccessHistory, wanted)
+	for i := range want {
+		if tt.AccessHistory[i] != want[i] {
+			t.Errorf("got access history %v;\nwant %v", tt.AccessHistory, want)
 			return
 		}
 	}
 }
 
 func testCheckPath(t *testing.T, name string, node interface{}, pathList []interface{}) {
-	var p []int
+	var wantPath []int
 	var ordering []int
 	switch name {
 	case "DfsPath":
@@ -406,25 +429,25 @@ func testCheckPath(t *testing.T, name string, node interface{}, pathList []inter
 	default:
 		// This should never happen, but will act as a safeguard for later,
 		// as a default value doesn't make sense here.
-		t.Error("Unacceptable name:", name)
+		t.Errorf("unacceptable name %q", name)
 		return
 	}
 	for _, n := range ordering {
 		if n == node {
 			idx, ok := node.(int)
 			if ok && idx >= 0 && idx < len(testTreeDataNodePath) {
-				p = testTreeDataNodePath[idx]
+				wantPath = testTreeDataNodePath[idx]
 			}
 			break
 		}
 	}
-	if len(pathList) != len(p) {
-		t.Errorf("%s - Path of %v: %v\nwanted: %v", name, node, pathList, p)
+	if len(pathList) != len(wantPath) {
+		t.Errorf("path of %v %v;\nwant %v", node, pathList, wantPath)
 		return
 	}
-	for i := range p {
-		if pathList[i] != p[i] {
-			t.Errorf("%s - Path of %v: %v\nwanted: %v", name, node, pathList, p)
+	for i := range wantPath {
+		if pathList[i] != wantPath[i] {
+			t.Errorf("path of %v %v;\nwant %v", node, pathList, wantPath)
 			return
 		}
 	}

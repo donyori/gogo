@@ -19,6 +19,7 @@
 package sequence
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/donyori/gogo/container/sequence"
@@ -41,9 +42,9 @@ func TestBinarySearchMaxLess(t *testing.T) {
 		EqualFn: compare.Equal,
 		LessFn:  compare.IntLess,
 	}
-	cases := []struct {
-		Goal  int
-		Index int
+	testCases := []struct {
+		goal int
+		want int
 	}{
 		{0, -1},
 		{1, -1},
@@ -52,11 +53,13 @@ func TestBinarySearchMaxLess(t *testing.T) {
 		{4, 5},
 		{5, 8},
 	}
-	for _, c := range cases {
-		idx := BinarySearchMaxLess(itf, c.Goal)
-		if idx != c.Index {
-			t.Errorf("BinarySearchMaxLess(%v, %d): %d != %d.", data, c.Goal, idx, c.Index)
-		}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("goal=%d", tc.goal), func(t *testing.T) {
+			if idx := BinarySearchMaxLess(itf, tc.goal); idx != tc.want {
+				t.Errorf("got %d; want %d", idx, tc.want)
+			}
+		})
 	}
 }
 
@@ -67,9 +70,9 @@ func TestBinarySearchMinGreater(t *testing.T) {
 		EqualFn: compare.Equal,
 		LessFn:  compare.IntLess,
 	}
-	cases := []struct {
-		Goal  int
-		Index int
+	testCases := []struct {
+		goal int
+		want int
 	}{
 		{0, 0},
 		{1, 3},
@@ -78,11 +81,13 @@ func TestBinarySearchMinGreater(t *testing.T) {
 		{4, -1},
 		{5, -1},
 	}
-	for _, c := range cases {
-		idx := BinarySearchMinGreater(itf, c.Goal)
-		if idx != c.Index {
-			t.Errorf("BinarySearchMinGreater(%v, %d): %d != %d.", data, c.Goal, idx, c.Index)
-		}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("goal=%d", tc.goal), func(t *testing.T) {
+			if idx := BinarySearchMinGreater(itf, tc.goal); idx != tc.want {
+				t.Errorf("got %d; want %d", idx, tc.want)
+			}
+		})
 	}
 }
 
@@ -104,30 +109,50 @@ func testBinarySearch(t *testing.T, data, negativeSamples []int) {
 		EqualFn: less.ToEqual(),
 		LessFn:  less,
 	}
-	for i, x := range s {
-		idx := BinarySearch(itf1, x)
-		if idx != i {
-			t.Errorf("BinarySearch(%v [%d], ...): %d != %d.", x, *x.(*int), idx, i)
+
+	t.Run(fmt.Sprintf("data=%v", data), func(t *testing.T) {
+		for i, goal := range s {
+			value := *(goal.(*int))
+			t.Run(fmt.Sprintf("goal=<index=%d&value=%d>", i, value), func(t *testing.T) {
+				t.Run("equalFn=compare.Equal", func(t *testing.T) {
+					if idx := BinarySearch(itf1, goal); idx != i {
+						t.Errorf("got %d; want %d", idx, i)
+					}
+				})
+				t.Run("equalFn=less.ToEqual()", func(t *testing.T) {
+					if idx := BinarySearch(itf2, goal); value != data[idx] {
+						t.Errorf("got %d (value %d)", idx, data[idx])
+					}
+				})
+			})
 		}
-		idx = BinarySearch(itf2, x)
-		if *x.(*int) != data[idx] {
-			t.Errorf("BinarySearch(%v [%d], ...): %d [%d].", x, *x.(*int), idx, data[idx])
+		for i, value := range negativeSamples {
+			goal := &value
+			t.Run(fmt.Sprintf("goal=<index=%d&value=%d&isNegativeSample>", i, value), func(t *testing.T) {
+				t.Run("equalFn=compare.Equal", func(t *testing.T) {
+					if idx := BinarySearch(itf1, goal); idx != -1 {
+						t.Errorf("got %d; want -1", idx)
+					}
+				})
+				t.Run("equalFn=less.ToEqual()", func(t *testing.T) {
+					idx := BinarySearch(itf2, goal)
+					if idx == -1 {
+						var wantList []int
+						for j := range data {
+							if data[j] == value {
+								wantList = append(wantList, j)
+							}
+						}
+						if len(wantList) == 1 {
+							t.Errorf("got -1; want %d", wantList[0])
+						} else if len(wantList) > 1 {
+							t.Errorf("got -1; want anyone of %v", wantList)
+						}
+					} else if value != data[idx] {
+						t.Errorf("got %d (value %d)", idx, data[idx])
+					}
+				})
+			})
 		}
-	}
-	for i := range negativeSamples {
-		idx := BinarySearch(itf1, &negativeSamples[i])
-		if idx != -1 {
-			t.Errorf("BinarySearch(%v [%d], ...): %d != -1.", &negativeSamples[i], negativeSamples[i], idx)
-		}
-		idx = BinarySearch(itf2, &negativeSamples[i])
-		if idx == -1 {
-			for j := range data {
-				if data[j] == negativeSamples[i] {
-					t.Errorf("BinarySearch(%v [%d], ...): -1 != %d.", &negativeSamples[i], negativeSamples[i], j)
-				}
-			}
-		} else if negativeSamples[i] != data[idx] {
-			t.Errorf("BinarySearch(%v [%d], ...): %d [%d].", &negativeSamples[i], negativeSamples[i], idx, negativeSamples[idx])
-		}
-	}
+	})
 }

@@ -48,6 +48,7 @@ type Interface interface {
 // NextPermutation transforms itf to its next permutation in lexical order.
 // It returns false if itf.Len() == 0 or the permutations are exhausted,
 // and true otherwise.
+//
 // Time complexity: O(n), where n = itf.Len().
 func NextPermutation(itf Interface) bool {
 	if itf == nil {

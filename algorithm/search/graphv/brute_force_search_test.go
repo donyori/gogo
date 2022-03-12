@@ -18,7 +18,10 @@
 
 package graphv
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 // testGraphBase implements all methods of interface IdsInterface
 // except Adjacency.
@@ -248,29 +251,49 @@ func TestBfsPath(t *testing.T) {
 }
 
 func TestDls(t *testing.T) {
-	testBruteForceSearch(t, "Dls-0")
-	testBruteForceSearch(t, "Dls-1")
-	testBruteForceSearch(t, "Dls-2")
-	testBruteForceSearch(t, "Dls-3")
-	testBruteForceSearch(t, "Dls-m1")
+	for _, limit := range []int{0, 1, 2, 3, -1} {
+		var name string
+		if limit >= 0 {
+			name = fmt.Sprintf("Dls-%d", limit)
+		} else {
+			name = fmt.Sprintf("Dls-m%d", -limit)
+		}
+		t.Run(fmt.Sprintf("limit=%d", limit), func(t *testing.T) {
+			testBruteForceSearch(t, name)
+		})
+	}
 }
 
 func TestDlsPath(t *testing.T) {
-	testBruteForceSearchPath(t, "DlsPath-0")
-	testBruteForceSearchPath(t, "DlsPath-1")
-	testBruteForceSearchPath(t, "DlsPath-2")
-	testBruteForceSearchPath(t, "DlsPath-3")
-	testBruteForceSearchPath(t, "DlsPath-m1")
+	for _, limit := range []int{0, 1, 2, 3, -1} {
+		var name string
+		if limit >= 0 {
+			name = fmt.Sprintf("DlsPath-%d", limit)
+		} else {
+			name = fmt.Sprintf("DlsPath-m%d", -limit)
+		}
+		t.Run(fmt.Sprintf("limit=%d", limit), func(t *testing.T) {
+			testBruteForceSearchPath(t, name)
+		})
+	}
 }
 
 func TestIds(t *testing.T) {
-	testBruteForceSearch(t, "Ids")
-	testBruteForceSearch(t, "Ids-m")
+	t.Run("initLimit=1", func(t *testing.T) {
+		testBruteForceSearch(t, "Ids")
+	})
+	t.Run("initLimit=-1", func(t *testing.T) {
+		testBruteForceSearch(t, "Ids-m")
+	})
 }
 
 func TestIdsPath(t *testing.T) {
-	testBruteForceSearchPath(t, "IdsPath")
-	testBruteForceSearchPath(t, "IdsPath-m")
+	t.Run("initLimit=1", func(t *testing.T) {
+		testBruteForceSearchPath(t, "IdsPath")
+	})
+	t.Run("initLimit=-1", func(t *testing.T) {
+		testBruteForceSearchPath(t, "IdsPath-m")
+	})
 }
 
 func testBruteForceSearch(t *testing.T, name string) {
@@ -287,7 +310,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 		f = func(itf Interface, goal interface{}) interface{} {
 			v, more := Dls(itf, goal, 0)
 			if v == nil && !more {
-				t.Error(name, "- more is false but there are undiscovered vertices.")
+				t.Error("more is false but there are undiscovered vertices")
 			}
 			return v
 		}
@@ -296,7 +319,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 		f = func(itf Interface, goal interface{}) interface{} {
 			v, more := Dls(itf, goal, 1)
 			if v == nil && !more {
-				t.Error(name, "- more is false but there are undiscovered vertices.")
+				t.Error("more is false but there are undiscovered vertices")
 			}
 			return v
 		}
@@ -319,7 +342,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 		f = func(itf Interface, goal interface{}) interface{} {
 			v, more := Dls(itf, goal, -1)
 			if v == nil && !more {
-				t.Error(name, "- more is false but there are undiscovered vertices.")
+				t.Error("more is false but there are undiscovered vertices")
 			}
 			return v
 		}
@@ -335,7 +358,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 		}
 		ordering = testUndirectedGraphDataOrderingMap["ids"]
 	default:
-		t.Error("Unacceptable name:", name)
+		t.Errorf("unacceptable name %q", name)
 		return
 	}
 
@@ -360,25 +383,25 @@ func testBruteForceSearch(t *testing.T, name string) {
 			for i < len(ordering) && ordering[i] != v {
 				i++
 			}
-			var expV interface{} // The vertex expected to be found.
-			expHx := ordering    // Expected history.
+			var wantV interface{} // The vertex expected to be found.
+			wantHx := ordering    // Expected history.
 			if i < len(ordering) {
-				expV = v
-				expHx = expHx[:1+i]
+				wantV = v
+				wantHx = wantHx[:1+i]
 			}
 			r := f(tg, v)
-			if r != expV {
-				t.Errorf("%s returns %v != %v.", name, r, expV)
+			if r != wantV {
+				t.Errorf("got %v; want %v", r, wantV)
 			}
-			testCheckAccessHistory(t, name, tgb, expHx)
+			testCheckAccessHistory(t, tgb, wantHx)
 		}
 		// Non-existent nodes:
 		for _, goal := range []interface{}{nil, -1, len(testUndirectedGraphData), 1.2} {
 			r := f(tg, goal)
 			if r != nil {
-				t.Errorf("%s returns %v != nil.", name, r)
+				t.Errorf("got %v; want <nil>", r)
 			}
-			testCheckAccessHistory(t, name, tgb, ordering)
+			testCheckAccessHistory(t, tgb, ordering)
 		}
 	}
 }
@@ -397,7 +420,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		f = func(itf Interface, goal interface{}) []interface{} {
 			p, more := DlsPath(itf, goal, 0)
 			if p == nil && !more {
-				t.Error(name, "- more is false but there are undiscovered vertices.")
+				t.Error("more is false but there are undiscovered vertices")
 			}
 			return p
 		}
@@ -406,7 +429,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		f = func(itf Interface, goal interface{}) []interface{} {
 			p, more := DlsPath(itf, goal, 1)
 			if p == nil && !more {
-				t.Error(name, "- more is false but there are undiscovered vertices.")
+				t.Error("more is false but there are undiscovered vertices")
 			}
 			return p
 		}
@@ -429,7 +452,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		f = func(itf Interface, goal interface{}) []interface{} {
 			p, more := DlsPath(itf, goal, -1)
 			if p == nil && !more {
-				t.Error(name, "- more is false but there are undiscovered vertices.")
+				t.Error("more is false but there are undiscovered vertices")
 			}
 			return p
 		}
@@ -445,7 +468,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		}
 		ordering = testUndirectedGraphDataOrderingMap["ids"]
 	default:
-		t.Error("Unacceptable name:", name)
+		t.Errorf("unacceptable name %q", name)
 		return
 	}
 
@@ -472,36 +495,36 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 			for i < len(ordering) && ordering[i] != v {
 				i++
 			}
-			expHx := ordering // Expected history.
+			wantHx := ordering // Expected history.
 			if i < len(ordering) {
-				expHx = expHx[:1+i]
+				wantHx = wantHx[:1+i]
 			}
-			testCheckAccessHistory(t, name, tgb, expHx)
+			testCheckAccessHistory(t, tgb, wantHx)
 		}
 		// Non-existent nodes:
 		for _, goal := range []interface{}{nil, -1, len(testUndirectedGraphData), 1.2} {
 			pl := f(tg, goal)
 			testCheckPath(t, name, goal, pl)
-			testCheckAccessHistory(t, name, tgb, ordering)
+			testCheckAccessHistory(t, tgb, ordering)
 		}
 	}
 }
 
-func testCheckAccessHistory(t *testing.T, name string, tg *testGraphBase, wanted []int) {
-	if len(tg.AccessHistory) != len(wanted) {
-		t.Errorf("%s - Access history: %v\nwanted: %v", name, tg.AccessHistory, wanted)
+func testCheckAccessHistory(t *testing.T, tg *testGraphBase, want []int) {
+	if len(tg.AccessHistory) != len(want) {
+		t.Errorf("got access history %v;\nwant %v", tg.AccessHistory, want)
 		return
 	}
-	for i := range wanted {
-		if tg.AccessHistory[i] != wanted[i] {
-			t.Errorf("%s - Access history: %v\nwanted: %v", name, tg.AccessHistory, wanted)
+	for i := range want {
+		if tg.AccessHistory[i] != want[i] {
+			t.Errorf("got access history %v;\nwant %v", tg.AccessHistory, want)
 			return
 		}
 	}
 }
 
 func testCheckPath(t *testing.T, name string, vertex interface{}, pathList []interface{}) {
-	var p []int
+	var wantPath []int
 	var list [][]int
 	switch name {
 	case "DfsPath":
@@ -523,20 +546,20 @@ func testCheckPath(t *testing.T, name string, vertex interface{}, pathList []int
 	default:
 		// This should never happen, but will act as a safeguard for later,
 		// as a default value doesn't make sense here.
-		t.Error("Unacceptable name:", name)
+		t.Errorf("unacceptable name %q", name)
 		return
 	}
 	idx, ok := vertex.(int)
 	if ok && idx >= 0 && idx < len(list) {
-		p = list[idx]
+		wantPath = list[idx]
 	}
-	if len(pathList) != len(p) {
-		t.Errorf("%s - Path of %v: %v\nwanted: %v", name, vertex, pathList, p)
+	if len(pathList) != len(wantPath) {
+		t.Errorf("path of %v %v;\nwant %v", vertex, pathList, wantPath)
 		return
 	}
-	for i := range p {
-		if pathList[i] != p[i] {
-			t.Errorf("%s - Path of %v: %v\nwanted: %v", name, vertex, pathList, p)
+	for i := range wantPath {
+		if pathList[i] != wantPath[i] {
+			t.Errorf("path of %v %v;\nwant %v", vertex, pathList, wantPath)
 			return
 		}
 	}
