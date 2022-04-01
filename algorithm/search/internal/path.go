@@ -21,10 +21,22 @@ package internal
 // Path recursively represents a path.
 //
 // The path represented by this Path is constructed by
-// extending path P with element X.
-type Path struct {
-	X interface{}
-	P *Path
+// extending path P with element E.
+//
+// For example, the path "0 -> 1 -> 2" will be represented as
+//  &Path[int]{
+//      E: 2,
+//      P: &Path[int]{
+//          E: 1,
+//          P: &Path[int]{
+//              E: 0,
+//              P: nil,
+//          }
+//      },
+//  }
+type Path[Elem any] struct {
+	E Elem
+	P *Path[Elem]
 }
 
 // ToList describes the path represented by this Path as a list,
@@ -32,14 +44,14 @@ type Path struct {
 //
 // The client should guarantee that there is no change along the path
 // during the call to this method.
-func (p *Path) ToList() []interface{} {
+func (p *Path[Elem]) ToList() []Elem {
 	var length int
-	for x := p; x != nil; x = x.P {
+	for t := p; t != nil; t = t.P {
 		length++
 	}
-	list := make([]interface{}, length)
-	for i, x := length-1, p; i >= 0; i, x = i-1, x.P {
-		list[i] = x.X
+	list := make([]Elem, length)
+	for i, t := length-1, p; i >= 0; i, t = i-1, t.P {
+		list[i] = t.E
 	}
 	return list
 }

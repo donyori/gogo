@@ -23,35 +23,52 @@ import (
 	"testing"
 )
 
-// testGraphBase implements all methods of interface IdsInterface
-// except Adjacency.
-type testGraphBase struct {
+// testGraph implements all methods of interface IdsInterface[int].
+type testGraph struct {
 	Data          [][]int
-	Goal          interface{}
-	AccessHistory []interface{}
+	Goal          int
+	GoalValid     bool
+	AccessHistory []int
 
 	// Index of the beginning of the access history
 	// in the most recent search iteration.
 	head int
 }
 
-func (tg *testGraphBase) Root() interface{} {
-	return 0
-}
-
-// SetGoal sets the search goal as well as resets the access history.
-func (tg *testGraphBase) SetGoal(goal interface{}) {
-	tg.Goal = goal
+// Init sets the search goal as well as resets the access history.
+func (tg *testGraph) Init(args ...any) {
+	tg.Goal, tg.GoalValid = -1, false
+	if len(args) >= 1 {
+		goal, ok := args[0].(int)
+		if ok {
+			tg.Goal, tg.GoalValid = goal, true
+		}
+	}
 	tg.AccessHistory = tg.AccessHistory[:0] // Reuse the underlying array.
 	tg.head = 0
 }
 
-func (tg *testGraphBase) Access(vertex interface{}) (found bool) {
-	tg.AccessHistory = append(tg.AccessHistory, vertex)
-	if tg.Goal == nil {
-		return false
+func (tg *testGraph) Root() int {
+	if len(tg.Data) == 0 {
+		return -1
 	}
-	return vertex == tg.Goal
+	return 0
+}
+
+func (tg *testGraph) Adjacency(vertex int) []int {
+	list := tg.Data[vertex]
+	if len(list) == 0 {
+		return nil
+	}
+	return append(list[:0:0], list...) // Return a copy of list.
+}
+
+func (tg *testGraph) Access(vertex, _ int) (found, cont bool) {
+	tg.AccessHistory = append(tg.AccessHistory, vertex)
+	if !tg.GoalValid {
+		return
+	}
+	return vertex == tg.Goal, true
 }
 
 // Discovered reports whether the specified vertex
@@ -60,7 +77,7 @@ func (tg *testGraphBase) Access(vertex interface{}) (found bool) {
 //
 // It may be time-consuming,
 // but it doesn't matter because the test graph is very small.
-func (tg *testGraphBase) Discovered(vertex interface{}) bool {
+func (tg *testGraph) Discovered(vertex int) bool {
 	for i := tg.head; i < len(tg.AccessHistory); i++ {
 		if tg.AccessHistory[i] == vertex {
 			return true
@@ -69,60 +86,8 @@ func (tg *testGraphBase) Discovered(vertex interface{}) bool {
 	return false
 }
 
-func (tg *testGraphBase) ResetSearchState() {
+func (tg *testGraph) ResetSearchState() {
 	tg.head = len(tg.AccessHistory)
-}
-
-// testGraphNormal attaches the method Adjacency with normal performance
-// to testGraphBase.
-type testGraphNormal struct {
-	testGraphBase
-}
-
-func (tg *testGraphNormal) Adjacency(vertex interface{}) []interface{} {
-	list := tg.Data[vertex.(int)]
-	if len(list) == 0 {
-		return nil
-	}
-	adj := make([]interface{}, len(list))
-	for i := range list {
-		adj[i] = list[i]
-	}
-	return adj
-}
-
-// testGraphNilAdjacentVertices attaches the method Adjacency to testGraphBase.
-// Its method Adjacency returns an adjacency list with
-// some additional nil vertices.
-type testGraphNilAdjacentVertices struct {
-	testGraphBase
-}
-
-func (tg *testGraphNilAdjacentVertices) Adjacency(vertex interface{}) []interface{} {
-	list := tg.Data[vertex.(int)]
-	if len(list) == 0 {
-		return nil
-	}
-	adj := make([]interface{}, len(list)+4)
-	// Add 4 nil vertices for testing.
-	switch len(list) {
-	case 1:
-		// adj: {nil, nil, nil, list[0], nil}
-		adj[4] = list[0]
-	case 2:
-		// adj: {nil, list[0], nil, nil, list[1], nil}
-		adj[1] = list[0]
-		adj[5] = list[1]
-	default:
-		// adj: {list[0], nil, list[1], ..., list[n-2], nil, nil, nil, list[n-1]}
-		// where n = len(list)
-		adj[0] = list[0]
-		for i := 1; i < len(list)-1; i++ {
-			adj[i+1] = list[i]
-		}
-		adj[len(adj)-1] = list[len(list)-1]
-	}
-	return adj
 }
 
 // testNumUndirectedGraphVertices is the number of vertices
@@ -297,64 +262,68 @@ func TestIdsPath(t *testing.T) {
 }
 
 func testBruteForceSearch(t *testing.T, name string) {
-	var f func(itf Interface, goal interface{}) interface{}
+	var f func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool)
 	var ordering []int
 	switch name {
 	case "Dfs":
-		f = Dfs
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
+			return Dfs[int](itf, initArgs...)
+		}
 		ordering = testUndirectedGraphDataOrderingMap["dfs"]
 	case "Bfs":
-		f = Bfs
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
+			return Bfs[int](itf, initArgs...)
+		}
 		ordering = testUndirectedGraphDataOrderingMap["bfs"]
 	case "Dls-0":
-		f = func(itf Interface, goal interface{}) interface{} {
-			v, more := Dls(itf, goal, 0)
-			if v == nil && !more {
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
+			vertex, found, more := Dls[int](itf, 0, initArgs...)
+			if testIsFirstInitArgInt(initArgs) && !found && !more {
 				t.Error("more is false but there are undiscovered vertices")
 			}
-			return v
+			return vertex, found
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-0"]
 	case "Dls-1":
-		f = func(itf Interface, goal interface{}) interface{} {
-			v, more := Dls(itf, goal, 1)
-			if v == nil && !more {
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
+			vertex, found, more := Dls[int](itf, 1, initArgs...)
+			if testIsFirstInitArgInt(initArgs) && !found && !more {
 				t.Error("more is false but there are undiscovered vertices")
 			}
-			return v
+			return vertex, found
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-1"]
 	case "Dls-2":
-		f = func(itf Interface, goal interface{}) interface{} {
-			v, _ := Dls(itf, goal, 2)
-			// Both true and false are acceptable for the second return value.
-			return v
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
+			vertex, found, _ := Dls[int](itf, 2, initArgs...)
+			// Both true and false are acceptable for the third return value.
+			return vertex, found
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-2"]
 	case "Dls-3":
-		f = func(itf Interface, goal interface{}) interface{} {
-			v, _ := Dls(itf, goal, 3)
-			// Both true and false are acceptable for the second return value.
-			return v
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
+			vertex, found, _ := Dls[int](itf, 3, initArgs...)
+			// Both true and false are acceptable for the third return value.
+			return vertex, found
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-3"]
 	case "Dls-m1":
-		f = func(itf Interface, goal interface{}) interface{} {
-			v, more := Dls(itf, goal, -1)
-			if v == nil && !more {
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
+			vertex, found, more := Dls[int](itf, -1, initArgs...)
+			if testIsFirstInitArgInt(initArgs) && !found && !more {
 				t.Error("more is false but there are undiscovered vertices")
 			}
-			return v
+			return vertex, found
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-m1"]
 	case "Ids":
-		f = func(itf Interface, goal interface{}) interface{} {
-			return Ids(itf.(IdsInterface), goal, 1)
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
+			return Ids(itf, 1, initArgs...)
 		}
 		ordering = testUndirectedGraphDataOrderingMap["ids"]
 	case "Ids-m":
-		f = func(itf Interface, goal interface{}) interface{} {
-			return Ids(itf.(IdsInterface), goal, -1)
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
+			return Ids(itf, -1, initArgs...)
 		}
 		ordering = testUndirectedGraphDataOrderingMap["ids"]
 	default:
@@ -362,109 +331,107 @@ func testBruteForceSearch(t *testing.T, name string) {
 		return
 	}
 
-	for _, tg := range []IdsInterface{
-		&testGraphNormal{testGraphBase{Data: testUndirectedGraphData}},
-		&testGraphNilAdjacentVertices{testGraphBase{Data: testUndirectedGraphData}},
-	} {
-		var tgb *testGraphBase
-		switch tg.(type) {
-		case *testGraphNormal:
-			tgb = &tg.(*testGraphNormal).testGraphBase
-		case *testGraphNilAdjacentVertices:
-			tgb = &tg.(*testGraphNilAdjacentVertices).testGraphBase
-		default:
-			// This should never happen, but will act as a safeguard for later,
-			// as a default value doesn't make sense here.
-			t.Errorf("tg is neither of type *testGraphNormal nor of type *testGraphNilAdjacentVertices, type: %T", tg)
-			return
-		}
-		for v := 0; v < testNumUndirectedGraphVertices; v++ {
+	tg := &testGraph{Data: testUndirectedGraphData}
+	for goal := 0; goal < testNumUndirectedGraphVertices; goal++ {
+		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
 			var i int
-			for i < len(ordering) && ordering[i] != v {
+			for i < len(ordering) && ordering[i] != goal {
 				i++
 			}
-			var wantV interface{} // The vertex expected to be found.
-			wantHx := ordering    // Expected history.
+			var wantVertex int // The vertex expected to be found.
+			var wantFound bool // Expected found value.
+			wantHx := ordering // Expected history.
 			if i < len(ordering) {
-				wantV = v
-				wantHx = wantHx[:1+i]
+				wantVertex, wantFound, wantHx = goal, true, wantHx[:1+i]
 			}
-			r := f(tg, v)
-			if r != wantV {
-				t.Errorf("got %v; want %v", r, wantV)
+			r, found := f(t, tg, goal)
+			if found != wantFound || r != wantVertex {
+				t.Errorf("got <%d, %t>; want <%d, %t>", r, found, wantVertex, wantFound)
 			}
-			testCheckAccessHistory(t, tgb, wantHx)
-		}
-		// Non-existent nodes:
-		for _, goal := range []interface{}{nil, -1, len(testUndirectedGraphData), 1.2} {
-			r := f(tg, goal)
-			if r != nil {
-				t.Errorf("got %v; want <nil>", r)
+			testCheckAccessHistory(t, tg, wantHx)
+		})
+	}
+	// Non-existent nodes:
+	for _, goal := range []any{nil, -1, len(testUndirectedGraphData), 1.2} {
+		t.Run(fmt.Sprintf("goal=%v", goal), func(t *testing.T) {
+			wantHx := ordering // Expected history.
+			if len(wantHx) > 1 {
+				if _, ok := goal.(int); !ok {
+					wantHx = wantHx[:1]
+				}
 			}
-			testCheckAccessHistory(t, tgb, ordering)
-		}
+			r, found := f(t, tg, goal)
+			if r != 0 || found {
+				t.Errorf("got <%d, %t>; want <0, false>", r, found)
+			}
+			testCheckAccessHistory(t, tg, wantHx)
+		})
 	}
 }
 
 func testBruteForceSearchPath(t *testing.T, name string) {
-	var f func(itf Interface, goal interface{}) []interface{}
+	var f func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int
 	var ordering []int
 	switch name {
 	case "DfsPath":
-		f = DfsPath
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
+			return DfsPath[int](itf, initArgs...)
+		}
 		ordering = testUndirectedGraphDataOrderingMap["dfs"]
 	case "BfsPath":
-		f = BfsPath
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
+			return BfsPath[int](itf, initArgs...)
+		}
 		ordering = testUndirectedGraphDataOrderingMap["bfs"]
 	case "DlsPath-0":
-		f = func(itf Interface, goal interface{}) []interface{} {
-			p, more := DlsPath(itf, goal, 0)
-			if p == nil && !more {
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
+			path, more := DlsPath[int](itf, 0, initArgs...)
+			if testIsFirstInitArgInt(initArgs) && path == nil && !more {
 				t.Error("more is false but there are undiscovered vertices")
 			}
-			return p
+			return path
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-0"]
 	case "DlsPath-1":
-		f = func(itf Interface, goal interface{}) []interface{} {
-			p, more := DlsPath(itf, goal, 1)
-			if p == nil && !more {
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
+			path, more := DlsPath[int](itf, 1, initArgs...)
+			if testIsFirstInitArgInt(initArgs) && path == nil && !more {
 				t.Error("more is false but there are undiscovered vertices")
 			}
-			return p
+			return path
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-1"]
 	case "DlsPath-2":
-		f = func(itf Interface, goal interface{}) []interface{} {
-			p, _ := DlsPath(itf, goal, 2)
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
+			path, _ := DlsPath[int](itf, 2, initArgs...)
 			// Both true and false are acceptable for the second return value.
-			return p
+			return path
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-2"]
 	case "DlsPath-3":
-		f = func(itf Interface, goal interface{}) []interface{} {
-			p, _ := DlsPath(itf, goal, 3)
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
+			path, _ := DlsPath[int](itf, 3, initArgs...)
 			// Both true and false are acceptable for the second return value.
-			return p
+			return path
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-3"]
 	case "DlsPath-m1":
-		f = func(itf Interface, goal interface{}) []interface{} {
-			p, more := DlsPath(itf, goal, -1)
-			if p == nil && !more {
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
+			path, more := DlsPath[int](itf, -1, initArgs...)
+			if testIsFirstInitArgInt(initArgs) && path == nil && !more {
 				t.Error("more is false but there are undiscovered vertices")
 			}
-			return p
+			return path
 		}
 		ordering = testUndirectedGraphDataOrderingMap["dls-m1"]
 	case "IdsPath":
-		f = func(itf Interface, goal interface{}) []interface{} {
-			return IdsPath(itf.(IdsInterface), goal, 1)
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
+			return IdsPath(itf, 1, initArgs...)
 		}
 		ordering = testUndirectedGraphDataOrderingMap["ids"]
 	case "IdsPath-m":
-		f = func(itf Interface, goal interface{}) []interface{} {
-			return IdsPath(itf.(IdsInterface), goal, -1)
+		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
+			return IdsPath(itf, -1, initArgs...)
 		}
 		ordering = testUndirectedGraphDataOrderingMap["ids"]
 	default:
@@ -472,45 +439,48 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		return
 	}
 
-	for _, tg := range []IdsInterface{
-		&testGraphNormal{testGraphBase{Data: testUndirectedGraphData}},
-		&testGraphNilAdjacentVertices{testGraphBase{Data: testUndirectedGraphData}},
-	} {
-		var tgb *testGraphBase
-		switch tg.(type) {
-		case *testGraphNormal:
-			tgb = &tg.(*testGraphNormal).testGraphBase
-		case *testGraphNilAdjacentVertices:
-			tgb = &tg.(*testGraphNilAdjacentVertices).testGraphBase
-		default:
-			// This should never happen, but will act as a safeguard for later,
-			// as a default value doesn't make sense here.
-			t.Errorf("tg is neither of type *testGraphNormal nor of type *testGraphNilAdjacentVertices, type: %T", tg)
-			return
-		}
-		for v := 0; v < testNumUndirectedGraphVertices; v++ {
-			pl := f(tg, v)
-			testCheckPath(t, name, v, pl)
+	tg := &testGraph{Data: testUndirectedGraphData}
+	for goal := 0; goal < testNumUndirectedGraphVertices; goal++ {
+		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
+			path := f(t, tg, goal)
+			testCheckPath(t, name, goal, path)
 			var i int
-			for i < len(ordering) && ordering[i] != v {
+			for i < len(ordering) && ordering[i] != goal {
 				i++
 			}
 			wantHx := ordering // Expected history.
 			if i < len(ordering) {
 				wantHx = wantHx[:1+i]
 			}
-			testCheckAccessHistory(t, tgb, wantHx)
-		}
-		// Non-existent nodes:
-		for _, goal := range []interface{}{nil, -1, len(testUndirectedGraphData), 1.2} {
-			pl := f(tg, goal)
-			testCheckPath(t, name, goal, pl)
-			testCheckAccessHistory(t, tgb, ordering)
-		}
+			testCheckAccessHistory(t, tg, wantHx)
+		})
+	}
+	// Non-existent nodes:
+	for _, goal := range []any{nil, -1, len(testUndirectedGraphData), 1.2} {
+		t.Run(fmt.Sprintf("goal=%v", goal), func(t *testing.T) {
+			wantHx := ordering // Expected history.
+			goalVertex := -1
+			if g, ok := goal.(int); ok {
+				goalVertex = g
+			} else if len(wantHx) > 1 {
+				wantHx = wantHx[:1]
+			}
+			path := f(t, tg, goal)
+			testCheckPath(t, name, goalVertex, path)
+			testCheckAccessHistory(t, tg, wantHx)
+		})
 	}
 }
 
-func testCheckAccessHistory(t *testing.T, tg *testGraphBase, want []int) {
+func testIsFirstInitArgInt(initArgs []any) bool {
+	if len(initArgs) < 1 {
+		return false
+	}
+	_, ok := initArgs[0].(int)
+	return ok
+}
+
+func testCheckAccessHistory(t *testing.T, tg *testGraph, want []int) {
 	if len(tg.AccessHistory) != len(want) {
 		t.Errorf("got access history %v;\nwant %v", tg.AccessHistory, want)
 		return
@@ -523,7 +493,7 @@ func testCheckAccessHistory(t *testing.T, tg *testGraphBase, want []int) {
 	}
 }
 
-func testCheckPath(t *testing.T, name string, vertex interface{}, pathList []interface{}) {
+func testCheckPath(t *testing.T, name string, vertex int, pathList []int) {
 	var wantPath []int
 	var list [][]int
 	switch name {
@@ -549,17 +519,16 @@ func testCheckPath(t *testing.T, name string, vertex interface{}, pathList []int
 		t.Errorf("unacceptable name %q", name)
 		return
 	}
-	idx, ok := vertex.(int)
-	if ok && idx >= 0 && idx < len(list) {
-		wantPath = list[idx]
+	if vertex >= 0 && vertex < len(list) {
+		wantPath = list[vertex]
 	}
 	if len(pathList) != len(wantPath) {
-		t.Errorf("path of %v %v;\nwant %v", vertex, pathList, wantPath)
+		t.Errorf("path of %d %v;\nwant %v", vertex, pathList, wantPath)
 		return
 	}
 	for i := range wantPath {
 		if pathList[i] != wantPath[i] {
-			t.Errorf("path of %v %v;\nwant %v", vertex, pathList, wantPath)
+			t.Errorf("path of %d %v;\nwant %v", vertex, pathList, wantPath)
 			return
 		}
 	}
