@@ -35,6 +35,7 @@ type BufferedReader interface {
 	io.RuneScanner
 	io.WriterTo
 	LineReader
+	EntireLineReader
 	LineWriterTo
 
 	// Size returns the size of the underlying buffer in bytes.
@@ -110,8 +111,7 @@ func NewBufferedReaderSize(r io.Reader, size int) ResettableBufferedReader {
 		return br
 	}
 	if br, ok := r.(*resettableBufferedReader); ok {
-		br = &resettableBufferedReader{bufio.NewReaderSize(br.br, size)}
-		return br
+		return &resettableBufferedReader{bufio.NewReaderSize(br.br, size)}
 	}
 	br, ok := r.(*bufio.Reader)
 	if !ok || br.Size() < size {
@@ -195,6 +195,14 @@ func (rbr *resettableBufferedReader) WriteTo(w io.Writer) (n int64, err error) {
 // more will be false when returning the last fragment of the line.
 //
 // It either returns a non-nil line or it returns an error, never both.
+// If an error (including io.EOF) occurs after reading some content,
+// it returns the content as a line and a nil error.
+// The error encountered will be reported on future read calls.
+//
+// No indication or error is given if the input ends
+// without a final line end.
+// Even if the input ends without end-of-line bytes,
+// the content before EOF is treated as a line.
 //
 // Caller should not keep the return value line,
 // and line is only valid until the next call to the reader,
@@ -204,16 +212,73 @@ func (rbr *resettableBufferedReader) ReadLine() (line []byte, more bool, err err
 	return line, more, errors.AutoWrap(err)
 }
 
-// WriteLineTo reads a line from its underlying reader and writes it to w.
+// ReadEntireLine reads an entire line excluding the end-of-line bytes.
+//
+// It either returns a non-nil line or it returns an error, never both.
+// If an error (including io.EOF) occurs after reading some content,
+// it returns the content as a line and a nil error.
+// The error encountered will be reported on future read calls.
+//
+// No indication or error is given if the input ends
+// without a final line end.
+// Even if the input ends without end-of-line bytes,
+// the content before EOF is treated as a line.
+//
+// Unlike the method ReadLine of interface LineReader,
+// the returned line is always valid.
+// Caller can keep the returned line safely.
+//
+// If the line is too long to be stored in a []byte
+// (hardly happens in text files), it may panic or report an error.
+func (rbr *resettableBufferedReader) ReadEntireLine() (line []byte, err error) {
+	var parts [][]byte
+	var n int
+	more := true
+	for more {
+		var t []byte
+		t, more, err = rbr.ReadLine()
+		if len(t) > 0 {
+			buf := make([]byte, len(t))
+			n += copy(buf, t)
+			parts = append(parts, buf)
+		}
+	}
+	if n == 0 {
+		return nil, errors.AutoWrap(err)
+	}
+	// If n > 0, set err to nil, as described in the document.
+	if len(parts) == 1 {
+		return parts[0], nil
+	}
+	line, err = make([]byte, n), nil
+	n = 0
+	for i := range parts {
+		n += copy(line[n:], parts[i])
+	}
+	return
+}
+
+// WriteLineTo reads a line excluding the end-of-line bytes
+// from its underlying reader and writes it to w.
 //
 // It stops writing data if an error occurs.
 //
 // It returns the number of bytes written to w and any error encountered.
+//
+// If an error (including io.EOF) occurs while reading from
+// the underlying reader, but some content has already been read,
+// it writes the content as a line and returns a nil error.
+// The error encountered will be reported on future read calls.
+//
+// No indication or error is given if the input ends
+// without a final line end.
+// Even if the input ends without end-of-line bytes,
+// the content before EOF is treated as a line.
 func (rbr *resettableBufferedReader) WriteLineTo(w io.Writer) (n int64, err error) {
-	var line []byte
 	errList, more := errors.NewErrorList(true), true
 	for more {
-		line, more, err = rbr.ReadLine()
+		var line []byte
+		line, more, err = rbr.br.ReadLine()
 		if err != nil {
 			errList.Append(err)
 		}

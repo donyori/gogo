@@ -33,6 +33,14 @@ type LineReader interface {
 	// more will be false when returning the last fragment of the line.
 	//
 	// It either returns a non-nil line or it returns an error, never both.
+	// If an error (including io.EOF) occurs after reading some content,
+	// it returns the content as a line and a nil error.
+	// The error encountered will be reported on future read calls.
+	//
+	// No indication or error is given if the input ends
+	// without a final line end.
+	// Even if the input ends without end-of-line bytes,
+	// the content before EOF is treated as a line.
 	//
 	// Caller should not keep the return value line,
 	// and line is only valid until the next call to the reader,
@@ -40,12 +48,46 @@ type LineReader interface {
 	ReadLine() (line []byte, more bool, err error)
 }
 
+// EntireLineReader is an interface that wraps method ReadEntireLine.
+type EntireLineReader interface {
+	// ReadEntireLine reads an entire line excluding the end-of-line bytes.
+	//
+	// It either returns a non-nil line or it returns an error, never both.
+	// If an error (including io.EOF) occurs after reading some content,
+	// it returns the content as a line and a nil error.
+	// The error encountered will be reported on future read calls.
+	//
+	// No indication or error is given if the input ends
+	// without a final line end.
+	// Even if the input ends without end-of-line bytes,
+	// the content before EOF is treated as a line.
+	//
+	// Unlike the method ReadLine of interface LineReader,
+	// the returned line is always valid.
+	// Caller can keep the returned line safely.
+	//
+	// If the line is too long to be stored in a []byte
+	// (hardly happens in text files), it may panic or report an error.
+	ReadEntireLine() (line []byte, err error)
+}
+
 // LineWriterTo is an interface that wraps method WriteLineTo.
 type LineWriterTo interface {
-	// WriteLineTo reads a line from its underlying reader and writes it to w.
+	// WriteLineTo reads a line excluding the end-of-line bytes
+	// from its underlying reader and writes it to w.
 	//
 	// It stops writing data if an error occurs.
 	//
 	// It returns the number of bytes written to w and any error encountered.
+	//
+	// If an error (including io.EOF) occurs while reading from
+	// the underlying reader, but some content has already been read,
+	// it writes the content as a line and returns a nil error.
+	// The error encountered will be reported on future read calls.
+	//
+	// No indication or error is given if the input ends
+	// without a final line end.
+	// Even if the input ends without end-of-line bytes,
+	// the content before EOF is treated as a line.
 	WriteLineTo(w io.Writer) (n int64, err error)
 }

@@ -16,61 +16,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package inout
+package inout_test
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"io"
 	"strings"
 	"testing"
 	"testing/iotest"
+
+	"github.com/donyori/gogo/inout"
 )
-
-func TestNewBufferedReaderSize(t *testing.T) {
-	r := strings.NewReader("123456")
-	bufr := bufio.NewReader(r)
-	bufr128 := bufio.NewReaderSize(r, 128)
-	bufr64 := bufio.NewReaderSize(r, 64)
-	br := NewBufferedReader(r)
-	br128 := NewBufferedReaderSize(r, 128)
-	br64 := NewBufferedReaderSize(r, 64)
-	const size = 128
-	b := NewBufferedReaderSize(r, size)
-	if n := b.Size(); n != size {
-		t.Errorf("(on r) size: %d != %d.", n, size)
-	}
-	b = NewBufferedReaderSize(bufr, size)
-	if b.(*resettableBufferedReader).br != bufr {
-		t.Error("(on bufr) b.br != bufr.")
-	}
-	b = NewBufferedReaderSize(bufr128, size)
-	if b.(*resettableBufferedReader).br != bufr128 {
-		t.Error("(on bufr128) b.br != bufr128.")
-	}
-	b = NewBufferedReaderSize(bufr64, size)
-	if n := b.Size(); n != size {
-		t.Errorf("(on bufr64) size: %d != %d.", n, size)
-	}
-	b = NewBufferedReaderSize(br, size)
-	if b != br {
-		t.Error("(on br) b != br.")
-	}
-	b = NewBufferedReaderSize(br128, size)
-	if b != br128 {
-		t.Error("(on br128) b != br128.")
-	}
-	b = NewBufferedReaderSize(br64, size)
-	if n := b.Size(); n != size {
-		t.Errorf("(on br64) size: %d != %d.", n, size)
-	}
-
-	b = NewBufferedReaderSize(r, 0)
-	if n := b.Size(); n != minReadBufferSize {
-		t.Errorf("(on r, size 0) size: %d != minReadBufferSize (%d).", n, minReadBufferSize)
-	}
-}
 
 func TestBufferedReader_Basic(t *testing.T) {
 	content := `die Ruinenstadt ist immer noch schön
@@ -92,39 +49,64 @@ erinnerst du dich noch an den Tag Andem du mir
 wenn die Jahreszeit des Vergissmeinnichts kommt,
 singe ich ein Lied
 wenn die Jahreszeit des Vergissmeinnichts kommt,
-rufe ich dich`
-	r := NewBufferedReader(strings.NewReader(content))
+rufe ich dich
+`
+	r := inout.NewBufferedReader(strings.NewReader(content))
 	if err := iotest.TestReader(r, []byte(content)); err != nil {
 		t.Error(err)
 	}
 }
 
+func TestResettableBufferedReader_ReadEntireLine(t *testing.T) {
+	longLine, data := buildLongLineAndInputData()
+	br := inout.NewBufferedReader(bytes.NewReader(data))
+	longLineWitoutEndOfLine := strings.TrimRight(longLine, "\n")
+	var err error
+	for err == nil {
+		var line []byte
+		line, err = br.ReadEntireLine()
+		if err == nil {
+			if s := string(line); s != longLineWitoutEndOfLine {
+				t.Errorf("read line wrong; line length: %d\nline: %q\nwant: %q", len(s), s, longLineWitoutEndOfLine)
+			}
+		} else if !errors.Is(err, io.EOF) {
+			t.Error(err)
+		}
+	}
+}
+
 func TestBufferedReader_WriteLineTo(t *testing.T) {
+	longLine, data := buildLongLineAndInputData()
+	br := inout.NewBufferedReader(bytes.NewReader(data))
+	longLineWitoutEndOfLine := strings.TrimRight(longLine, "\n")
+	var output strings.Builder
+	output.Grow(len(longLine) + 100)
+	var err error
+	for err == nil {
+		output.Reset()
+		_, err = br.WriteLineTo(&output)
+		if err == nil {
+			if output.String() != longLineWitoutEndOfLine {
+				t.Errorf("output line wrong; line length: %d\nline: %q\nwant: %q", output.Len(), output.String(), longLineWitoutEndOfLine)
+			}
+		} else if !errors.Is(err, io.EOF) {
+			t.Error(err)
+		}
+	}
+}
+
+func buildLongLineAndInputData() (longLine string, data []byte) {
 	var longLineBuilder strings.Builder
 	longLineBuilder.Grow(16390)
 	for longLineBuilder.Len() < 16384 {
 		longLineBuilder.WriteString("12345678")
 	}
 	longLineBuilder.WriteByte('\n')
-	data := make([]byte, 0, 65560)
+	longLine = longLineBuilder.String()
+	data = make([]byte, 0, 65560)
 	for i := 0; i < 4; i++ {
-		data = append(data, longLineBuilder.String()...)
+		data = append(data, longLine...)
 	}
-	data = data[:len(data)-1]
-	br := NewBufferedReader(bytes.NewReader(data))
-	var output strings.Builder
-	output.Grow(longLineBuilder.Len() + 100)
-	var err error
-	for err == nil {
-		output.Reset()
-		_, err = br.WriteLineTo(&output)
-		if err == nil {
-			output.WriteByte('\n')
-			if output.String() != longLineBuilder.String() {
-				t.Errorf("Output line wrong. Line length: %d. Line: %q\nWanted: %q.", output.Len(), output.String(), longLineBuilder.String())
-			}
-		} else if !errors.Is(err, io.EOF) {
-			t.Errorf("Error: %v.", err)
-		}
-	}
+	data = data[:len(data)-1] // Remove the last '\n'.
+	return longLine, data
 }
