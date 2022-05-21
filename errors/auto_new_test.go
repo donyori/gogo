@@ -16,12 +16,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package errors
+package errors_test
 
 import (
 	stderrors "errors"
 	"fmt"
 	"testing"
+
+	"github.com/donyori/gogo/errors"
 )
 
 func TestAutoNew(t *testing.T) {
@@ -29,14 +31,14 @@ func TestAutoNew(t *testing.T) {
 		msg     string
 		wantMsg string
 	}{
-		{"", "github.com/donyori/gogo/errors.TestAutoNew.func1: (no error message)"},
-		{"some error", "github.com/donyori/gogo/errors.TestAutoNew.func1: some error"},
+		{"", "github.com/donyori/gogo/errors_test.TestAutoNew.func1: (no error message)"},
+		{"some error", "github.com/donyori/gogo/errors_test.TestAutoNew.func1: some error"},
 	}
 	// In the above testCases.wantMsg, ".func1" is the anonymous function passed to t.Run.
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("msg=%q", tc.msg), func(t *testing.T) {
-			got := AutoNew(tc.msg)
+			got := errors.AutoNew(tc.msg)
 			if gotMsg := got.Error(); gotMsg != tc.wantMsg {
 				t.Errorf("got msg %q; want %q", gotMsg, tc.wantMsg)
 			}
@@ -54,38 +56,38 @@ func TestAutoNew(t *testing.T) {
 func TestAutoNewCustom(t *testing.T) {
 	testCases := []struct {
 		msg     string
-		ms      ErrorMessageStrategy
+		ms      errors.ErrorMessageStrategy
 		skip    int
 		wantMsg string
 	}{
-		{"", -1, 0, "github.com/donyori/gogo/errors.TestAutoNewCustom.func1.1: (no error message)"},
-		{"", -1, 1, "github.com/donyori/gogo/errors.TestAutoNewCustom.func1: (no error message)"},
-		{"", OriginalMsg, 0, "(no error message)"},
-		{"", OriginalMsg, 1, "(no error message)"},
-		{"", PrependFullFuncName, 0, "github.com/donyori/gogo/errors.TestAutoNewCustom.func1.1: (no error message)"},
-		{"", PrependFullFuncName, 1, "github.com/donyori/gogo/errors.TestAutoNewCustom.func1: (no error message)"},
-		{"", PrependFullPkgName, 0, "github.com/donyori/gogo/errors: (no error message)"},
-		{"", PrependFullPkgName, 1, "github.com/donyori/gogo/errors: (no error message)"},
-		{"", PrependSimpleFuncName, 0, "TestAutoNewCustom.func1.1: (no error message)"},
-		{"", PrependSimpleFuncName, 1, "TestAutoNewCustom.func1: (no error message)"},
-		{"", PrependSimplePkgName, 0, "errors: (no error message)"},
-		{"", PrependSimplePkgName, 1, "errors: (no error message)"},
-		{"", PrependSimplePkgName + 1, 0, "github.com/donyori/gogo/errors.TestAutoNewCustom.func1.1: (no error message)"},
-		{"", PrependSimplePkgName + 1, 1, "github.com/donyori/gogo/errors.TestAutoNewCustom.func1: (no error message)"},
-		{"some error", -1, 0, "github.com/donyori/gogo/errors.TestAutoNewCustom.func1.1: some error"},
-		{"some error", -1, 1, "github.com/donyori/gogo/errors.TestAutoNewCustom.func1: some error"},
-		{"some error", OriginalMsg, 0, "some error"},
-		{"some error", OriginalMsg, 1, "some error"},
-		{"some error", PrependFullFuncName, 0, "github.com/donyori/gogo/errors.TestAutoNewCustom.func1.1: some error"},
-		{"some error", PrependFullFuncName, 1, "github.com/donyori/gogo/errors.TestAutoNewCustom.func1: some error"},
-		{"some error", PrependFullPkgName, 0, "github.com/donyori/gogo/errors: some error"},
-		{"some error", PrependFullPkgName, 1, "github.com/donyori/gogo/errors: some error"},
-		{"some error", PrependSimpleFuncName, 0, "TestAutoNewCustom.func1.1: some error"},
-		{"some error", PrependSimpleFuncName, 1, "TestAutoNewCustom.func1: some error"},
-		{"some error", PrependSimplePkgName, 0, "errors: some error"},
-		{"some error", PrependSimplePkgName, 1, "errors: some error"},
-		{"some error", PrependSimplePkgName + 1, 0, "github.com/donyori/gogo/errors.TestAutoNewCustom.func1.1: some error"},
-		{"some error", PrependSimplePkgName + 1, 1, "github.com/donyori/gogo/errors.TestAutoNewCustom.func1: some error"},
+		{"", -1, 0, "github.com/donyori/gogo/errors_test.TestAutoNewCustom.func1.1: (no error message)"},
+		{"", -1, 1, "github.com/donyori/gogo/errors_test.TestAutoNewCustom.func1: (no error message)"},
+		{"", errors.OriginalMsg, 0, "(no error message)"},
+		{"", errors.OriginalMsg, 1, "(no error message)"},
+		{"", errors.PrependFullFuncName, 0, "github.com/donyori/gogo/errors_test.TestAutoNewCustom.func1.1: (no error message)"},
+		{"", errors.PrependFullFuncName, 1, "github.com/donyori/gogo/errors_test.TestAutoNewCustom.func1: (no error message)"},
+		{"", errors.PrependFullPkgName, 0, "github.com/donyori/gogo/errors_test: (no error message)"},
+		{"", errors.PrependFullPkgName, 1, "github.com/donyori/gogo/errors_test: (no error message)"},
+		{"", errors.PrependSimpleFuncName, 0, "TestAutoNewCustom.func1.1: (no error message)"},
+		{"", errors.PrependSimpleFuncName, 1, "TestAutoNewCustom.func1: (no error message)"},
+		{"", errors.PrependSimplePkgName, 0, "errors_test: (no error message)"},
+		{"", errors.PrependSimplePkgName, 1, "errors_test: (no error message)"},
+		{"", errors.PrependSimplePkgName + 1, 0, "github.com/donyori/gogo/errors_test.TestAutoNewCustom.func1.1: (no error message)"},
+		{"", errors.PrependSimplePkgName + 1, 1, "github.com/donyori/gogo/errors_test.TestAutoNewCustom.func1: (no error message)"},
+		{"some error", -1, 0, "github.com/donyori/gogo/errors_test.TestAutoNewCustom.func1.1: some error"},
+		{"some error", -1, 1, "github.com/donyori/gogo/errors_test.TestAutoNewCustom.func1: some error"},
+		{"some error", errors.OriginalMsg, 0, "some error"},
+		{"some error", errors.OriginalMsg, 1, "some error"},
+		{"some error", errors.PrependFullFuncName, 0, "github.com/donyori/gogo/errors_test.TestAutoNewCustom.func1.1: some error"},
+		{"some error", errors.PrependFullFuncName, 1, "github.com/donyori/gogo/errors_test.TestAutoNewCustom.func1: some error"},
+		{"some error", errors.PrependFullPkgName, 0, "github.com/donyori/gogo/errors_test: some error"},
+		{"some error", errors.PrependFullPkgName, 1, "github.com/donyori/gogo/errors_test: some error"},
+		{"some error", errors.PrependSimpleFuncName, 0, "TestAutoNewCustom.func1.1: some error"},
+		{"some error", errors.PrependSimpleFuncName, 1, "TestAutoNewCustom.func1: some error"},
+		{"some error", errors.PrependSimplePkgName, 0, "errors_test: some error"},
+		{"some error", errors.PrependSimplePkgName, 1, "errors_test: some error"},
+		{"some error", errors.PrependSimplePkgName + 1, 0, "github.com/donyori/gogo/errors_test.TestAutoNewCustom.func1.1: some error"},
+		{"some error", errors.PrependSimplePkgName + 1, 1, "github.com/donyori/gogo/errors_test.TestAutoNewCustom.func1: some error"},
 	}
 	// In the above testCases.wantMsg, ".func1" is the anonymous function passed to t.Run;
 	// ".func1.1" is the anonymous inner function that calls function AutoNewCustom.
@@ -93,7 +95,7 @@ func TestAutoNewCustom(t *testing.T) {
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("case %d?msg=%q&ms=%s(%[3]d)&skip=%d", i, tc.msg, tc.ms, tc.skip), func(t *testing.T) {
 			func() { // Use an inner function to test the "skip".
-				got := AutoNewCustom(tc.msg, tc.ms, tc.skip)
+				got := errors.AutoNewCustom(tc.msg, tc.ms, tc.skip)
 				if gotMsg := got.Error(); gotMsg != tc.wantMsg {
 					t.Errorf("got msg %q; want %q", gotMsg, tc.wantMsg)
 				}

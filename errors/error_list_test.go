@@ -26,12 +26,12 @@ import (
 	"testing"
 )
 
-var testErrorsForErrorList []error // It will be set in function init.
+var errorsForErrorList []error // It will be set in function init.
 
 func init() {
-	testErrorsForErrorList = make([]error, 3)
-	for i := range testErrorsForErrorList {
-		testErrorsForErrorList[i] = fmt.Errorf("test error %d", i)
+	errorsForErrorList = make([]error, 3)
+	for i := range errorsForErrorList {
+		errorsForErrorList[i] = fmt.Errorf("test error %d", i)
 	}
 }
 
@@ -44,16 +44,16 @@ func TestNewErrorList(t *testing.T) {
 		{nil, []error{}},
 		{[]error{}, []error{}},
 		{[]error{nil}, []error{}},
-		{[]error{testErrorsForErrorList[0]}, []error{testErrorsForErrorList[0]}},
-		{append(testErrorsForErrorList[:0:0], testErrorsForErrorList...), testErrorsForErrorList},
-		{[]error{testErrorsForErrorList[0], testErrorsForErrorList[0]}, []error{testErrorsForErrorList[0], testErrorsForErrorList[0]}},
-		{[]error{testErrorsForErrorList[0], stderrors.New(testErrorsForErrorList[0].Error())}, nil}, // this case, want will be set later
-		{[]error{testErrorsForErrorList[0], nil}, testErrorsForErrorList[:1]},
-		{[]error{nil, testErrorsForErrorList[0]}, testErrorsForErrorList[:1]},
-		{append(testErrorsForErrorList, testErrorsForErrorList...), append(testErrorsForErrorList, testErrorsForErrorList...)},
-		{append([]error{nil}, testErrorsForErrorList...), testErrorsForErrorList},
-		{append(testErrorsForErrorList, nil), testErrorsForErrorList},
-		{append(testErrorsForErrorList[:2:2], append([]error{nil}, testErrorsForErrorList[2:]...)...), testErrorsForErrorList},
+		{[]error{errorsForErrorList[0]}, []error{errorsForErrorList[0]}},
+		{append(errorsForErrorList[:0:0], errorsForErrorList...), errorsForErrorList},
+		{[]error{errorsForErrorList[0], errorsForErrorList[0]}, []error{errorsForErrorList[0], errorsForErrorList[0]}},
+		{[]error{errorsForErrorList[0], stderrors.New(errorsForErrorList[0].Error())}, nil}, // this case, want will be set later
+		{[]error{errorsForErrorList[0], nil}, errorsForErrorList[:1]},
+		{[]error{nil, errorsForErrorList[0]}, errorsForErrorList[:1]},
+		{append(errorsForErrorList, errorsForErrorList...), append(errorsForErrorList, errorsForErrorList...)},
+		{append([]error{nil}, errorsForErrorList...), errorsForErrorList},
+		{append(errorsForErrorList, nil), errorsForErrorList},
+		{append(errorsForErrorList[:2:2], append([]error{nil}, errorsForErrorList[2:]...)...), errorsForErrorList},
 	}
 	testCases[6].want = append([]error{}, testCases[6].errs...)
 
@@ -81,16 +81,16 @@ func TestErrorList_Append(t *testing.T) {
 		{nil, nil},
 		{[]error{}, nil},
 		{[]error{nil}, nil},
-		{[]error{testErrorsForErrorList[0]}, []error{testErrorsForErrorList[0]}},
-		{append(testErrorsForErrorList[:0:0], testErrorsForErrorList...), testErrorsForErrorList},
-		{[]error{testErrorsForErrorList[0], testErrorsForErrorList[0]}, []error{testErrorsForErrorList[0], testErrorsForErrorList[0]}},
-		{[]error{testErrorsForErrorList[0], stderrors.New(testErrorsForErrorList[0].Error())}, nil}, // this case, want will be set later
-		{[]error{testErrorsForErrorList[0], nil}, testErrorsForErrorList[:1]},
-		{[]error{nil, testErrorsForErrorList[0]}, testErrorsForErrorList[:1]},
-		{append(testErrorsForErrorList, testErrorsForErrorList...), append(testErrorsForErrorList, testErrorsForErrorList...)},
-		{append([]error{nil}, testErrorsForErrorList...), testErrorsForErrorList},
-		{append(testErrorsForErrorList, nil), testErrorsForErrorList},
-		{append(testErrorsForErrorList[:2:2], append([]error{nil}, testErrorsForErrorList[2:]...)...), testErrorsForErrorList},
+		{[]error{errorsForErrorList[0]}, []error{errorsForErrorList[0]}},
+		{append(errorsForErrorList[:0:0], errorsForErrorList...), errorsForErrorList},
+		{[]error{errorsForErrorList[0], errorsForErrorList[0]}, []error{errorsForErrorList[0], errorsForErrorList[0]}},
+		{[]error{errorsForErrorList[0], stderrors.New(errorsForErrorList[0].Error())}, nil}, // this case, want will be set later
+		{[]error{errorsForErrorList[0], nil}, errorsForErrorList[:1]},
+		{[]error{nil, errorsForErrorList[0]}, errorsForErrorList[:1]},
+		{append(errorsForErrorList, errorsForErrorList...), append(errorsForErrorList, errorsForErrorList...)},
+		{append([]error{nil}, errorsForErrorList...), errorsForErrorList},
+		{append(errorsForErrorList, nil), errorsForErrorList},
+		{append(errorsForErrorList[:2:2], append([]error{nil}, errorsForErrorList[2:]...)...), errorsForErrorList},
 	}
 	testCases[6].want = testCases[6].errs
 
@@ -113,8 +113,8 @@ func TestErrorList_ToError(t *testing.T) {
 		{NewErrorList(true).(*errorList), nil},
 		{NewErrorList(true, []error{}...).(*errorList), nil},
 		{NewErrorList(true, nil).(*errorList), nil},
-		{NewErrorList(true, testErrorsForErrorList[0]).(*errorList), testErrorsForErrorList[0]},
-		{NewErrorList(true, testErrorsForErrorList...).(*errorList), nil}, // this case, err will be set later
+		{NewErrorList(true, errorsForErrorList[0]).(*errorList), errorsForErrorList[0]},
+		{NewErrorList(true, errorsForErrorList...).(*errorList), nil}, // this case, err will be set later
 	}
 	testCases[4].err = testCases[4].el
 
@@ -136,16 +136,16 @@ func TestErrorList_Deduplicate(t *testing.T) {
 		{nil, nil},
 		{[]error{}, nil},
 		{[]error{nil}, nil},
-		{[]error{testErrorsForErrorList[0]}, testErrorsForErrorList[:1]},
-		{append(testErrorsForErrorList[:0:0], testErrorsForErrorList...), testErrorsForErrorList},
-		{[]error{testErrorsForErrorList[0], testErrorsForErrorList[0]}, testErrorsForErrorList[:1]},
-		{[]error{testErrorsForErrorList[0], stderrors.New(testErrorsForErrorList[0].Error())}, testErrorsForErrorList[:1]},
-		{[]error{testErrorsForErrorList[0], nil}, testErrorsForErrorList[:1]},
-		{[]error{nil, testErrorsForErrorList[0]}, testErrorsForErrorList[:1]},
-		{append(testErrorsForErrorList, testErrorsForErrorList...), testErrorsForErrorList},
-		{append([]error{nil}, testErrorsForErrorList...), testErrorsForErrorList},
-		{append(testErrorsForErrorList, nil), testErrorsForErrorList},
-		{append(testErrorsForErrorList[:2:2], append([]error{nil}, testErrorsForErrorList[2:]...)...), testErrorsForErrorList},
+		{[]error{errorsForErrorList[0]}, errorsForErrorList[:1]},
+		{append(errorsForErrorList[:0:0], errorsForErrorList...), errorsForErrorList},
+		{[]error{errorsForErrorList[0], errorsForErrorList[0]}, errorsForErrorList[:1]},
+		{[]error{errorsForErrorList[0], stderrors.New(errorsForErrorList[0].Error())}, errorsForErrorList[:1]},
+		{[]error{errorsForErrorList[0], nil}, errorsForErrorList[:1]},
+		{[]error{nil, errorsForErrorList[0]}, errorsForErrorList[:1]},
+		{append(errorsForErrorList, errorsForErrorList...), errorsForErrorList},
+		{append([]error{nil}, errorsForErrorList...), errorsForErrorList},
+		{append(errorsForErrorList, nil), errorsForErrorList},
+		{append(errorsForErrorList[:2:2], append([]error{nil}, errorsForErrorList[2:]...)...), errorsForErrorList},
 	}
 
 	for i, tc := range testCases {
@@ -167,11 +167,11 @@ func TestErrorList_Error(t *testing.T) {
 		{nil, "no error"},
 		{[]error{}, "no error"},
 		{[]error{nil}, fmt.Sprintf("%v", error(nil))},
-		{[]error{testErrorsForErrorList[0]}, fmt.Sprintf("%v", testErrorsForErrorList[0])},
-		{append(testErrorsForErrorList[:0:0], testErrorsForErrorList...), ""},
-		{append(testErrorsForErrorList, nil), ""},
-		{append([]error{nil}, testErrorsForErrorList...), ""},
-		{append(testErrorsForErrorList[:2:2], append([]error{nil}, testErrorsForErrorList[2:]...)...), ""},
+		{[]error{errorsForErrorList[0]}, fmt.Sprintf("%v", errorsForErrorList[0])},
+		{append(errorsForErrorList[:0:0], errorsForErrorList...), ""},
+		{append(errorsForErrorList, nil), ""},
+		{append([]error{nil}, errorsForErrorList...), ""},
+		{append(errorsForErrorList[:2:2], append([]error{nil}, errorsForErrorList[2:]...)...), ""},
 	}
 	for i := 4; i < len(testCases); i++ {
 		strs := make([]string, len(testCases[i].errs))
@@ -204,16 +204,16 @@ func TestCombine(t *testing.T) {
 		{nil, nil},
 		{[]error{}, nil},
 		{[]error{nil}, nil},
-		{[]error{testErrorsForErrorList[0]}, []error{testErrorsForErrorList[0]}},
-		{append(testErrorsForErrorList[:0:0], testErrorsForErrorList...), testErrorsForErrorList},
-		{[]error{testErrorsForErrorList[0], testErrorsForErrorList[0]}, []error{testErrorsForErrorList[0], testErrorsForErrorList[0]}},
-		{[]error{testErrorsForErrorList[0], stderrors.New(testErrorsForErrorList[0].Error())}, nil}, // this case, want will be set later
-		{[]error{testErrorsForErrorList[0], nil}, testErrorsForErrorList[:1]},
-		{[]error{nil, testErrorsForErrorList[0]}, testErrorsForErrorList[:1]},
-		{append(testErrorsForErrorList, testErrorsForErrorList...), append(testErrorsForErrorList, testErrorsForErrorList...)},
-		{append([]error{nil}, testErrorsForErrorList...), testErrorsForErrorList},
-		{append(testErrorsForErrorList, nil), testErrorsForErrorList},
-		{append(testErrorsForErrorList[:2:2], append([]error{nil}, testErrorsForErrorList[2:]...)...), testErrorsForErrorList},
+		{[]error{errorsForErrorList[0]}, []error{errorsForErrorList[0]}},
+		{append(errorsForErrorList[:0:0], errorsForErrorList...), errorsForErrorList},
+		{[]error{errorsForErrorList[0], errorsForErrorList[0]}, []error{errorsForErrorList[0], errorsForErrorList[0]}},
+		{[]error{errorsForErrorList[0], stderrors.New(errorsForErrorList[0].Error())}, nil}, // this case, want will be set later
+		{[]error{errorsForErrorList[0], nil}, errorsForErrorList[:1]},
+		{[]error{nil, errorsForErrorList[0]}, errorsForErrorList[:1]},
+		{append(errorsForErrorList, errorsForErrorList...), append(errorsForErrorList, errorsForErrorList...)},
+		{append([]error{nil}, errorsForErrorList...), errorsForErrorList},
+		{append(errorsForErrorList, nil), errorsForErrorList},
+		{append(errorsForErrorList[:2:2], append([]error{nil}, errorsForErrorList[2:]...)...), errorsForErrorList},
 	}
 	testCases[6].want = testCases[6].errs
 

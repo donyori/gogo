@@ -16,15 +16,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package graphv
+package graphv_test
 
 import (
 	"fmt"
 	"testing"
+
+	"github.com/donyori/gogo/algorithm/search/graphv"
 )
 
-// testGraph implements all methods of interface IdsInterface[int].
-type testGraph struct {
+// graphImpl implements all methods of interface IdsInterface[int].
+type graphImpl struct {
 	Data          [][]int
 	Goal          int
 	GoalValid     bool
@@ -36,39 +38,39 @@ type testGraph struct {
 }
 
 // Init sets the search goal as well as resets the access history.
-func (tg *testGraph) Init(args ...any) {
-	tg.Goal, tg.GoalValid = -1, false
+func (g *graphImpl) Init(args ...any) {
+	g.Goal, g.GoalValid = -1, false
 	if len(args) >= 1 {
 		goal, ok := args[0].(int)
 		if ok {
-			tg.Goal, tg.GoalValid = goal, true
+			g.Goal, g.GoalValid = goal, true
 		}
 	}
-	tg.AccessHistory = tg.AccessHistory[:0] // Reuse the underlying array.
-	tg.head = 0
+	g.AccessHistory = g.AccessHistory[:0] // Reuse the underlying array.
+	g.head = 0
 }
 
-func (tg *testGraph) Root() int {
-	if len(tg.Data) == 0 {
+func (g *graphImpl) Root() int {
+	if len(g.Data) == 0 {
 		return -1
 	}
 	return 0
 }
 
-func (tg *testGraph) Adjacency(vertex int) []int {
-	list := tg.Data[vertex]
+func (g *graphImpl) Adjacency(vertex int) []int {
+	list := g.Data[vertex]
 	if len(list) == 0 {
 		return nil
 	}
 	return append(list[:0:0], list...) // Return a copy of list.
 }
 
-func (tg *testGraph) Access(vertex, _ int) (found, cont bool) {
-	tg.AccessHistory = append(tg.AccessHistory, vertex)
-	if !tg.GoalValid {
+func (g *graphImpl) Access(vertex, _ int) (found, cont bool) {
+	g.AccessHistory = append(g.AccessHistory, vertex)
+	if !g.GoalValid {
 		return
 	}
-	return vertex == tg.Goal, true
+	return vertex == g.Goal, true
 }
 
 // Discovered reports whether the specified vertex
@@ -76,25 +78,25 @@ func (tg *testGraph) Access(vertex, _ int) (found, cont bool) {
 // via checking the access history.
 //
 // It may be time-consuming,
-// but it doesn't matter because the test graph is very small.
-func (tg *testGraph) Discovered(vertex int) bool {
-	for i := tg.head; i < len(tg.AccessHistory); i++ {
-		if tg.AccessHistory[i] == vertex {
+// but it doesn't matter because the graph is very small.
+func (g *graphImpl) Discovered(vertex int) bool {
+	for i := g.head; i < len(g.AccessHistory); i++ {
+		if g.AccessHistory[i] == vertex {
 			return true
 		}
 	}
 	return false
 }
 
-func (tg *testGraph) ResetSearchState() {
-	tg.head = len(tg.AccessHistory)
+func (g *graphImpl) ResetSearchState() {
+	g.head = len(g.AccessHistory)
 }
 
-// testNumUndirectedGraphVertices is the number of vertices
-// in testUndirectedGraphData.
-const testNumUndirectedGraphVertices int = 7
+// numUndirectedGraphVertices is the number of vertices
+// in undirectedGraphData.
+const numUndirectedGraphVertices int = 7
 
-// testUndirectedGraphData represents an undirected graph as follows:
+// undirectedGraphData represents an undirected graph as follows:
 //      0
 //     /|\
 //    1 2 3
@@ -110,7 +112,7 @@ const testNumUndirectedGraphVertices int = 7
 //  0, 1, 4, 5, 3, 2, 6
 // Expected BFS ordering:
 //  0, 1, 2, 3, 4, 5, 6
-var testUndirectedGraphData = [][]int{
+var undirectedGraphData = [][]int{
 	{1, 2, 3}, // vertex 0
 	{0, 4, 5}, // vertex 1
 	{0, 6},    // vertex 2
@@ -120,8 +122,8 @@ var testUndirectedGraphData = [][]int{
 	{2},       // vertex 6
 }
 
-// testUndirectedGraphDataOrderingMap is a mapping from algorithm short names
-// to the expected vertex access orderings of testUndirectedGraphData.
+// undirectedGraphDataOrderingMap is a mapping from algorithm short names
+// to the expected vertex access orderings of undirectedGraphData.
 //
 // Valid keys:
 //  dfs
@@ -133,7 +135,7 @@ var testUndirectedGraphData = [][]int{
 //  dls-m1
 //  ids
 // where dls is followed by the depth limit, and m1 is minus 1 (-1).
-var testUndirectedGraphDataOrderingMap = map[string][]int{
+var undirectedGraphDataOrderingMap = map[string][]int{
 	"dfs":    {0, 1, 4, 5, 3, 2, 6},
 	"bfs":    {0, 1, 2, 3, 4, 5, 6},
 	"dls-0":  {0},
@@ -144,8 +146,8 @@ var testUndirectedGraphDataOrderingMap = map[string][]int{
 	"ids":    {0, 1, 2, 3, 0, 1, 4, 5, 2, 6, 3, 0, 1, 4, 5, 3, 2, 6},
 }
 
-// testUndirectedGraphDataVertexPathMap is a mapping from algorithm short names
-// to lists of paths from the root to each vertex of testUndirectedGraphData.
+// undirectedGraphDataVertexPathMap is a mapping from algorithm short names
+// to lists of paths from the root to each vertex of undirectedGraphData.
 //
 // Valid keys:
 //  dfs
@@ -157,7 +159,7 @@ var testUndirectedGraphDataOrderingMap = map[string][]int{
 //  dls-m1
 //  ids
 // where dls is followed by the depth limit, and m1 is minus 1 (-1).
-var testUndirectedGraphDataVertexPathMap = map[string][][]int{
+var undirectedGraphDataVertexPathMap = map[string][][]int{
 	"dfs": {
 		{0},
 		{0, 1},
@@ -192,11 +194,11 @@ var testUndirectedGraphDataVertexPathMap = map[string][][]int{
 }
 
 func init() {
-	testUndirectedGraphDataOrderingMap["dls-3"] = testUndirectedGraphDataOrderingMap["dfs"]
+	undirectedGraphDataOrderingMap["dls-3"] = undirectedGraphDataOrderingMap["dfs"]
 
-	testUndirectedGraphDataVertexPathMap["dls-2"] = testUndirectedGraphDataVertexPathMap["bfs"]
-	testUndirectedGraphDataVertexPathMap["dls-3"] = testUndirectedGraphDataVertexPathMap["dfs"]
-	testUndirectedGraphDataVertexPathMap["ids"] = testUndirectedGraphDataVertexPathMap["bfs"]
+	undirectedGraphDataVertexPathMap["dls-2"] = undirectedGraphDataVertexPathMap["bfs"]
+	undirectedGraphDataVertexPathMap["dls-3"] = undirectedGraphDataVertexPathMap["dfs"]
+	undirectedGraphDataVertexPathMap["ids"] = undirectedGraphDataVertexPathMap["bfs"]
 }
 
 func TestDfs(t *testing.T) {
@@ -262,77 +264,77 @@ func TestIdsPath(t *testing.T) {
 }
 
 func testBruteForceSearch(t *testing.T, name string) {
-	var f func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool)
+	var f func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) (int, bool)
 	var ordering []int
 	switch name {
 	case "Dfs":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
-			return Dfs[int](itf, initArgs...)
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) (int, bool) {
+			return graphv.Dfs[int](itf, initArgs...)
 		}
-		ordering = testUndirectedGraphDataOrderingMap["dfs"]
+		ordering = undirectedGraphDataOrderingMap["dfs"]
 	case "Bfs":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
-			return Bfs[int](itf, initArgs...)
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) (int, bool) {
+			return graphv.Bfs[int](itf, initArgs...)
 		}
-		ordering = testUndirectedGraphDataOrderingMap["bfs"]
+		ordering = undirectedGraphDataOrderingMap["bfs"]
 	case "Dls-0":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
-			vertex, found, more := Dls[int](itf, 0, initArgs...)
-			if testIsFirstInitArgInt(initArgs) && !found && !more {
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) (int, bool) {
+			vertex, found, more := graphv.Dls[int](itf, 0, initArgs...)
+			if isFirstInitArgInt(initArgs) && !found && !more {
 				t.Error("more is false but there are undiscovered vertices")
 			}
 			return vertex, found
 		}
-		ordering = testUndirectedGraphDataOrderingMap["dls-0"]
+		ordering = undirectedGraphDataOrderingMap["dls-0"]
 	case "Dls-1":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
-			vertex, found, more := Dls[int](itf, 1, initArgs...)
-			if testIsFirstInitArgInt(initArgs) && !found && !more {
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) (int, bool) {
+			vertex, found, more := graphv.Dls[int](itf, 1, initArgs...)
+			if isFirstInitArgInt(initArgs) && !found && !more {
 				t.Error("more is false but there are undiscovered vertices")
 			}
 			return vertex, found
 		}
-		ordering = testUndirectedGraphDataOrderingMap["dls-1"]
+		ordering = undirectedGraphDataOrderingMap["dls-1"]
 	case "Dls-2":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
-			vertex, found, _ := Dls[int](itf, 2, initArgs...)
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) (int, bool) {
+			vertex, found, _ := graphv.Dls[int](itf, 2, initArgs...)
 			// Both true and false are acceptable for the third return value.
 			return vertex, found
 		}
-		ordering = testUndirectedGraphDataOrderingMap["dls-2"]
+		ordering = undirectedGraphDataOrderingMap["dls-2"]
 	case "Dls-3":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
-			vertex, found, _ := Dls[int](itf, 3, initArgs...)
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) (int, bool) {
+			vertex, found, _ := graphv.Dls[int](itf, 3, initArgs...)
 			// Both true and false are acceptable for the third return value.
 			return vertex, found
 		}
-		ordering = testUndirectedGraphDataOrderingMap["dls-3"]
+		ordering = undirectedGraphDataOrderingMap["dls-3"]
 	case "Dls-m1":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
-			vertex, found, more := Dls[int](itf, -1, initArgs...)
-			if testIsFirstInitArgInt(initArgs) && !found && !more {
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) (int, bool) {
+			vertex, found, more := graphv.Dls[int](itf, -1, initArgs...)
+			if isFirstInitArgInt(initArgs) && !found && !more {
 				t.Error("more is false but there are undiscovered vertices")
 			}
 			return vertex, found
 		}
-		ordering = testUndirectedGraphDataOrderingMap["dls-m1"]
+		ordering = undirectedGraphDataOrderingMap["dls-m1"]
 	case "Ids":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
-			return Ids(itf, 1, initArgs...)
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) (int, bool) {
+			return graphv.Ids(itf, 1, initArgs...)
 		}
-		ordering = testUndirectedGraphDataOrderingMap["ids"]
+		ordering = undirectedGraphDataOrderingMap["ids"]
 	case "Ids-m":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) (int, bool) {
-			return Ids(itf, -1, initArgs...)
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) (int, bool) {
+			return graphv.Ids(itf, -1, initArgs...)
 		}
-		ordering = testUndirectedGraphDataOrderingMap["ids"]
+		ordering = undirectedGraphDataOrderingMap["ids"]
 	default:
 		t.Errorf("unacceptable name %q", name)
 		return
 	}
 
-	tg := &testGraph{Data: testUndirectedGraphData}
-	for goal := 0; goal < testNumUndirectedGraphVertices; goal++ {
+	tg := &graphImpl{Data: undirectedGraphData}
+	for goal := 0; goal < numUndirectedGraphVertices; goal++ {
 		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
 			var i int
 			for i < len(ordering) && ordering[i] != goal {
@@ -348,11 +350,11 @@ func testBruteForceSearch(t *testing.T, name string) {
 			if found != wantFound || r != wantVertex {
 				t.Errorf("got <%d, %t>; want <%d, %t>", r, found, wantVertex, wantFound)
 			}
-			testCheckAccessHistory(t, tg, wantHx)
+			checkAccessHistory(t, tg, wantHx)
 		})
 	}
 	// Non-existent nodes:
-	for _, goal := range []any{nil, -1, len(testUndirectedGraphData), 1.2} {
+	for _, goal := range []any{nil, -1, len(undirectedGraphData), 1.2} {
 		t.Run(fmt.Sprintf("goal=%v", goal), func(t *testing.T) {
 			wantHx := ordering // Expected history.
 			if len(wantHx) > 1 {
@@ -364,86 +366,86 @@ func testBruteForceSearch(t *testing.T, name string) {
 			if r != 0 || found {
 				t.Errorf("got <%d, %t>; want <0, false>", r, found)
 			}
-			testCheckAccessHistory(t, tg, wantHx)
+			checkAccessHistory(t, tg, wantHx)
 		})
 	}
 }
 
 func testBruteForceSearchPath(t *testing.T, name string) {
-	var f func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int
+	var f func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) []int
 	var ordering []int
 	switch name {
 	case "DfsPath":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
-			return DfsPath[int](itf, initArgs...)
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) []int {
+			return graphv.DfsPath[int](itf, initArgs...)
 		}
-		ordering = testUndirectedGraphDataOrderingMap["dfs"]
+		ordering = undirectedGraphDataOrderingMap["dfs"]
 	case "BfsPath":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
-			return BfsPath[int](itf, initArgs...)
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) []int {
+			return graphv.BfsPath[int](itf, initArgs...)
 		}
-		ordering = testUndirectedGraphDataOrderingMap["bfs"]
+		ordering = undirectedGraphDataOrderingMap["bfs"]
 	case "DlsPath-0":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
-			path, more := DlsPath[int](itf, 0, initArgs...)
-			if testIsFirstInitArgInt(initArgs) && path == nil && !more {
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) []int {
+			path, more := graphv.DlsPath[int](itf, 0, initArgs...)
+			if isFirstInitArgInt(initArgs) && path == nil && !more {
 				t.Error("more is false but there are undiscovered vertices")
 			}
 			return path
 		}
-		ordering = testUndirectedGraphDataOrderingMap["dls-0"]
+		ordering = undirectedGraphDataOrderingMap["dls-0"]
 	case "DlsPath-1":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
-			path, more := DlsPath[int](itf, 1, initArgs...)
-			if testIsFirstInitArgInt(initArgs) && path == nil && !more {
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) []int {
+			path, more := graphv.DlsPath[int](itf, 1, initArgs...)
+			if isFirstInitArgInt(initArgs) && path == nil && !more {
 				t.Error("more is false but there are undiscovered vertices")
 			}
 			return path
 		}
-		ordering = testUndirectedGraphDataOrderingMap["dls-1"]
+		ordering = undirectedGraphDataOrderingMap["dls-1"]
 	case "DlsPath-2":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
-			path, _ := DlsPath[int](itf, 2, initArgs...)
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) []int {
+			path, _ := graphv.DlsPath[int](itf, 2, initArgs...)
 			// Both true and false are acceptable for the second return value.
 			return path
 		}
-		ordering = testUndirectedGraphDataOrderingMap["dls-2"]
+		ordering = undirectedGraphDataOrderingMap["dls-2"]
 	case "DlsPath-3":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
-			path, _ := DlsPath[int](itf, 3, initArgs...)
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) []int {
+			path, _ := graphv.DlsPath[int](itf, 3, initArgs...)
 			// Both true and false are acceptable for the second return value.
 			return path
 		}
-		ordering = testUndirectedGraphDataOrderingMap["dls-3"]
+		ordering = undirectedGraphDataOrderingMap["dls-3"]
 	case "DlsPath-m1":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
-			path, more := DlsPath[int](itf, -1, initArgs...)
-			if testIsFirstInitArgInt(initArgs) && path == nil && !more {
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) []int {
+			path, more := graphv.DlsPath[int](itf, -1, initArgs...)
+			if isFirstInitArgInt(initArgs) && path == nil && !more {
 				t.Error("more is false but there are undiscovered vertices")
 			}
 			return path
 		}
-		ordering = testUndirectedGraphDataOrderingMap["dls-m1"]
+		ordering = undirectedGraphDataOrderingMap["dls-m1"]
 	case "IdsPath":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
-			return IdsPath(itf, 1, initArgs...)
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) []int {
+			return graphv.IdsPath(itf, 1, initArgs...)
 		}
-		ordering = testUndirectedGraphDataOrderingMap["ids"]
+		ordering = undirectedGraphDataOrderingMap["ids"]
 	case "IdsPath-m":
-		f = func(t *testing.T, itf IdsInterface[int], initArgs ...any) []int {
-			return IdsPath(itf, -1, initArgs...)
+		f = func(t *testing.T, itf graphv.IdsInterface[int], initArgs ...any) []int {
+			return graphv.IdsPath(itf, -1, initArgs...)
 		}
-		ordering = testUndirectedGraphDataOrderingMap["ids"]
+		ordering = undirectedGraphDataOrderingMap["ids"]
 	default:
 		t.Errorf("unacceptable name %q", name)
 		return
 	}
 
-	tg := &testGraph{Data: testUndirectedGraphData}
-	for goal := 0; goal < testNumUndirectedGraphVertices; goal++ {
+	tg := &graphImpl{Data: undirectedGraphData}
+	for goal := 0; goal < numUndirectedGraphVertices; goal++ {
 		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
 			path := f(t, tg, goal)
-			testCheckPath(t, name, goal, path)
+			checkPath(t, name, goal, path)
 			var i int
 			for i < len(ordering) && ordering[i] != goal {
 				i++
@@ -452,11 +454,11 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 			if i < len(ordering) {
 				wantHx = wantHx[:1+i]
 			}
-			testCheckAccessHistory(t, tg, wantHx)
+			checkAccessHistory(t, tg, wantHx)
 		})
 	}
 	// Non-existent nodes:
-	for _, goal := range []any{nil, -1, len(testUndirectedGraphData), 1.2} {
+	for _, goal := range []any{nil, -1, len(undirectedGraphData), 1.2} {
 		t.Run(fmt.Sprintf("goal=%v", goal), func(t *testing.T) {
 			wantHx := ordering // Expected history.
 			goalVertex := -1
@@ -466,13 +468,13 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 				wantHx = wantHx[:1]
 			}
 			path := f(t, tg, goal)
-			testCheckPath(t, name, goalVertex, path)
-			testCheckAccessHistory(t, tg, wantHx)
+			checkPath(t, name, goalVertex, path)
+			checkAccessHistory(t, tg, wantHx)
 		})
 	}
 }
 
-func testIsFirstInitArgInt(initArgs []any) bool {
+func isFirstInitArgInt(initArgs []any) bool {
 	if len(initArgs) < 1 {
 		return false
 	}
@@ -480,7 +482,7 @@ func testIsFirstInitArgInt(initArgs []any) bool {
 	return ok
 }
 
-func testCheckAccessHistory(t *testing.T, tg *testGraph, want []int) {
+func checkAccessHistory(t *testing.T, tg *graphImpl, want []int) {
 	if len(tg.AccessHistory) != len(want) {
 		t.Errorf("got access history %v;\nwant %v", tg.AccessHistory, want)
 		return
@@ -493,26 +495,26 @@ func testCheckAccessHistory(t *testing.T, tg *testGraph, want []int) {
 	}
 }
 
-func testCheckPath(t *testing.T, name string, vertex int, pathList []int) {
+func checkPath(t *testing.T, name string, vertex int, pathList []int) {
 	var wantPath []int
 	var list [][]int
 	switch name {
 	case "DfsPath":
-		list = testUndirectedGraphDataVertexPathMap["dfs"]
+		list = undirectedGraphDataVertexPathMap["dfs"]
 	case "BfsPath":
-		list = testUndirectedGraphDataVertexPathMap["bfs"]
+		list = undirectedGraphDataVertexPathMap["bfs"]
 	case "DlsPath-0":
-		list = testUndirectedGraphDataVertexPathMap["dls-0"]
+		list = undirectedGraphDataVertexPathMap["dls-0"]
 	case "DlsPath-1":
-		list = testUndirectedGraphDataVertexPathMap["dls-1"]
+		list = undirectedGraphDataVertexPathMap["dls-1"]
 	case "DlsPath-2":
-		list = testUndirectedGraphDataVertexPathMap["dls-2"]
+		list = undirectedGraphDataVertexPathMap["dls-2"]
 	case "DlsPath-3":
-		list = testUndirectedGraphDataVertexPathMap["dls-3"]
+		list = undirectedGraphDataVertexPathMap["dls-3"]
 	case "DlsPath-m1":
-		list = testUndirectedGraphDataVertexPathMap["dls-m1"]
+		list = undirectedGraphDataVertexPathMap["dls-m1"]
 	case "IdsPath", "IdsPath-m":
-		list = testUndirectedGraphDataVertexPathMap["ids"]
+		list = undirectedGraphDataVertexPathMap["ids"]
 	default:
 		// This should never happen, but will act as a safeguard for later,
 		// as a default value doesn't make sense here.

@@ -16,111 +16,85 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package runtime
+package runtime_test
 
-import "testing"
+import (
+	"testing"
 
-type TestExportedStruct struct{}
+	"github.com/donyori/gogo/runtime"
+)
 
-func (tes *TestExportedStruct) Foo() (pkg, fn string) {
-	pkg, fn, _ = CallerPkgFunc(0)
+type ExportedStruct struct{}
+
+func (es *ExportedStruct) Foo() (pkg, fn string) {
+	pkg, fn, _ = runtime.CallerPkgFunc(0)
 	return pkg, fn
 }
 
-func (tes *TestExportedStruct) foo() (pkg, fn string) {
-	pkg, fn, _ = CallerPkgFunc(0)
+func (es *ExportedStruct) foo() (pkg, fn string) {
+	pkg, fn, _ = runtime.CallerPkgFunc(0)
 	return pkg, fn
 }
 
-type testLocalStruct struct{}
+type localStruct struct{}
 
-func (tls *testLocalStruct) Foo() (pkg, fn string) {
-	pkg, fn, _ = CallerPkgFunc(0)
+func (ls *localStruct) Foo() (pkg, fn string) {
+	pkg, fn, _ = runtime.CallerPkgFunc(0)
 	return pkg, fn
 }
 
-func (tls *testLocalStruct) foo() (pkg, fn string) {
-	pkg, fn, _ = CallerPkgFunc(0)
+func (ls *localStruct) foo() (pkg, fn string) {
+	pkg, fn, _ = runtime.CallerPkgFunc(0)
 	return pkg, fn
 }
 
-var testGlobalTagPkgFuncs [][3]string
+var globalTagPkgFuncs [][3]string
 
 func init() {
-	pkg, fn, _ := CallerPkgFunc(0)
-	testGlobalTagPkgFuncs = append(testGlobalTagPkgFuncs, [3]string{"init.0", pkg, fn})
+	pkg, fn, _ := runtime.CallerPkgFunc(0)
+	globalTagPkgFuncs = append(globalTagPkgFuncs, [3]string{"init.0", pkg, fn})
 }
 
 func init() {
-	pkg, fn, _ := CallerPkgFunc(0)
-	testGlobalTagPkgFuncs = append(testGlobalTagPkgFuncs, [3]string{"init.1", pkg, fn})
+	pkg, fn, _ := runtime.CallerPkgFunc(0)
+	globalTagPkgFuncs = append(globalTagPkgFuncs, [3]string{"init.1", pkg, fn})
+}
+
+type callerPkgFuncRecord struct {
+	expFn string
+	pkg   string
+	fn    string
 }
 
 func TestCallerPkgFunc(t *testing.T) {
-	var records []struct {
-		expFn string
-		pkg   string
-		fn    string
+	var records []callerPkgFuncRecord
+	for _, elem := range globalTagPkgFuncs {
+		records = append(records, callerPkgFuncRecord{elem[0], elem[1], elem[2]})
 	}
-	for _, elem := range testGlobalTagPkgFuncs {
-		records = append(records, struct {
-			expFn string
-			pkg   string
-			fn    string
-		}{elem[0], elem[1], elem[2]})
-	}
-	pkg, fn, _ := CallerPkgFunc(0)
-	records = append(records, struct {
-		expFn string
-		pkg   string
-		fn    string
-	}{"TestCallerPkgFunc", pkg, fn})
+	pkg, fn, _ := runtime.CallerPkgFunc(0)
+	records = append(records, callerPkgFuncRecord{"TestCallerPkgFunc", pkg, fn})
 	func() {
 		defer func() {
-			pkg, fn, _ := CallerPkgFunc(0)
-			records = append(records, struct {
-				expFn string
-				pkg   string
-				fn    string
-			}{"TestCallerPkgFunc.func1.1", pkg, fn})
+			pkg, fn, _ := runtime.CallerPkgFunc(0)
+			records = append(records, callerPkgFuncRecord{"TestCallerPkgFunc.func1.1", pkg, fn})
 		}()
-		pkg, fn, _ := CallerPkgFunc(0)
-		records = append(records, struct {
-			expFn string
-			pkg   string
-			fn    string
-		}{"TestCallerPkgFunc.func1", pkg, fn})
+		pkg, fn, _ := runtime.CallerPkgFunc(0)
+		records = append(records, callerPkgFuncRecord{"TestCallerPkgFunc.func1", pkg, fn})
 	}()
-	tes := new(TestExportedStruct)
+	tes := new(ExportedStruct)
 	pkg, fn = tes.Foo()
-	records = append(records, struct {
-		expFn string
-		pkg   string
-		fn    string
-	}{"(*TestExportedStruct).Foo", pkg, fn})
+	records = append(records, callerPkgFuncRecord{"(*ExportedStruct).Foo", pkg, fn})
 	pkg, fn = tes.foo()
-	records = append(records, struct {
-		expFn string
-		pkg   string
-		fn    string
-	}{"(*TestExportedStruct).foo", pkg, fn})
-	tls := new(testLocalStruct)
+	records = append(records, callerPkgFuncRecord{"(*ExportedStruct).foo", pkg, fn})
+	tls := new(localStruct)
 	pkg, fn = tls.Foo()
-	records = append(records, struct {
-		expFn string
-		pkg   string
-		fn    string
-	}{"(*testLocalStruct).Foo", pkg, fn})
+	records = append(records, callerPkgFuncRecord{"(*localStruct).Foo", pkg, fn})
 	pkg, fn = tls.foo()
-	records = append(records, struct {
-		expFn string
-		pkg   string
-		fn    string
-	}{"(*testLocalStruct).foo", pkg, fn})
+	records = append(records, callerPkgFuncRecord{"(*localStruct).foo", pkg, fn})
 
 	for _, rec := range records {
-		if rec.pkg != "github.com/donyori/gogo/runtime" || rec.fn != rec.expFn {
-			t.Errorf("pkg: %s, fn: %s\nwanted: pkg: github.com/donyori/gogo/runtime, fn: %s", rec.pkg, rec.fn, rec.expFn)
+		if rec.pkg != "github.com/donyori/gogo/runtime_test" || rec.fn != rec.expFn {
+			t.Errorf("got pkg: %s, fn: %s\nwant pkg: github.com/donyori/gogo/runtime_test, fn: %s", rec.pkg, rec.fn, rec.expFn)
 		}
 	}
 }
