@@ -16,21 +16,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package time
+package timestamp
 
 import (
 	"bytes"
 	"regexp"
 	"strconv"
-	stdtime "time"
+	"time"
 
 	"github.com/donyori/gogo/errors"
 )
-
-// Time is an alias of standard time.Time.
-//
-// It exports the standard time.Time for convenience.
-type Time = stdtime.Time
 
 // Regular expression patterns for various timestamps.
 const (
@@ -48,7 +43,7 @@ const (
 	NanoTimestampPattern = "^[+-]?[0-9]+$"
 )
 
-// Timestamp is a timestamp wrapped on Time.
+// Timestamp is a timestamp wrapped on time.Time.
 //
 // It automatically detects the time unit (seconds, milliseconds, microseconds,
 // or nanoseconds) when parsing from string.
@@ -59,11 +54,11 @@ const (
 //  12-digits to 14-digits - millisecond,
 //  15-digits or 16-digits - microsecond,
 //  more than 16-digits - nanosecond.
-type Timestamp Time
+type Timestamp time.Time
 
 // String formats this timestamp in seconds to a decimal representation.
 func (ts Timestamp) String() string {
-	return string(timeToTimestamp(autoTimestamp, Time(ts)))
+	return string(timeToTimestamp(autoTimestamp, time.Time(ts)))
 }
 
 // MarshalText formats this timestamp in seconds to a decimal representation.
@@ -72,7 +67,7 @@ func (ts Timestamp) String() string {
 //
 // It conforms to interface encoding.TextMarshaler.
 func (ts Timestamp) MarshalText() (text []byte, err error) {
-	return timeToTimestamp(autoTimestamp, Time(ts)), nil
+	return timeToTimestamp(autoTimestamp, time.Time(ts)), nil
 }
 
 // UnmarshalText parses decimal timestamp.
@@ -92,7 +87,7 @@ func (ts *Timestamp) UnmarshalText(text []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*Time)(ts) = t
+	*(*time.Time)(ts) = t
 	return nil
 }
 
@@ -102,7 +97,7 @@ func (ts *Timestamp) UnmarshalText(text []byte) error {
 //
 // It conforms to interface encoding/json.Marshaler.
 func (ts Timestamp) MarshalJSON() ([]byte, error) {
-	return timeToTimestamp(autoTimestamp, Time(ts)), nil
+	return timeToTimestamp(autoTimestamp, time.Time(ts)), nil
 }
 
 // UnmarshalJSON parses decimal timestamp.
@@ -129,16 +124,16 @@ func (ts *Timestamp) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*Time)(ts) = t
+	*(*time.Time)(ts) = t
 	return nil
 }
 
-// UnixTimestamp is a UNIX timestamp (in seconds) wrapped on Time.
-type UnixTimestamp Time
+// UnixTimestamp is a UNIX timestamp (in seconds) wrapped on time.Time.
+type UnixTimestamp time.Time
 
 // String formats this timestamp in seconds to a decimal representation.
 func (ut UnixTimestamp) String() string {
-	return string(timeToTimestamp(unixTimestamp, Time(ut)))
+	return string(timeToTimestamp(unixTimestamp, time.Time(ut)))
 }
 
 // MarshalText formats this timestamp in seconds to a decimal representation.
@@ -147,7 +142,7 @@ func (ut UnixTimestamp) String() string {
 //
 // It conforms to interface encoding.TextMarshaler.
 func (ut UnixTimestamp) MarshalText() (text []byte, err error) {
-	return timeToTimestamp(unixTimestamp, Time(ut)), nil
+	return timeToTimestamp(unixTimestamp, time.Time(ut)), nil
 }
 
 // UnmarshalText parses decimal timestamp in seconds.
@@ -160,7 +155,7 @@ func (ut *UnixTimestamp) UnmarshalText(text []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*Time)(ut) = t
+	*(*time.Time)(ut) = t
 	return nil
 }
 
@@ -170,7 +165,7 @@ func (ut *UnixTimestamp) UnmarshalText(text []byte) error {
 //
 // It conforms to interface encoding/json.Marshaler.
 func (ut UnixTimestamp) MarshalJSON() ([]byte, error) {
-	return timeToTimestamp(unixTimestamp, Time(ut)), nil
+	return timeToTimestamp(unixTimestamp, time.Time(ut)), nil
 }
 
 // UnmarshalJSON parses decimal timestamp in seconds.
@@ -190,17 +185,17 @@ func (ut *UnixTimestamp) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*Time)(ut) = t
+	*(*time.Time)(ut) = t
 	return nil
 }
 
 // MilliTimestamp is a millisecond timestamp, often used in JavaScript,
-// wrapped on Time.
-type MilliTimestamp Time
+// wrapped on time.Time.
+type MilliTimestamp time.Time
 
 // String formats this timestamp in milliseconds to a decimal representation.
 func (mt MilliTimestamp) String() string {
-	return string(timeToTimestamp(milliTimestamp, Time(mt)))
+	return string(timeToTimestamp(milliTimestamp, time.Time(mt)))
 }
 
 // MarshalText formats this timestamp in milliseconds to
@@ -210,7 +205,7 @@ func (mt MilliTimestamp) String() string {
 //
 // It conforms to interface encoding.TextMarshaler.
 func (mt MilliTimestamp) MarshalText() (text []byte, err error) {
-	return timeToTimestamp(milliTimestamp, Time(mt)), nil
+	return timeToTimestamp(milliTimestamp, time.Time(mt)), nil
 }
 
 // UnmarshalText parses decimal timestamp in milliseconds.
@@ -223,7 +218,7 @@ func (mt *MilliTimestamp) UnmarshalText(text []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*Time)(mt) = t
+	*(*time.Time)(mt) = t
 	return nil
 }
 
@@ -234,7 +229,7 @@ func (mt *MilliTimestamp) UnmarshalText(text []byte) error {
 //
 // It conforms to interface encoding/json.Marshaler.
 func (mt MilliTimestamp) MarshalJSON() ([]byte, error) {
-	return timeToTimestamp(milliTimestamp, Time(mt)), nil
+	return timeToTimestamp(milliTimestamp, time.Time(mt)), nil
 }
 
 // UnmarshalJSON parses decimal timestamp in milliseconds.
@@ -254,16 +249,16 @@ func (mt *MilliTimestamp) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*Time)(mt) = t
+	*(*time.Time)(mt) = t
 	return nil
 }
 
-// MicroTimestamp is a microsecond timestamp wrapped on Time.
-type MicroTimestamp Time
+// MicroTimestamp is a microsecond timestamp wrapped on time.Time.
+type MicroTimestamp time.Time
 
 // String formats this timestamp in microseconds to a decimal representation.
 func (ct MicroTimestamp) String() string {
-	return string(timeToTimestamp(microTimestamp, Time(ct)))
+	return string(timeToTimestamp(microTimestamp, time.Time(ct)))
 }
 
 // MarshalText formats this timestamp in microseconds to
@@ -273,7 +268,7 @@ func (ct MicroTimestamp) String() string {
 //
 // It conforms to interface encoding.TextMarshaler.
 func (ct MicroTimestamp) MarshalText() (text []byte, err error) {
-	return timeToTimestamp(microTimestamp, Time(ct)), nil
+	return timeToTimestamp(microTimestamp, time.Time(ct)), nil
 }
 
 // UnmarshalText parses decimal timestamp in microseconds.
@@ -286,7 +281,7 @@ func (ct *MicroTimestamp) UnmarshalText(text []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*Time)(ct) = t
+	*(*time.Time)(ct) = t
 	return nil
 }
 
@@ -297,7 +292,7 @@ func (ct *MicroTimestamp) UnmarshalText(text []byte) error {
 //
 // It conforms to interface encoding/json.Marshaler.
 func (ct MicroTimestamp) MarshalJSON() ([]byte, error) {
-	return timeToTimestamp(microTimestamp, Time(ct)), nil
+	return timeToTimestamp(microTimestamp, time.Time(ct)), nil
 }
 
 // UnmarshalJSON parses decimal timestamp in microseconds.
@@ -317,16 +312,16 @@ func (ct *MicroTimestamp) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*Time)(ct) = t
+	*(*time.Time)(ct) = t
 	return nil
 }
 
-// NanoTimestamp is a nanosecond timestamp wrapped on Time.
-type NanoTimestamp Time
+// NanoTimestamp is a nanosecond timestamp wrapped on time.Time.
+type NanoTimestamp time.Time
 
 // String formats this timestamp in nanoseconds to a decimal representation.
 func (nt NanoTimestamp) String() string {
-	return string(timeToTimestamp(nanoTimestamp, Time(nt)))
+	return string(timeToTimestamp(nanoTimestamp, time.Time(nt)))
 }
 
 // MarshalText formats this timestamp in nanoseconds to
@@ -336,7 +331,7 @@ func (nt NanoTimestamp) String() string {
 //
 // It conforms to interface encoding.TextMarshaler.
 func (nt NanoTimestamp) MarshalText() (text []byte, err error) {
-	return timeToTimestamp(nanoTimestamp, Time(nt)), nil
+	return timeToTimestamp(nanoTimestamp, time.Time(nt)), nil
 }
 
 // UnmarshalText parses decimal timestamp in nanoseconds.
@@ -349,7 +344,7 @@ func (nt *NanoTimestamp) UnmarshalText(text []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*Time)(nt) = t
+	*(*time.Time)(nt) = t
 	return nil
 }
 
@@ -360,7 +355,7 @@ func (nt *NanoTimestamp) UnmarshalText(text []byte) error {
 //
 // It conforms to interface encoding/json.Marshaler.
 func (nt NanoTimestamp) MarshalJSON() ([]byte, error) {
-	return timeToTimestamp(nanoTimestamp, Time(nt)), nil
+	return timeToTimestamp(nanoTimestamp, time.Time(nt)), nil
 }
 
 // UnmarshalJSON parses decimal timestamp in nanoseconds.
@@ -380,7 +375,7 @@ func (nt *NanoTimestamp) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*Time)(nt) = t
+	*(*time.Time)(nt) = t
 	return nil
 }
 
@@ -447,13 +442,13 @@ var (
 	timestampFractionalLenMapping = [...]int{-1, 9, 6, 3, 0}
 )
 
-// timestampToTime parses decimal timestamp ts into Time
+// timestampToTime parses decimal timestamp ts into time.Time
 // according to the timestamp type tsType.
 //
 // It reports an error if ts is empty, or ts is not valid for tsType.
 //
 // Caller should guarantee that tsType is valid.
-func timestampToTime(tsType timestampType, ts []byte) (t Time, err error) {
+func timestampToTime(tsType timestampType, ts []byte) (t time.Time, err error) {
 	if len(ts) == 0 {
 		err = errors.AutoNew("empty timestamp")
 		return
@@ -516,14 +511,14 @@ func timestampToTime(tsType timestampType, ts []byte) (t Time, err error) {
 	radix := 1e9 / shift
 	nsec += (sec % radix) * shift // valid for negative values
 	sec /= radix
-	return stdtime.Unix(sec, nsec), nil
+	return time.Unix(sec, nsec), nil
 }
 
 // timeToTimestamp formats time t into decimal timestamp
 // according to the timestamp type tsType.
 //
 // Caller should guarantee that tsType is valid.
-func timeToTimestamp(tsType timestampType, t Time) []byte {
+func timeToTimestamp(tsType timestampType, t time.Time) []byte {
 	intPart := t.Unix()
 	sign := 1                  // sign = 1 for non-negative values, -1 for negative values.
 	fracPart := t.Nanosecond() // Nanosecond() always returns non-negative value, so adjust as follows:
