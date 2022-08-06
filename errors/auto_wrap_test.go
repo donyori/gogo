@@ -138,18 +138,24 @@ func TestAutoWrapCustom(t *testing.T) {
 	// In the above wantXxx, ".func1" is the anonymous function passed to t.Run;
 	// ".func1.1" is the anonymous inner function that calls function AutoWrapCustom.
 
-	var testCases []struct {
+	errorList := []error{nil, io.EOF, err0, err1, err2, stderrors.New("")}
+	excls := []ErrorReadOnlySet{nil, excl}
+	testCases := make([]struct {
 		err     error
 		ms      ErrorMessageStrategy
 		skip    int
 		excl    ErrorReadOnlySet
 		equal   bool
 		wantMsg string
-	}
-	for _, err := range []error{nil, io.EOF, err0, err1, err2, stderrors.New("")} {
+	}, len(errorList)*len(excls)*(int(PrependSimplePkgName)+3)*2)
+	var idx int
+	for _, err := range errorList {
 		for ms := ErrorMessageStrategy(-1); ms <= PrependSimplePkgName+1; ms++ {
 			for skip := 0; skip <= 1; skip++ {
-				for _, excl := range []ErrorReadOnlySet{nil, excl} {
+				for _, excl := range excls {
+					if idx >= len(testCases) {
+						t.Fatal("not enough test cases, please update")
+					}
 					var wantMsg string
 					if err != nil {
 						if excl == nil || !excl.Contain(err) {
@@ -189,24 +195,19 @@ func TestAutoWrapCustom(t *testing.T) {
 						}
 					}
 
-					testCases = append(testCases, struct {
-						err     error
-						ms      ErrorMessageStrategy
-						skip    int
-						excl    ErrorReadOnlySet
-						equal   bool
-						wantMsg string
-					}{
-						err,
-						ms,
-						skip,
-						excl,
-						err == nil || excl != nil && excl.Contain(err),
-						wantMsg,
-					})
+					testCases[idx].err = err
+					testCases[idx].ms = ms
+					testCases[idx].skip = skip
+					testCases[idx].excl = excl
+					testCases[idx].equal = err == nil || excl != nil && excl.Contain(err)
+					testCases[idx].wantMsg = wantMsg
+					idx++
 				}
 			}
 		}
+	}
+	if idx != len(testCases) {
+		t.Fatal("excessive test cases, please update")
 	}
 
 	for i, tc := range testCases {

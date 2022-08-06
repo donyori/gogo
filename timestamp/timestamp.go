@@ -50,10 +50,11 @@ const (
 // It is treated as a UNIX timestamp (in seconds) when formatting to string.
 //
 // It determines the time unit by the integer part digits, as follows:
-//  less than 12-digits - second,
-//  12-digits to 14-digits - millisecond,
-//  15-digits or 16-digits - microsecond,
-//  more than 16-digits - nanosecond.
+//
+//	less than 12-digits - second,
+//	12-digits to 14-digits - millisecond,
+//	15-digits or 16-digits - microsecond,
+//	more than 16-digits - nanosecond.
 type Timestamp time.Time
 
 // String formats this timestamp in seconds to a decimal representation.
@@ -74,10 +75,11 @@ func (ts Timestamp) MarshalText() (text []byte, err error) {
 //
 // It automatically determines the time unit by the integer part digits,
 // as follows:
-//  less than 12-digits - second,
-//  12-digits to 14-digits - millisecond,
-//  15-digits or 16-digits - microsecond,
-//  more than 16-digits - nanosecond.
+//
+//	less than 12-digits - second,
+//	12-digits to 14-digits - millisecond,
+//	15-digits or 16-digits - microsecond,
+//	more than 16-digits - nanosecond.
 //
 // It reports an error if text is empty or text is not decimal timestamp.
 //
@@ -87,7 +89,7 @@ func (ts *Timestamp) UnmarshalText(text []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*time.Time)(ts) = t
+	*ts = Timestamp(t)
 	return nil
 }
 
@@ -104,10 +106,11 @@ func (ts Timestamp) MarshalJSON() ([]byte, error) {
 //
 // It automatically determines the time unit by the integer part digits,
 // as follows:
-//  less than 12-digits - second,
-//  12-digits to 14-digits - millisecond,
-//  15-digits or 16-digits - microsecond,
-//  more than 16-digits - nanosecond.
+//
+//	less than 12-digits - second,
+//	12-digits to 14-digits - millisecond,
+//	15-digits or 16-digits - microsecond,
+//	more than 16-digits - nanosecond.
 //
 // It reports an error if b is empty or
 // b is neither decimal timestamp nor []byte("null").
@@ -124,7 +127,7 @@ func (ts *Timestamp) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*time.Time)(ts) = t
+	*ts = Timestamp(t)
 	return nil
 }
 
@@ -155,7 +158,7 @@ func (ut *UnixTimestamp) UnmarshalText(text []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*time.Time)(ut) = t
+	*ut = UnixTimestamp(t)
 	return nil
 }
 
@@ -185,7 +188,7 @@ func (ut *UnixTimestamp) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*time.Time)(ut) = t
+	*ut = UnixTimestamp(t)
 	return nil
 }
 
@@ -218,7 +221,7 @@ func (mt *MilliTimestamp) UnmarshalText(text []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*time.Time)(mt) = t
+	*mt = MilliTimestamp(t)
 	return nil
 }
 
@@ -249,7 +252,7 @@ func (mt *MilliTimestamp) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*time.Time)(mt) = t
+	*mt = MilliTimestamp(t)
 	return nil
 }
 
@@ -281,7 +284,7 @@ func (ct *MicroTimestamp) UnmarshalText(text []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*time.Time)(ct) = t
+	*ct = MicroTimestamp(t)
 	return nil
 }
 
@@ -312,7 +315,7 @@ func (ct *MicroTimestamp) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*time.Time)(ct) = t
+	*ct = MicroTimestamp(t)
 	return nil
 }
 
@@ -344,7 +347,7 @@ func (nt *NanoTimestamp) UnmarshalText(text []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*time.Time)(nt) = t
+	*nt = NanoTimestamp(t)
 	return nil
 }
 
@@ -375,7 +378,7 @@ func (nt *NanoTimestamp) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	*(*time.Time)(nt) = t
+	*nt = NanoTimestamp(t)
 	return nil
 }
 
