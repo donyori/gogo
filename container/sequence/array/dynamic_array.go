@@ -16,27 +16,29 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package sequence
+package array
+
+import "github.com/donyori/gogo/container/sequence"
 
 // dynamicArraySpecific is an interface that groups
 // the dynamic-array-specific methods.
-type dynamicArraySpecific interface {
+type dynamicArraySpecific[Item any] interface {
 	// Cap returns the current capacity of the dynamic array.
 	Cap() int
 
 	// Push adds x to the back of the dynamic array.
-	Push(x interface{})
+	Push(x Item)
 
 	// Pop removes and returns the last item.
 	//
 	// It panics if the dynamic array is nil or empty.
-	Pop() interface{}
+	Pop() Item
 
 	// Append adds s to the back of the dynamic array.
 	//
 	// s shouldn't be modified during calling this method,
 	// otherwise, unknown error may occur.
-	Append(s Sequence)
+	Append(s sequence.Sequence[Item])
 
 	// Truncate removes the item with index i and all subsequent items.
 	//
@@ -46,18 +48,18 @@ type dynamicArraySpecific interface {
 	// Insert adds x as the item with index i.
 	//
 	// It panics if i is out of range, i.e., i < 0 or i > Len().
-	Insert(i int, x interface{})
+	Insert(i int, x Item)
 
 	// Remove removes and returns the item with index i.
 	//
 	// It panics if i is out of range, i.e., i < 0 or i >= Len().
-	Remove(i int) interface{}
+	Remove(i int) Item
 
 	// RemoveWithoutOrder removes and returns the item with index i,
 	// without preserving order.
 	//
 	// It panics if i is out of range, i.e., i < 0 or i >= Len().
-	RemoveWithoutOrder(i int) interface{}
+	RemoveWithoutOrder(i int) Item
 
 	// InsertSequence inserts s to the front of the item with index i.
 	//
@@ -65,7 +67,7 @@ type dynamicArraySpecific interface {
 	//
 	// s shouldn't be modified during calling this method,
 	// otherwise, unknown error may occur.
-	InsertSequence(i int, s Sequence)
+	InsertSequence(i int, s sequence.Sequence[Item])
 
 	// Cut removes items from argument begin (inclusive) to
 	// argument end (exclusive) of the dynamic array.
@@ -98,7 +100,7 @@ type dynamicArraySpecific interface {
 	// Shrink reduces the dynamic array to fit, i.e.,
 	// requests Cap() equals to Len().
 	//
-	// Note that it isn't equivalent to operations on slice
+	// Note that it isn't equivalent to operations on Go slice
 	// like s[:len(s):len(s)],
 	// because it will allocate a new array and copy the content
 	// if Cap() > Len().
@@ -108,23 +110,25 @@ type dynamicArraySpecific interface {
 	// asks to release the memory.
 	Clear()
 
-	// Filter refines items in the dynamic array (in place).
+	// Filter refines items in the dynamic array (in-place).
 	//
 	// Its argument filter is a function to report
 	// whether to keep the item x.
-	Filter(filter func(x interface{}) (keep bool))
+	Filter(filter func(x Item) (keep bool))
 }
 
 // DynamicArray is an interface representing
 // a dynamic-length direct-access sequence.
-type DynamicArray interface {
-	Array
-	dynamicArraySpecific
+type DynamicArray[Item any] interface {
+	Array[Item]
+	dynamicArraySpecific[Item]
 }
 
 // OrderedDynamicArray is an interface representing a dynamic-length
 // direct-access sequence that can be sorted by integer index.
-type OrderedDynamicArray interface {
-	OrderedArray
-	dynamicArraySpecific
+//
+// It conforms to interface sort.Interface.
+type OrderedDynamicArray[Item any] interface {
+	OrderedArray[Item]
+	dynamicArraySpecific[Item]
 }

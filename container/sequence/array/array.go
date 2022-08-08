@@ -16,21 +16,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package sequence
+package array
+
+import "github.com/donyori/gogo/container/sequence"
 
 // Array is an interface representing a direct-access sequence.
-type Array interface {
-	Sequence
+type Array[Item any] interface {
+	sequence.Sequence[Item]
 
 	// Get returns the item with index i.
 	//
 	// It panics if i is out of range.
-	Get(i int) interface{}
+	Get(i int) Item
 
 	// Set sets the item with index i to x.
 	//
 	// It panics if i is out of range.
-	Set(i int, x interface{})
+	Set(i int, x Item)
 
 	// Swap exchanges the items with indexes i and j.
 	//
@@ -41,13 +43,15 @@ type Array interface {
 	// argument end (exclusive) of the array, as an Array.
 	//
 	// It panics if begin or end is out of range, or begin > end.
-	Slice(begin, end int) Array
+	Slice(begin, end int) Array[Item]
 }
 
 // OrderedArray is an interface representing a direct-access sequence
 // that can be sorted by integer index.
-type OrderedArray interface {
-	Array
+//
+// It conforms to interface sort.Interface.
+type OrderedArray[Item any] interface {
+	Array[Item]
 
 	// Less reports whether the item with index i must sort before
 	// the item with index j.

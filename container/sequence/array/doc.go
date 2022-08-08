@@ -16,27 +16,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package sequence
-
-import "testing"
-
-func TestNewIntDynamicArray(t *testing.T) {
-	ida := NewIntDynamicArray(3)
-	if n, c := ida.Len(), ida.Cap(); n != 0 || c != 3 {
-		t.Errorf("NewIntDynamicArray(3) - Len(): %d, Cap(): %d.", n, c)
-	}
-}
-
-func TestNewFloat64DynamicArray(t *testing.T) {
-	fda := NewFloat64DynamicArray(3)
-	if n, c := fda.Len(), fda.Cap(); n != 0 || c != 3 {
-		t.Errorf("NewFloat64DynamicArray(3) - Len(): %d, Cap(): %d.", n, c)
-	}
-}
-
-func TestNewStringDynamicArray(t *testing.T) {
-	sda := NewStringDynamicArray(3)
-	if n, c := sda.Len(), sda.Cap(); n != 0 || c != 3 {
-		t.Errorf("NewStringDynamicArray(3) - Len(): %d, Cap(): %d.", n, c)
-	}
-}
+// Package array provides OOP-style arrays (direct-access sequences).
+//
+// For better performance, all functions in this package are unsafe
+// for concurrency unless otherwise specified.
+package array

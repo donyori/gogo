@@ -16,63 +16,70 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package sequence
+package array
 
-// StringDynamicArray is a prefab DynamicArray for string.
-type StringDynamicArray []string
+import "github.com/donyori/gogo/container/sequence"
 
-// NewStringDynamicArray makes a new StringDynamicArray
-// with specified capacity.
-// It panics if capacity < 0.
-func NewStringDynamicArray(capacity int) StringDynamicArray {
-	return make(StringDynamicArray, 0, capacity)
-}
+// SliceDynamicArray is a dynamic array wrapped on Go slice.
+// It implements the interface DynamicArray.
+//
+// The client can convert a Go slice to SliceDynamicArray by type conversion,
+// e.g.:
+//
+//	sda := SliceDynamicArray[int]([]int{1, 2, 3})
+//
+// Or allocate a new SliceDynamicArray by the built-in function make, e.g.:
+//
+//	sda := make(SliceDynamicArray[int], 2, 10)
+type SliceDynamicArray[Item any] []Item
 
-// Len returns the number of items in the array.
-func (sda StringDynamicArray) Len() int {
+// Len returns the number of items in the slice.
+//
+// It returns 0 if the slice is nil.
+func (sda SliceDynamicArray[Item]) Len() int {
 	return len(sda)
 }
 
 // Front returns the first item.
 //
-// It panics if the array is nil or empty.
-func (sda StringDynamicArray) Front() interface{} {
+// It panics if the slice is nil or empty.
+func (sda SliceDynamicArray[Item]) Front() Item {
 	return sda[0]
 }
 
 // SetFront sets the first item to x.
 //
-// It panics if the array is nil or empty.
-func (sda StringDynamicArray) SetFront(x interface{}) {
-	sda[0] = x.(string)
+// It panics if the slice is nil or empty.
+func (sda SliceDynamicArray[Item]) SetFront(x Item) {
+	sda[0] = x
 }
 
 // Back returns the last item.
 //
-// It panics if the array is nil or empty.
-func (sda StringDynamicArray) Back() interface{} {
+// It panics if the slice is nil or empty.
+func (sda SliceDynamicArray[Item]) Back() Item {
 	return sda[len(sda)-1]
 }
 
 // SetBack sets the last item to x.
 //
-// It panics if the array is nil or empty.
-func (sda StringDynamicArray) SetBack(x interface{}) {
-	sda[len(sda)-1] = x.(string)
+// It panics if the slice is nil or empty.
+func (sda SliceDynamicArray[Item]) SetBack(x Item) {
+	sda[len(sda)-1] = x
 }
 
-// Reverse turns the other way round items in the array.
-func (sda StringDynamicArray) Reverse() {
-	for i, k := 0, len(sda)-1; i < k; i, k = i+1, k-1 {
-		sda[i], sda[k] = sda[k], sda[i]
+// Reverse turns items in the slice the other way round.
+func (sda SliceDynamicArray[Item]) Reverse() {
+	for i, j := 0, len(sda)-1; i < j; i, j = i+1, j-1 {
+		sda[i], sda[j] = sda[j], sda[i]
 	}
 }
 
-// Range browses the items in the array from the first to the last.
+// Range browses the items in the slice from the first to the last.
 //
 // Its argument handler is a function to deal with the item x in the
-// array and report whether to continue to check the next item.
-func (sda StringDynamicArray) Range(handler func(x interface{}) (cont bool)) {
+// slice and report whether to continue to check the next item.
+func (sda SliceDynamicArray[Item]) Range(handler func(x Item) (cont bool)) {
 	for _, x := range sda {
 		if !handler(x) {
 			return
@@ -83,66 +90,61 @@ func (sda StringDynamicArray) Range(handler func(x interface{}) (cont bool)) {
 // Get returns the item with index i.
 //
 // It panics if i is out of range.
-func (sda StringDynamicArray) Get(i int) interface{} {
+func (sda SliceDynamicArray[Item]) Get(i int) Item {
 	return sda[i]
 }
 
 // Set sets the item with index i to x.
 //
 // It panics if i is out of range.
-func (sda StringDynamicArray) Set(i int, x interface{}) {
-	sda[i] = x.(string)
+func (sda SliceDynamicArray[Item]) Set(i int, x Item) {
+	sda[i] = x
 }
 
 // Swap exchanges the items with indexes i and j.
 //
 // It panics if i or j is out of range.
-func (sda StringDynamicArray) Swap(i, j int) {
+func (sda SliceDynamicArray[Item]) Swap(i, j int) {
 	sda[i], sda[j] = sda[j], sda[i]
 }
 
 // Slice returns a slice from argument begin (inclusive) to
-// argument end (exclusive) of the array, as an Array.
+// argument end (exclusive) of the slice, as an Array.
 //
 // It panics if begin or end is out of range, or begin > end.
-func (sda StringDynamicArray) Slice(begin, end int) Array {
+func (sda SliceDynamicArray[Item]) Slice(begin, end int) Array[Item] {
 	return sda[begin:end:end]
 }
 
-// Less reports whether the item with index i must sort before
-// the item with index j.
+// Cap returns the current capacity of the slice.
 //
-// It panics if i or j is out of range.
-func (sda StringDynamicArray) Less(i, j int) bool {
-	return sda[i] < sda[j]
-}
-
-// Cap returns the current capacity of the dynamic array.
-func (sda StringDynamicArray) Cap() int {
+// It returns 0 if the slice is nil.
+func (sda SliceDynamicArray[Item]) Cap() int {
 	return cap(sda)
 }
 
-// Push adds x to the back of the dynamic array.
-func (sda *StringDynamicArray) Push(x interface{}) {
-	*sda = append(*sda, x.(string))
+// Push adds x to the back of the slice.
+func (sda *SliceDynamicArray[Item]) Push(x Item) {
+	*sda = append(*sda, x)
 }
 
 // Pop removes and returns the last item.
 //
-// It panics if the dynamic array is nil or empty.
-func (sda *StringDynamicArray) Pop() interface{} {
+// It panics if the slice is nil or empty.
+func (sda *SliceDynamicArray[Item]) Pop() Item {
 	back := len(*sda) - 1
 	x := (*sda)[back]
-	(*sda)[back] = "" // avoid memory leak
+	var zero Item
+	(*sda)[back] = zero // avoid memory leak
 	*sda = (*sda)[:back]
 	return x
 }
 
-// Append adds s to the back of the dynamic array.
+// Append adds s to the back of the slice.
 //
 // s shouldn't be modified during calling this method,
 // otherwise, unknown error may occur.
-func (sda *StringDynamicArray) Append(s Sequence) {
+func (sda *SliceDynamicArray[Item]) Append(s sequence.Sequence[Item]) {
 	if s == nil {
 		return
 	}
@@ -150,15 +152,14 @@ func (sda *StringDynamicArray) Append(s Sequence) {
 	if n == 0 {
 		return
 	}
-	if slice, ok := s.(StringDynamicArray); ok {
-		*sda = append(*sda, slice...)
+	if t, ok := s.(SliceDynamicArray[Item]); ok {
+		*sda = append(*sda, t...)
 		return
 	}
 	i := len(*sda)
-	*sda = append(*sda, make([]string, n)...)
-	s.Range(func(x interface{}) (cont bool) {
-		(*sda)[i] = x.(string)
-		i++
+	*sda = append(*sda, make([]Item, n)...)
+	s.Range(func(x Item) (cont bool) {
+		(*sda)[i], i = x, i+1
 		return true
 	})
 }
@@ -166,12 +167,13 @@ func (sda *StringDynamicArray) Append(s Sequence) {
 // Truncate removes the item with index i and all subsequent items.
 //
 // It does nothing if i is out of range.
-func (sda *StringDynamicArray) Truncate(i int) {
+func (sda *SliceDynamicArray[Item]) Truncate(i int) {
 	if i < 0 || i >= len(*sda) {
 		return
 	}
-	for k := i; k < len(*sda); k++ {
-		(*sda)[k] = "" // avoid memory leak
+	var zero Item
+	for j := i; j < len(*sda); j++ {
+		(*sda)[j] = zero // avoid memory leak
 	}
 	*sda = (*sda)[:i]
 }
@@ -179,28 +181,30 @@ func (sda *StringDynamicArray) Truncate(i int) {
 // Insert adds x as the item with index i.
 //
 // It panics if i is out of range, i.e., i < 0 or i > Len().
-func (sda *StringDynamicArray) Insert(i int, x interface{}) {
+func (sda *SliceDynamicArray[Item]) Insert(i int, x Item) {
 	if i == len(*sda) {
 		sda.Push(x)
 		return
 	}
 	_ = (*sda)[i] // ensure i is valid
-	*sda = append(*sda, "")
+	var zero Item
+	*sda = append(*sda, zero)
 	copy((*sda)[i+1:], (*sda)[i:])
-	(*sda)[i] = x.(string)
+	(*sda)[i] = x
 }
 
 // Remove removes and returns the item with index i.
 //
 // It panics if i is out of range, i.e., i < 0 or i >= Len().
-func (sda *StringDynamicArray) Remove(i int) interface{} {
+func (sda *SliceDynamicArray[Item]) Remove(i int) Item {
 	back := len(*sda) - 1
 	if i == back {
 		return sda.Pop()
 	}
 	x := (*sda)[i]
 	copy((*sda)[i:], (*sda)[i+1:])
-	(*sda)[back] = "" // avoid memory leak
+	var zero Item
+	(*sda)[back] = zero // avoid memory leak
 	*sda = (*sda)[:back]
 	return x
 }
@@ -209,13 +213,14 @@ func (sda *StringDynamicArray) Remove(i int) interface{} {
 // without preserving order.
 //
 // It panics if i is out of range, i.e., i < 0 or i >= Len().
-func (sda *StringDynamicArray) RemoveWithoutOrder(i int) interface{} {
+func (sda *SliceDynamicArray[Item]) RemoveWithoutOrder(i int) Item {
 	x := (*sda)[i]
 	back := len(*sda) - 1
 	if i != back {
 		(*sda)[i] = (*sda)[back]
 	}
-	(*sda)[back] = "" // avoid memory leak
+	var zero Item
+	(*sda)[back] = zero // avoid memory leak
 	*sda = (*sda)[:back]
 	return x
 }
@@ -226,7 +231,7 @@ func (sda *StringDynamicArray) RemoveWithoutOrder(i int) interface{} {
 //
 // s shouldn't be modified during calling this method,
 // otherwise, unknown error may occur.
-func (sda *StringDynamicArray) InsertSequence(i int, s Sequence) {
+func (sda *SliceDynamicArray[Item]) InsertSequence(i int, s sequence.Sequence[Item]) {
 	if i == len(*sda) {
 		sda.Append(s)
 		return
@@ -239,21 +244,20 @@ func (sda *StringDynamicArray) InsertSequence(i int, s Sequence) {
 	if n == 0 {
 		return
 	}
-	*sda = append(*sda, make([]string, n)...)
+	*sda = append(*sda, make([]Item, n)...)
 	copy((*sda)[i+n:], (*sda)[i:])
-	k := i
-	s.Range(func(x interface{}) (cont bool) {
-		(*sda)[k] = x.(string)
-		k++
+	j := i
+	s.Range(func(x Item) (cont bool) {
+		(*sda)[j], j = x, j+1
 		return true
 	})
 }
 
 // Cut removes items from argument begin (inclusive) to
-// argument end (exclusive) of the dynamic array.
+// argument end (exclusive) of the slice.
 //
 // It panics if begin or end is out of range, or begin > end.
-func (sda *StringDynamicArray) Cut(begin, end int) {
+func (sda *SliceDynamicArray[Item]) Cut(begin, end int) {
 	_ = (*sda)[begin:end] // ensure begin and end are valid
 	if begin == end {
 		return
@@ -263,17 +267,18 @@ func (sda *StringDynamicArray) Cut(begin, end int) {
 		return
 	}
 	copy((*sda)[begin:], (*sda)[end:])
+	var zero Item
 	for i := len(*sda) - end + begin; i < len(*sda); i++ {
-		(*sda)[i] = "" // avoid memory leak
+		(*sda)[i] = zero // avoid memory leak
 	}
 	*sda = (*sda)[:len(*sda)-end+begin]
 }
 
 // CutWithoutOrder removes items from argument begin (inclusive) to
-// argument end (exclusive) of the dynamic array, without preserving order.
+// argument end (exclusive) of the slice, without preserving order.
 //
 // It panics if begin or end is out of range, or begin > end.
-func (sda *StringDynamicArray) CutWithoutOrder(begin, end int) {
+func (sda *SliceDynamicArray[Item]) CutWithoutOrder(begin, end int) {
 	_ = (*sda)[begin:end] // ensure begin and end are valid
 	if begin == end {
 		return
@@ -287,92 +292,93 @@ func (sda *StringDynamicArray) CutWithoutOrder(begin, end int) {
 		copyIdx = end
 	}
 	copy((*sda)[begin:], (*sda)[copyIdx:])
+	var zero Item
 	for i := len(*sda) - end + begin; i < len(*sda); i++ {
-		(*sda)[i] = "" // avoid memory leak
+		(*sda)[i] = zero // avoid memory leak
 	}
 	*sda = (*sda)[:len(*sda)-end+begin]
 }
 
-// Extend adds n zero-value items to the back of the dynamic array.
+// Extend adds n zero-value items to the back of the slice.
 //
 // It panics if n < 0.
-func (sda *StringDynamicArray) Extend(n int) {
-	*sda = append(*sda, make([]string, n)...)
+func (sda *SliceDynamicArray[Item]) Extend(n int) {
+	*sda = append(*sda, make([]Item, n)...)
 }
 
 // Expand inserts n zero-value items to the front of the item with index i.
 //
 // It panics if i is out of range, i.e., i < 0 or i > Len(), or n < 0.
-func (sda *StringDynamicArray) Expand(i, n int) {
+func (sda *SliceDynamicArray[Item]) Expand(i, n int) {
 	if i == len(*sda) {
 		sda.Extend(n)
 		return
 	}
 	_ = (*sda)[i] // ensure i is valid
-	*sda = append(*sda, make([]string, n)...)
+	*sda = append(*sda, make([]Item, n)...)
 	copy((*sda)[i+n:], (*sda)[i:])
-	for k := i; k < i+n; k++ {
-		(*sda)[k] = ""
+	var zero Item
+	for j := i; j < i+n; j++ {
+		(*sda)[j] = zero
 	}
 }
 
-// Reserve requests that the capacity of the dynamic array
+// Reserve requests that the capacity of the slice
 // is at least the specified capacity.
 //
 // It does nothing if capacity <= Cap().
-func (sda *StringDynamicArray) Reserve(capacity int) {
+func (sda *SliceDynamicArray[Item]) Reserve(capacity int) {
 	if capacity <= 0 || (sda != nil && capacity <= cap(*sda)) {
 		return
 	}
-	s := make(StringDynamicArray, len(*sda), capacity)
+	s := make(SliceDynamicArray[Item], len(*sda), capacity)
 	copy(s, *sda)
 	*sda = s
 }
 
-// Shrink reduces the dynamic array to fit, i.e.,
+// Shrink reduces the slice to fit, i.e.,
 // requests Cap() equals to Len().
 //
-// Note that it isn't equivalent to operations on slice
+// Note that it isn't equivalent to operations on Go slice
 // like s[:len(s):len(s)],
 // because it will allocate a new array and copy the content
 // if Cap() > Len().
-func (sda *StringDynamicArray) Shrink() {
+func (sda *SliceDynamicArray[Item]) Shrink() {
 	if sda == nil || len(*sda) == cap(*sda) {
 		return
 	}
-	s := make(StringDynamicArray, len(*sda))
+	s := make(SliceDynamicArray[Item], len(*sda))
 	copy(s, *sda)
 	*sda = s
 }
 
-// Clear removes all items in the dynamic array and
-// asks to release the memory.
-func (sda *StringDynamicArray) Clear() {
+// Clear sets the slice to nil.
+func (sda *SliceDynamicArray[Item]) Clear() {
 	if sda != nil {
 		*sda = nil
 	}
 }
 
-// Filter refines items in the dynamic array (in place).
+// Filter refines items in the slice (in-place).
 //
 // Its argument filter is a function to report
 // whether to keep the item x.
-func (sda *StringDynamicArray) Filter(filter func(x interface{}) (keep bool)) {
+func (sda *SliceDynamicArray[Item]) Filter(filter func(x Item) (keep bool)) {
 	if sda == nil || len(*sda) == 0 {
 		return
 	}
 	var n int
 	for _, x := range *sda {
 		if filter(x) {
-			(*sda)[n] = x
-			n++
+			(*sda)[n], n = x, n+1
 		}
 	}
 	if n == len(*sda) {
 		return
 	}
+	var zero Item
 	for i := n; i < len(*sda); i++ {
-		(*sda)[i] = "" // avoid memory leak
+		(*sda)[i] = zero // avoid memory leak
 	}
 	*sda = (*sda)[:n]
 }

@@ -18,6 +18,6 @@
 
 // Package sequence provides OOP-style sequences.
 //
-// For better performance, all functions in this package are unsafe
-// for concurrency unless otherwise specified.
+// For better performance, all functions in this package and its subpackages
+// are unsafe for concurrency unless otherwise specified.
 package sequence

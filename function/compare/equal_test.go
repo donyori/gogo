@@ -16,17 +16,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package compare
+package compare_test
 
 import (
-	"reflect"
+	"fmt"
 	"testing"
 
-	"github.com/donyori/gogo/errors"
+	"github.com/donyori/gogo/function/compare"
 )
 
-func TestEqual(t *testing.T) {
-	pairs := [][2]interface{}{
+func TestAnyEqual(t *testing.T) {
+	pairs := [][2]any{
 		{nil, nil},
 		{1, nil},
 		{nil, 1},
@@ -38,14 +38,16 @@ func TestEqual(t *testing.T) {
 		{1., 1},
 	}
 	for _, pair := range pairs {
-		if r := Equal(pair[0], pair[1]); r != (pair[0] == pair[1]) {
-			t.Errorf("Equal(%v, %v): %t.", pair[0], pair[1], r)
-		}
+		t.Run(fmt.Sprintf("a=%v(%[1]T)&b=%v(%[2]T)", pair[0], pair[1]), func(t *testing.T) {
+			if r := compare.AnyEqual(pair[0], pair[1]); r != (pair[0] == pair[1]) {
+				t.Errorf("got %t", r)
+			}
+		})
 	}
 }
 
 func TestEqualFunc_Not(t *testing.T) {
-	pairs := [][2]interface{}{
+	pairs := [][2]any{
 		{nil, nil},
 		{1, nil},
 		{nil, 1},
@@ -56,219 +58,176 @@ func TestEqualFunc_Not(t *testing.T) {
 		{1, 1.},
 		{1., 1},
 	}
-	eq := Equal
-	nEq := eq.Not()
+	neq := compare.AnyEqual.Not()
 	for _, pair := range pairs {
-		r1 := !eq(pair[0], pair[1])
-		r2 := nEq(pair[0], pair[1])
-		if r1 != r2 {
-			t.Errorf("nEq(%v, %v) != !eq(%[1]v, %v).", pair[0], pair[1])
-		}
+		t.Run(fmt.Sprintf("a=%v(%[1]T)&b=%v(%[2]T)", pair[0], pair[1]), func(t *testing.T) {
+			if r := neq(pair[0], pair[1]); r != !compare.AnyEqual(pair[0], pair[1]) {
+				t.Errorf("got %t", r)
+			}
+		})
 	}
 }
 
-func TestBytesEqual(t *testing.T) {
-	eqPairs, neqPairs := testMkEqNeqPairs([][]interface{}{
-		{nil, []byte(nil), []byte{}, ""}, // Empty.
-		{[]byte("1234"), "1234"},         // Even length - 1.
-		{[]byte("1224"), "1224"},         // Even length - 2.
-		{[]byte("12345"), "12345"},       // Odd length - 1.
-		{[]byte("12245"), "12245"},       // Odd length - 2.
+func TestComparableEqual(t *testing.T) {
+	subtestComparableEqual(t, "type=int", []int{1, 2, 3, 4, 5})
+	subtestComparableEqual(t, "type=float64", []float64{1., 2., 3., 4., 5.})
+	subtestComparableEqual(t, "type=string", []string{"1", "2", "3", "4", "5"})
+}
+
+func subtestComparableEqual[T comparable](t *testing.T, name string, data []T) {
+	eqGroups := make([][]T, len(data))
+	for i := range eqGroups {
+		eqGroups[i] = []T{data[i]}
+	}
+	eqPairs, neqPairs := mkEqNeqPairs(eqGroups, 0, 0)
+	subtestPairs(t, name, compare.ComparableEqual[T], eqPairs, neqPairs)
+}
+
+var (
+	intsEqPairs, intsNeqPairs         [][2][]int
+	float64sEqPairs, float64sNeqPairs [][2][]float64
+	stringsEqPairs, stringsNeqPairs   [][2][]string
+)
+
+func init() {
+	intsEqPairs, intsNeqPairs = mkEqNeqPairs([][][]int{
+		{nil, {}},         // Empty.
+		{{1, 2, 3, 4}},    // Even length - 1.
+		{{1, 2, 2, 4}},    // Even length - 2.
+		{{1, 2, 3, 4, 5}}, // Odd length - 1.
+		{{1, 2, 2, 4, 5}}, // Odd length - 2.
 	}, 0, 0)
-	for i, pair := range eqPairs {
-		if r := BytesEqual(pair[0], pair[1]); !r {
-			t.Errorf("eqPairs Case %d: BytesEqual(a, b): false. a: %#v, b: %#v.", i, pair[0], pair[1])
-		}
-		if r := BytesEqual(pair[1], pair[0]); !r {
-			t.Errorf("eqPairs Case %d Reverse: BytesEqual(a, b): false. a: %#v, b: %#v.", i, pair[1], pair[0])
-		}
-	}
-	for i, pair := range neqPairs {
-		if r := BytesEqual(pair[0], pair[1]); r {
-			t.Errorf("neqPairs Case %d: BytesEqual(a, b): true. a: %#v, b: %#v.", i, pair[0], pair[1])
-		}
-		if r := BytesEqual(pair[1], pair[0]); r {
-			t.Errorf("neqPairs Case %d Reverse: BytesEqual(a, b): true. a: %#v, b: %#v.", i, pair[1], pair[0])
-		}
-	}
-}
-
-func TestIntsEqual(t *testing.T) {
-	eqPairs, neqPairs := testMkEqNeqPairs([][]interface{}{
-		{nil, []int(nil), []int{}}, // Empty.
-		{[]int{1, 2, 3, 4}},        // Even length - 1.
-		{[]int{1, 2, 2, 4}},        // Even length - 2.
-		{[]int{1, 2, 3, 4, 5}},     // Odd length - 1.
-		{[]int{1, 2, 2, 4, 5}},     // Odd length - 2.
+	float64sEqPairs, float64sNeqPairs = mkEqNeqPairs([][][]float64{
+		{nil, {}},              // Empty.
+		{{1., 2., 3., 4.}},     // Even length - 1.
+		{{1., 2., 2., 4.}},     // Even length - 2.
+		{{1., 2., 3., 4., 5.}}, // Odd length - 1.
+		{{1., 2., 2., 4., 5.}}, // Odd length - 2.
 	}, 0, 0)
-	for i, pair := range eqPairs {
-		if r := IntsEqual(pair[0], pair[1]); !r {
-			t.Errorf("eqPairs Case %d: IntsEqual(a, b): false. a: %#v, b: %#v.", i, pair[0], pair[1])
-		}
-		if r := IntsEqual(pair[1], pair[0]); !r {
-			t.Errorf("eqPairs Case %d Reverse: IntsEqual(a, b): false. a: %#v, b: %#v.", i, pair[1], pair[0])
-		}
-	}
-	for i, pair := range neqPairs {
-		if r := IntsEqual(pair[0], pair[1]); r {
-			t.Errorf("neqPairs Case %d: IntsEqual(a, b): true. a: %#v, b: %#v.", i, pair[0], pair[1])
-		}
-		if r := IntsEqual(pair[1], pair[0]); r {
-			t.Errorf("neqPairs Case %d Reverse: IntsEqual(a, b): true. a: %#v, b: %#v.", i, pair[1], pair[0])
-		}
-	}
-}
-
-func TestFloat64sEqual(t *testing.T) {
-	eqPairs, neqPairs := testMkEqNeqPairs([][]interface{}{
-		{nil, []float64(nil), []float64{}}, // Empty.
-		{[]float64{1., 2., 3., 4.}},        // Even length - 1.
-		{[]float64{1., 2., 2., 4.}},        // Even length - 2.
-		{[]float64{1., 2., 3., 4., 5.}},    // Odd length - 1.
-		{[]float64{1., 2., 2., 4., 5.}},    // Odd length - 2.
+	stringsEqPairs, stringsNeqPairs = mkEqNeqPairs([][][]string{
+		{nil, {}},                   // Empty.
+		{{"1", "2", "3", "4"}},      // Even length - 1.
+		{{"1", "2", "2", "4"}},      // Even length - 2.
+		{{"1", "2", "3", "4", "5"}}, // Odd length - 1.
+		{{"1", "2", "2", "4", "5"}}, // Odd length - 2.
 	}, 0, 0)
-	for i, pair := range eqPairs {
-		if r := Float64sEqual(pair[0], pair[1]); !r {
-			t.Errorf("eqPairs Case %d: Float64sEqual(a, b): false. a: %#v, b: %#v.", i, pair[0], pair[1])
-		}
-		if r := Float64sEqual(pair[1], pair[0]); !r {
-			t.Errorf("eqPairs Case %d Reverse: Float64sEqual(a, b): false. a: %#v, b: %#v.", i, pair[1], pair[0])
-		}
-	}
-	for i, pair := range neqPairs {
-		if r := Float64sEqual(pair[0], pair[1]); r {
-			t.Errorf("neqPairs Case %d: Float64sEqual(a, b): true. a: %#v, b: %#v.", i, pair[0], pair[1])
-		}
-		if r := Float64sEqual(pair[1], pair[0]); r {
-			t.Errorf("neqPairs Case %d Reverse: Float64sEqual(a, b): true. a: %#v, b: %#v.", i, pair[1], pair[0])
-		}
-	}
 }
 
-func TestStringsEqual(t *testing.T) {
-	eqPairs, neqPairs := testMkEqNeqPairs([][]interface{}{
-		{nil, []string(nil), []string{}},    // Empty.
-		{[]string{"1", "2", "3", "4"}},      // Even length - 1.
-		{[]string{"1", "2", "2", "4"}},      // Even length - 2.
-		{[]string{"1", "2", "3", "4", "5"}}, // Odd length - 1.
-		{[]string{"1", "2", "2", "4", "5"}}, // Odd length - 2.
-	}, 0, 0)
-	for i, pair := range eqPairs {
-		if r := StringsEqual(pair[0], pair[1]); !r {
-			t.Errorf("eqPairs Case %d: StringsEqual(a, b): false. a: %#v, b: %#v.", i, pair[0], pair[1])
-		}
-		if r := StringsEqual(pair[1], pair[0]); !r {
-			t.Errorf("eqPairs Case %d Reverse: StringsEqual(a, b): false. a: %#v, b: %#v.", i, pair[1], pair[0])
-		}
-	}
-	for i, pair := range neqPairs {
-		if r := StringsEqual(pair[0], pair[1]); r {
-			t.Errorf("neqPairs Case %d: StringsEqual(a, b): true. a: %#v, b: %#v.", i, pair[0], pair[1])
-		}
-		if r := StringsEqual(pair[1], pair[0]); r {
-			t.Errorf("neqPairs Case %d Reverse: StringsEqual(a, b): true. a: %#v, b: %#v.", i, pair[1], pair[0])
-		}
-	}
+func TestComparableSliceEqual(t *testing.T) {
+	subtestComparableSliceEqual(t, "type=[]int", intsEqPairs, intsNeqPairs)
+	subtestComparableSliceEqual(t, "type=[]float64", float64sEqPairs, float64sNeqPairs)
+	subtestComparableSliceEqual(t, "type=[]string", stringsEqPairs, stringsNeqPairs)
 }
 
-func TestGeneralSliceEqual(t *testing.T) {
-	eqPairs, neqPairs := testMkEqNeqPairs([][]interface{}{
-		{nil, []interface{}(nil), []interface{}{}}, // Empty.
-		{[]interface{}{1, 2, 3, 4}},                // Even length - 1.
-		{[]interface{}{1., 2., 3., 4.}},            // Even length - 2.
-		{[]interface{}{1, 2, 2, 4}},                // Even length - 3.
-		{[]interface{}{1., 2., 2., 4.}},            // Even length - 4.
-		{[]interface{}{1, 2, 3, 4, 5}},             // Odd length - 1.
-		{[]interface{}{1., 2., 3., 4., 5.}},        // Odd length - 2.
-		{[]interface{}{1, 2, 2, 4, 5}},             // Odd length - 3.
-		{[]interface{}{1., 2., 2., 4., 5.}},        // Odd length - 4.
+func subtestComparableSliceEqual[T comparable](t *testing.T, name string, eqPairs, neqPairs [][2][]T) {
+	subtestPairs(t, name, compare.ComparableSliceEqual[T], eqPairs, neqPairs)
+}
+
+func TestAnySliceEqual(t *testing.T) {
+	anyEqPairs, anyNeqPairs := mkEqNeqPairs([][][]any{
+		{nil, {}},              // Empty.
+		{{1, 2, 3, 4}},         // Even length - 1.
+		{{1., 2., 3., 4.}},     // Even length - 2.
+		{{1, 2, 2, 4}},         // Even length - 3.
+		{{1., 2., 2., 4.}},     // Even length - 4.
+		{{1, 2, 3, 4, 5}},      // Odd length - 1.
+		{{1., 2., 3., 4., 5.}}, // Odd length - 2.
+		{{1, 2, 2, 4, 5}},      // Odd length - 3.
+		{{1., 2., 2., 4., 5.}}, // Odd length - 4.
 	}, 1, 2)
-	eqPairs = append(eqPairs, [2]interface{}{
-		[]interface{}{1, 2., '3', byte('4')},
-		[]interface{}{1, 2., '3', byte('4')},
+	anyEqPairs = append(anyEqPairs, [2][]any{
+		{1, 2., '3', byte('4')},
+		{1, 2., '3', byte('4')},
 	})
-	neqPairs = append(neqPairs, [2]interface{}{
+	anyNeqPairs = append(anyNeqPairs, [2][]any{
 		// It should regard as unequal since []int is not comparable.
-		[]interface{}{[]int{1, 2, 3}},
-		[]interface{}{[]int{1, 2, 3}},
-	}, [2]interface{}{
+		{[]int{1, 2, 3}},
+		{[]int{1, 2, 3}},
+	}, [2][]any{
 		// 2. (type: float64) != 2 (type: int).
-		[]interface{}{1, 2., '3', byte('4')},
-		[]interface{}{1, 2, '3', byte('4')},
+		{1, 2., '3', byte('4')},
+		{1, 2, '3', byte('4')},
 	})
-	for i, pair := range eqPairs {
-		if r := GeneralSliceEqual(pair[0], pair[1]); !r {
-			t.Errorf("eqPairs Case %d: GeneralSliceEqual(a, b): false. a: %#v, b: %#v.", i, pair[0], pair[1])
-		}
-		if r := GeneralSliceEqual(pair[1], pair[0]); !r {
-			t.Errorf("eqPairs Case %d Reverse: GeneralSliceEqual(a, b): false. a: %#v, b: %#v.", i, pair[1], pair[0])
-		}
-	}
-	for i, pair := range neqPairs {
-		if r := GeneralSliceEqual(pair[0], pair[1]); r {
-			t.Errorf("neqPairs Case %d: GeneralSliceEqual(a, b): true. a: %#v, b: %#v.", i, pair[0], pair[1])
-		}
-		if r := GeneralSliceEqual(pair[1], pair[0]); r {
-			t.Errorf("neqPairs Case %d Reverse: GeneralSliceEqual(a, b): true. a: %#v, b: %#v.", i, pair[1], pair[0])
-		}
-	}
+
+	subtestAnySliceEqual(t, "type=[]int", intsEqPairs, intsNeqPairs)
+	subtestAnySliceEqual(t, "type=[]float64", float64sEqPairs, float64sNeqPairs)
+	subtestAnySliceEqual(t, "type=[]string", stringsEqPairs, stringsNeqPairs)
+	subtestAnySliceEqual(t, "type=[]any", anyEqPairs, anyNeqPairs)
 }
 
-func TestSliceItemEqual(t *testing.T) {
-	eqPairs, neqPairs := testMkEqNeqPairs([][]interface{}{
-		{nil, []byte(nil), []byte{}, "", []int(nil), []int{},
-			[]float64(nil), []float64{}, []string(nil), []string{},
-			[]interface{}(nil), []interface{}{}}, // Empty.
-		{[]byte("1234"), "1234", []interface{}{byte('1'), byte('2'), byte('3'), byte('4')}},              // Bytes - Even length - 1.
-		{[]byte("1224"), "1224", []interface{}{byte('1'), byte('2'), byte('2'), byte('4')}},              // Bytes - Even length - 2.
-		{[]byte("12345"), "12345", []interface{}{byte('1'), byte('2'), byte('3'), byte('4'), byte('5')}}, // Bytes - Odd length - 1.
-		{[]byte("12245"), "12245", []interface{}{byte('1'), byte('2'), byte('2'), byte('4'), byte('5')}}, // Bytes - Odd length - 2.
-		{[]int{1, 2, 3, 4}, []interface{}{1, 2, 3, 4}},                                                   // Ints - Even length - 1.
-		{[]int{1, 2, 2, 4}, []interface{}{1, 2, 2, 4}},                                                   // Ints - Even length - 2.
-		{[]int{1, 2, 3, 4, 5}, []interface{}{1, 2, 3, 4, 5}},                                             // Ints - Odd length - 1.
-		{[]int{1, 2, 2, 4, 5}, []interface{}{1, 2, 2, 4, 5}},                                             // Ints - Odd length - 2.
-		{[]float64{1., 2., 3., 4.}, []interface{}{1., 2., 3., 4.}},                                       // Floats - Even length - 1.
-		{[]float64{1., 2., 2., 4.}, []interface{}{1., 2., 2., 4.}},                                       // Floats - Even length - 2.
-		{[]float64{1., 2., 3., 4., 5.}, []interface{}{1., 2., 3., 4., 5.}},                               // Floats - Odd length - 1.
-		{[]float64{1., 2., 2., 4., 5.}, []interface{}{1., 2., 2., 4., 5.}},                               // Floats - Odd length - 2.
-		{[]string{"1", "2", "3", "4"}, []interface{}{"1", "2", "3", "4"}},                                // Strings - Even length - 1.
-		{[]string{"1", "2", "2", "4"}, []interface{}{"1", "2", "2", "4"}},                                // Strings - Even length - 2.
-		{[]string{"1", "2", "3", "4", "5"}, []interface{}{"1", "2", "3", "4", "5"}},                      // Strings - Even length - 1.
-		{[]string{"1", "2", "2", "4", "5"}, []interface{}{"1", "2", "2", "4", "5"}},                      // Strings - Even length - 2.
-	}, 1, 2)
-	eqPairs = append(eqPairs, [2]interface{}{
-		[]interface{}{1, 2., '3', byte('4')},
-		[]interface{}{1, 2., '3', byte('4')},
-	})
-	neqPairs = append(neqPairs, [2]interface{}{
-		// It should regard as unequal since []int is not comparable.
-		[]interface{}{[]int{1, 2, 3}},
-		[]interface{}{[]int{1, 2, 3}},
-	}, [2]interface{}{
-		// 2. (type: float64) != 2 (type: int).
-		[]interface{}{1, 2., '3', byte('4')},
-		[]interface{}{1, 2, '3', byte('4')},
-	})
-
-	for i, pair := range eqPairs {
-		if r := SliceItemEqual(pair[0], pair[1]); !r {
-			t.Errorf("eqPairs Case %d: SliceItemEqual(a, b): false. a: %#v, b: %#v.", i, pair[0], pair[1])
-		}
-		if r := SliceItemEqual(pair[1], pair[0]); !r {
-			t.Errorf("eqPairs Case %d Reverse: SliceItemEqual(a, b): false. a: %#v, b: %#v.", i, pair[1], pair[0])
-		}
-	}
-	for i, pair := range neqPairs {
-		if r := SliceItemEqual(pair[0], pair[1]); r {
-			t.Errorf("neqPairs Case %d: SliceItemEqual(a, b): true. a: %#v, b: %#v.", i, pair[0], pair[1])
-		}
-		if r := SliceItemEqual(pair[1], pair[0]); r {
-			t.Errorf("neqPairs Case %d Reverse: SliceItemEqual(a, b): true. a: %#v, b: %#v.", i, pair[1], pair[0])
-		}
-	}
+func subtestAnySliceEqual[T any](t *testing.T, name string, eqPairs, neqPairs [][2][]T) {
+	subtestPairs(t, name, compare.AnySliceEqual[T], eqPairs, neqPairs)
 }
 
-// testMkEqNeqPairs generates eqPairs and neqPairs for
+func TestComparableSliceEqualWithoutOrder(t *testing.T) {
+	intsEqWithoutOrderPairs, intsNeqWithoutOrderPairs := mkEqNeqPairs([][][]int{
+		{nil, {}},
+		{{1, 1}},
+		{{1, 2}, {2, 1}},
+		{{1, 1, 1}},
+		{{1, 1, 2}, {1, 2, 1}, {2, 1, 1}},
+		{{1, 2, 2}, {2, 1, 2}, {2, 2, 1}},
+	}, 0, 0)
+	float64sEqWithoutOrderPairs, float64sNeqWithoutOrderPairs := mkEqNeqPairs([][][]float64{
+		{nil, {}},
+		{{1., 1.}},
+		{{1., 2.}, {2., 1.}},
+		{{1., 1., 1.}},
+		{{1., 1., 2.}, {1., 2., 1.}, {2., 1., 1.}},
+		{{1., 2., 2.}, {2., 1., 2.}, {2., 2., 1.}},
+	}, 0, 0)
+	stringsEqWithoutOrderPairs, stringsNeqWithoutOrderPairs := mkEqNeqPairs([][][]string{
+		{nil, {}},
+		{{"1", "1"}},
+		{{"1", "2"}, {"2", "1"}},
+		{{"1", "1", "1"}},
+		{{"1", "1", "2"}, {"1", "2", "1"}, {"2", "1", "1"}},
+		{{"1", "2", "2"}, {"2", "1", "2"}, {"2", "2", "1"}},
+	}, 0, 0)
+
+	subtestComparableSliceEqualWithoutOrder(t, "type=[]int", intsEqWithoutOrderPairs, intsNeqWithoutOrderPairs)
+	subtestComparableSliceEqualWithoutOrder(t, "type=[]float64", float64sEqWithoutOrderPairs, float64sNeqWithoutOrderPairs)
+	subtestComparableSliceEqualWithoutOrder(t, "type=[]string", stringsEqWithoutOrderPairs, stringsNeqWithoutOrderPairs)
+}
+
+func subtestComparableSliceEqualWithoutOrder[T comparable](t *testing.T, name string, eqPairs, neqPairs [][2][]T) {
+	subtestPairs(t, name, compare.ComparableSliceEqualWithoutOrder[T], eqPairs, neqPairs)
+}
+
+func subtestPairs[T any](t *testing.T, name string, f compare.EqualFunc[T], eqPairs, neqPairs [][2]T) {
+	t.Run(name, func(t *testing.T) {
+		for _, eqPair := range eqPairs {
+			a, b := eqPair[0], eqPair[1]
+			name := fmt.Sprintf("a=%v(%[1]T)&b=%v(%[2]T)", a, b)
+			t.Run(name, func(t *testing.T) {
+				if !f(a, b) {
+					t.Error("got false")
+				}
+			})
+			t.Run(name+"&reverse", func(t *testing.T) {
+				if !f(b, a) {
+					t.Error("got false")
+				}
+			})
+		}
+		for _, neqPair := range neqPairs {
+			a, b := neqPair[0], neqPair[1]
+			name := fmt.Sprintf("a=%v(%[1]T)&b=%v(%[2]T)", a, b)
+			t.Run(name, func(t *testing.T) {
+				if f(a, b) {
+					t.Error("got true")
+				}
+			})
+			t.Run(name+"&reverse", func(t *testing.T) {
+				if f(b, a) {
+					t.Error("got true")
+				}
+			})
+		}
+	})
+}
+
+// mkEqNeqPairs generates eqPairs and neqPairs for
 // testing the prefab functions for EqualFunc.
 //
 // An item in eqPairs consists of two equal elements.
@@ -282,7 +241,7 @@ func TestSliceItemEqual(t *testing.T) {
 // neqExCap is the additional capacity of neqPairs.
 // These two arguments are useful to avoid unnecessary memory allocation
 // when the caller wants to append custom data to eqPairs and neqPairs.
-func testMkEqNeqPairs(eqGroups [][]interface{}, eqExCap, neqExCap int) (eqPairs, neqPairs [][2]interface{}) {
+func mkEqNeqPairs[T any](eqGroups [][]T, eqExCap, neqExCap int) (eqPairs, neqPairs [][2]T) {
 	if eqExCap < 0 {
 		eqExCap = 0
 	}
@@ -297,205 +256,25 @@ func testMkEqNeqPairs(eqGroups [][]interface{}, eqExCap, neqExCap int) (eqPairs,
 	for i, group := range eqGroups {
 		n := len(group)
 		eqPairsLen += n * (n + 1) / 2
-		for k := i + 1; k < gn; k++ {
-			neqPairsLen += n * len(eqGroups[k])
+		for j := i + 1; j < gn; j++ {
+			neqPairsLen += n * len(eqGroups[j])
 		}
 	}
-	eqPairs = make([][2]interface{}, eqPairsLen, eqPairsLen+eqExCap)
-	neqPairs = make([][2]interface{}, neqPairsLen, neqPairsLen+neqExCap)
+	eqPairs = make([][2]T, eqPairsLen, eqPairsLen+eqExCap)
+	neqPairs = make([][2]T, neqPairsLen, neqPairsLen+neqExCap)
 	for i, group := range eqGroups {
-		for k := range group {
-			for m := k; m < len(group); m++ {
-				eqPairs[eqIdx][0], eqPairs[eqIdx][1], eqIdx = group[k], group[m], eqIdx+1
+		for j := range group {
+			for k := j; k < len(group); k++ {
+				eqPairs[eqIdx][0], eqPairs[eqIdx][1], eqIdx = group[j], group[k], eqIdx+1
 			}
 		}
-		for k := i + 1; k < gn; k++ {
+		for j := i + 1; j < gn; j++ {
 			for _, a := range group {
-				for _, b := range eqGroups[k] {
+				for _, b := range eqGroups[j] {
 					neqPairs[neqIdx][0], neqPairs[neqIdx][1], neqIdx = a, b, neqIdx+1
 				}
 			}
 		}
 	}
 	return
-}
-
-func BenchmarkIntsEqual(b *testing.B) {
-	data := make([]int, 9999)
-	for i := range data {
-		data[i] = i % 100
-	}
-
-	bms := []struct {
-		name string
-		fn   EqualFunc
-	}{
-		{"One direction", IntsEqual},
-		{"Two directions", testIntsEqualBidirectionalComparison},
-	}
-	for _, bm := range bms {
-		b.Run(bm.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				if !bm.fn(data, data) {
-					b.Error(bm.name, "case reports false.")
-				}
-			}
-		})
-	}
-}
-
-func BenchmarkBytesEqual(b *testing.B) {
-	const span = 'Z' - 'A' + 1
-	bs := make([]byte, 9999)
-	for i := range bs {
-		bs[i] = 'A' + byte(i%span)
-	}
-	s := string(bs)
-
-	bms := []struct {
-		name string
-		fn   EqualFunc
-	}{
-		{"One direction", BytesEqual},
-		{"Two directions", testBytesEqualBidirectionalComparison},
-	}
-	for _, bm := range bms {
-		b.Run(bm.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				if !bm.fn(bs, s) {
-					b.Error(bm.name, "case reports false.")
-				}
-			}
-		})
-	}
-}
-
-func BenchmarkSliceItemEqual(b *testing.B) {
-	const span = 'Z' - 'A' + 1
-	bs := make([]byte, 9999)
-	for i := range bs {
-		bs[i] = 'A' + byte(i%span)
-	}
-	s := string(bs)
-
-	bms := []struct {
-		name string
-		fn   EqualFunc
-	}{
-		{"One direction", SliceItemEqual},
-		{"Two directions", testSliceItemEqualBidirectionalComparison},
-	}
-	for _, bm := range bms {
-		b.Run(bm.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				if !bm.fn(bs, s) {
-					b.Error(bm.name, "case reports false.")
-				}
-			}
-		})
-	}
-}
-
-var testIntsEqualBidirectionalComparison EqualFunc = func(a, b interface{}) bool {
-	var ia, ib []int
-	var ok bool
-	if a != nil {
-		ia, ok = a.([]int)
-		if !ok {
-			panic(errors.AutoMsg("a is not []int"))
-		}
-	}
-	if b != nil {
-		ib, ok = b.([]int)
-		if !ok {
-			panic(errors.AutoMsg("b is not []int"))
-		}
-	}
-	if len(ia) != len(ib) {
-		return false
-	}
-	for i, k := 0, len(ia)-1; i <= k; i, k = i+1, k-1 {
-		// ia and ib will never be nil here.
-		if ia[i] != ib[i] || ia[k] != ib[k] {
-			return false
-		}
-	}
-	return true
-}
-
-var testBytesEqualBidirectionalComparison EqualFunc = func(a, b interface{}) bool {
-	if a == nil {
-		a = ""
-	}
-	if b == nil {
-		b = ""
-	}
-	if sa, ok := a.(string); ok {
-		if sb, ok := b.(string); ok {
-			return sa == sb
-		}
-		if bb, ok := b.([]byte); ok {
-			return testBytesEqualBytesStringBidirectionalComparison(bb, sa)
-		}
-	} else if ba, ok := a.([]byte); ok {
-		if sb, ok := b.(string); ok {
-			return testBytesEqualBytesStringBidirectionalComparison(ba, sb)
-		}
-		if bb, ok := b.([]byte); ok {
-			if len(ba) != len(bb) {
-				return false
-			}
-			for i, k := 0, len(ba)-1; i <= k; i, k = i+1, k-1 {
-				if ba[i] != bb[i] || ba[k] != bb[k] {
-					return false
-				}
-			}
-			return true
-		}
-	} else {
-		panic(errors.AutoMsg("a is neither []byte nor string"))
-	}
-	panic(errors.AutoMsg("b is neither []byte nor string"))
-}
-
-var testSliceItemEqualBidirectionalComparison EqualFunc = func(a, b interface{}) bool {
-	va, vb := reflect.ValueOf(a), reflect.ValueOf(b)
-	var na, nb int
-	switch va.Kind() {
-	case reflect.Slice, reflect.String:
-		na = va.Len()
-	case reflect.Invalid:
-	default:
-		panic(errors.AutoMsg("a is neither slice nor string"))
-	}
-	switch vb.Kind() {
-	case reflect.Slice, reflect.String:
-		nb = vb.Len()
-	case reflect.Invalid:
-	default:
-		panic(errors.AutoMsg("b is neither slice nor string"))
-	}
-
-	if na != nb {
-		return false
-	}
-	for i, k := 0, na-1; i <= k; i, k = i+1, k-1 {
-		if !(equal(va.Index(i).Interface(), vb.Index(i).Interface()) &&
-			equal(va.Index(k).Interface(), vb.Index(k).Interface())) {
-			return false
-		}
-	}
-	return true
-}
-
-func testBytesEqualBytesStringBidirectionalComparison(b []byte, s string) bool {
-	if len(b) != len(s) {
-		return false
-	}
-	for i, k := 0, len(b)-1; i <= k; i, k = i+1, k-1 {
-		if b[i] != s[i] || b[k] != s[k] {
-			return false
-		}
-	}
-	return true
 }
