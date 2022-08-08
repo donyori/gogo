@@ -75,25 +75,29 @@ func (t *treeImpl) Access(node, _ int) (found, cont bool) {
 	return node == t.Goal, true
 }
 
-// numTreeNodes is the number of nodes in treeData.
-const numTreeNodes int = 12
+// numTreeNode is the number of nodes in treeData.
+const numTreeNode int = 12
 
 // treeData represents a tree as follows:
-//        0
-//       /|\
-//      1 2 3
-//     /|   |\
-//    4 5   6 7
-//   /|     |\
-//  8 9    10 11
+//
+//	      0
+//	     /|\
+//	    1 2 3
+//	   /|   |\
+//	  4 5   6 7
+//	 /|     |\
+//	8 9    10 11
 //
 // Assuming that the left edges are chosen before the right edges,
 // the expected orderings are as follows:
 //
 // Expected DFS ordering:
-//  0, 1, 4, 8, 9, 5, 2, 3, 6, 10, 11, 7
+//
+//	0, 1, 4, 8, 9, 5, 2, 3, 6, 10, 11, 7
+//
 // Expected BFS ordering:
-//  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
+//
+//	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
 var treeData = [][2]int{
 	{1, -1},  // node 0
 	{4, 2},   // node 1
@@ -113,14 +117,16 @@ var treeData = [][2]int{
 // to the expected node access orderings of treeData.
 //
 // Valid keys:
-//  dfs
-//  bfs
-//  dls-0
-//  dls-1
-//  dls-2
-//  dls-3
-//  dls-m1
-//  ids
+//
+//	dfs
+//	bfs
+//	dls-0
+//	dls-1
+//	dls-2
+//	dls-3
+//	dls-m1
+//	ids
+//
 // where dls is followed by the depth limit, and m1 is minus 1 (-1).
 var treeDataOrderingMap = map[string][]int{
 	"dfs":    {0, 1, 4, 8, 9, 5, 2, 3, 6, 10, 11, 7},
@@ -289,7 +295,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 	}
 
 	tt := &treeImpl{Data: treeData}
-	for goal := 0; goal < numTreeNodes; goal++ {
+	for goal := 0; goal < numTreeNode; goal++ {
 		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
 			var i int
 			for i < len(ordering) && ordering[i] != goal {
@@ -399,7 +405,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 	}
 
 	tt := &treeImpl{Data: treeData}
-	for goal := 0; goal < numTreeNodes; goal++ {
+	for goal := 0; goal < numTreeNode; goal++ {
 		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
 			path := f(t, tt, goal)
 			checkPath(t, name, goal, path)

@@ -92,26 +92,30 @@ func (g *graphImpl) ResetSearchState() {
 	g.head = len(g.AccessHistory)
 }
 
-// numUndirectedGraphVertices is the number of vertices
+// numUndirectedGraphVertex is the number of vertices
 // in undirectedGraphData.
-const numUndirectedGraphVertices int = 7
+const numUndirectedGraphVertex int = 7
 
 // undirectedGraphData represents an undirected graph as follows:
-//      0
-//     /|\
-//    1 2 3
-//   /| | |
-//  4 5 6 |
-//     \_/
+//
+//	    0
+//	   /|\
+//	  1 2 3
+//	 /| | |
+//	4 5 6 |
+//	   \_/
 //
 // Assuming that the search starts at the vertex 0,
 // and the left edges are chosen before the right edges,
 // the expected orderings are as follows:
 //
 // Expected DFS ordering:
-//  0, 1, 4, 5, 3, 2, 6
+//
+//	0, 1, 4, 5, 3, 2, 6
+//
 // Expected BFS ordering:
-//  0, 1, 2, 3, 4, 5, 6
+//
+//	0, 1, 2, 3, 4, 5, 6
 var undirectedGraphData = [][]int{
 	{1, 2, 3}, // vertex 0
 	{0, 4, 5}, // vertex 1
@@ -126,14 +130,16 @@ var undirectedGraphData = [][]int{
 // to the expected vertex access orderings of undirectedGraphData.
 //
 // Valid keys:
-//  dfs
-//  bfs
-//  dls-0
-//  dls-1
-//  dls-2
-//  dls-3
-//  dls-m1
-//  ids
+//
+//	dfs
+//	bfs
+//	dls-0
+//	dls-1
+//	dls-2
+//	dls-3
+//	dls-m1
+//	ids
+//
 // where dls is followed by the depth limit, and m1 is minus 1 (-1).
 var undirectedGraphDataOrderingMap = map[string][]int{
 	"dfs":    {0, 1, 4, 5, 3, 2, 6},
@@ -150,14 +156,16 @@ var undirectedGraphDataOrderingMap = map[string][]int{
 // to lists of paths from the root to each vertex of undirectedGraphData.
 //
 // Valid keys:
-//  dfs
-//  bfs
-//  dls-0
-//  dls-1
-//  dls-2
-//  dls-3
-//  dls-m1
-//  ids
+//
+//	dfs
+//	bfs
+//	dls-0
+//	dls-1
+//	dls-2
+//	dls-3
+//	dls-m1
+//	ids
+//
 // where dls is followed by the depth limit, and m1 is minus 1 (-1).
 var undirectedGraphDataVertexPathMap = map[string][][]int{
 	"dfs": {
@@ -334,7 +342,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 	}
 
 	tg := &graphImpl{Data: undirectedGraphData}
-	for goal := 0; goal < numUndirectedGraphVertices; goal++ {
+	for goal := 0; goal < numUndirectedGraphVertex; goal++ {
 		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
 			var i int
 			for i < len(ordering) && ordering[i] != goal {
@@ -442,7 +450,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 	}
 
 	tg := &graphImpl{Data: undirectedGraphData}
-	for goal := 0; goal < numUndirectedGraphVertices; goal++ {
+	for goal := 0; goal < numUndirectedGraphVertex; goal++ {
 		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
 			path := f(t, tg, goal)
 			checkPath(t, name, goal, path)
