@@ -123,9 +123,36 @@ type PredeclaredOrdered interface {
 }
 
 // Ordered is a constraint that matches any ordered type.
+//
 // An ordered type is one that supports the <, <=, >, and >= operators.
 type Ordered interface {
 	Real | ~string
+}
+
+// PredeclaredTransitiveOrdered is a constraint that matches the predeclared
+// ordered types that implement a transitive ordering, including int, int8,
+// int16, int32 (rune), int64, uint, uint8 (byte), uint16, uint32, uint64,
+// uintptr, and string.
+//
+// An ordered type is one that supports the <, <=, >, and >= operators.
+//
+// A transitive ordering satisfies:
+//   - if both a < b and b < c are true, then a < c must be true as well.
+//   - if both a < b and b < c are false, then a < c must be false as well.
+type PredeclaredTransitiveOrdered interface {
+	PredeclaredInteger | string
+}
+
+// TransitiveOrdered is a constraint that matches any ordered type that
+// implements a transitive ordering.
+//
+// An ordered type is one that supports the <, <=, >, and >= operators.
+//
+// A transitive ordering satisfies:
+//   - if both a < b and b < c are true, then a < c must be true as well.
+//   - if both a < b and b < c are false, then a < c must be false as well.
+type TransitiveOrdered interface {
+	Integer | ~string
 }
 
 // PredeclaredAddable is a constraint that matches the predeclared addable
@@ -138,6 +165,7 @@ type PredeclaredAddable interface {
 }
 
 // Addable is a constraint that matches any addable type.
+//
 // An addable type is one that supports the + operator.
 type Addable interface {
 	Numeric | ~string
