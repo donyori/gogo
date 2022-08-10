@@ -20,6 +20,7 @@ package array
 
 import (
 	"github.com/donyori/gogo/constraints"
+	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/function/compare"
 )
 
@@ -29,7 +30,7 @@ import (
 // It implements the interface OrderedDynamicArray.
 type sliceLess[Item any] struct {
 	*SliceDynamicArray[Item]
-	less compare.LessFunc[Item]
+	lessFn compare.LessFunc[Item]
 }
 
 // WrapSliceLess wraps a pointer to a Go slice with
@@ -47,11 +48,19 @@ type sliceLess[Item any] struct {
 // affect the provided Go slice.
 // Operations on the Go slice will also affect
 // the returned OrderedDynamicArray.
+//
+// It panics if slicePtr or lessFn is nil.
 func WrapSliceLess[Item any](
 	slicePtr *[]Item, lessFn compare.LessFunc[Item]) OrderedDynamicArray[Item] {
+	if slicePtr == nil {
+		panic(errors.AutoMsg("slicePtr is nil"))
+	}
+	if lessFn == nil {
+		panic(errors.AutoMsg("lessFn is nil"))
+	}
 	return &sliceLess[Item]{
 		SliceDynamicArray: (*SliceDynamicArray[Item])(slicePtr),
-		less:              lessFn,
+		lessFn:            lessFn,
 	}
 }
 
@@ -69,7 +78,7 @@ func WrapSliceLess[Item any](
 //
 // It panics if i or j is out of range.
 func (sl *sliceLess[Item]) Less(i, j int) bool {
-	return sl.less((*sl.SliceDynamicArray)[i], (*sl.SliceDynamicArray)[j])
+	return sl.lessFn((*sl.SliceDynamicArray)[i], (*sl.SliceDynamicArray)[j])
 }
 
 // transitiveOrderedSlice is a SliceDynamicArray that constraints its item type
@@ -90,8 +99,13 @@ type transitiveOrderedSlice[Item constraints.TransitiveOrdered] struct {
 // affect the provided Go slice.
 // Operations on the Go slice will also affect
 // the returned OrderedDynamicArray.
+//
+// It panics if slicePtr is nil.
 func WrapTransitiveOrderedSlice[Item constraints.TransitiveOrdered](
 	slicePtr *[]Item) OrderedDynamicArray[Item] {
+	if slicePtr == nil {
+		panic(errors.AutoMsg("slicePtr is nil"))
+	}
 	return &transitiveOrderedSlice[Item]{
 		SliceDynamicArray: (*SliceDynamicArray[Item])(slicePtr),
 	}
@@ -130,7 +144,12 @@ type floatSlice[Item constraints.Float] struct {
 // affect the provided Go slice.
 // Operations on the Go slice will also affect
 // the returned OrderedDynamicArray.
+//
+// It panics if slicePtr is nil.
 func WrapFloatSlice[Item constraints.Float](slicePtr *[]Item) OrderedDynamicArray[Item] {
+	if slicePtr == nil {
+		panic(errors.AutoMsg("slicePtr is nil"))
+	}
 	return &floatSlice[Item]{
 		SliceDynamicArray: (*SliceDynamicArray[Item])(slicePtr),
 	}
