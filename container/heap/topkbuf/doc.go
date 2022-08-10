@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package topkbuf provides OOP-style buffer
-// for saving the first K smallest items.
+// Package topkbuf provides OOP-style buffers for
+// storing the top-K largest items.
 //
 // For better performance, all functions in this package are unsafe
 // for concurrency unless otherwise specified.
