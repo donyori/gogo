@@ -16,12 +16,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package pqueue provides OOP-style priority queues.
+// Package heap provides OOP-style heap-based containers
+// (such as priority queues).
 //
-// There are three priority queue versions in this package:
-// mini version (PriorityQueueMini), standard version (PriorityQueue),
-// and extended version (PriorityQueueEx).
-//
-// For better performance, all functions in this package are unsafe
-// for concurrency unless otherwise specified.
-package pqueue
+// For better performance, all functions in this package and its subpackages
+// are unsafe for concurrency unless otherwise specified.
+package heap
