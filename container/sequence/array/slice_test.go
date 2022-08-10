@@ -35,7 +35,7 @@ func TestTypeConversion(t *testing.T) {
 		_ = array.SliceDynamicArray[int]([]int{1, 2, 3})
 	})
 	t.Run("any", func(t *testing.T) {
-		_ = array.SliceDynamicArray[any]{[]any{1, nil, 3., "4"}}
+		_ = array.SliceDynamicArray[any]([]any{1, nil, 3., "4"})
 	})
 }
 
@@ -213,8 +213,7 @@ func TestSliceDynamicArray_Range(t *testing.T) {
 func TestSliceDynamicArray_Get(t *testing.T) {
 	sda := array.SliceDynamicArray[int]{2, 3, 4, 5, 6}
 	testCases := []struct {
-		i    int
-		want int
+		i, want int
 	}{
 		{0, 2},
 		{1, 3},
@@ -929,7 +928,7 @@ func sliceToName[T any](s []T) string {
 	return b.String()
 }
 
-func sequenceToName[T any](s sequence.Sequence[T]) string {
+func sequenceToName[Item any](s sequence.Sequence[Item]) string {
 	typeStr := fmt.Sprintf("(%T)", s)
 	if s == nil {
 		return typeStr + "<nil>"
@@ -939,7 +938,7 @@ func sequenceToName[T any](s sequence.Sequence[T]) string {
 	b.WriteString(typeStr)
 	b.WriteByte('[')
 	var notFirst bool
-	s.Range(func(x T) (cont bool) {
+	s.Range(func(x Item) (cont bool) {
 		if notFirst {
 			b.WriteByte(',')
 		} else {
@@ -952,7 +951,7 @@ func sequenceToName[T any](s sequence.Sequence[T]) string {
 	return b.String()
 }
 
-func sequenceLen[T any](s sequence.Sequence[T]) int {
+func sequenceLen[Item any](s sequence.Sequence[Item]) int {
 	if s == nil {
 		return 0
 	}
@@ -984,37 +983,37 @@ func sliceUnequalWithoutOrder[T comparable](a, b []T) bool {
 
 // sequenceImpl is a linked list-based implementation of interface
 // github.com/donyori/gogo/container/sequence.Sequence.
-type sequenceImpl[T any] struct {
+type sequenceImpl[Item any] struct {
 	linkedList      list.List
 	useFrontAndNext bool
 }
 
-func newSequence[T any](data []T) *sequenceImpl[T] {
-	seq := &sequenceImpl[T]{useFrontAndNext: true}
+func newSequence[Item any](data []Item) *sequenceImpl[Item] {
+	seq := &sequenceImpl[Item]{useFrontAndNext: true}
 	for _, x := range data {
 		seq.linkedList.PushBack(x)
 	}
 	return seq
 }
 
-func (s *sequenceImpl[T]) Len() int {
+func (s *sequenceImpl[Item]) Len() int {
 	if s == nil {
 		return 0
 	}
 	return s.linkedList.Len()
 }
 
-func (s *sequenceImpl[T]) Front() T {
+func (s *sequenceImpl[Item]) Front() Item {
 	if s.Len() == 0 {
 		panic(errors.AutoMsg("sequence is nil or empty"))
 	}
 	if s.useFrontAndNext {
-		return s.linkedList.Front().Value.(T)
+		return s.linkedList.Front().Value.(Item)
 	}
-	return s.linkedList.Back().Value.(T)
+	return s.linkedList.Back().Value.(Item)
 }
 
-func (s *sequenceImpl[T]) SetFront(x T) {
+func (s *sequenceImpl[Item]) SetFront(x Item) {
 	if s.Len() == 0 {
 		panic(errors.AutoMsg("sequence is nil or empty"))
 	}
@@ -1025,17 +1024,17 @@ func (s *sequenceImpl[T]) SetFront(x T) {
 	}
 }
 
-func (s *sequenceImpl[T]) Back() T {
+func (s *sequenceImpl[Item]) Back() Item {
 	if s.Len() == 0 {
 		panic(errors.AutoMsg("sequence is nil or empty"))
 	}
 	if s.useFrontAndNext {
-		return s.linkedList.Back().Value.(T)
+		return s.linkedList.Back().Value.(Item)
 	}
-	return s.linkedList.Front().Value.(T)
+	return s.linkedList.Front().Value.(Item)
 }
 
-func (s *sequenceImpl[T]) SetBack(x T) {
+func (s *sequenceImpl[Item]) SetBack(x Item) {
 	if s.Len() == 0 {
 		panic(errors.AutoMsg("sequence is nil or empty"))
 	}
@@ -1046,20 +1045,20 @@ func (s *sequenceImpl[T]) SetBack(x T) {
 	}
 }
 
-func (s *sequenceImpl[T]) Reverse() {
+func (s *sequenceImpl[Item]) Reverse() {
 	if s.Len() > 0 {
 		s.useFrontAndNext = !s.useFrontAndNext
 	}
 }
 
-func (s *sequenceImpl[T]) Range(handler func(x T) (cont bool)) {
+func (s *sequenceImpl[Item]) Range(handler func(x Item) (cont bool)) {
 	if s.Len() == 0 {
 		return
 	}
 	if s.useFrontAndNext {
 		elem := s.linkedList.Front()
 		for elem != nil {
-			if !handler(elem.Value.(T)) {
+			if !handler(elem.Value.(Item)) {
 				return
 			}
 			elem = elem.Next()
@@ -1067,7 +1066,7 @@ func (s *sequenceImpl[T]) Range(handler func(x T) (cont bool)) {
 	} else {
 		elem := s.linkedList.Back()
 		for elem != nil {
-			if !handler(elem.Value.(T)) {
+			if !handler(elem.Value.(Item)) {
 				return
 			}
 			elem = elem.Prev()

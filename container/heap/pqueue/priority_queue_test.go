@@ -80,9 +80,7 @@ func TestPriorityQueueBasic_Enqueue(t *testing.T) {
 	xsList := [][]int{nil, {}, {-1}, {0}, {1}, {7}, {-1, 0, 1}, {0, 0, 7}}
 
 	testCases := make([]struct {
-		data []int
-		xs   []int
-		want []int
+		data, xs, want []int
 	}, len(dataList)*len(xsList))
 	var idx int
 	for _, data := range dataList {
