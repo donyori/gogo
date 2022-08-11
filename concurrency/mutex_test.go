@@ -16,87 +16,102 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package concurrency
+package concurrency_test
 
 import (
+	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/donyori/gogo/concurrency"
 )
 
 func TestMutex_Lock(t *testing.T) {
-	m := NewMutex()
-
-	start := time.Now()
-	go func() {
+	t.Run("m.Lock()", func(t *testing.T) {
+		m := concurrency.NewMutex()
+		c := make(chan struct{})
+		var start time.Time
+		go func() {
+			m.Lock()
+			defer m.Unlock()
+			start = time.Now()
+			c <- struct{}{}
+			time.Sleep(time.Millisecond)
+		}()
+		<-c
 		m.Lock()
-		defer m.Unlock()
-		time.Sleep(time.Millisecond)
-	}()
-	time.Sleep(time.Microsecond)
-	m.Lock()
-	if time.Since(start) < time.Millisecond {
-		t.Error("m.Lock() is not working.")
-	}
-	m.Unlock()
-
-	start = time.Now()
-	go func() {
-		<-m.C()
-		defer m.Unlock()
-		time.Sleep(time.Millisecond)
-	}()
-	time.Sleep(time.Microsecond)
-	m.Lock()
-	if time.Since(start) < time.Millisecond {
-		t.Error("<-m.C() is not working.")
-	}
+		m.Unlock()
+		if time.Since(start) < time.Millisecond {
+			t.Error("not working")
+		}
+	})
+	t.Run("<-m.C()", func(t *testing.T) {
+		m := concurrency.NewMutex()
+		c := make(chan struct{})
+		var start time.Time
+		go func() {
+			<-m.C() // equivalent to m.Lock()
+			defer m.Unlock()
+			start = time.Now()
+			c <- struct{}{}
+			time.Sleep(time.Millisecond)
+		}()
+		<-c
+		m.Lock()
+		m.Unlock()
+		if time.Since(start) < time.Millisecond {
+			t.Error("not working")
+		}
+	})
 }
 
 func TestMutex_Locked(t *testing.T) {
-	m := NewMutex()
+	m := concurrency.NewMutex()
 	if m.Locked() {
-		t.Error("m.Locked() = true on a new mutex.")
+		t.Fatal("true on a new mutex")
 	}
 	m.Lock()
 	if !m.Locked() {
-		t.Error("m.Locked() = false after calling Lock.")
+		t.Fatal("false after calling Lock")
 	}
 	m.Unlock()
 	if m.Locked() {
-		t.Error("m.Locked() = true after calling Unlock.")
+		t.Fatal("true after calling Unlock")
 	}
 	<-m.C()
 	if !m.Locked() {
-		t.Error("m.Locked() = false after receiving on m.C().")
+		t.Error("false after receiving on m.C()")
 	}
 }
 
 func TestMutex_UnlockOfUnlockedMutex(t *testing.T) {
 	defer func() {
-		if r := recover(); r == nil {
-			t.Error("No panic when calling Unlock of an unlocked mutex.")
+		if e := recover(); !isUnlockPanicMessage(e) {
+			t.Error(e)
 		}
 	}()
-	NewMutex().Unlock()
+	concurrency.NewMutex().Unlock() // want to panic here
+	t.Error("no panic when calling Unlock of an unlocked mutex")
 }
 
 func TestMutex_UnlockTwice(t *testing.T) {
 	defer func() {
-		if r := recover(); r == nil {
-			t.Error("No panic when calling Unlock twice.")
+		if e := recover(); !isUnlockPanicMessage(e) {
+			t.Error(e)
 		}
 	}()
-	m := NewMutex()
+	m := concurrency.NewMutex()
 	m.Lock()
 	m.Unlock()
-	m.Unlock()
+	m.Unlock() // want to panic here
+	t.Error("no panic when calling Unlock twice")
 }
 
 func TestMutex_Fairness(t *testing.T) {
-	// This test refers to TestMutexFairness
-	// (a test of sync.Mutex, in the file sync/mutex_test.go).
-	m := NewMutex()
+	// This test refers to TestMutexFairness,
+	// a test of sync.Mutex, in the file sync/mutex_test.go.
+	m := concurrency.NewMutex()
 	stopC := make(chan struct{})
 	sc := stopC // A copy of stopC, for closing stopC.
 	defer func() {
@@ -135,9 +150,17 @@ func TestMutex_Fairness(t *testing.T) {
 	select {
 	case <-doneC:
 	case <-time.After(time.Second * 10):
-		t.Error("Cannot acquire the lock in 10 second.")
+		t.Error("cannot acquire the lock in 10 seconds")
 	}
 	close(sc)
 	sc = nil
 	wg.Wait()
+}
+
+func isUnlockPanicMessage(err any) bool {
+	if err == nil {
+		return false
+	}
+	msg, ok := err.(string)
+	return ok && strings.HasSuffix(msg, "unlock of an unlocked mutex")
 }

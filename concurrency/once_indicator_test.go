@@ -16,22 +16,29 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package concurrency
+package concurrency_test
 
 import (
 	"sync"
+	"sync/atomic"
 	"testing"
+
+	"github.com/donyori/gogo/concurrency"
 )
 
-type testOne int
+type one int32
 
-func (o *testOne) Increase() {
-	*o++
+func (o *one) Increase() {
+	atomic.AddInt32((*int32)(o), 1)
 }
 
-func TestOnceIndicator_Do(t *testing.T) {
-	o := new(testOne)
-	oi := NewOnceIndicator()
+func (o *one) Load() int32 {
+	return atomic.LoadInt32((*int32)(o))
+}
+
+func TestOnceIndicator_Do_Once(t *testing.T) {
+	o := new(one)
+	oi := concurrency.NewOnceIndicator()
 	const N = 10
 	rs := make([]bool, N)
 	var wg sync.WaitGroup
@@ -42,14 +49,14 @@ func TestOnceIndicator_Do(t *testing.T) {
 			rs[rank] = oi.Do(func() {
 				o.Increase()
 			})
-			if v := *o; v != 1 {
-				t.Errorf("Once failed: %d != 1.", v)
+			if v := o.Load(); v != 1 {
+				t.Errorf("goroutine %d, once failed: %d is not 1", rank, v)
 			}
 		}(i)
 	}
 	wg.Wait()
-	if *o != 1 {
-		t.Errorf("Once failed: %d != 1.", *o)
+	if v := o.Load(); v != 1 {
+		t.Errorf("main goroutine, once failed: %d is not 1", v)
 	}
 	var ctr int
 	for _, r := range rs {
@@ -58,43 +65,43 @@ func TestOnceIndicator_Do(t *testing.T) {
 		}
 	}
 	if ctr != 1 {
-		t.Errorf("Not only one call of Do return true. #true: %d.", ctr)
+		t.Errorf("not only one call of Do return true, #true: %d", ctr)
 	}
 }
 
 func TestOnceIndicator_Do_Panic(t *testing.T) {
-	oi := NewOnceIndicator()
+	oi := concurrency.NewOnceIndicator()
 	func() {
 		defer func() {
-			if r := recover(); r == nil {
-				t.Fatal("OnceIndicator.Do did NOT panic.")
+			if e := recover(); e == nil {
+				t.Fatal("OnceIndicator.Do did NOT panic")
 			}
 		}()
 		oi.Do(func() {
-			panic("first panic")
+			panic("panic")
 		})
 	}()
 
 	oi.Do(func() {
-		t.Fatal("OnceIndicator.Do called twice.")
+		t.Fatal("OnceIndicator.Do called twice")
 	})
 
 	select {
 	case <-oi.C():
 	default:
-		t.Error("OnceIndicator.Do did NOT trigger the channel after calling Do.")
+		t.Error("OnceIndicator.Do did NOT trigger the channel after being called")
 	}
 }
 
 func TestOnceIndicator_Do_NilF(t *testing.T) {
-	oi := NewOnceIndicator()
+	oi := concurrency.NewOnceIndicator()
 	if !oi.Do(nil) {
-		t.Error("OnceIndicator.Do returns false on the first call.")
+		t.Error("OnceIndicator.Do returned false on the first call")
 	}
 
 	select {
 	case <-oi.C():
 	default:
-		t.Error("OnceIndicator.Do did NOT trigger the channel after calling Do with f set to nil.")
+		t.Error("OnceIndicator.Do did NOT trigger the channel after being called with a nil f")
 	}
 }

@@ -24,7 +24,7 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// Mutex is a mutual exclusion lock based on Golang channel.
+// Mutex is a mutual exclusion lock based on Go channel.
 //
 // It can be used similarly to sync.Mutex.
 // Moreover, it enables the client to acquire the lock while listening to
@@ -83,9 +83,12 @@ func (m *mutex) Unlock() {
 //
 // The client can acquire the lock by receiving a signal on this channel,
 // which has the same effect as calling the method Lock, i.e.,
-//  <-m.C()
+//
+//	<-m.C()
+//
 // is equivalent to
-//  m.Lock()
+//
+//	m.Lock()
 func (m *mutex) C() <-chan struct{} {
 	return m.c
 }

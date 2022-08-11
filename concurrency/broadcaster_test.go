@@ -16,14 +16,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package concurrency
+package concurrency_test
 
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/donyori/gogo/concurrency"
 )
 
 func TestBroadcaster_Broadcast(t *testing.T) {
@@ -34,7 +37,7 @@ func TestBroadcaster_Broadcast(t *testing.T) {
 		data[i] = i + 1
 	}
 
-	bcast := NewBroadcaster(0)
+	bcast := concurrency.NewBroadcaster[int](0)
 
 	// Barriers to synchronize goroutines.
 	// Calling barriers[i].Done() means this goroutine is ready to delay
@@ -45,7 +48,7 @@ func TestBroadcaster_Broadcast(t *testing.T) {
 	}
 	var barriersWaitOnce [NumMessage]sync.Once
 
-	random := rand.New(rand.NewSource(10)) // Use a fixed seed for debugging.
+	random := rand.New(rand.NewSource(10)) // use a fixed seed for debugging
 	var delayDurations [NumGoroutine][NumMessage - 1]time.Duration
 	for i := 0; i < NumGoroutine; i++ {
 		for k := 0; k < NumMessage-1; k++ {
@@ -63,9 +66,9 @@ func TestBroadcaster_Broadcast(t *testing.T) {
 			barriers[idx].Done()
 			for msg := range c {
 				if idx >= NumMessage {
-					panic(fmt.Sprintf("Goroutine %d: got messages more than %d.", rank, NumMessage))
+					panic(fmt.Sprintf("goroutine %d, got messages more than %d", rank, NumMessage))
 				}
-				recv[idx] = msg.(int)
+				recv[idx] = msg
 				idx++
 				barriers[idx].Done()
 
@@ -78,7 +81,7 @@ func TestBroadcaster_Broadcast(t *testing.T) {
 				}
 			}
 			if recv != data {
-				t.Errorf("Goroutine %d: recv: %v != data: %v.", rank, recv, data)
+				t.Errorf("goroutine %d, recv %v; want %v", rank, recv, data)
 			}
 		}(i)
 	}
@@ -90,11 +93,15 @@ func TestBroadcaster_Broadcast(t *testing.T) {
 	wg.Wait()
 
 	defer func() {
-		if r := recover(); r == nil {
-			t.Error("No panic when calling Broadcast after the broadcaster closed.")
+		if e := recover(); e != nil {
+			msg, ok := e.(string)
+			if !ok || !strings.HasSuffix(msg, "broadcaster is closed") {
+				t.Error(e)
+			}
 		}
 	}()
-	bcast.Broadcast(nil)
+	bcast.Broadcast(0)
+	t.Error("no panic when calling Broadcast after the broadcaster closed")
 }
 
 func TestBroadcaster_Unsubscribe(t *testing.T) {
@@ -103,7 +110,7 @@ func TestBroadcaster_Unsubscribe(t *testing.T) {
 	for i := range data {
 		data[i] = i
 	}
-	bcast := NewBroadcaster(0)
+	bcast := concurrency.NewBroadcaster[int](0)
 	c := bcast.Subscribe(NumMessage / 4)
 	var wg sync.WaitGroup
 	wg.Add(4) // 3 receivers + 1 sender
@@ -119,14 +126,14 @@ func TestBroadcaster_Unsubscribe(t *testing.T) {
 			ready.Done()
 			for msg := range c {
 				if idx >= NumMessage {
-					panic(fmt.Sprintf("Goroutine %d: got messages more than %d.", rank, NumMessage))
+					panic(fmt.Sprintf("goroutine %d, got messages more than %d", rank, NumMessage))
 				}
-				recv[idx] = msg.(int)
+				recv[idx] = msg
 				idx++
-				time.Sleep(time.Microsecond * time.Duration(rank)) // Let the next reception not start at the same time.
+				time.Sleep(time.Microsecond * time.Duration(rank)) // let the next reception not start at the same time
 			}
 			if recv != data {
-				t.Errorf("Goroutine %d: recv: %v != data: %v.", rank, recv, data)
+				t.Errorf("goroutine %d, recv %v; want %v", rank, recv, data)
 			}
 		}(i)
 	}
@@ -144,47 +151,51 @@ func TestBroadcaster_Unsubscribe(t *testing.T) {
 	for i := 0; i < stop; i++ {
 		msg, ok := <-c
 		if !ok {
-			t.Errorf("c closed early. Received messages: %v.", recv[:i])
+			t.Errorf("c closed early, received messages %v", recv[:i])
 			return
 		}
-		recv[i] = msg.(int)
+		recv[i] = msg
 	}
 	unread := bcast.Unsubscribe(c)
 	if len(unread) > cap(c)+1 || len(unread) > NumMessage-stop {
-		t.Errorf("Too more unread messages. len(unread): %d, cap(c): %d, NumMessage - stop: %d.",
+		t.Errorf("too many unread messages, len(unread) = %d, cap(c) = %d, NumMessage - stop = %d",
 			len(unread), cap(c), NumMessage-stop)
 	}
 	for i := range unread {
-		recv[i+stop] = unread[i].(int)
+		recv[i+stop] = unread[i]
 	}
 	for i, n := 0, stop+len(unread); i < n; i++ {
 		if recv[i] != data[i] {
-			t.Errorf("recv[:%d]: %v != data[:%[1]d]: %[3]v.", n, recv[:n], data[:n])
+			t.Errorf("recv[:%d] = %v; want (data[:%[1]d]) %[3]v", n, recv[:n], data[:n])
 			break
 		}
 	}
 }
 
 func TestBroadcaster_Unsubscribe_IllegalC(t *testing.T) {
-	bcast := NewBroadcaster(0)
+	bcast := concurrency.NewBroadcaster[int](0)
 	bcast.Subscribe(-1)
 	defer func() {
-		if r := recover(); r == nil {
-			t.Error("No panic when calling Unsubscribe with a channel not assigned by the broadcaster.")
+		if e := recover(); e != nil {
+			msg, ok := e.(string)
+			if !ok || !strings.HasSuffix(msg, "c is not gotten from this broadcaster or has already unsubscribed") {
+				t.Error(e)
+			}
 		}
 	}()
-	bcast.Unsubscribe(make(chan interface{}))
+	bcast.Unsubscribe(make(chan int))
+	t.Error("no panic when calling Unsubscribe with a channel not assigned by the broadcaster")
 }
 
 func TestBroadcaster_Unsubscribe_AfterClose(t *testing.T) {
-	bcast := NewBroadcaster(0)
+	bcast := concurrency.NewBroadcaster[int](0)
 	c := bcast.Subscribe(-1)
 	bcast.Close()
 	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("Panic when calling Unsubscribe after the broadcaster closed: %v.", r)
+		if e := recover(); e != nil {
+			t.Errorf("panic when calling Unsubscribe after the broadcaster closed, %v", e)
 		}
 	}()
 	bcast.Unsubscribe(c)
-	bcast.Unsubscribe(make(chan interface{}))
+	bcast.Unsubscribe(make(chan int))
 }

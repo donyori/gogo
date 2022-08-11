@@ -37,7 +37,7 @@ import (
 // Then, the receiver can get messages by listening to the channel.
 // Finally, when the receiver no longer needs to get messages from this
 // broadcaster, it can call the method Unsubscribe.
-type Broadcaster interface {
+type Broadcaster[Message any] interface {
 	// Closed reports whether the broadcaster is closed.
 	Closed() bool
 
@@ -47,7 +47,7 @@ type Broadcaster interface {
 	// or buffer the message.
 	//
 	// It will panic if the broadcaster is closed.
-	Broadcast(x interface{})
+	Broadcast(x Message)
 
 	// Close closes the broadcaster.
 	//
@@ -71,7 +71,7 @@ type Broadcaster interface {
 	//
 	// It returns a channel for receiving messages from the sender.
 	// If the broadcaster is closed, it returns nil.
-	Subscribe(bufSize int) <-chan interface{}
+	Subscribe(bufSize int) <-chan Message
 
 	// Unsubscribe unsubscribes the broadcaster to stop receiving messages.
 	//
@@ -86,19 +86,19 @@ type Broadcaster interface {
 	//
 	// It returns all buffered and unreceived messages on the channel c
 	// before unsubscribing, in order of the broadcaster sending them.
-	Unsubscribe(c <-chan interface{}) []interface{}
+	Unsubscribe(c <-chan Message) []Message
 }
 
 // NewBroadcaster creates a new instance of interface Broadcaster.
 //
 // dfltBufSize is the default buffer size for the new broadcaster.
 // Non-positive values for no buffer.
-func NewBroadcaster(dfltBufSize int) Broadcaster {
+func NewBroadcaster[Message any](dfltBufSize int) Broadcaster[Message] {
 	if dfltBufSize < 0 {
 		dfltBufSize = 0
 	}
-	return &broadcaster{
-		cm:  make(map[<-chan interface{}]chan<- interface{}),
+	return &broadcaster[Message]{
+		cm:  make(map[<-chan Message]chan<- Message),
 		coi: NewOnceIndicator(),
 		m:   NewMutex(),
 		dbs: dfltBufSize,
@@ -106,19 +106,19 @@ func NewBroadcaster(dfltBufSize int) Broadcaster {
 }
 
 // broadcaster is an implementation of interface Broadcaster.
-type broadcaster struct {
+type broadcaster[Message any] struct {
 	// Map from receive-only channels to send-only channels,
 	// for sending messages to subscribers.
-	cm map[<-chan interface{}]chan<- interface{}
+	cm map[<-chan Message]chan<- Message
 
 	coi OnceIndicator // For closing the broadcaster.
-	m   Mutex         // Lock for cm.
+	m   Mutex         // Lock for the field cm.
 	bs  int32         // Broadcast semaphore.
 	dbs int           // Default buffer size.
 }
 
 // Closed reports whether the broadcaster is closed.
-func (b *broadcaster) Closed() bool {
+func (b *broadcaster[Message]) Closed() bool {
 	if atomic.LoadInt32(&b.bs) > 0 {
 		// The broadcaster is executing the method Broadcast,
 		// which means it is not closed.
@@ -137,7 +137,7 @@ func (b *broadcaster) Closed() bool {
 // or buffer the message.
 //
 // It will panic if the broadcaster is closed.
-func (b *broadcaster) Broadcast(x interface{}) {
+func (b *broadcaster[Message]) Broadcast(x Message) {
 	b.m.Lock()
 	defer b.m.Unlock()
 	if b.coi.Test() {
@@ -145,7 +145,7 @@ func (b *broadcaster) Broadcast(x interface{}) {
 	}
 	atomic.AddInt32(&b.bs, 1)
 	defer atomic.AddInt32(&b.bs, -1)
-	var unsent []chan<- interface{}
+	var unsent []chan<- Message
 	for _, c := range b.cm {
 		select {
 		case c <- x:
@@ -194,7 +194,7 @@ func (b *broadcaster) Broadcast(x interface{}) {
 // All calls after the first call will perform nothing.
 //
 // This method should only be used by the sender.
-func (b *broadcaster) Close() {
+func (b *broadcaster[Message]) Close() {
 	b.coi.Do(func() {
 		b.m.Lock()
 		defer b.m.Unlock()
@@ -213,7 +213,7 @@ func (b *broadcaster) Close() {
 //
 // It returns a channel for receiving messages from the sender.
 // If the broadcaster is closed, it returns nil.
-func (b *broadcaster) Subscribe(bufSize int) <-chan interface{} {
+func (b *broadcaster[Message]) Subscribe(bufSize int) <-chan Message {
 	if bufSize < 0 {
 		bufSize = b.dbs
 	}
@@ -222,11 +222,11 @@ func (b *broadcaster) Subscribe(bufSize int) <-chan interface{} {
 	if b.coi.Test() {
 		return nil
 	}
-	c := make(chan interface{}, bufSize)
+	c := make(chan Message, bufSize)
 
 	b.cm[c] = c
 	// If a compiler bug occurs on the above statement, try this:
-	//  var inC <-chan interface{} = c
+	//  var inC <-chan Message = c
 	//  b.cm[inC] = c
 
 	return c
@@ -245,8 +245,8 @@ func (b *broadcaster) Subscribe(bufSize int) <-chan interface{} {
 //
 // It returns all buffered and unreceived messages on the channel c
 // before unsubscribing, in order of the broadcaster sending them.
-func (b *broadcaster) Unsubscribe(c <-chan interface{}) []interface{} {
-	var r []interface{}
+func (b *broadcaster[Message]) Unsubscribe(c <-chan Message) []Message {
+	var r []Message
 	inC, unlocked := c, true
 	for unlocked {
 		select {
