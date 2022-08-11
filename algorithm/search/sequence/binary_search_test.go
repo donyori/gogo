@@ -244,6 +244,9 @@ func TestBinarySearchMinGreater(t *testing.T) {
 }
 
 func acceptSetString(acceptSet map[int]bool) string {
+	if acceptSet == nil {
+		return "<nil>"
+	}
 	vs := make([]int, len(acceptSet))
 	var i int
 	for v := range acceptSet {
@@ -264,6 +267,9 @@ func acceptSetString(acceptSet map[int]bool) string {
 }
 
 func dataToName(data []*idValue) string {
+	if data == nil {
+		return "<nil>"
+	}
 	var b strings.Builder
 	b.Grow(len(data)*5 + 2)
 	b.WriteByte('[')

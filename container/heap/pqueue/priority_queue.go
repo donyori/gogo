@@ -71,6 +71,8 @@ type PriorityQueue[Item any] interface {
 	Clear()
 }
 
+const emptyQueuePanicMessage string = "priority queue is empty"
+
 // priorityQueueBasic is an implementation of interface PriorityQueueBasic,
 // based on container/heap.
 type priorityQueueBasic[Item any] struct {
@@ -134,7 +136,7 @@ func (pqb *priorityQueueBasic[Item]) Enqueue(x ...Item) {
 // Time complexity: O(log n), where n = pq.Len().
 func (pqb *priorityQueueBasic[Item]) Dequeue() Item {
 	if pqb.oha.Len() == 0 {
-		panic(errors.AutoMsg("priority queue is empty"))
+		panic(errors.AutoMsg(emptyQueuePanicMessage))
 	}
 	return heap.Pop(pqb.oha).(Item)
 }
@@ -189,7 +191,7 @@ func (pq *priorityQueue[Item]) Cap() int {
 // Time complexity: O(1).
 func (pq *priorityQueue[Item]) Top() Item {
 	if pq.oha.Len() == 0 {
-		panic(errors.AutoMsg("priority queue is empty"))
+		panic(errors.AutoMsg(emptyQueuePanicMessage))
 	}
 	return pq.oha.Oda.Front()
 }
@@ -202,7 +204,7 @@ func (pq *priorityQueue[Item]) Top() Item {
 // Time complexity: O(log n), where n = pq.Len().
 func (pq *priorityQueue[Item]) ReplaceTop(newX Item) Item {
 	if pq.oha.Len() == 0 {
-		panic(errors.AutoMsg("priority queue is empty"))
+		panic(errors.AutoMsg(emptyQueuePanicMessage))
 	}
 	pq.oha.Oda.SetFront(newX)
 	heap.Fix(pq.oha, 0)

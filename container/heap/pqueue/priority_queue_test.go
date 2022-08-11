@@ -233,6 +233,9 @@ func sliceToName[T any](s []T) string {
 }
 
 func copyAndSort(data []int) []int {
+	if data == nil {
+		return nil
+	}
 	sorted := make([]int, len(data))
 	copy(sorted, data)
 	sort.Ints(sorted)
@@ -269,7 +272,7 @@ func checkPriorityQueueByDequeue[Item comparable](t *testing.T,
 			t.Error(e)
 		}
 	}()
-	x := pqb.Dequeue()
+	x := pqb.Dequeue() // want to panic here
 	t.Errorf("dequeued more than %d items, got %v", i, x)
 }
 

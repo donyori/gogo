@@ -208,6 +208,9 @@ func sliceToName[T any](s []T) string {
 }
 
 func copyAndSort(data []int) []int {
+	if data == nil {
+		return nil
+	}
 	sorted := make([]int, len(data))
 	copy(sorted, data)
 	sort.Ints(sorted)

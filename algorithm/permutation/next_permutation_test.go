@@ -16,55 +16,235 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package permutation
+package permutation_test
 
 import (
-	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 	"testing"
+
+	"github.com/donyori/gogo/algorithm/permutation"
+	"github.com/donyori/gogo/function/compare"
 )
 
-func TestNextPermutation(t *testing.T) {
-	ps := [][4]int{
-		{0, 1, 1, 3},
-		{0, 1, 3, 1},
-		{0, 3, 1, 1},
-		{1, 0, 1, 3},
-		{1, 0, 3, 1},
-		{1, 1, 0, 3},
-		{1, 1, 3, 0},
-		{1, 3, 0, 1},
-		{1, 3, 1, 0},
-		{3, 0, 1, 1},
-		{3, 1, 0, 1},
-		{3, 1, 1, 0},
+var dataList = [][][]int{
+	{
+		nil,
+	},
+	{
+		{},
+	},
+	{
+		{0},
+	},
+	{
+		{0, 0},
+	},
+	{
+		{0, 1},
+		{1, 0},
+	},
+	{
+		{0, 0, 0},
+	},
+	{
+		{0, 0, 1},
+		{0, 1, 0},
+		{1, 0, 0},
+	},
+	{
+		{0, 1, 1},
+		{1, 0, 1},
+		{1, 1, 0},
+	},
+	{
+		{0, 1, 2},
+		{0, 2, 1},
+		{1, 0, 2},
+		{1, 2, 0},
+		{2, 0, 1},
+		{2, 1, 0},
+	},
+	{
+		{0, 0, 0, 0},
+	},
+	{
+		{0, 0, 0, 1},
+		{0, 0, 1, 0},
+		{0, 1, 0, 0},
+		{1, 0, 0, 0},
+	},
+	{
+		{0, 0, 1, 1},
+		{0, 1, 0, 1},
+		{0, 1, 1, 0},
+		{1, 0, 0, 1},
+		{1, 0, 1, 0},
+		{1, 1, 0, 0},
+	},
+	{
+		{0, 1, 1, 1},
+		{1, 0, 1, 1},
+		{1, 1, 0, 1},
+		{1, 1, 1, 0},
+	},
+	{
+		{0, 0, 1, 2},
+		{0, 0, 2, 1},
+		{0, 1, 0, 2},
+		{0, 1, 2, 0},
+		{0, 2, 0, 1},
+		{0, 2, 1, 0},
+		{1, 0, 0, 2},
+		{1, 0, 2, 0},
+		{1, 2, 0, 0},
+		{2, 0, 0, 1},
+		{2, 0, 1, 0},
+		{2, 1, 0, 0},
+	},
+	{
+		{0, 1, 1, 2},
+		{0, 1, 2, 1},
+		{0, 2, 1, 1},
+		{1, 0, 1, 2},
+		{1, 0, 2, 1},
+		{1, 1, 0, 2},
+		{1, 1, 2, 0},
+		{1, 2, 0, 1},
+		{1, 2, 1, 0},
+		{2, 0, 1, 1},
+		{2, 1, 0, 1},
+		{2, 1, 1, 0},
+	},
+	{
+		{0, 1, 2, 2},
+		{0, 2, 1, 2},
+		{0, 2, 2, 1},
+		{1, 0, 2, 2},
+		{1, 2, 0, 2},
+		{1, 2, 2, 0},
+		{2, 0, 1, 2},
+		{2, 0, 2, 1},
+		{2, 1, 0, 2},
+		{2, 1, 2, 0},
+		{2, 2, 0, 1},
+		{2, 2, 1, 0},
+	},
+	{
+		{0, 1, 2, 3},
+		{0, 1, 3, 2},
+		{0, 2, 1, 3},
+		{0, 2, 3, 1},
+		{0, 3, 1, 2},
+		{0, 3, 2, 1},
+		{1, 0, 2, 3},
+		{1, 0, 3, 2},
+		{1, 2, 0, 3},
+		{1, 2, 3, 0},
+		{1, 3, 0, 2},
+		{1, 3, 2, 0},
+		{2, 0, 1, 3},
+		{2, 0, 3, 1},
+		{2, 1, 0, 3},
+		{2, 1, 3, 0},
+		{2, 3, 0, 1},
+		{2, 3, 1, 0},
+		{3, 0, 1, 2},
+		{3, 0, 2, 1},
+		{3, 1, 0, 2},
+		{3, 1, 2, 0},
+		{3, 2, 0, 1},
+		{3, 2, 1, 0},
+	},
+}
+
+// MaxItem is the maximum of items in dataList.
+const MaxItem int = 3
+
+var alphabet = [MaxItem + 1]string{"0", "1", "2", "3"}
+
+func init() {
+	// Check that MaxItem and alphabet are valid.
+	var max int
+	for _, ps := range dataList {
+		for _, data := range ps {
+			for _, x := range data {
+				if x > max {
+					max = x
+				}
+			}
+		}
 	}
-	for i := 0; i < len(ps)-1; i++ {
-		p := ps[i]
-		t.Run(fmt.Sprintf("p=%v", p), func(t *testing.T) {
-			itf := sort.IntSlice(p[:])
-			if more := NextPermutation(itf); !more {
-				t.Fatal("return false before exhausted")
-			}
-			if p != ps[i+1] {
-				t.Errorf("got %v; want %v", p, ps[i+1])
-			}
+	if max != MaxItem {
+		panic("MaxItem needs to be updated")
+	}
+	for i := range alphabet {
+		if s := strconv.Itoa(i); alphabet[i] != s {
+			panic("alphabet[" + s + "] needs to be updated")
+		}
+	}
+}
+
+type testCase struct {
+	data, wantData []int
+	wantMore       bool
+}
+
+func TestNextPermutation(t *testing.T) {
+	var testCases []testCase
+	for _, ps := range dataList {
+		for i := 0; i < len(ps)-1; i++ {
+			testCases = append(testCases, testCase{
+				data:     ps[i],
+				wantData: ps[i+1],
+				wantMore: true,
+			})
+		}
+		testCases = append(testCases, testCase{
+			data:     ps[len(ps)-1],
+			wantData: ps[len(ps)-1],
 		})
 	}
 
-	final := ps[len(ps)-1]
-	falseCases := []sort.IntSlice{final[:], nil, {}, {1}}
-	for _, itf := range falseCases {
-		var name string
-		if itf != nil {
-			name = fmt.Sprintf("false case?p=%v", itf)
-		} else {
-			name = "false case?p=<nil>"
-		}
-		t.Run(name, func(t *testing.T) {
-			if more := NextPermutation(itf); more {
-				t.Error("return true")
+	for _, tc := range testCases {
+		t.Run("data="+dataToName(tc.data), func(t *testing.T) {
+			var data []int
+			if tc.data != nil {
+				data = make([]int, len(tc.data))
+				copy(data, tc.data)
+			}
+			itf := sort.IntSlice(data)
+			if more := permutation.NextPermutation(itf); more != tc.wantMore {
+				t.Errorf("return value: got %t; want %t", more, tc.wantMore)
+			}
+			if dataUnequal(data, tc.wantData) {
+				t.Errorf("permutation: got %v; want %v", data, tc.wantData)
 			}
 		})
 	}
+}
+
+func dataToName(data []int) string {
+	if data == nil {
+		return "<nil>"
+	}
+	var b strings.Builder
+	b.Grow(len(data)*2 + 2)
+	b.WriteByte('[')
+	for i := range data {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(alphabet[data[i]])
+	}
+	b.WriteByte(']')
+	return b.String()
+}
+
+func dataUnequal(a, b []int) bool {
+	if a == nil {
+		return b != nil
+	}
+	return b == nil || !compare.ComparableSliceEqual(a, b)
 }

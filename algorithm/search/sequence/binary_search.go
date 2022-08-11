@@ -79,7 +79,7 @@ type BinarySearchInterface[Item any] interface {
 //
 // goal is only used to call the method SetGoal of itf.
 // It's OK to handle goal in your implementation of BinarySearchInterface,
-// and set goal to an arbitrary value, such as nil.
+// and set goal to an arbitrary value, such as a zero value.
 //
 // Time complexity: O(log n + m), where n = itf.Len(),
 // m is the number of items that let itf.Cmp return (0, false).
@@ -100,15 +100,22 @@ func BinarySearch[Item any](itf BinarySearchInterface[Item], goal Item) int {
 			if isGoal {
 				return mid
 			}
-			for i := mid - 1; i >= low && cmp == 0; i-- {
+			for i := mid - 1; i >= low; i-- {
 				cmp, isGoal = itf.Cmp(i)
+				// check cmp before isGoal as isGoal is only valid when cmp == 0
+				if cmp != 0 {
+					break
+				}
 				if isGoal {
 					return i
 				}
 			}
-			cmp = 0 // restore cmp to f(mid)
-			for i := mid + 1; i < high && cmp == 0; i++ {
+			for i := mid + 1; i < high; i++ {
 				cmp, isGoal = itf.Cmp(i)
+				// check cmp before isGoal as isGoal is only valid when cmp == 0
+				if cmp != 0 {
+					break
+				}
 				if isGoal {
 					return i
 				}
@@ -139,7 +146,7 @@ func BinarySearch[Item any](itf BinarySearchInterface[Item], goal Item) int {
 //
 // goal is only used to call the method SetGoal of itf.
 // It's OK to handle goal in your implementation of BinarySearchInterface,
-// and set goal to an arbitrary value, such as nil.
+// and set goal to an arbitrary value, such as a zero value.
 //
 // Time complexity: O(log n), where n = itf.Len().
 func BinarySearchMaxLess[Item any](itf BinarySearchInterface[Item], goal Item) int {
@@ -179,7 +186,7 @@ func BinarySearchMaxLess[Item any](itf BinarySearchInterface[Item], goal Item) i
 //
 // goal is only used to call the method SetGoal of itf.
 // It's OK to handle goal in your implementation of BinarySearchInterface,
-// and set goal to an arbitrary value, such as nil.
+// and set goal to an arbitrary value, such as a zero value.
 //
 // Time complexity: O(log n), where n = itf.Len().
 func BinarySearchMinGreater[Item any](itf BinarySearchInterface[Item], goal Item) int {
