@@ -16,143 +16,263 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package sequence
+package sequence_test
 
 import (
 	"fmt"
+	"sort"
+	"strconv"
+	"strings"
 	"testing"
 
-	"github.com/donyori/gogo/container/sequence"
-	"github.com/donyori/gogo/function/compare"
+	"github.com/donyori/gogo/algorithm/search/sequence"
+	"github.com/donyori/gogo/container/sequence/array"
 )
 
+type idValue struct {
+	id    string
+	value int
+}
+
+func (iv *idValue) String() string {
+	if iv == nil {
+		return "<nil>"
+	}
+	return iv.id
+}
+
+func idValueLess(a, b *idValue) bool {
+	if a == nil {
+		return b != nil
+	}
+	return b != nil && a.value < b.value
+}
+
+func idValueEqual(a, b *idValue) bool {
+	if a == nil {
+		return b == nil
+	}
+	return b != nil && a.id == b.id
+}
+
+func idValueSortLess(a, b *idValue) bool {
+	if a == nil {
+		return b != nil
+	}
+	if b == nil {
+		return false
+	}
+	if a.value != b.value {
+		return a.value < b.value
+	}
+	return a.id < b.id
+}
+
+const MaxValue int = 6                // The range of values in dataList is {0, 1, 2, 3, 4, 5, 6}.
+const BaseLength = (MaxValue+1)*3 + 1 // Each value is repeated 3 times, and finally, a nil *idValue is appended.
+const MaxCopy int = 3
+
+// These variables will be set in function init.
+var (
+	valueCounter map[int]int
+	dataList     [][]*idValue
+)
+
+var acceptNotFound = map[int]bool{-1: true}
+
+func init() {
+	valueCounter = make(map[int]int, MaxValue+1)
+	base := make([]*idValue, BaseLength)
+	for i := 0; i < BaseLength-1; i++ {
+		v := i % (MaxValue + 1)
+		ctr := valueCounter[v]
+		valueCounter[v] = ctr + 1
+		base[i] = &idValue{id: fmt.Sprintf("%d-%d", v, ctr), value: v}
+	}
+	// base[BaseLength-1] is nil
+	dataList = make([][]*idValue, BaseLength*MaxCopy+2)
+	// dataList[0] is nil
+	dataList[1] = []*idValue{}
+	idx := 2
+	for length := 1; length <= BaseLength; length++ {
+		for numCopy := 1; numCopy <= MaxCopy; numCopy++ {
+			data := make([]*idValue, length*numCopy)
+			var copied int
+			for copied < len(data) {
+				copied += copy(data[copied:], base[:length])
+			}
+			if len(data) > 1 {
+				sort.Slice(data, func(i, j int) bool {
+					return idValueSortLess(data[i], data[j])
+				})
+			}
+			dataList[idx], idx = data, idx+1
+		}
+	}
+}
+
+type testCase[AcceptType int | map[int]bool] struct {
+	data   []*idValue
+	goal   *idValue
+	accept AcceptType
+}
+
 func TestBinarySearch(t *testing.T) {
-	data1 := []int{0, 0, 1, 3, 3, 4, 5, 7, 7, 7, 9, 9}
-	negativeSamples1 := []int{-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	testBinarySearch(t, data1, negativeSamples1)
-	data2 := []int{1, 1, 1, 1}
-	negativeSamples2 := []int{-1, 0, 1, 2, 3}
-	testBinarySearch(t, data2, negativeSamples2)
+	var testCases []testCase[map[int]bool]
+	for _, data := range dataList {
+		for _, goal := range data {
+			accept := make(map[int]bool, 3)
+			for i, x := range data {
+				if idValueEqual(x, goal) {
+					accept[i] = true
+				}
+			}
+			testCases = append(testCases, testCase[map[int]bool]{
+				data:   data,
+				goal:   goal,
+				accept: accept,
+			})
+		}
+		for v := -2; v <= MaxValue+2; v++ {
+			testCases = append(testCases, testCase[map[int]bool]{
+				data: data,
+				goal: &idValue{
+					id:    fmt.Sprintf("%d-%d", v, valueCounter[v]),
+					value: v,
+				},
+				accept: acceptNotFound,
+			})
+		}
+	}
+
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("case %d?data=%s&goal=%v",
+			i, dataToName(tc.data), tc.goal), func(t *testing.T) {
+			itf := sequence.WrapArrayLessEqual[*idValue](
+				array.SliceDynamicArray[*idValue](tc.data), idValueLess, idValueEqual)
+			if idx := sequence.BinarySearch(itf, tc.goal); !tc.accept[idx] {
+				t.Errorf("got %d; accept %s", idx, acceptSetString(tc.accept))
+			}
+		})
+	}
 }
 
 func TestBinarySearchMaxLess(t *testing.T) {
-	data := sequence.GeneralDynamicArray{1, 1, 1, 2, 2, 2, 4, 4, 4}
-	itf := &BinarySearchArrayAdapter{
-		Data:    data,
-		EqualFn: compare.Equal,
-		LessFn:  compare.IntLess,
-	}
-	testCases := []struct {
-		goal int
-		want int
-	}{
-		{0, -1},
-		{1, -1},
-		{2, 2},
-		{3, 5},
-		{4, 5},
-		{5, 8},
+	var testCases []testCase[int]
+	for _, data := range dataList {
+		for _, goal := range data {
+			want := -1
+			for i := 0; i < len(data) && idValueLess(data[i], goal); i++ {
+				want = i
+			}
+			testCases = append(testCases, testCase[int]{
+				data:   data,
+				goal:   goal,
+				accept: want,
+			})
+		}
+		for v := -2; v <= MaxValue+2; v++ {
+			goal := &idValue{
+				id:    fmt.Sprintf("%d-%d", v, valueCounter[v]),
+				value: v,
+			}
+			want := -1
+			for i := 0; i < len(data) && idValueLess(data[i], goal); i++ {
+				want = i
+			}
+			testCases = append(testCases, testCase[int]{
+				data:   data,
+				goal:   goal,
+				accept: want,
+			})
+		}
 	}
 
-	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("goal=%d", tc.goal), func(t *testing.T) {
-			if idx := BinarySearchMaxLess(itf, tc.goal); idx != tc.want {
-				t.Errorf("got %d; want %d", idx, tc.want)
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("case %d?data=%s&goal=%v",
+			i, dataToName(tc.data), tc.goal), func(t *testing.T) {
+			itf := sequence.WrapArrayLessEqual[*idValue](
+				array.SliceDynamicArray[*idValue](tc.data), idValueLess, idValueEqual)
+			if idx := sequence.BinarySearchMaxLess(itf, tc.goal); idx != tc.accept {
+				t.Errorf("got %d; want %d", idx, tc.accept)
 			}
 		})
 	}
 }
 
 func TestBinarySearchMinGreater(t *testing.T) {
-	data := sequence.GeneralDynamicArray{1, 1, 1, 2, 2, 2, 4, 4, 4}
-	itf := &BinarySearchArrayAdapter{
-		Data:    data,
-		EqualFn: compare.Equal,
-		LessFn:  compare.IntLess,
-	}
-	testCases := []struct {
-		goal int
-		want int
-	}{
-		{0, 0},
-		{1, 3},
-		{2, 6},
-		{3, 6},
-		{4, -1},
-		{5, -1},
+	var testCases []testCase[int]
+	for _, data := range dataList {
+		for _, goal := range data {
+			want := -1
+			for i := len(data) - 1; i >= 0 && idValueLess(goal, data[i]); i-- {
+				want = i
+			}
+			testCases = append(testCases, testCase[int]{
+				data:   data,
+				goal:   goal,
+				accept: want,
+			})
+		}
+		for v := -2; v <= MaxValue+2; v++ {
+			goal := &idValue{
+				id:    fmt.Sprintf("%d-%d", v, valueCounter[v]),
+				value: v,
+			}
+			want := -1
+			for i := len(data) - 1; i >= 0 && idValueLess(goal, data[i]); i-- {
+				want = i
+			}
+			testCases = append(testCases, testCase[int]{
+				data:   data,
+				goal:   goal,
+				accept: want,
+			})
+		}
 	}
 
-	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("goal=%d", tc.goal), func(t *testing.T) {
-			if idx := BinarySearchMinGreater(itf, tc.goal); idx != tc.want {
-				t.Errorf("got %d; want %d", idx, tc.want)
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("case %d?data=%s&goal=%v",
+			i, dataToName(tc.data), tc.goal), func(t *testing.T) {
+			itf := sequence.WrapArrayLessEqual[*idValue](
+				array.SliceDynamicArray[*idValue](tc.data), idValueLess, idValueEqual)
+			if idx := sequence.BinarySearchMinGreater(itf, tc.goal); idx != tc.accept {
+				t.Errorf("got %d; want %d", idx, tc.accept)
 			}
 		})
 	}
 }
 
-func testBinarySearch(t *testing.T, data, negativeSamples []int) {
-	s := make(sequence.GeneralDynamicArray, len(data))
-	for i, n := 0, len(data); i < n; i++ {
-		s[i] = &data[i]
+func acceptSetString(acceptSet map[int]bool) string {
+	vs := make([]int, len(acceptSet))
+	var i int
+	for v := range acceptSet {
+		vs[i], i = v, i+1
 	}
-	var less compare.LessFunc = func(a, b interface{}) bool {
-		return *(a.(*int)) < *(b.(*int))
+	sort.Ints(vs)
+	var b strings.Builder
+	b.Grow(len(vs)*3 + 2)
+	b.WriteByte('[')
+	for i, v := range vs {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(strconv.Itoa(v))
 	}
-	itf1 := &BinarySearchArrayAdapter{
-		Data:    s,
-		EqualFn: compare.Equal,
-		LessFn:  less,
-	}
-	itf2 := &BinarySearchArrayAdapter{
-		Data:    s,
-		EqualFn: less.ToEqual(),
-		LessFn:  less,
-	}
+	b.WriteByte(']')
+	return b.String()
+}
 
-	t.Run(fmt.Sprintf("data=%v", data), func(t *testing.T) {
-		for i, goal := range s {
-			value := *(goal.(*int))
-			t.Run(fmt.Sprintf("goal=<index=%d&value=%d>", i, value), func(t *testing.T) {
-				t.Run("equalFn=compare.Equal", func(t *testing.T) {
-					if idx := BinarySearch(itf1, goal); idx != i {
-						t.Errorf("got %d; want %d", idx, i)
-					}
-				})
-				t.Run("equalFn=less.ToEqual()", func(t *testing.T) {
-					if idx := BinarySearch(itf2, goal); value != data[idx] {
-						t.Errorf("got %d (value %d)", idx, data[idx])
-					}
-				})
-			})
+func dataToName(data []*idValue) string {
+	var b strings.Builder
+	b.Grow(len(data)*5 + 2)
+	b.WriteByte('[')
+	for i, x := range data {
+		if i > 0 {
+			b.WriteByte(',')
 		}
-		for i, value := range negativeSamples {
-			goal := &value
-			t.Run(fmt.Sprintf("goal=<index=%d&value=%d&isNegativeSample>", i, value), func(t *testing.T) {
-				t.Run("equalFn=compare.Equal", func(t *testing.T) {
-					if idx := BinarySearch(itf1, goal); idx != -1 {
-						t.Errorf("got %d; want -1", idx)
-					}
-				})
-				t.Run("equalFn=less.ToEqual()", func(t *testing.T) {
-					idx := BinarySearch(itf2, goal)
-					if idx == -1 {
-						var wantList []int
-						for j := range data {
-							if data[j] == value {
-								wantList = append(wantList, j)
-							}
-						}
-						if len(wantList) == 1 {
-							t.Errorf("got -1; want %d", wantList[0])
-						} else if len(wantList) > 1 {
-							t.Errorf("got -1; want anyone of %v", wantList)
-						}
-					} else if value != data[idx] {
-						t.Errorf("got %d (value %d)", idx, data[idx])
-					}
-				})
-			})
-		}
-	})
+		b.WriteString(x.String())
+	}
+	b.WriteByte(']')
+	return b.String()
 }
