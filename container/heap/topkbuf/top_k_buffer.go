@@ -26,7 +26,7 @@ import (
 	"github.com/donyori/gogo/function/compare"
 )
 
-// TopKBuffer is a buffer for storing the top-K largest items.
+// TopKBuffer is a buffer for storing the top-K greatest items.
 type TopKBuffer[Item any] interface {
 	// K returns the parameter K,
 	// which limits the maximum number of items the buffer can hold.
@@ -60,7 +60,7 @@ type topKBuffer[Item any] struct {
 }
 
 // NewTopKBuffer creates a new TopKBuffer with the parameter k.
-// The buffer will hold the top-k largest items.
+// The buffer will hold the top-k greatest items.
 //
 // lessFn is a function to report whether a < b.
 // It must describe a transitive ordering:

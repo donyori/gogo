@@ -57,8 +57,8 @@ type OrderedArray[Item any] interface {
 	// the item with index j.
 	//
 	// Less must describe a transitive ordering:
-	//  - if both Less(i, j) and Less(j, k) are true, then Less(i, k) must be true as well.
-	//  - if both Less(i, j) and Less(j, k) are false, then Less(i, k) must be false as well.
+	//   - if both Less(i, j) and Less(j, k) are true, then Less(i, k) must be true as well.
+	//   - if both Less(i, j) and Less(j, k) are false, then Less(i, k) must be false as well.
 	//
 	// Note that floating-point comparison
 	// (the < operator on float32 or float64 values)

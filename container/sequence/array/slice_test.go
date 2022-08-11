@@ -915,7 +915,7 @@ func sliceToName[T any](s []T) string {
 		return typeStr + "<nil>"
 	}
 	var b strings.Builder
-	b.Grow(len(typeStr) + (len(s)+1)*2)
+	b.Grow(len(typeStr) + len(s)*3 + 2)
 	b.WriteString(typeStr)
 	b.WriteByte('[')
 	for i, x := range s {
@@ -934,7 +934,7 @@ func sequenceToName[Item any](s sequence.Sequence[Item]) string {
 		return typeStr + "<nil>"
 	}
 	var b strings.Builder
-	b.Grow(len(typeStr) + (s.Len()+1)*2)
+	b.Grow(len(typeStr) + s.Len()*3 + 2)
 	b.WriteString(typeStr)
 	b.WriteByte('[')
 	var notFirst bool

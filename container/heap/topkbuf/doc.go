@@ -17,7 +17,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Package topkbuf provides OOP-style buffers for
-// storing the top-K largest items.
+// storing the top-K greatest items.
 //
 // For better performance, all functions in this package are unsafe
 // for concurrency unless otherwise specified.

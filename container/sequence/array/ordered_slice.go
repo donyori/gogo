@@ -37,8 +37,8 @@ type sliceLess[Item any] struct {
 // github.com/donyori/gogo/function/compare.LessFunc to an OrderedDynamicArray.
 //
 // The specified LessFunc must describe a transitive ordering:
-//   - if both lessFn(i, j) and lessFn(j, k) are true, then lessFn(i, k) must be true as well.
-//   - if both lessFn(i, j) and lessFn(j, k) are false, then lessFn(i, k) must be false as well.
+//   - if both lessFn(a, b) and lessFn(b, c) are true, then lessFn(a, c) must be true as well.
+//   - if both lessFn(a, b) and lessFn(b, c) are false, then lessFn(a, c) must be false as well.
 //
 // Note that floating-point comparison
 // (the < operator on float32 or float64 values)
