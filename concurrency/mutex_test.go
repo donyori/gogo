@@ -91,7 +91,7 @@ func TestMutex_UnlockOfUnlockedMutex(t *testing.T) {
 			t.Error(e)
 		}
 	}()
-	concurrency.NewMutex().Unlock() // want to panic here
+	concurrency.NewMutex().Unlock() // want panic here
 	t.Error("no panic when calling Unlock of an unlocked mutex")
 }
 
@@ -104,7 +104,7 @@ func TestMutex_UnlockTwice(t *testing.T) {
 	m := concurrency.NewMutex()
 	m.Lock()
 	m.Unlock()
-	m.Unlock() // want to panic here
+	m.Unlock() // want panic here
 	t.Error("no panic when calling Unlock twice")
 }
 

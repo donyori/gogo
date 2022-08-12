@@ -272,7 +272,7 @@ func checkPriorityQueueByDequeue[Item comparable](t *testing.T,
 			t.Error(e)
 		}
 	}()
-	x := pqb.Dequeue() // want to panic here
+	x := pqb.Dequeue() // want panic here
 	t.Errorf("dequeued more than %d items, got %v", i, x)
 }
 

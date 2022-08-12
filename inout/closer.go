@@ -180,7 +180,7 @@ type MultiCloser interface {
 
 	// CloserClosed reports whether the specified closer is closed successfully.
 	//
-	// It returns two Boolean indicators:
+	// It returns two boolean indicators:
 	// closed reports whether the specified closer
 	// has been successfully closed by this MultiCloser.
 	// ok reports whether the specified closer is in this MultiCloser.
@@ -300,7 +300,7 @@ func (mc *multiCloser) Closed() bool {
 
 // CloserClosed reports whether the specified closer is closed successfully.
 //
-// It returns two Boolean indicators:
+// It returns two boolean indicators:
 // closed reports whether the specified closer
 // has been successfully closed by this MultiCloser.
 // ok reports whether the specified closer is in this MultiCloser.

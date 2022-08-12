@@ -100,7 +100,7 @@ func TestBroadcaster_Broadcast(t *testing.T) {
 			}
 		}
 	}()
-	bcast.Broadcast(0)
+	bcast.Broadcast(0) // want panic here
 	t.Error("no panic when calling Broadcast after the broadcaster closed")
 }
 
@@ -183,7 +183,7 @@ func TestBroadcaster_Unsubscribe_IllegalC(t *testing.T) {
 			}
 		}
 	}()
-	bcast.Unsubscribe(make(chan int))
+	bcast.Unsubscribe(make(chan int)) // want panic here
 	t.Error("no panic when calling Unsubscribe with a channel not assigned by the broadcaster")
 }
 
