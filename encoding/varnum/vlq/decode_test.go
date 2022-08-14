@@ -18,6 +18,8 @@
 
 package vlq
 
+// This file indirectly requires the unexported variable: minUint64s.
+
 import (
 	"errors"
 	"fmt"
@@ -28,18 +30,18 @@ import (
 )
 
 func TestDecodeUint64(t *testing.T) {
-	for i, src := range testEncodedUint64s {
+	for i, src := range encodedUint64s {
 		t.Run(fmt.Sprintf("src=%X", src), func(t *testing.T) {
 			u, err := DecodeUint64(src)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if u != testUint64s[i] {
-				t.Errorf("got %#X; want %#X", u, testUint64s[i])
+			if u != uint64s[i] {
+				t.Errorf("got %#X; want %#X", u, uint64s[i])
 			}
 		})
 	}
-	for _, src := range testIncompleteSrcs {
+	for _, src := range incompleteSrcs {
 		var name string
 		if len(src) == 0 {
 			if src == nil {
@@ -57,7 +59,7 @@ func TestDecodeUint64(t *testing.T) {
 			}
 		})
 	}
-	for _, src := range testTooLargeSrcs {
+	for _, src := range tooLargeSrcs {
 		t.Run(fmt.Sprintf("src=%X(TooLarge)", src), func(t *testing.T) {
 			u, err := DecodeUint64(src)
 			if !errors.Is(err, ErrSrcTooLarge) {
@@ -68,13 +70,13 @@ func TestDecodeUint64(t *testing.T) {
 }
 
 func TestDecodeInt64(t *testing.T) {
-	for i, src := range testEncodedUint64s {
+	for i, src := range encodedUint64s {
 		t.Run(fmt.Sprintf("src=%X", src), func(t *testing.T) {
 			x, err := DecodeInt64(src)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if want := uintconv.ToInt64Zigzag(testUint64s[i]); x != want {
+			if want := uintconv.ToInt64Zigzag(uint64s[i]); x != want {
 				t.Errorf("got %#X; want %#X", x, want)
 			}
 		})
@@ -82,13 +84,13 @@ func TestDecodeInt64(t *testing.T) {
 }
 
 func TestDecodeFloat64(t *testing.T) {
-	for i, src := range testEncodedUint64s {
+	for i, src := range encodedUint64s {
 		t.Run(fmt.Sprintf("src=%X", src), func(t *testing.T) {
 			f, err := DecodeFloat64(src)
 			if err != nil {
 				t.Fatal(err)
 			}
-			want := uintconv.ToFloat64ByteReversal(testUint64s[i])
+			want := uintconv.ToFloat64ByteReversal(uint64s[i])
 			if math.IsNaN(want) {
 				if !math.IsNaN(f) {
 					t.Errorf("got %f; want NaN", f)

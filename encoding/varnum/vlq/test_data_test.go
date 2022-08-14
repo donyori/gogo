@@ -18,14 +18,16 @@
 
 package vlq
 
+// This file requires the unexported variable: minUint64s.
+
 import "math"
 
 var (
-	testUint64s        []uint64
-	testEncodedUint64s [][]byte
+	uint64s        []uint64
+	encodedUint64s [][]byte
 
-	testIncompleteSrcs = [][]byte{nil, {}, {0x80, 0x81}}
-	testTooLargeSrcs   = [][]byte{
+	incompleteSrcs = [][]byte{nil, {}, {0x80, 0x81}}
+	tooLargeSrcs   = [][]byte{
 		{0x80, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFF, 0},
 		{0xFF, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0x7F},
 		{0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0},
@@ -34,20 +36,20 @@ var (
 )
 
 func init() {
-	testUint64s = make([]uint64, 53)
-	testUint64s[1], testUint64s[2], testUint64s[3], testUint64s[4] = 1, 7, 8, 9
+	uint64s = make([]uint64, 53)
+	uint64s[1], uint64s[2], uint64s[3], uint64s[4] = 1, 7, 8, 9
 	for i, x := range minUint64s {
-		testUint64s[5+i*5] = x - 2
-		testUint64s[6+i*5] = x - 1
-		testUint64s[7+i*5] = x
-		testUint64s[8+i*5] = x + 1
-		testUint64s[9+i*5] = x + 2
+		uint64s[5+i*5] = x - 2
+		uint64s[6+i*5] = x - 1
+		uint64s[7+i*5] = x
+		uint64s[8+i*5] = x + 1
+		uint64s[9+i*5] = x + 2
 	}
-	testUint64s[50], testUint64s[51], testUint64s[52] = math.MaxUint64-2, math.MaxUint64-1, math.MaxUint64
+	uint64s[50], uint64s[51], uint64s[52] = math.MaxUint64-2, math.MaxUint64-1, math.MaxUint64
 
-	testEncodedUint64s = make([][]byte, 53)
+	encodedUint64s = make([][]byte, 53)
 	for i := 0; i < 7; i++ {
-		testEncodedUint64s[i] = []byte{byte(testUint64s[i])}
+		encodedUint64s[i] = []byte{byte(uint64s[i])}
 	}
 	for i := 1; i <= len(minUint64s); i++ {
 		for k, lastByte := range []byte{0, 1, 2, 0x7E, 0x7F} {
@@ -55,18 +57,18 @@ func init() {
 			if idx >= 50 {
 				break
 			}
-			testEncodedUint64s[idx] = make([]byte, i+1)
+			encodedUint64s[idx] = make([]byte, i+1)
 			for j := 0; j < i; j++ {
 				if k < 3 {
-					testEncodedUint64s[idx][j] = 0x80
+					encodedUint64s[idx][j] = 0x80
 				} else {
-					testEncodedUint64s[idx][j] = 0xFF
+					encodedUint64s[idx][j] = 0xFF
 				}
 			}
-			testEncodedUint64s[idx][i] = lastByte
+			encodedUint64s[idx][i] = lastByte
 		}
 	}
-	testEncodedUint64s[50] = []byte{0x80, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0x7D}
-	testEncodedUint64s[51] = []byte{0x80, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0x7E}
-	testEncodedUint64s[52] = []byte{0x80, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0x7F}
+	encodedUint64s[50] = []byte{0x80, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0x7D}
+	encodedUint64s[51] = []byte{0x80, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0x7E}
+	encodedUint64s[52] = []byte{0x80, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0x7F}
 }

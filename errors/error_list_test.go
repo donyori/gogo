@@ -18,6 +18,8 @@
 
 package errors
 
+// This file requires the unexported type: errorList.
+
 import (
 	stderrors "errors"
 	"fmt"

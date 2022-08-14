@@ -153,7 +153,8 @@ func testMultiCloser(t *testing.T, tryAll, noError bool) {
 	})
 }
 
-func testMultiCloserOneCall(t *testing.T, tryAll, noError bool, failErr error, closers []io.Closer, anotherCloser io.Closer, mc inout.MultiCloser, callNo int) {
+func testMultiCloserOneCall(t *testing.T, tryAll, noError bool, failErr error,
+	closers []io.Closer, anotherCloser io.Closer, mc inout.MultiCloser, callNo int) {
 	t.Run(fmt.Sprintf("callNo=%d", callNo), func(t *testing.T) {
 		err := mc.Close()
 		var wantedErr error

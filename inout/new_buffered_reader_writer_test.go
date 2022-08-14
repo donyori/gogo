@@ -18,6 +18,9 @@
 
 package inout
 
+// This file requires the unexported variables: minReadBufferSize and defaultBufferSize,
+// and the unexported type: resettableBufferedReader.
+
 import (
 	"bufio"
 	"bytes"

@@ -18,6 +18,8 @@
 
 package vlq
 
+// This file requires the unexported variable: minUint64s.
+
 import (
 	"bytes"
 	"fmt"
@@ -27,10 +29,10 @@ import (
 )
 
 func TestUint64EncodedLen(t *testing.T) {
-	for i, u := range testUint64s {
+	for i, u := range uint64s {
 		t.Run(fmt.Sprintf("u=%#X", u), func(t *testing.T) {
-			if n := Uint64EncodedLen(u); n != len(testEncodedUint64s[i]) {
-				t.Errorf("got %d; want %d", n, len(testEncodedUint64s[i]))
+			if n := Uint64EncodedLen(u); n != len(encodedUint64s[i]) {
+				t.Errorf("got %d; want %d", n, len(encodedUint64s[i]))
 			}
 		})
 	}
@@ -65,7 +67,7 @@ func BenchmarkUint64EncodedLen(b *testing.B) {
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				for _, u := range testUint64s {
+				for _, u := range uint64s {
 					bm.f(u)
 				}
 			}
@@ -74,60 +76,60 @@ func BenchmarkUint64EncodedLen(b *testing.B) {
 }
 
 func TestEncodeUint64(t *testing.T) {
-	for i, u := range testUint64s {
+	for i, u := range uint64s {
 		t.Run(fmt.Sprintf("u=%#X", u), func(t *testing.T) {
 			dst := make([]byte, 10)
 			n := EncodeUint64(dst, u)
-			if !bytes.Equal(dst[:n], testEncodedUint64s[i]) {
-				t.Errorf("got %X; want %X", dst[:n], testEncodedUint64s[i])
+			if !bytes.Equal(dst[:n], encodedUint64s[i]) {
+				t.Errorf("got %X; want %X", dst[:n], encodedUint64s[i])
 			}
 		})
 	}
 }
 
 func TestInt64EncodedLen(t *testing.T) {
-	for i, u := range testUint64s {
+	for i, u := range uint64s {
 		x := uintconv.ToInt64Zigzag(u)
 		t.Run(fmt.Sprintf("i=%#X", x), func(t *testing.T) {
-			if n := Int64EncodedLen(x); n != len(testEncodedUint64s[i]) {
-				t.Errorf("got %d; want %d", n, len(testEncodedUint64s[i]))
+			if n := Int64EncodedLen(x); n != len(encodedUint64s[i]) {
+				t.Errorf("got %d; want %d", n, len(encodedUint64s[i]))
 			}
 		})
 	}
 }
 
 func TestEncodeInt64(t *testing.T) {
-	for i, u := range testUint64s {
+	for i, u := range uint64s {
 		x := uintconv.ToInt64Zigzag(u)
 		t.Run(fmt.Sprintf("i=%#X", x), func(t *testing.T) {
 			dst := make([]byte, 10)
 			n := EncodeInt64(dst, x)
-			if !bytes.Equal(dst[:n], testEncodedUint64s[i]) {
-				t.Errorf("got %X; want %X", dst[:n], testEncodedUint64s[i])
+			if !bytes.Equal(dst[:n], encodedUint64s[i]) {
+				t.Errorf("got %X; want %X", dst[:n], encodedUint64s[i])
 			}
 		})
 	}
 }
 
 func TestFloat64EncodedLen(t *testing.T) {
-	for i, u := range testUint64s {
+	for i, u := range uint64s {
 		f := uintconv.ToFloat64ByteReversal(u)
 		t.Run(fmt.Sprintf("f=%f", f), func(t *testing.T) {
-			if n := Float64EncodedLen(f); n != len(testEncodedUint64s[i]) {
-				t.Errorf("got %d; want %d", n, len(testEncodedUint64s[i]))
+			if n := Float64EncodedLen(f); n != len(encodedUint64s[i]) {
+				t.Errorf("got %d; want %d", n, len(encodedUint64s[i]))
 			}
 		})
 	}
 }
 
 func TestEncodeFloat64(t *testing.T) {
-	for i, u := range testUint64s {
+	for i, u := range uint64s {
 		f := uintconv.ToFloat64ByteReversal(u)
 		t.Run(fmt.Sprintf("f=%f", f), func(t *testing.T) {
 			dst := make([]byte, 10)
 			n := EncodeFloat64(dst, f)
-			if !bytes.Equal(dst[:n], testEncodedUint64s[i]) {
-				t.Errorf("got %X; want %X", dst[:n], testEncodedUint64s[i])
+			if !bytes.Equal(dst[:n], encodedUint64s[i]) {
+				t.Errorf("got %X; want %X", dst[:n], encodedUint64s[i])
 			}
 		})
 	}

@@ -16,15 +16,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package uintconv
+package uintconv_test
 
 import (
 	"fmt"
 	"math"
 	"testing"
+
+	"github.com/donyori/gogo/encoding/varnum/uintconv"
 )
 
-var testInt64Uint64ZigzagPairs = []struct {
+var int64Uint64ZigzagPairs = []struct {
 	i int64
 	u uint64
 }{
@@ -39,9 +41,9 @@ var testInt64Uint64ZigzagPairs = []struct {
 }
 
 func TestFromInt64Zigzag(t *testing.T) {
-	for _, pair := range testInt64Uint64ZigzagPairs {
+	for _, pair := range int64Uint64ZigzagPairs {
 		t.Run(fmt.Sprintf("i=%d", pair.i), func(t *testing.T) {
-			if got := FromInt64Zigzag(pair.i); got != pair.u {
+			if got := uintconv.FromInt64Zigzag(pair.i); got != pair.u {
 				t.Errorf("got %d; want %d", got, pair.u)
 			}
 		})
@@ -49,9 +51,9 @@ func TestFromInt64Zigzag(t *testing.T) {
 }
 
 func TestToInt64Zigzag(t *testing.T) {
-	for _, pair := range testInt64Uint64ZigzagPairs {
+	for _, pair := range int64Uint64ZigzagPairs {
 		t.Run(fmt.Sprintf("u=%d", pair.u), func(t *testing.T) {
-			if got := ToInt64Zigzag(pair.u); got != pair.i {
+			if got := uintconv.ToInt64Zigzag(pair.u); got != pair.i {
 				t.Errorf("got %d; want %d", got, pair.i)
 			}
 		})

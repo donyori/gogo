@@ -16,15 +16,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package uintconv
+package uintconv_test
 
 import (
 	"fmt"
 	"math"
 	"testing"
+
+	"github.com/donyori/gogo/encoding/varnum/uintconv"
 )
 
-var testFloat64Uint64ByteReversalPair = []struct {
+var float64Uint64ByteReversalPair = []struct {
 	f float64
 	u uint64
 }{
@@ -51,9 +53,9 @@ var testFloat64Uint64ByteReversalPair = []struct {
 }
 
 func TestFromFloat64ByteReversal(t *testing.T) {
-	for _, pair := range testFloat64Uint64ByteReversalPair {
+	for _, pair := range float64Uint64ByteReversalPair {
 		t.Run(fmt.Sprintf("f=%f", pair.f), func(t *testing.T) {
-			if got := FromFloat64ByteReversal(pair.f); got != pair.u {
+			if got := uintconv.FromFloat64ByteReversal(pair.f); got != pair.u {
 				t.Errorf("got %d; want %d", got, pair.u)
 			}
 		})
@@ -61,9 +63,9 @@ func TestFromFloat64ByteReversal(t *testing.T) {
 }
 
 func TestToFloat64ByteReversal(t *testing.T) {
-	for _, pair := range testFloat64Uint64ByteReversalPair {
+	for _, pair := range float64Uint64ByteReversalPair {
 		t.Run(fmt.Sprintf("u=%d", pair.u), func(t *testing.T) {
-			got := ToFloat64ByteReversal(pair.u)
+			got := uintconv.ToFloat64ByteReversal(pair.u)
 			if math.IsNaN(pair.f) {
 				if !math.IsNaN(got) {
 					t.Errorf("got %f; want NaN", got)
