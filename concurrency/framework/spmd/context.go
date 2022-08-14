@@ -18,56 +18,60 @@
 
 package spmd
 
-import "github.com/donyori/gogo/container/sequence"
+import "github.com/donyori/gogo/container/sequence/array"
 
 // bcastChanCtr is a combination of a channel used in Broadcast and a counter.
-type bcastChanCtr struct {
-	Chan chan interface{}
-	Ctr  int // Counter for the number of remaining uses.
+type bcastChanCtr[Message any] struct {
+	c   chan Message
+	ctr int // Counter for the number of remaining uses.
 }
 
-// scatterChanCtr is a combination of a channel list used in Scatter
-// and a counter.
-type scatterChanCtr struct {
-	Chans []chan sequence.Array
-	Ctr   int // Counter for the number of remaining uses.
+// scatterChanCtr is a combination of a channel list
+// used in Scatter and a counter.
+type scatterChanCtr[Message any] struct {
+	cs  []chan array.Array[Message]
+	ctr int // Counter for the number of remaining uses.
 }
 
 // gatherChanCtr is a combination of a channel used in Gather and a counter.
-type gatherChanCtr struct {
-	Chan chan *sndrMsg
-	Ctr  int // Counter for the number of remaining uses.
+type gatherChanCtr[Message any] struct {
+	c   chan *sndrMsg[Message]
+	ctr int // Counter for the number of remaining uses.
 }
 
 // context is the environment of the communicators.
 // Each goroutine group has its own context.
 // Each communicator belongs to only one group (context).
-type context struct {
-	Id         string           // ID of the group.
-	Ctrl       *controller      // Controller.
-	Comms      []*communicator  // List of communicators.
-	WorldRanks []int            // List of world ranks of the goroutines, corresponding to Comms.
-	PubC       chan *sndrMsgRxc // Public channel used by communicators.
+type context[Message any] struct {
+	id         string                    // ID of the group.
+	ctrl       *controller[Message]      // Controller.
+	comms      []*communicator[Message]  // List of communicators.
+	worldRanks []int                     // List of world ranks of the goroutines, corresponding to comms.
+	pubC       chan *sndrMsgRxc[Message] // Public channel used by communicators.
 
-	BcastMap   map[int64]*bcastChanCtr   // Channel map for Broadcast, maintained by the channel dispatcher, initially nil.
-	ScatterMap map[int64]*scatterChanCtr // Channel list map for Scatter, maintained by the channel dispatcher, initially nil.
-	GatherMap  map[int64]*gatherChanCtr  // Channel map for Gather, maintained by the channel dispatcher, initially nil.
+	bcastMap   map[int64]*bcastChanCtr[Message]   // Channel map for Broadcast, maintained by the channel dispatcher, initially nil.
+	scatterMap map[int64]*scatterChanCtr[Message] // Channel list map for Scatter, maintained by the channel dispatcher, initially nil.
+	gatherMap  map[int64]*gatherChanCtr[Message]  // Channel map for Gather, maintained by the channel dispatcher, initially nil.
 }
 
 // newContext creates a new context.
 // Only for function New.
-func newContext(ctrl *controller, id string, worldRanks []int) *context {
+//
+// The caller (function New) must guarantee that
+// worldRanks is non-nil and non-empty,
+// has no duplicates and no out-of-range items,
+// and cannot be modified by others (such as the caller of function New).
+func newContext[Message any](ctrl *controller[Message], id string, worldRanks []int) *context[Message] {
 	n := len(worldRanks)
-	ctx := &context{
-		Id:         id,
-		Ctrl:       ctrl,
-		Comms:      make([]*communicator, n),
-		WorldRanks: make([]int, n),
-		PubC:       make(chan *sndrMsgRxc),
+	ctx := &context[Message]{
+		id:         id,
+		ctrl:       ctrl,
+		comms:      make([]*communicator[Message], n),
+		worldRanks: worldRanks,
+		pubC:       make(chan *sndrMsgRxc[Message]),
 	}
-	copy(ctx.WorldRanks, worldRanks) // Keep a copy to avoid unexpected modifications.
 	for i := 0; i < n; i++ {
-		ctx.Comms[i] = newCommunicator(ctx, i)
+		ctx.comms[i] = newCommunicator(ctx, i)
 	}
 	return ctx
 }

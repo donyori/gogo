@@ -28,20 +28,20 @@ import (
 	"github.com/donyori/gogo/concurrency"
 	"github.com/donyori/gogo/concurrency/framework"
 	"github.com/donyori/gogo/concurrency/framework/internal"
-	"github.com/donyori/gogo/container/sequence"
+	"github.com/donyori/gogo/container/sequence/array"
 	"github.com/donyori/gogo/errors"
 )
 
 // BusinessFunc is a function to achieve the user business.
 //
-// The first argument is the communicator of the group World,
+// The first argument is the communicator of the world group,
 // which is the default group and includes all goroutines to process the job.
 //
 // The second argument is the map of communicators of custom groups.
 // The key of the map is the ID of the custom group.
 // The value of the map is the corresponding communicator for this goroutine.
 // If there is no custom group, commMap is nil.
-type BusinessFunc func(world Communicator, commMap map[string]Communicator)
+type BusinessFunc[Message any] func(world Communicator[Message], commMap map[string]Communicator[Message])
 
 // groupIdPattern is a regular expression pattern for verifying group ID.
 var groupIdPattern = regexp.MustCompile(`[a-z0-9][a-z0-9_]*`)
@@ -69,26 +69,26 @@ var groupIdPattern = regexp.MustCompile(`[a-z0-9][a-z0-9_]*`)
 // in the list.
 // The client can get the communicators of custom groups via argument commMap
 // of the business function biz.
-func New(n int, biz BusinessFunc, groupMap map[string][]int) framework.Controller {
+func New[Message any](n int, biz BusinessFunc[Message], groupMap map[string][]int) framework.Controller {
 	if biz == nil {
 		panic(errors.AutoMsg("biz is nil"))
 	}
 	if n <= 0 {
 		n = runtime.NumCPU()
 	}
-	ctrl := &controller{
-		Qd:           internal.NewQuitDevice(),
-		Cd:           newChanDispr(),
+	ctrl := &controller[Message]{
+		qd:           internal.NewQuitDevice(),
+		cd:           newChanDispr[Message](),
 		biz:          biz,
 		lnchOi:       concurrency.NewOnceIndicator(),
 		cdOi:         concurrency.NewOnceIndicator(),
-		lnchCommMaps: make([]map[string]Communicator, n),
+		lnchCommMaps: make([]map[string]Communicator[Message], n),
 	}
 	worldRanks := make([]int, n)
 	for i := range worldRanks {
 		worldRanks[i] = i
 	}
-	ctrl.World = newContext(ctrl, "_world", worldRanks)
+	ctrl.world = newContext(ctrl, "_world", worldRanks)
 	for id, group := range groupMap {
 		if !groupIdPattern.MatchString(id) {
 			panic(errors.AutoMsg("group ID is illegal: " + id))
@@ -96,25 +96,25 @@ func New(n int, biz BusinessFunc, groupMap map[string][]int) framework.Controlle
 		if len(group) == 0 {
 			panic(errors.AutoMsg("group is nil or empty"))
 		}
-		g, set := sequence.IntDynamicArray(group), make(map[int]bool, len(group))
-		// Deduplicate:
-		g.Filter(func(x interface{}) (keep bool) {
-			i := x.(int)
-			if i < 0 || i >= n {
-				panic(errors.AutoMsgCustom(fmt.Sprintf("world rank %d is out of range (n: %d)", i, n), -1, 2))
+		g, set := make(array.SliceDynamicArray[int], 0, len(group)), make(map[int]bool, len(group))
+		// Deduplicate and check out-of-range items:
+		for _, wr := range group {
+			if wr < 0 || wr >= n {
+				panic(errors.AutoMsg(fmt.Sprintf("world rank %d is out of range (n: %d)", wr, n)))
 			}
-			if set[i] {
-				return false
+			if set[wr] {
+				continue
 			}
-			set[i] = true
-			return true
-		})
+			set[wr] = true
+			g.Push(wr)
+		}
+		g.Shrink()
 		ctx := newContext(ctrl, id, g)
-		for r, wr := range ctx.WorldRanks {
+		for r, wr := range ctx.worldRanks {
 			if ctrl.lnchCommMaps[wr] == nil {
-				ctrl.lnchCommMaps[wr] = make(map[string]Communicator)
+				ctrl.lnchCommMaps[wr] = make(map[string]Communicator[Message])
 			}
-			ctrl.lnchCommMaps[wr][id] = ctx.Comms[r]
+			ctrl.lnchCommMaps[wr][id] = ctx.comms[r]
 		}
 	}
 	return ctrl
@@ -124,19 +124,19 @@ func New(n int, biz BusinessFunc, groupMap map[string][]int) framework.Controlle
 // It returns the panic records of the Controller.
 //
 // The arguments are the same as those of function New.
-func Run(n int, biz BusinessFunc, groupMap map[string][]int) []framework.PanicRec {
+func Run[Message any](n int, biz BusinessFunc[Message], groupMap map[string][]int) []framework.PanicRecord {
 	ctrl := New(n, biz, groupMap)
 	ctrl.Run()
 	return ctrl.PanicRecords()
 }
 
 // controller is an implementation of interface Controller.
-type controller struct {
-	Qd    framework.QuitDevice // Quit device.
-	World *context             // World context.
-	Cd    *chanDispr           // Channel dispatcher.
+type controller[Message any] struct {
+	qd    framework.QuitDevice // Quit device.
+	world *context[Message]    // World context.
+	cd    *chanDispr[Message]  // Channel dispatcher.
 
-	biz    BusinessFunc              // Business function.
+	biz    BusinessFunc[Message]     // Business function.
 	pr     framework.PanicRecords    // Panic records.
 	wg     sync.WaitGroup            // Wait group for the main process.
 	lnchOi concurrency.OnceIndicator // For launching the job.
@@ -145,27 +145,27 @@ type controller struct {
 
 	// List of commMap used by method Launch,
 	// will be nil after calling Launch.
-	lnchCommMaps []map[string]Communicator
+	lnchCommMaps []map[string]Communicator[Message]
 }
 
 // QuitChan returns the channel for the quit signal.
 // When the job is finished or quit, this channel will be closed
 // to broadcast the quit signal.
-func (ctrl *controller) QuitChan() <-chan struct{} {
-	return ctrl.Qd.QuitChan()
+func (ctrl *controller[Message]) QuitChan() <-chan struct{} {
+	return ctrl.qd.QuitChan()
 }
 
 // IsQuit detects the quit signal on the quit channel.
 // It returns true if a quit signal is detected, and false otherwise.
-func (ctrl *controller) IsQuit() bool {
-	return ctrl.Qd.IsQuit()
+func (ctrl *controller[Message]) IsQuit() bool {
+	return ctrl.qd.IsQuit()
 }
 
 // Quit broadcasts a quit signal to quit the job.
 //
 // This method will NOT wait until the job ends.
-func (ctrl *controller) Quit() {
-	ctrl.Qd.Quit()
+func (ctrl *controller[Message]) Quit() {
+	ctrl.qd.Quit()
 }
 
 // Launch starts the job.
@@ -176,23 +176,23 @@ func (ctrl *controller) Quit() {
 // Note that Launch can take effect only once.
 // To do the same job again, create a new Controller
 // with the same parameters.
-func (ctrl *controller) Launch() {
+func (ctrl *controller[Message]) Launch() {
 	ctrl.lnchOi.Do(func() {
-		n, commMaps := len(ctrl.World.Comms), ctrl.lnchCommMaps
+		n, commMaps := len(ctrl.world.comms), ctrl.lnchCommMaps
 		ctrl.wg.Add(n)
 		for i := 0; i < n; i++ {
 			go func(rank int) {
 				defer func() {
 					if r := recover(); r != nil {
-						ctrl.Qd.Quit()
-						ctrl.pr.Append(framework.PanicRec{
+						ctrl.qd.Quit()
+						ctrl.pr.Append(framework.PanicRecord{
 							Name:    strconv.Itoa(rank),
 							Content: r,
 						})
 					}
 					ctrl.wg.Done()
 				}()
-				ctrl.biz(ctrl.World.Comms[rank], commMaps[rank])
+				ctrl.biz(ctrl.world.comms[rank], commMaps[rank])
 			}(i)
 		}
 		ctrl.lnchCommMaps = nil
@@ -203,12 +203,12 @@ func (ctrl *controller) Launch() {
 // It returns the number of panic goroutines.
 //
 // If the job was not launched, it does nothing and returns -1.
-func (ctrl *controller) Wait() int {
+func (ctrl *controller[Message]) Wait() int {
 	if !ctrl.lnchOi.Test() {
 		return -1
 	}
 	defer func() {
-		ctrl.Qd.Quit() // For cleanup possible daemon goroutines that wait for a quit signal to exit.
+		ctrl.qd.Quit() // For cleanup possible daemon goroutines that wait for a quit signal to exit.
 		if ctrl.cdOi.Test() {
 			<-ctrl.cdFinC // Wait for the channel dispatcher to finish.
 		}
@@ -219,7 +219,7 @@ func (ctrl *controller) Wait() int {
 
 // Run launches the job and waits for it.
 // It returns the number of panic goroutines.
-func (ctrl *controller) Run() int {
+func (ctrl *controller[Message]) Run() int {
 	ctrl.Launch()
 	return ctrl.Wait()
 }
@@ -230,31 +230,31 @@ func (ctrl *controller) Run() int {
 // Any possible control goroutines, daemon goroutines, auxiliary goroutines,
 // or the goroutines launched in the client's business functions
 // are all excluded.
-func (ctrl *controller) NumGoroutine() int {
-	return len(ctrl.World.Comms)
+func (ctrl *controller[Message]) NumGoroutine() int {
+	return len(ctrl.world.comms)
 }
 
-// PanicRecords returns the panic records.
-func (ctrl *controller) PanicRecords() []framework.PanicRec {
+// PanicRecords returns a list of the panic records.
+func (ctrl *controller[Message]) PanicRecords() []framework.PanicRecord {
 	return ctrl.pr.List()
 }
 
 // launchChannelDispatcher launches a channel dispatcher in a daemon goroutine.
 // This method takes effect only once.
-func (ctrl *controller) launchChannelDispatcher() {
+func (ctrl *controller[Message]) launchChannelDispatcher() {
 	ctrl.cdOi.Do(func() {
 		ctrl.cdFinC = make(chan struct{})
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					ctrl.Qd.Quit()
-					ctrl.pr.Append(framework.PanicRec{
+					ctrl.qd.Quit()
+					ctrl.pr.Append(framework.PanicRecord{
 						Name:    "channel_dispatcher",
 						Content: r,
 					})
 				}
 			}()
-			ctrl.Cd.Run(ctrl.Qd, ctrl.cdFinC)
+			ctrl.cd.Run(ctrl.qd, ctrl.cdFinC)
 		}()
 	})
 }

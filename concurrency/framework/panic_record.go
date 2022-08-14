@@ -23,28 +23,28 @@ import (
 	"sync"
 )
 
-// PanicRec is a panic record, including the name of the goroutine
-// and the panic content (i.e., the parameter passed to function panic).
-type PanicRec struct {
-	Name    string      // Name of the goroutine.
-	Content interface{} // The parameter passed to function panic.
+// PanicRecord is a panic record, including the name of the goroutine
+// and the panic content (i.e., the argument passed to function panic).
+type PanicRecord struct {
+	Name    string // Name of the goroutine.
+	Content any    // The argument passed to function panic.
 }
 
 // Error formats the panic record into a string
 // and reports it as an error message.
-func (pr PanicRec) Error() string {
+func (pr PanicRecord) Error() string {
 	if pr.Content == nil {
 		return "no panic"
 	}
-	return fmt.Sprintf("panic on Goroutine %s: %v", pr.Name, pr.Content)
+	return fmt.Sprintf("panic on goroutine %s: %v", pr.Name, pr.Content)
 }
 
 // PanicRecords are panic records, used by the framework codes.
 //
 // It is safe for concurrent use by multiple goroutines.
 type PanicRecords struct {
-	recs []PanicRec   // List of panic records.
-	lock sync.RWMutex // Lock for concurrent use.
+	recs []PanicRecord // List of panic records.
+	lock sync.RWMutex  // Lock for concurrent use.
 }
 
 // Len returns the number of records.
@@ -54,16 +54,21 @@ func (pr *PanicRecords) Len() int {
 	return len(pr.recs)
 }
 
-// List outputs the panic records as a slice of PanicRec.
+// List copies and returns the panic records as a slice of PanicRecord.
 // It returns nil if there is no panic record.
-func (pr *PanicRecords) List() []PanicRec {
+func (pr *PanicRecords) List() []PanicRecord {
 	pr.lock.RLock()
 	defer pr.lock.RUnlock()
-	return append(pr.recs[:0:0], pr.recs...) // Return a copy of pr.recs.
+	if len(pr.recs) == 0 {
+		return nil
+	}
+	recs := make([]PanicRecord, len(pr.recs))
+	copy(recs, pr.recs)
+	return recs
 }
 
 // Append adds new panic records to the back of its panic record list.
-func (pr *PanicRecords) Append(panicRecs ...PanicRec) {
+func (pr *PanicRecords) Append(panicRecs ...PanicRecord) {
 	if len(panicRecs) == 0 {
 		return
 	}

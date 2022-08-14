@@ -18,11 +18,13 @@
 
 package spmd
 
+// This file requires the unexported type: controller.
+
 import (
 	"testing"
 	"time"
 
-	"github.com/donyori/gogo/container/sequence"
+	"github.com/donyori/gogo/container/sequence/array"
 )
 
 func TestCommunicator_Send_Receive(t *testing.T) {
@@ -38,20 +40,20 @@ func TestCommunicator_Send_Receive(t *testing.T) {
 	// Round 4: 1 -> 0, 3 -> 2
 	// Round 5: 2 -> 0, 3 -> 1
 	// Round 6: 3 -> 0, 2 -> 1
-	prs := Run(4, func(world Communicator, commMap map[string]Communicator) {
+	prs := Run(4, func(world Communicator[int], commMap map[string]Communicator[int]) {
 		r := world.Rank()
 		var src, dst int
 		sendTest := func() {
 			if !world.Send(dst, dataFn(r, dst)) {
-				t.Errorf("Goroutine %d, dst %d: Send returns false.", r, dst)
+				t.Errorf("goroutine %d, dst %d, Send returns false", r, dst)
 			}
 		}
 		recvTest := func() {
 			msg, ok := world.Receive(src)
 			if !ok {
-				t.Errorf("Goroutine %d, src %d: Receive returns ok to false.", r, src)
+				t.Errorf("goroutine %d, src %d, Receive returns ok to false", r, src)
 			} else if wanted := dataFn(src, r); msg != wanted {
-				t.Errorf("Goroutine %d, src %d: Receive msg: %v != %d.", r, src, msg, wanted)
+				t.Errorf("goroutine %d, src %d, Receive got %d; want %d", r, src, msg, wanted)
 			}
 		}
 		switch r {
@@ -94,7 +96,7 @@ func TestCommunicator_Send_Receive(t *testing.T) {
 		}
 	}, nil)
 	if len(prs) > 0 {
-		t.Errorf("Panic: %q.", prs)
+		t.Errorf("panic %q", prs)
 	}
 }
 
@@ -102,16 +104,16 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 	dataFn := func(src, dst int) int {
 		return src*10 + dst
 	}
-	prs := Run(7, func(world Communicator, commMap map[string]Communicator) {
+	prs := Run(7, func(world Communicator[int], commMap map[string]Communicator[int]) {
 		if world.Rank() == 6 {
 			timer := time.AfterFunc(time.Second, func() {
-				t.Error("Timeout!")
+				t.Error("timeout")
 				world.Quit()
 			})
 			defer timer.Stop()
 			// Goroutine 6 is a progress monitor.
 			for i := 1; i <= 4; i++ {
-				t.Logf("Part %d starts at %v.", i, time.Now())
+				// t.Logf("part %d starts at %v", i, time.Now())
 				if i < 4 && !world.Barrier() {
 					return
 				}
@@ -121,19 +123,19 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 		comm := commMap["tester"]
 		r := comm.Rank()
 		var src, dst int
-		var msg interface{}
+		var msg any
 		checkD := func(d int) {
 			if d < 0 {
-				t.Errorf("Goroutine %d, dst %d: An unexpected quit signal was detected.", r, dst)
+				t.Errorf("goroutine %d, dst %d, detected an unexpected quit signal", r, dst)
 			} else if d != dst {
-				t.Errorf("Goroutine %d: dst: %d != %d.", r, d, dst)
+				t.Errorf("goroutine %d, got dst %d; want %d", r, d, dst)
 			}
 		}
 		checkSrcMsg := func() {
 			if src < 0 {
-				t.Errorf("Goroutine %d: An unexpected quit signal was detected.", r)
+				t.Errorf("goroutine %d, detected an unexpected quit signal", r)
 			} else if wanted := dataFn(src, r); msg != wanted {
-				t.Errorf("Goroutine %d, src %d: Receive msg: %v != %d.", r, src, msg, wanted)
+				t.Errorf("goroutine %d, src %d, Receive got %d; want %d", r, src, msg, wanted)
 			}
 		}
 		switch r {
@@ -143,11 +145,11 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 				world.Barrier()
 			}
 			if comm.Send(3, dataFn(r, 3)) {
-				t.Errorf("Goroutine %d, dst 3: Send should return false but got true.", r)
+				t.Errorf("goroutine %d, dst 3, Send got true; want false", r)
 			}
 		case 1, 5:
 			if !comm.Send(2, dataFn(r, 2)) {
-				t.Errorf("Goroutine %d, dst 2: Send returns false.", r)
+				t.Errorf("goroutine %d, dst 2, Send got false; want true", r)
 			}
 			for _, dst = range []int{2, 3} {
 				checkD(comm.SendPublic(dataFn(r, dst)))
@@ -157,28 +159,28 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 				}
 			}
 			if comm.Send(3, dataFn(r, 3)) {
-				t.Errorf("Goroutine %d, dst 3: Send should return false but got true.", r)
+				t.Errorf("goroutine %d, dst 3, Send got true; want false", r)
 			}
 		case 2:
 			for i := 0; i < 6; i++ {
 				src, msg = comm.ReceiveAny()
 				checkSrcMsg()
-				// t.Logf("Goroutine %d: ReceiveAny() - src: %d, msg: %v.", r, src, msg)
+				// t.Logf("goroutine %d, ReceiveAny - src %d, msg %d", r, src, msg)
 			}
 			world.Barrier()
 			world.Barrier()
 			world.Barrier()
 			if comm.Send(3, dataFn(r, 3)) {
-				t.Errorf("Goroutine %d, dst 3: Send should return false but got true.", r)
+				t.Errorf("goroutine %d, dst 3, Send got true; want false", r)
 			}
 		case 3:
 			world.Barrier()
 			for _, src = range []int{0, 4} {
 				msg, ok := comm.Receive(src)
 				if !ok {
-					t.Errorf("Goroutine %d: An unexpected quit signal was detected.", r)
+					t.Errorf("goroutine %d, detected an unexpected quit signal", r)
 				} else if wanted := dataFn(src, r); msg != wanted {
-					t.Errorf("Goroutine %d, src %d: Receive msg: %v != %d.", r, src, msg, wanted)
+					t.Errorf("goroutine %d, src %d, Receive got %d; want %d", r, src, msg, wanted)
 				}
 			}
 			world.Barrier()
@@ -188,29 +190,29 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 			}
 			world.Barrier()
 			time.AfterFunc(time.Microsecond, func() {
-				comm.Quit() // Quit the job to let other goroutines exit.
+				comm.Quit() // quit the job to let other goroutines exit
 			})
 			src, msg = comm.ReceivePublic()
 			if src >= 0 {
-				t.Errorf("Goroutine %d: ReceivePublic should get nothing but src: %d, msg: %v.", r, src, msg)
+				t.Errorf("goroutine %d, ReceivePublic got (%d, %d); want (-1, 0)", r, src, msg)
 			}
 		}
 	}, map[string][]int{"tester": {0, 1, 2, 3, 4, 5}})
 	if len(prs) > 0 {
-		t.Errorf("Panic: %q.", prs)
+		t.Errorf("panic %q", prs)
 	}
 }
 
 func TestCommunicator_Barrier(t *testing.T) {
 	times := make([]time.Time, 4)
-	prs := Run(4, func(world Communicator, commMap map[string]Communicator) {
+	prs := Run(4, func(world Communicator[int], commMap map[string]Communicator[int]) {
 		r := world.Rank()
 		time.Sleep(time.Millisecond * time.Duration(r))
 		world.Barrier()
 		times[r] = time.Now()
 	}, nil)
 	if len(prs) > 0 {
-		t.Errorf("Panic: %q.", prs)
+		t.Errorf("panic %q", prs)
 	}
 	for i := 1; i < len(times); i++ {
 		diff := times[0].Sub(times[i])
@@ -218,127 +220,129 @@ func TestCommunicator_Barrier(t *testing.T) {
 			diff = -diff
 		}
 		if diff > time.Microsecond {
-			t.Errorf("Goroutine 0 and %d are %v apart.", i, diff)
+			t.Errorf("goroutine 0 and %d are %v apart", i, diff)
 		}
 	}
 }
 
 func TestCommunicator_Broadcast(t *testing.T) {
-	data := [][4]interface{}{
+	data := [][4]any{
 		{1},
 		{2, 0.3, 4, 5},
 		{nil, nil, "Hello"},
 		{nil, nil, nil, complex(1, -1)},
 		{},
 	}
-	ctrl := New(4, func(world Communicator, commMap map[string]Communicator) {
+	ctrl := New(4, func(world Communicator[any], commMap map[string]Communicator[any]) {
 		r := world.Rank()
 		for i, a := range data {
 			msg, ok := world.Broadcast(i%4, a[r])
 			if !ok {
-				t.Errorf("Goroutine %d, root %d: An unexpected quit signal was detected.", r, i%4)
+				t.Errorf("goroutine %d, root %d, detected an unexpected quit signal", r, i%4)
 			}
 			if msg != a[i%4] {
-				t.Errorf("Goroutine %d, root %d: msg: %v != root msg: %v.", r, i%4, msg, a[i%4])
+				t.Errorf("goroutine %d, root %d, got %v; want %v", r, i%4, msg, a[i%4])
 			}
 		}
-	}, nil).(*controller)
+	}, nil).(*controller[any])
 	ctrl.Run()
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
-		t.Errorf("Panic: %q.", prs)
+		t.Errorf("panic %q", prs)
 	}
-	if n := len(ctrl.World.BcastMap); n > 0 {
-		t.Errorf("Broadcast channel map is NOT clean. %d element(s) remained.", n)
+	if n := len(ctrl.world.bcastMap); n > 0 {
+		t.Errorf("broadcast channel map is NOT clean: %d element(s) remained", n)
 	}
 }
 
 func TestCommunicator_Scatter(t *testing.T) {
-	array := sequence.IntDynamicArray{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	wanted := [4]sequence.IntDynamicArray{
+	a := array.SliceDynamicArray[int]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+	wanted := [4]array.SliceDynamicArray[int]{
 		{1, 2, 3},
 		{4, 5, 6},
 		{7, 8},
 		{9, 10},
 	}
-	data := [][4]sequence.IntDynamicArray{
-		{array},
-		{nil, array},
-		{nil, nil, array},
-		{nil, nil, nil, array},
+	data := [][4]array.SliceDynamicArray[int]{
+		{a},
+		{nil, a},
+		{nil, nil, a},
+		{nil, nil, nil, a},
 		{},
 	}
-	ctrl := New(4, func(world Communicator, commMap map[string]Communicator) {
+	ctrl := New(4, func(world Communicator[int], commMap map[string]Communicator[int]) {
 		r := world.Rank()
 		for i, a := range data {
-			msg, ok := world.Scatter(i%4, a[r])
+			intArray, ok := world.Scatter(i%4, a[r])
 			if !ok {
-				t.Errorf("Goroutine %d, root %d: An unexpected quit signal was detected.", r, i%4)
+				t.Errorf("goroutine %d, root %d, detected an unexpected quit signal", r, i%4)
 			}
-			if msg == nil {
+			if intArray == nil {
 				if i < 4 {
-					t.Errorf("Goroutine %d, root %d: msg is nil but should be %v.", r, i%4, wanted[r])
+					t.Errorf("goroutine %d, root %d, intArray is nil; want %v", r, i%4, wanted[r])
 				}
 				continue
 			}
-			ints := msg.(sequence.IntDynamicArray)
-			if ints.Len() != wanted[r].Len() {
-				t.Errorf("Goroutine %d, root %d: msg: %v != %v.", r, i%4, ints, wanted[r])
+			if n := intArray.Len(); n != wanted[r].Len() {
+				t.Errorf("goroutine %d, root %d, got intArray.Len %d; want %d", r, i%4, n, wanted[r].Len())
 				continue
 			}
-			for k := range ints {
-				if ints[k] != wanted[r][k] {
-					t.Errorf("Goroutine %d, root %d: msg: %v != %v.", r, i%4, ints, wanted[r])
-					break
+			var k int
+			intArray.Range(func(x int) (cont bool) {
+				if x != wanted[r][k] {
+					t.Errorf("goroutine %d, root %d, got intArray[%d] %d; want %d", r, i%4, k, x, wanted[r][k])
+					return false
 				}
-			}
+				k++
+				return true
+			})
 		}
-	}, nil).(*controller)
+	}, nil).(*controller[int])
 	ctrl.Run()
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
-		t.Errorf("Panic: %q.", prs)
+		t.Errorf("panic %q", prs)
 	}
-	if n := len(ctrl.World.ScatterMap); n > 0 {
-		t.Errorf("Scatter channel map is NOT clean. %d element(s) remained.", n)
+	if n := len(ctrl.world.scatterMap); n > 0 {
+		t.Errorf("scatter channel map is NOT clean: %d element(s) remained", n)
 	}
 }
 
 func TestCommunicator_Gather(t *testing.T) {
-	data := [][4]interface{}{
+	data := [][4]any{
 		{4, 3, 2, 1},
 		{1, nil, nil, 4},
 		{nil, 2, 3},
 		{},
 	}
-	ctrl := New(4, func(world Communicator, commMap map[string]Communicator) {
+	ctrl := New(4, func(world Communicator[any], commMap map[string]Communicator[any]) {
 		r := world.Rank()
 		for _, a := range data {
 			for root := 0; root < 4; root++ {
 				x, ok := world.Gather(root, a[r])
 				if !ok {
-					t.Errorf("Goroutine %d, root %d: An unexpected quit signal was detected.", r, root)
+					t.Errorf("goroutine %d, root %d, detected an unexpected quit signal", r, root)
 				}
 				if r == root {
 					if len(x) != len(a) {
-						t.Errorf("Goroutine %d, root %d: x: %v != %v.", r, root, x, a)
+						t.Errorf("goroutine %d, root %d, got x %v; want %v", r, root, x, a)
 						continue
 					}
 					for k := range x {
 						if x[k] != a[k] {
-							t.Errorf("Goroutine %d, root %d: x: %v != %v.", r, root, x, a)
+							t.Errorf("goroutine %d, root %d, got x %v; want %v", r, root, x, a)
 							break
 						}
 					}
 				} else if x != nil {
-					t.Errorf("Goroutine %d, root %d: x != nil.", r, root)
+					t.Errorf("goroutine %d, root %d, got x %v; want nil", r, root, x)
 				}
 			}
 		}
-	}, nil).(*controller)
+	}, nil).(*controller[any])
 	ctrl.Run()
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
-		t.Errorf("Panic: %q.", prs)
+		t.Errorf("panic %q", prs)
 	}
-	if n := len(ctrl.World.GatherMap); n > 0 {
-		t.Errorf("Gather channel map is NOT clean. %d element(s) remained.", n)
+	if n := len(ctrl.world.gatherMap); n > 0 {
+		t.Errorf("gather channel map is NOT clean: %d element(s) remained", n)
 	}
 }

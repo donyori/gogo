@@ -18,54 +18,67 @@
 
 package spmd
 
+// This file requires the unexported type: controller.
+
 import "testing"
 
 func TestNew_lnchCommMaps(t *testing.T) {
-	n := 8
+	const N int = 8
 	groupMap := map[string][]int{
 		"g1": {0, 1, 2, 3},
 		"g2": {4, 5, 6, 7},
 		"g3": {0, 2, 4, 6},
 		"g4": {0, 1, 2, 3, 7, 6, 5, 4},
 		"g5": {4, 1, 1, 1},
+		"g6": {4, 1, 1, 2, 1, 1, 4},
 	}
-	ctrl := New(n, func(world Communicator, commMap map[string]Communicator) {
+	ctrl := New(N, func(world Communicator[int], commMap map[string]Communicator[int]) {
 		// Empty function body.
-	}, groupMap).(*controller)
+	}, groupMap).(*controller[int])
+
+	deduplicatedGroupMap := make(map[string][]int, len(groupMap))
+	for k, v := range groupMap {
+		newV := make([]int, 0, len(v))
+		set := make(map[int]bool, N)
+		for _, x := range v {
+			if set[x] {
+				continue
+			}
+			set[x] = true
+			newV = append(newV, x)
+		}
+		deduplicatedGroupMap[k] = newV
+	}
 	// Verify that all commMaps are consistent with groupMap.
 	for wr, commMap := range ctrl.lnchCommMaps {
 		for id, comm := range commMap {
 			if comm == nil {
-				t.Errorf("Goroutine %d, group %q: comm is nil.", wr, id)
-			} else if r := comm.Rank(); wr != groupMap[id][r] {
-				t.Errorf("Goroutine %d, group %q: comm.Rank(): %d, groupMap[%[2]q][%[1]d]: %[4]d.", wr, id, r, groupMap[id][wr])
+				t.Errorf("goroutine %d, group %q, comm is nil", wr, id)
+			} else if r := comm.Rank(); wr != deduplicatedGroupMap[id][r] {
+				t.Errorf("goroutine %d, group %q, comm.Rank %d is inconsistent with groupMap[%[2]q][%[1]d] %[4]d",
+					wr, id, r, deduplicatedGroupMap[id][r])
 			}
 		}
 	}
 	// Verify that all items in groupMap have corresponding communicators.
-	for id, group := range groupMap {
-		set, r := make(map[int]bool), 0
-		for _, wr := range group {
-			if set[wr] {
-				continue
-			}
-			set[wr] = true
+	for id, group := range deduplicatedGroupMap {
+		for r, wr := range group {
 			comm := ctrl.lnchCommMaps[wr][id]
 			if comm == nil {
-				t.Errorf("Goroutine %d, group %q: comm is nil.", wr, id)
+				t.Errorf("goroutine %d, group %q, comm is nil", wr, id)
 			} else if rank := comm.Rank(); rank != r {
-				t.Errorf("Goroutine %d, group %q: comm.Rank(): %d, groupMap[%[2]q][%[1]d]: %[4]d.", wr, id, rank, r)
+				t.Errorf("goroutine %d, group %q, comm.Rank %d is inconsistent with groupMap[%[2]q][%[1]d] %[4]d",
+					wr, id, rank, r)
 			}
-			r++
 		}
 	}
 }
 
 func TestController_Wait_BeforeLaunch(t *testing.T) {
-	ctrl := New(0, func(world Communicator, commMap map[string]Communicator) {
+	ctrl := New(0, func(world Communicator[int], commMap map[string]Communicator[int]) {
 		// Do nothing.
 	}, nil)
 	if r := ctrl.Wait(); r != -1 {
-		t.Errorf("ctrl.Wait returns %d (not -1) before calling Launch.", r)
+		t.Errorf("got %d; want -1", r)
 	}
 }

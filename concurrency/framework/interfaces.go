@@ -71,6 +71,6 @@ type Controller interface {
 	// are all excluded.
 	NumGoroutine() int
 
-	// PanicRecords returns the panic records.
-	PanicRecords() []PanicRec
+	// PanicRecords returns a list of the panic records.
+	PanicRecords() []PanicRecord
 }
