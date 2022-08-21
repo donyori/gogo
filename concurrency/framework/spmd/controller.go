@@ -34,10 +34,10 @@ import (
 
 // BusinessFunc is a function to achieve the user business.
 //
-// The first argument is the communicator of the world group,
+// The first parameter is the communicator of the world group,
 // which is the default group and includes all goroutines to process the job.
 //
-// The second argument is the map of communicators of custom groups.
+// The second parameter is the map of communicators of custom groups.
 // The key of the map is the ID of the custom group.
 // The value of the map is the corresponding communicator for this goroutine.
 // If there is no custom group, commMap is nil.
@@ -123,7 +123,7 @@ func New[Message any](n int, biz BusinessFunc[Message], groupMap map[string][]in
 // Run creates a Controller with specified parameters, and then run it.
 // It returns the panic records of the Controller.
 //
-// The arguments are the same as those of function New.
+// The parameters are the same as those of function New.
 func Run[Message any](n int, biz BusinessFunc[Message], groupMap map[string][]int) []framework.PanicRecord {
 	ctrl := New(n, biz, groupMap)
 	ctrl.Run()
@@ -183,11 +183,11 @@ func (ctrl *controller[Message]) Launch() {
 		for i := 0; i < n; i++ {
 			go func(rank int) {
 				defer func() {
-					if r := recover(); r != nil {
+					if e := recover(); e != nil {
 						ctrl.qd.Quit()
 						ctrl.pr.Append(framework.PanicRecord{
 							Name:    strconv.Itoa(rank),
-							Content: r,
+							Content: e,
 						})
 					}
 					ctrl.wg.Done()
@@ -246,11 +246,11 @@ func (ctrl *controller[Message]) launchChannelDispatcher() {
 		ctrl.cdFinC = make(chan struct{})
 		go func() {
 			defer func() {
-				if r := recover(); r != nil {
+				if e := recover(); e != nil {
 					ctrl.qd.Quit()
 					ctrl.pr.Append(framework.PanicRecord{
 						Name:    "channel_dispatcher",
-						Content: r,
+						Content: e,
 					})
 				}
 			}()

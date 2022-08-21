@@ -27,7 +27,7 @@ type Container[Item any] interface {
 	// Each item will be accessed once.
 	// The order of the access depends on the specific implementation.
 	//
-	// Its argument handler is a function to deal with the item x in the
+	// Its parameter handler is a function to deal with the item x in the
 	// container and report whether to continue to access the next item.
 	//
 	// The client should do read-only operations on x

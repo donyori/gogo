@@ -106,7 +106,7 @@ func (tkb *topKBuffer[Item]) Len() int {
 // Each item will be accessed once.
 // The order of the access may not be ascending or descending.
 //
-// Its argument handler is a function to deal with the item x in the
+// Its parameter handler is a function to deal with the item x in the
 // buffer and report whether to continue to access the next item.
 //
 // The client should do read-only operations on x

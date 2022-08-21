@@ -239,7 +239,7 @@ func subtestPairs[T any](t *testing.T, name string, f compare.EqualFunc[T], eqPa
 //
 // eqExCap is the additional capacity of eqPairs.
 // neqExCap is the additional capacity of neqPairs.
-// These two arguments are useful to avoid unnecessary memory allocation
+// These two parameters are useful to avoid unnecessary memory allocation
 // when the caller wants to append custom data to eqPairs and neqPairs.
 func mkEqNeqPairs[T any](eqGroups [][]T, eqExCap, neqExCap int) (eqPairs, neqPairs [][2]T) {
 	if eqExCap < 0 {

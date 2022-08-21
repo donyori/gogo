@@ -61,8 +61,8 @@ type ErrorList interface {
 	// whether to continue the iteration.
 	Range(handler func(i int, err error) (cont bool))
 
-	// Append appends errs to the error list.
-	Append(errs ...error)
+	// Append appends err to the error list.
+	Append(err ...error)
 
 	// Deduplicate removes duplicated and nil errors.
 	//
@@ -81,12 +81,12 @@ type errorList struct {
 //
 // ignoreNil indicates whether the ErrorList ignores nil errors.
 // If ignoreNil is true, the ErrorList will discard all nil errors.
-// errs are errors added to the ErrorList initially.
-func NewErrorList(ignoreNil bool, errs ...error) ErrorList {
+// err is errors added to the ErrorList initially.
+func NewErrorList(ignoreNil bool, err ...error) ErrorList {
 	el := &errorList{ignoreNil: ignoreNil}
-	if len(errs) > 0 {
-		el.list = make([]error, 0, len(errs))
-		el.Append(errs...)
+	if len(err) > 0 {
+		el.list = make([]error, 0, len(err))
+		el.Append(err...)
 	}
 	return el
 }
@@ -191,11 +191,11 @@ func (el *errorList) Range(handler func(i int, err error) (cont bool)) {
 	}
 }
 
-// Append appends errs to the error list.
-func (el *errorList) Append(errs ...error) {
-	for _, err := range errs {
-		if err != nil || !el.ignoreNil {
-			el.list = append(el.list, err)
+// Append appends err to the error list.
+func (el *errorList) Append(err ...error) {
+	for _, e := range err {
+		if e != nil || !el.ignoreNil {
+			el.list = append(el.list, e)
 		}
 	}
 }
@@ -236,9 +236,9 @@ func (el *errorList) Deduplicate() {
 // If there is no non-nil error, it returns nil.
 // If there is only one non-nil error, it returns this error.
 // Otherwise, it returns an ErrorList containing all non-nil errors.
-func Combine(errs ...error) error {
-	if len(errs) == 0 {
+func Combine(err ...error) error {
+	if len(err) == 0 {
 		return nil
 	}
-	return NewErrorList(true, errs...).ToError()
+	return NewErrorList(true, err...).ToError()
 }

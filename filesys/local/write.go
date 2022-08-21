@@ -151,28 +151,29 @@ type writer struct {
 // If name is empty, it does nothing and returns an error.
 // If opts is nil, it will use the default write options instead.
 // The default write options are shown as follows:
-//  Append: false,
-//  Raw: false,
-//  BufSize: 0,
-//  BufOpen: false,
-//  Backup: true,
-//  MkDirs: true,
-//  VerifyFn: nil,
-//  GzipLv: gzip.DefaultCompression,
 //
-// Data ultimately written to the file will also be written to copies.
+//	Append: false,
+//	Raw: false,
+//	BufSize: 0,
+//	BufOpen: false,
+//	Backup: true,
+//	MkDirs: true,
+//	VerifyFn: nil,
+//	GzipLv: gzip.DefaultCompression,
+//
+// Data ultimately written to the file will also be written to copyTo.
 // (Due to possible compression, data written to the file may be
 // different from data provided to the writer when the option Raw is disabled.)
-// The client can use copies to monitor the data,
+// The client can use copyTo to monitor the data,
 // such as calculating the checksum to verify the file.
 //
 // But note that:
-// 1. The client is responsible for managing copies,
+// 1. The client is responsible for managing copyTo,
 // including flushing or closing them after use.
-// 2. If an error occurs when writing to copies,
+// 2. If an error occurs when writing to copyTo,
 // other writing will also stop and the writer will fall into the error state.
 // 3. During one write operation, data will be written to the file first,
-// and then to copies sequentially. If an error occurs when writing to copies,
+// and then to copyTo sequentially. If an error occurs when writing to copyTo,
 // the data of current write operation has already been written to the file.
 //
 // As for the write options,
@@ -180,8 +181,8 @@ type writer struct {
 // and the specified file already exists,
 // this function will copy the specified file to a temporary file,
 // which may cost a lot of time and space resource.
-// Data copied from the specified file won't be written to copies.
-func Write(name string, perm filesys.FileMode, opts *WriteOptions, copies ...io.Writer) (w Writer, err error) {
+// Data copied from the specified file won't be written to copyTo.
+func Write(name string, perm filesys.FileMode, opts *WriteOptions, copyTo ...io.Writer) (w Writer, err error) {
 	if name == "" {
 		return nil, errors.AutoNew("name is empty")
 	}
@@ -275,8 +276,8 @@ func Write(name string, perm filesys.FileMode, opts *WriteOptions, copies ...io.
 		}
 	}()
 
-	if len(copies) > 0 {
-		fw.ubw = io.MultiWriter(append([]io.Writer{fw.ubw}, copies...)...)
+	if len(copyTo) > 0 {
+		fw.ubw = io.MultiWriter(append([]io.Writer{fw.ubw}, copyTo...)...)
 	}
 	if !opts.Raw {
 		base = strings.ToLower(base)

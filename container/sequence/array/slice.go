@@ -43,7 +43,7 @@ func (sda SliceDynamicArray[Item]) Len() int {
 // Range accesses the items in the slice from first to last.
 // Each item will be accessed once.
 //
-// Its argument handler is a function to deal with the item x in the
+// Its parameter handler is a function to deal with the item x in the
 // slice and report whether to continue to access the next item.
 func (sda SliceDynamicArray[Item]) Range(handler func(x Item) (cont bool)) {
 	for _, x := range sda {
@@ -362,7 +362,7 @@ func (sda *SliceDynamicArray[Item]) Clear() {
 
 // Filter refines items in the slice (in-place).
 //
-// Its argument filter is a function to report
+// Its parameter filter is a function to report
 // whether to keep the item x.
 func (sda *SliceDynamicArray[Item]) Filter(filter func(x Item) (keep bool)) {
 	if sda == nil || len(*sda) == 0 {

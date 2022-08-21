@@ -117,7 +117,7 @@ func (pq *priorityQueue[Item]) Len() int {
 // Each item will be accessed once.
 // The order of the access may not involve priority.
 //
-// Its argument handler is a function to deal with the item x in the
+// Its parameter handler is a function to deal with the item x in the
 // queue and report whether to continue to access the next item.
 //
 // The client should do read-only operations on x

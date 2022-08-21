@@ -55,10 +55,10 @@ type errorReadOnlySetEqual struct {
 //
 // The returned set regards that an error "belongs to" it
 // if the error is equal to any item in this set.
-func NewErrorReadOnlySetEqual(errs ...error) ErrorReadOnlySet {
-	erose := &errorReadOnlySetEqual{make(map[error]bool, len(errs))}
-	for _, err := range errs {
-		erose.set[err] = true
+func NewErrorReadOnlySetEqual(err ...error) ErrorReadOnlySet {
+	erose := &errorReadOnlySetEqual{make(map[error]bool, len(err))}
+	for _, e := range err {
+		erose.set[e] = true
 	}
 	return erose
 }
@@ -101,15 +101,15 @@ type errorReadOnlySetIs struct {
 //
 // The returned set regards that an error err "belongs to" it
 // if there is an item x in this set such that errors.Is(err, x) returns true.
-func NewErrorReadOnlySetIs(errs ...error) ErrorReadOnlySet {
-	erosi := &errorReadOnlySetIs{set: make(map[error]map[error]bool, len(errs))}
-	for _, err := range errs {
+func NewErrorReadOnlySetIs(err ...error) ErrorReadOnlySet {
+	erosi := &errorReadOnlySetIs{set: make(map[error]map[error]bool, len(err))}
+	for _, e := range err {
 		var hasIs bool
-		if _, ok := err.(ErrorIs); ok {
+		if _, ok := e.(ErrorIs); ok {
 			hasIs = true
 		}
-		root := err
-		for tmp := stderrors.Unwrap(err); tmp != nil; tmp = stderrors.Unwrap(tmp) {
+		root := e
+		for tmp := stderrors.Unwrap(e); tmp != nil; tmp = stderrors.Unwrap(tmp) {
 			root = tmp
 			if !hasIs {
 				if _, ok := tmp.(ErrorIs); ok {
@@ -119,16 +119,16 @@ func NewErrorReadOnlySetIs(errs ...error) ErrorReadOnlySet {
 		}
 		subset := erosi.set[root]
 		if subset == nil {
-			subset = map[error]bool{err: true}
+			subset = map[error]bool{e: true}
 			erosi.set[root] = subset
 		} else {
-			subset[err] = true
+			subset[e] = true
 		}
 		if hasIs {
 			if erosi.cis == nil {
-				erosi.cis = map[error]bool{err: true}
+				erosi.cis = map[error]bool{e: true}
 			} else {
-				erosi.cis[err] = true
+				erosi.cis[e] = true
 			}
 		}
 	}
@@ -195,19 +195,19 @@ type errorReadOnlySetSameMessage struct {
 //
 // The returned set regards that an error "belongs to" it
 // if the error has the same message as any item in this set.
-func NewErrorReadOnlySetSameMessage(errs ...error) ErrorReadOnlySet {
-	erossm := &errorReadOnlySetSameMessage{make(map[string]map[error]bool, len(errs))}
-	for _, err := range errs {
+func NewErrorReadOnlySetSameMessage(err ...error) ErrorReadOnlySet {
+	erossm := &errorReadOnlySetSameMessage{make(map[string]map[error]bool, len(err))}
+	for _, e := range err {
 		msg := "<nil>"
-		if err != nil {
-			msg = err.Error()
+		if e != nil {
+			msg = e.Error()
 		}
 		subset := erossm.set[msg]
 		if subset == nil {
-			subset = map[error]bool{err: true}
+			subset = map[error]bool{e: true}
 			erossm.set[msg] = subset
 		} else {
-			subset[err] = true
+			subset[e] = true
 		}
 	}
 	return erossm

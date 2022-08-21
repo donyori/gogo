@@ -68,11 +68,11 @@ func (pr *PanicRecords) List() []PanicRecord {
 }
 
 // Append adds new panic records to the back of its panic record list.
-func (pr *PanicRecords) Append(panicRecs ...PanicRecord) {
-	if len(panicRecs) == 0 {
+func (pr *PanicRecords) Append(panicRec ...PanicRecord) {
+	if len(panicRec) == 0 {
 		return
 	}
 	pr.lock.Lock()
 	defer pr.lock.Unlock()
-	pr.recs = append(pr.recs, panicRecs...)
+	pr.recs = append(pr.recs, panicRec...)
 }

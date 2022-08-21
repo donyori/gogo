@@ -217,16 +217,16 @@ type multiCloser struct {
 // If the option noError is disabled, its method Close will do nothing and
 // return a *ClosedError after the first successful call.
 //
-// closers are the closers provided to the MultiCloser.
+// closer is the closers provided to the MultiCloser.
 // All nil closers will be ignored.
 // If there is no non-nil closer,
 // the MultiCloser will perform as an already closed closer.
-func NewMultiCloser(tryAll, noError bool, closers ...io.Closer) MultiCloser {
+func NewMultiCloser(tryAll, noError bool, closer ...io.Closer) MultiCloser {
 	mc := &multiCloser{
 		cm: make(map[io.Closer]bool),
-		cs: make([]io.Closer, 0, len(closers)),
+		cs: make([]io.Closer, 0, len(closer)),
 	}
-	for _, c := range closers {
+	for _, c := range closer {
 		if c != nil {
 			mc.cm[c] = false
 			mc.cs = append(mc.cs, c)
