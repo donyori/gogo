@@ -16,36 +16,21 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package sequence
+package container
 
-import "github.com/donyori/gogo/container"
+// Container is an interface representing a general container.
+type Container[Item any] interface {
+	// Len returns the number of items in the container.
+	Len() int
 
-// Sequence is an interface representing a general sequence.
-//
-// Its method Range will access the items from first to last.
-type Sequence[Item any] interface {
-	container.Container[Item]
-
-	// Front returns the first item.
+	// Range accesses the items in the container.
+	// Each item will be accessed once.
+	// The order of the access depends on the specific implementation.
 	//
-	// It panics if the sequence is nil or empty.
-	Front() Item
-
-	// SetFront sets the first item to x.
+	// Its argument handler is a function to deal with the item x in the
+	// container and report whether to continue to access the next item.
 	//
-	// It panics if the sequence is nil or empty.
-	SetFront(x Item)
-
-	// Back returns the last item.
-	//
-	// It panics if the sequence is nil or empty.
-	Back() Item
-
-	// SetBack sets the last item to x.
-	//
-	// It panics if the sequence is nil or empty.
-	SetBack(x Item)
-
-	// Reverse turns items in the sequence the other way round.
-	Reverse()
+	// The client should do read-only operations on x
+	// to avoid corrupting the container.
+	Range(handler func(x Item) (cont bool))
 }

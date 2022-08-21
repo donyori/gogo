@@ -40,6 +40,19 @@ func (sda SliceDynamicArray[Item]) Len() int {
 	return len(sda)
 }
 
+// Range accesses the items in the slice from first to last.
+// Each item will be accessed once.
+//
+// Its argument handler is a function to deal with the item x in the
+// slice and report whether to continue to access the next item.
+func (sda SliceDynamicArray[Item]) Range(handler func(x Item) (cont bool)) {
+	for _, x := range sda {
+		if !handler(x) {
+			return
+		}
+	}
+}
+
 // Front returns the first item.
 //
 // It panics if the slice is nil or empty.
@@ -72,18 +85,6 @@ func (sda SliceDynamicArray[Item]) SetBack(x Item) {
 func (sda SliceDynamicArray[Item]) Reverse() {
 	for i, j := 0, len(sda)-1; i < j; i, j = i+1, j-1 {
 		sda[i], sda[j] = sda[j], sda[i]
-	}
-}
-
-// Range browses the items in the slice from the first to the last.
-//
-// Its argument handler is a function to deal with the item x in the
-// slice and report whether to continue to check the next item.
-func (sda SliceDynamicArray[Item]) Range(handler func(x Item) (cont bool)) {
-	for _, x := range sda {
-		if !handler(x) {
-			return
-		}
 	}
 }
 

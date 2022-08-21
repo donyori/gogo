@@ -21,19 +21,22 @@ package topkbuf
 import (
 	"fmt"
 
+	"github.com/donyori/gogo/container"
 	"github.com/donyori/gogo/container/heap/pqueue"
 	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/function/compare"
 )
 
 // TopKBuffer is a buffer for storing the top-K greatest items.
+//
+// Its method Range may not access items in ascending or descending order.
+// It only guarantees that each item will be accessed once.
 type TopKBuffer[Item any] interface {
+	container.Container[Item]
+
 	// K returns the parameter K,
 	// which limits the maximum number of items the buffer can hold.
 	K() int
-
-	// Len returns the number of items in the buffer.
-	Len() int
 
 	// Add adds items x into the buffer.
 	//
@@ -94,15 +97,28 @@ func NewTopKBuffer[Item any](k int, lessFn compare.LessFunc[Item], data ...Item)
 	return tkb
 }
 
+// Len returns the number of items in the buffer.
+func (tkb *topKBuffer[Item]) Len() int {
+	return tkb.pq.Len()
+}
+
+// Range accesses the items in the buffer.
+// Each item will be accessed once.
+// The order of the access may not be ascending or descending.
+//
+// Its argument handler is a function to deal with the item x in the
+// buffer and report whether to continue to access the next item.
+//
+// The client should do read-only operations on x
+// to avoid corrupting the top-K buffer.
+func (tkb *topKBuffer[Item]) Range(handler func(x Item) (cont bool)) {
+	tkb.pq.Range(handler)
+}
+
 // K returns the parameter K,
 // which limits the maximum number of items the buffer can hold.
 func (tkb *topKBuffer[Item]) K() int {
 	return tkb.k
-}
-
-// Len returns the number of items in the buffer.
-func (tkb *topKBuffer[Item]) Len() int {
-	return tkb.pq.Len()
 }
 
 // Add adds items x into the buffer.

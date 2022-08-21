@@ -30,21 +30,6 @@ import (
 
 var intLess = compare.OrderedLess[int]
 
-func TestPriorityQueueVersionAssertion(t *testing.T) {
-	t.Run("PriorityQueueBasic to PriorityQueue", func(t *testing.T) {
-		pqb := pqueue.NewPriorityQueueBasic(intLess)
-		if _, ok := pqb.(pqueue.PriorityQueue[int]); ok {
-			t.Error("can convert; but should cannot")
-		}
-	})
-	t.Run("PriorityQueue to PriorityQueueBasic", func(t *testing.T) {
-		pb := pqueue.NewPriorityQueue(intLess)
-		if _, ok := pb.(pqueue.PriorityQueueBasic[int]); !ok {
-			t.Error("cannot convert; but should can")
-		}
-	})
-}
-
 var dataList = [][]int{
 	nil, {},
 	{0},
@@ -55,28 +40,62 @@ var dataList = [][]int{
 	{3, 2, 1, 0, 4, 5, 6}, {6, 5, 4, 3, 2, 1, 0},
 }
 
-func TestNewPriorityQueueBasic(t *testing.T) {
+func TestNewPriorityQueue(t *testing.T) {
 	for _, data := range dataList {
 		sorted := copyAndSort(data)
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pqb := pqueue.NewPriorityQueueBasic(intLess, data...)
-			checkPriorityQueueByDequeue(t, pqb, sorted)
+			pq := pqueue.NewPriorityQueue(intLess, data...)
+			checkPriorityQueueByDequeue[int](t, pq, sorted)
 		})
 	}
 }
 
-func TestPriorityQueueBasic_Len(t *testing.T) {
+func TestPriorityQueue_Len(t *testing.T) {
 	for _, data := range dataList {
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pqb := pqueue.NewPriorityQueueBasic(intLess, data...)
-			if n := pqb.Len(); n != len(data) {
+			pq := pqueue.NewPriorityQueue(intLess, data...)
+			if n := pq.Len(); n != len(data) {
 				t.Errorf("got %d; want %d", n, len(data))
 			}
 		})
 	}
 }
 
-func TestPriorityQueueBasic_Enqueue(t *testing.T) {
+func TestPriorityQueue_Range(t *testing.T) {
+	for _, data := range dataList {
+		counterMap := make(map[int]int, len(data))
+		for _, x := range data {
+			counterMap[x]++
+		}
+		t.Run("data="+sliceToName(data), func(t *testing.T) {
+			pq := pqueue.NewPriorityQueue(intLess, data...)
+			pq.Range(func(x int) (cont bool) {
+				counterMap[x]--
+				return true
+			})
+			for x, ctr := range counterMap {
+				if ctr > 0 {
+					t.Errorf("insufficient accesses to %d", x)
+				} else if ctr < 0 {
+					t.Errorf("too many accesses to %d", x)
+				}
+			}
+		})
+	}
+}
+
+func TestPriorityQueue_Cap(t *testing.T) {
+	for _, data := range dataList {
+		t.Run("data="+sliceToName(data), func(t *testing.T) {
+			pq := pqueue.NewPriorityQueue(intLess, data...)
+			if c := pq.Cap(); c < len(data) {
+				t.Errorf("got %d; want >= %d", c, len(data))
+			}
+		})
+	}
+}
+
+func TestPriorityQueue_Enqueue(t *testing.T) {
 	xsList := [][]int{nil, {}, {-1}, {0}, {1}, {7}, {-1, 0, 1}, {0, 0, 7}}
 
 	testCases := make([]struct {
@@ -97,46 +116,25 @@ func TestPriorityQueueBasic_Enqueue(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&xs=%s", sliceToName(tc.data), sliceToName(tc.xs)), func(t *testing.T) {
-			pqb := pqueue.NewPriorityQueueBasic(intLess, tc.data...)
-			pqb.Enqueue(tc.xs...)
-			checkPriorityQueueByDequeue(t, pqb, tc.want)
+			pq := pqueue.NewPriorityQueue(intLess, tc.data...)
+			pq.Enqueue(tc.xs...)
+			checkPriorityQueueByDequeue(t, pq, tc.want)
 		})
 	}
 }
 
-func TestPriorityQueueBasic_Dequeue(t *testing.T) {
+func TestPriorityQueue_Dequeue(t *testing.T) {
 	for _, data := range dataList {
 		if len(data) == 0 {
 			continue
 		}
 		sorted := copyAndSort(data)
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pqb := pqueue.NewPriorityQueueBasic(intLess, data...)
-			if x := pqb.Dequeue(); x != sorted[0] {
+			pq := pqueue.NewPriorityQueue(intLess, data...)
+			if x := pq.Dequeue(); x != sorted[0] {
 				t.Errorf("got %d; want %d", x, sorted[0])
 			}
-			checkPriorityQueueByDequeue(t, pqb, sorted[1:])
-		})
-	}
-}
-
-func TestNewPriorityQueue(t *testing.T) {
-	for _, data := range dataList {
-		sorted := copyAndSort(data)
-		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.NewPriorityQueue(intLess, data...)
-			checkPriorityQueueByDequeue[int](t, pq, sorted)
-		})
-	}
-}
-
-func TestPriorityQueue_Cap(t *testing.T) {
-	for _, data := range dataList {
-		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.NewPriorityQueue(intLess, data...)
-			if c := pq.Cap(); c < len(data) {
-				t.Errorf("got %d; want >= %d", c, len(data))
-			}
+			checkPriorityQueueByDequeue(t, pq, sorted[1:])
 		})
 	}
 }
@@ -242,11 +240,11 @@ func copyAndSort(data []int) []int {
 	return sorted
 }
 
-// !!pqb may be modified in this function.
+// !!pq may be modified in this function.
 //
 // want must be sorted.
 func checkPriorityQueueByDequeue[Item comparable](t *testing.T,
-	pqb pqueue.PriorityQueueBasic[Item], want []Item) {
+	pq pqueue.PriorityQueue[Item], want []Item) {
 	var i int
 	defer func() {
 		if e := recover(); e != nil {
@@ -262,7 +260,7 @@ func checkPriorityQueueByDequeue[Item comparable](t *testing.T,
 		}
 	}()
 	for i = 0; i < len(want); i++ {
-		if x := pqb.Dequeue(); x != want[i] {
+		if x := pq.Dequeue(); x != want[i] {
 			t.Errorf("i:%d, got %v; want %v", i, x, want[i])
 			return
 		}
@@ -272,7 +270,7 @@ func checkPriorityQueueByDequeue[Item comparable](t *testing.T,
 			t.Error(e)
 		}
 	}()
-	x := pqb.Dequeue() // want panic here
+	x := pq.Dequeue() // want panic here
 	t.Errorf("dequeued more than %d items, got %v", i, x)
 }
 

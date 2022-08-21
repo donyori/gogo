@@ -21,15 +21,21 @@ package pqueue
 import (
 	"container/heap"
 
+	"github.com/donyori/gogo/container"
 	"github.com/donyori/gogo/container/sequence/array"
 	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/function/compare"
 )
 
-// PriorityQueueBasic is an interface representing a basic priority queue.
-type PriorityQueueBasic[Item any] interface {
-	// Len returns the number of items in the queue.
-	Len() int
+// PriorityQueue is an interface representing a priority queue.
+//
+// Its method Range may not access items in a priority-related order.
+// It only guarantees that each item will be accessed once.
+type PriorityQueue[Item any] interface {
+	container.Container[Item]
+
+	// Cap returns the current capacity of the queue.
+	Cap() int
 
 	// Enqueue adds items x into the queue.
 	//
@@ -42,14 +48,6 @@ type PriorityQueueBasic[Item any] interface {
 	//
 	// Time complexity: O(log n), where n = pq.Len().
 	Dequeue() Item
-}
-
-// PriorityQueue is an interface representing a priority queue.
-type PriorityQueue[Item any] interface {
-	PriorityQueueBasic[Item]
-
-	// Cap returns the current capacity of the queue.
-	Cap() int
 
 	// Top returns the highest-priority item in the queue,
 	// without modifying the queue.
@@ -73,78 +71,10 @@ type PriorityQueue[Item any] interface {
 
 const emptyQueuePanicMessage string = "priority queue is empty"
 
-// priorityQueueBasic is an implementation of interface PriorityQueueBasic,
-// based on container/heap.
-type priorityQueueBasic[Item any] struct {
-	oha odaHeapAdapter[Item]
-}
-
-// NewPriorityQueueBasic creates a new basic version priority queue.
-// In this priority queue, the smaller the item
-// (compared by the function lessFn), the higher its priority.
-//
-// lessFn is a function to report whether a < b.
-// It must describe a transitive ordering:
-//   - if both lessFn(a, b) and lessFn(b, c) are true, then lessFn(a, c) must be true as well.
-//   - if both lessFn(a, b) and lessFn(b, c) are false, then lessFn(a, c) must be false as well.
-//
-// Note that floating-point comparison
-// (the < operator on float32 or float64 values)
-// is not a transitive ordering when not-a-number (NaN) values are involved.
-//
-// data is the initial items in the queue.
-//
-// It panics if lessFn is nil.
-func NewPriorityQueueBasic[Item any](lessFn compare.LessFunc[Item], data ...Item) PriorityQueueBasic[Item] {
-	if lessFn == nil {
-		panic(errors.AutoMsg("lessFn is nil"))
-	}
-	dataCopy := make([]Item, len(data))
-	copy(dataCopy, data)
-	pqb := &priorityQueueBasic[Item]{
-		odaHeapAdapter[Item]{
-			Oda: array.WrapSliceLess(&dataCopy, lessFn),
-		},
-	}
-	heap.Init(pqb.oha)
-	return pqb
-}
-
-// Len returns the number of items in the queue.
-func (pqb *priorityQueueBasic[Item]) Len() int {
-	return pqb.oha.Len()
-}
-
-// Enqueue adds items x into the queue.
-//
-// Time complexity: O(m log(m + n)), where m = len(x), n = pq.Len().
-func (pqb *priorityQueueBasic[Item]) Enqueue(x ...Item) {
-	if pqb.oha.Len() < len(x) {
-		pqb.oha.Oda.Append(array.SliceDynamicArray[Item](x))
-		heap.Init(pqb.oha)
-	} else {
-		for _, item := range x {
-			heap.Push(pqb.oha, item)
-		}
-	}
-}
-
-// Dequeue removes and returns the highest-priority item in the queue.
-//
-// It panics if the queue is nil or empty.
-//
-// Time complexity: O(log n), where n = pq.Len().
-func (pqb *priorityQueueBasic[Item]) Dequeue() Item {
-	if pqb.oha.Len() == 0 {
-		panic(errors.AutoMsg(emptyQueuePanicMessage))
-	}
-	return heap.Pop(pqb.oha).(Item)
-}
-
 // priorityQueue is an implementation of interface PriorityQueue,
 // based on container/heap.
 type priorityQueue[Item any] struct {
-	priorityQueueBasic[Item]
+	oha odaHeapAdapter[Item]
 }
 
 // NewPriorityQueue creates a new priority queue.
@@ -169,18 +99,62 @@ func NewPriorityQueue[Item any](lessFn compare.LessFunc[Item], data ...Item) Pri
 	}
 	dataCopy := make([]Item, len(data))
 	copy(dataCopy, data)
-	pq := &priorityQueue[Item]{priorityQueueBasic[Item]{
+	pq := &priorityQueue[Item]{
 		odaHeapAdapter[Item]{
 			Oda: array.WrapSliceLess(&dataCopy, lessFn),
 		},
-	}}
+	}
 	heap.Init(pq.oha)
 	return pq
+}
+
+// Len returns the number of items in the queue.
+func (pq *priorityQueue[Item]) Len() int {
+	return pq.oha.Len()
+}
+
+// Range accesses the items in the queue.
+// Each item will be accessed once.
+// The order of the access may not involve priority.
+//
+// Its argument handler is a function to deal with the item x in the
+// queue and report whether to continue to access the next item.
+//
+// The client should do read-only operations on x
+// to avoid corrupting the priority queue.
+func (pq *priorityQueue[Item]) Range(handler func(x Item) (cont bool)) {
+	pq.oha.Oda.Range(handler)
 }
 
 // Cap returns the current capacity of the queue.
 func (pq *priorityQueue[Item]) Cap() int {
 	return pq.oha.Oda.Cap()
+}
+
+// Enqueue adds items x into the queue.
+//
+// Time complexity: O(m log(m + n)), where m = len(x), n = pq.Len().
+func (pq *priorityQueue[Item]) Enqueue(x ...Item) {
+	if pq.oha.Len() < len(x) {
+		pq.oha.Oda.Append(array.SliceDynamicArray[Item](x))
+		heap.Init(pq.oha)
+	} else {
+		for _, item := range x {
+			heap.Push(pq.oha, item)
+		}
+	}
+}
+
+// Dequeue removes and returns the highest-priority item in the queue.
+//
+// It panics if the queue is nil or empty.
+//
+// Time complexity: O(log n), where n = pq.Len().
+func (pq *priorityQueue[Item]) Dequeue() Item {
+	if pq.oha.Len() == 0 {
+		panic(errors.AutoMsg(emptyQueuePanicMessage))
+	}
+	return heap.Pop(pq.oha).(Item)
 }
 
 // Top returns the highest-priority item in the queue,

@@ -74,19 +74,6 @@ func TestNewTopKBuffer(t *testing.T) {
 	}
 }
 
-func TestTopKBuffer_K(t *testing.T) {
-	for _, data := range dataList {
-		for k := 1; k <= maxK; k++ {
-			t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(data), k), func(t *testing.T) {
-				tkb := topkbuf.NewTopKBuffer(k, intLess, data...)
-				if got := tkb.K(); got != k {
-					t.Errorf("got %d; want %d", got, k)
-				}
-			})
-		}
-	}
-}
-
 func TestTopKBuffer_Len(t *testing.T) {
 	testCases := make([]struct {
 		data    []int
@@ -113,6 +100,57 @@ func TestTopKBuffer_Len(t *testing.T) {
 				t.Errorf("got %d; want %d", n, tc.want)
 			}
 		})
+	}
+}
+
+func TestTopKBuffer_Range(t *testing.T) {
+	testCases := make([]struct {
+		data []int
+		k    int
+		want []int
+	}, len(dataList)*maxK)
+	var idx int
+	for _, data := range dataList {
+		for k := 1; k <= maxK; k++ {
+			testCases[idx].data = data
+			testCases[idx].k = k
+			testCases[idx].want = kSuffixAndReverse(copyAndSort(data), k)
+			idx++
+		}
+	}
+
+	for _, tc := range testCases {
+		counterMap := make(map[int]int, len(tc.want))
+		for _, x := range tc.want {
+			counterMap[x]++
+		}
+		t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k), func(t *testing.T) {
+			tkb := topkbuf.NewTopKBuffer(tc.k, intLess, tc.data...)
+			tkb.Range(func(x int) (cont bool) {
+				counterMap[x]--
+				return true
+			})
+			for x, ctr := range counterMap {
+				if ctr > 0 {
+					t.Errorf("insufficient accesses to %d", x)
+				} else if ctr < 0 {
+					t.Errorf("too many accesses to %d", x)
+				}
+			}
+		})
+	}
+}
+
+func TestTopKBuffer_K(t *testing.T) {
+	for _, data := range dataList {
+		for k := 1; k <= maxK; k++ {
+			t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(data), k), func(t *testing.T) {
+				tkb := topkbuf.NewTopKBuffer(k, intLess, data...)
+				if got := tkb.K(); got != k {
+					t.Errorf("got %d; want %d", got, k)
+				}
+			})
+		}
 	}
 }
 
@@ -219,6 +257,9 @@ func copyAndSort(data []int) []int {
 
 // !!the last k items in s will be modified.
 func kSuffixAndReverse[Item any](s []Item, k int) []Item {
+	if s == nil {
+		return nil
+	}
 	if len(s) > k {
 		s = s[len(s)-k:]
 	}

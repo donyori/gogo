@@ -80,6 +80,19 @@ func TestSliceDynamicArray_Len(t *testing.T) {
 	}
 }
 
+func TestSliceDynamicArray_Range(t *testing.T) {
+	sda := array.SliceDynamicArray[int]{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
+	want := []int{0, 1, 2, 3, 4}
+	s := make([]int, 0, len(sda))
+	sda.Range(func(x int) (cont bool) {
+		s = append(s, x)
+		return len(s) < len(sda)/2
+	})
+	if sliceUnequal(s, want) {
+		t.Errorf("got %v; want %v", s, want)
+	}
+}
+
 func TestSliceDynamicArray_Front(t *testing.T) {
 	testCases := []struct {
 		sda  array.SliceDynamicArray[int]
@@ -194,19 +207,6 @@ func TestSliceDynamicArray_Reverse(t *testing.T) {
 				t.Errorf("got %v; want %v", sda, tc.want)
 			}
 		})
-	}
-}
-
-func TestSliceDynamicArray_Range(t *testing.T) {
-	sda := array.SliceDynamicArray[int]{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
-	want := []int{0, 1, 2, 3, 4}
-	s := make([]int, 0, len(sda))
-	sda.Range(func(x int) (cont bool) {
-		s = append(s, x)
-		return len(s) < len(sda)/2
-	})
-	if sliceUnequal(s, want) {
-		t.Errorf("got %v; want %v", s, want)
 	}
 }
 
