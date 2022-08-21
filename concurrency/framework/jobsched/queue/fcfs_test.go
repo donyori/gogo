@@ -16,29 +16,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package jobsched
+package queue_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/donyori/gogo/concurrency/framework/jobsched/queue"
+)
 
 func TestFcfsJobQueue(t *testing.T) {
-	const N = 10
-	jobs := make([]*Job, N)
-	var wanted, dqs [N]interface{}
-	for i := range jobs {
-		jobs[i] = &Job{Data: i}
-		wanted[i] = i
+	want := make([][]int, N)
+	for i := range want {
+		want[i] = []int{metaJobs[i].Job}
 	}
-	fjq := new(FcfsJobQueueMaker).New()
-	fjq.Enqueue(jobs[0])
-	fjq.Enqueue(jobs[1:5]...)
-	fjq.Enqueue(jobs[5:]...)
-	for i := range dqs {
-		dqs[i] = fjq.Dequeue()
-	}
-	if n := fjq.Len(); n > 0 {
-		t.Errorf("fjq.Len(): %d != 0.", n)
-	}
-	if dqs != wanted {
-		t.Errorf("Dequeued: %v, wanted: %v.", dqs, wanted)
-	}
+	testJobQueueFunc(t, queue.FcfsJobQueueMaker[int]{}, want)
 }

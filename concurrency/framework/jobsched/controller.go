@@ -30,110 +30,129 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// Controller is a controller for this jobsched framework.
+// Controller is a controller for this job scheduling framework.
 //
 // It is used to launch, quit, and wait for the job.
-// And it is also used to input new jobs.
-type Controller interface {
+// Also, it is used to input new jobs.
+//
+// The first type parameter Job is the type of jobs.
+// The second type parameter Properties is the type of custom properties
+// in the meta information of jobs.
+type Controller[Job, Properties any] interface {
 	framework.Controller
 
-	// Input inputs new jobs.
+	// Input enables the client to input new jobs.
 	//
-	// If an item in jobs is nil, it will be treated as a Job with Data to nil,
-	// Pri to 0, Ct to time.Now(), and CustAttr to nil.
-	// If an item in jobs has the Ct field with a zero value, its Ct field will
-	// be set to time.Now().
+	// If an item in metaJob is nil, it will be treated as a zero-value job
+	// (with the field Job to its zero value, Meta.Priority to 0,
+	// Meta.CreationTime to time.Now(), and Meta.Custom to its zero value).
+	// If an item in metaJob has the field Meta.CreationTime with a zero value,
+	// this field will be set to time.Now().
 	//
-	// The client can input new jobs before the effective first all of
+	// It returns the number of jobs input successfully.
+	//
+	// The client can input new jobs before the first effective call to
 	// the method Wait (i.e., the call after invoking the method Launch).
-	// After calling the method Wait, Input will do nothing and return false.
-	// Note that the method Run will call Wait inside it.
-	//
-	// It returns true if the input succeeds, otherwise (e.g., the job has quit,
-	// or the method Wait has been called effectively), false.
-	Input(jobs ...*Job) bool
+	// After calling the method Wait, Input will do nothing and return 0.
+	// Note that the method Run will call Wait inside.
+	Input(metaJob ...*MetaJob[Job, Properties]) int
 }
 
 // JobHandler is a function to process a job.
 //
-// The first argument jobData is the data of the job.
+// The first type parameter Job is the type of jobs.
+// The second type parameter Properties is the type of custom properties
+// in the meta information of jobs.
 //
-// The second argument quitDevice is to acquire the channel for the quit signal,
-// detect the quit signal, and broadcast a quit signal to quit the job.
+// The first parameter is the job to be processed.
 //
-// It returns a list of new jobs generated during or after processing
+// The second parameter is a device to acquire the channel for the quit signal,
+// detect the quit signal, and broadcast a quit signal to interrupt
+// all job processors.
+//
+// It returns new jobs generated during or after processing
 // the current job, called newJobs.
-// If an item in newJobs is nil, it will be treated as a Job with Data to nil,
-// Pri to 0, Ct to time.Now(), and CustAttr to nil.
-// If an item in newJobs has the Ct field with a zero value, its Ct field will
-// be set to time.Now().
-type JobHandler func(jobData interface{}, quitDevice framework.QuitDevice) (newJobs []*Job)
+// If an item in newJobs is nil, it will be treated as a zero-value job
+// (with the field Job to its zero value, Meta.Priority to 0,
+// Meta.CreationTime to time.Now(), and Meta.Custom to its zero value).
+// If an item in newJobs has the field Meta.CreationTime with a zero value,
+// this field will be set to time.Now().
+type JobHandler[Job, Properties any] func(job Job, quitDevice framework.QuitDevice) (newJobs []*MetaJob[Job, Properties])
 
 // New creates a new Controller.
+//
+// The first type parameter Job is the type of jobs.
+// The second type parameter Properties is the type of custom properties
+// in the meta information of jobs.
 //
 // n is the number of goroutines to process jobs.
 // If n is non-positive, runtime.NumCPU() will be used instead.
 //
 // handler is the job handler.
-// It will panic if handler is nil.
+// It panics if handler is nil.
 //
 // jobQueueMaker is a maker to create a new job queue.
 // It enables the client to make custom JobQueue.
-// If jobQueueMaker is nil, a default job queue maker will be used.
-// The default job queue implements a starvation-free scheduling algorithm.
+// It panics if jobQueueMaker is nil.
 //
-// The rest arguments are initial jobs to process.
-func New(n int, handler JobHandler, jobQueueMaker JobQueueMaker, jobs ...*Job) Controller {
+// metaJob is initial jobs to process.
+func New[Job, Properties any](n int, handler JobHandler[Job, Properties],
+	jobQueueMaker JobQueueMaker[Job, Properties],
+	metaJob ...*MetaJob[Job, Properties]) Controller[Job, Properties] {
 	if handler == nil {
 		panic(errors.AutoMsg("handler is nil"))
+	}
+	if jobQueueMaker == nil {
+		panic(errors.AutoMsg("job queue maker is nil"))
 	}
 	if n <= 0 {
 		n = runtime.NumCPU()
 	}
-	if jobQueueMaker == nil {
-		jobQueueMaker = &DefaultJobQueueMaker{n}
-	}
 	jq := jobQueueMaker.New()
-	jq.Enqueue(jobs...)
-	return &controller{
+	if len(metaJob) > 0 {
+		jq.Enqueue(copyMetaJobs(metaJob)...)
+	}
+	return &controller[Job, Properties]{
 		n:    n,
 		h:    handler,
 		qd:   internal.NewQuitDevice(),
 		jq:   jq,
-		ic:   make(chan []*Job),
-		eqc:  make(chan []*Job),
-		dqc:  make(chan interface{}),
+		ic:   make(chan []*MetaJob[Job, Properties]),
+		eqc:  make(chan []*MetaJob[Job, Properties]),
+		dqc:  make(chan Job),
 		loi:  concurrency.NewOnceIndicator(),
 		wsoi: concurrency.NewOnceIndicator(),
 	}
 }
 
-// Run creates a Controller with specified parameters, and then run it.
+// Run creates a Controller with specified arguments, and then run it.
 // It returns the panic records of the Controller.
 //
-// The arguments are the same as those of function New.
-func Run(n int, handler JobHandler, jobQueueMaker JobQueueMaker, jobs ...*Job) []framework.PanicRec {
-	ctrl := New(n, handler, jobQueueMaker, jobs...)
+// The parameters are the same as those of function New.
+func Run[Job, Properties any](n int, handler JobHandler[Job, Properties],
+	jobQueueMaker JobQueueMaker[Job, Properties],
+	metaJob ...*MetaJob[Job, Properties]) []framework.PanicRecord {
+	ctrl := New(n, handler, jobQueueMaker, metaJob...)
 	ctrl.Run()
 	return ctrl.PanicRecords()
 }
 
 // controller is an implementation of interface Controller.
-type controller struct {
-	n int        // The number of goroutines to process jobs.
-	h JobHandler // Job handler.
+type controller[Job, Properties any] struct {
+	n int                         // The number of goroutines to process jobs.
+	h JobHandler[Job, Properties] // Job handler.
 
-	qd framework.QuitDevice // Quit device.
-	jq JobQueue             // Job queue.
+	qd framework.QuitDevice      // Quit device.
+	jq JobQueue[Job, Properties] // Job queue.
 
-	ic  chan []*Job      // Input channel, to input jobs from the client.
-	eqc chan []*Job      // Enqueue channel, to input jobs from workers.
-	dqc chan interface{} // Dequeue channel, to output job data to workers.
+	ic  chan []*MetaJob[Job, Properties] // Input channel, to input jobs from the client.
+	eqc chan []*MetaJob[Job, Properties] // Enqueue channel, to input jobs from workers.
+	dqc chan Job                         // Dequeue channel, to dispatch jobs to workers.
 
 	pr   framework.PanicRecords    // Panic records.
 	wg   sync.WaitGroup            // Wait group for the main process.
-	loi  concurrency.OnceIndicator // For launching the job.
-	wsoi concurrency.OnceIndicator // For indicating the start of the effective first call of the method Wait.
+	loi  concurrency.OnceIndicator // For launching the framework.
+	wsoi concurrency.OnceIndicator // For indicating the start of the first effective call to the method Wait.
 	m    sync.Mutex                // Lock to avoid the race condition on jq when calling Launch and Input at the same time.
 	lsi  bool                      // An indicator to report whether the method Launch is started.
 }
@@ -141,20 +160,20 @@ type controller struct {
 // QuitChan returns the channel for the quit signal.
 // When the job is finished or quit, this channel will be closed
 // to broadcast the quit signal.
-func (ctrl *controller) QuitChan() <-chan struct{} {
+func (ctrl *controller[Job, Properties]) QuitChan() <-chan struct{} {
 	return ctrl.qd.QuitChan()
 }
 
 // IsQuit detects the quit signal on the quit channel.
 // It returns true if a quit signal is detected, and false otherwise.
-func (ctrl *controller) IsQuit() bool {
+func (ctrl *controller[Job, Properties]) IsQuit() bool {
 	return ctrl.qd.IsQuit()
 }
 
 // Quit broadcasts a quit signal to quit the job.
 //
 // This method will NOT wait until the job ends.
-func (ctrl *controller) Quit() {
+func (ctrl *controller[Job, Properties]) Quit() {
 	ctrl.qd.Quit()
 }
 
@@ -166,21 +185,21 @@ func (ctrl *controller) Quit() {
 // Note that Launch can take effect only once.
 // To do the same job again, create a new Controller
 // with the same parameters.
-func (ctrl *controller) Launch() {
+func (ctrl *controller[Job, Properties]) Launch() {
 	ctrl.loi.Do(func() {
 		ctrl.m.Lock()
 		defer ctrl.m.Unlock()
 		ctrl.lsi = true
 
-		ctrl.wg.Add(ctrl.n + 1) // n workers and 1 allocator.
+		ctrl.wg.Add(ctrl.n + 1) // n workers + 1 allocator
 		for i := 0; i < ctrl.n; i++ {
 			go func(rank int) {
 				defer func() {
-					if r := recover(); r != nil {
+					if e := recover(); e != nil {
 						ctrl.qd.Quit()
-						ctrl.pr.Append(framework.PanicRec{
-							Name:    strconv.Itoa(rank),
-							Content: r,
+						ctrl.pr.Append(framework.PanicRecord{
+							Name:    "worker " + strconv.Itoa(rank),
+							Content: e,
 						})
 					}
 					ctrl.wg.Done()
@@ -190,11 +209,11 @@ func (ctrl *controller) Launch() {
 		}
 		go func() {
 			defer func() {
-				if r := recover(); r != nil {
+				if e := recover(); e != nil {
 					ctrl.qd.Quit()
-					ctrl.pr.Append(framework.PanicRec{
+					ctrl.pr.Append(framework.PanicRecord{
 						Name:    "allocator",
-						Content: r,
+						Content: e,
 					})
 				}
 				ctrl.wg.Done()
@@ -208,11 +227,11 @@ func (ctrl *controller) Launch() {
 // It returns the number of panic goroutines.
 //
 // If the job was not launched, it does nothing and returns -1.
-func (ctrl *controller) Wait() int {
+func (ctrl *controller[Job, Properties]) Wait() int {
 	if !ctrl.loi.Test() {
 		return -1
 	}
-	defer ctrl.qd.Quit() // For cleanup possible daemon goroutines that wait for a quit signal to exit.
+	defer ctrl.qd.Quit() // for cleanup possible daemon goroutines that wait for a quit signal to exit
 	ctrl.wsoi.Do(nil)
 	ctrl.wg.Wait()
 	return ctrl.pr.Len()
@@ -220,7 +239,7 @@ func (ctrl *controller) Wait() int {
 
 // Run launches the job and waits for it.
 // It returns the number of panic goroutines.
-func (ctrl *controller) Run() int {
+func (ctrl *controller[Job, Properties]) Run() int {
 	ctrl.Launch()
 	return ctrl.Wait()
 }
@@ -231,149 +250,151 @@ func (ctrl *controller) Run() int {
 // Any possible control goroutines, daemon goroutines, auxiliary goroutines,
 // or the goroutines launched in the client's business functions
 // are all excluded.
-func (ctrl *controller) NumGoroutine() int {
+func (ctrl *controller[Job, Properties]) NumGoroutine() int {
 	return ctrl.n
 }
 
-// PanicRecords returns the panic records.
-func (ctrl *controller) PanicRecords() []framework.PanicRec {
+// PanicRecords returns a list of the panic records.
+func (ctrl *controller[Job, Properties]) PanicRecords() []framework.PanicRecord {
 	return ctrl.pr.List()
 }
 
-// Input inputs new jobs.
+// Input enables the client to input new jobs.
 //
-// If an item in jobs is nil, it will be treated as a Job with Data to nil,
-// Pri to 0, Ct to time.Now(), and CustAttr to nil.
-// If an item in jobs has the Ct field with a zero value, its Ct field will
-// be set to time.Now().
+// If an item in metaJob is nil, it will be treated as a zero-value job
+// (with the field Job to its zero value, Meta.Priority to 0,
+// Meta.CreationTime to time.Now(), and Meta.Custom to its zero value).
+// If an item in metaJob has the field Meta.CreationTime with a zero value,
+// this field will be set to time.Now().
 //
-// The client can input new jobs before the effective first all of
+// It returns the number of jobs input successfully.
+//
+// The client can input new jobs before the first effective call to
 // the method Wait (i.e., the call after invoking the method Launch).
-// After calling the method Wait, Input will do nothing and return false.
-// Note that the method Run will call Wait inside it.
-//
-// It returns true if the input succeeds, otherwise (e.g., the job has quit,
-// or the method Wait has been called effectively), false.
-func (ctrl *controller) Input(jobs ...*Job) bool {
+// After calling the method Wait, Input will do nothing and return 0.
+// Note that the method Run will call Wait inside.
+func (ctrl *controller[Job, Properties]) Input(metaJob ...*MetaJob[Job, Properties]) int {
 	if ctrl.wsoi.Test() {
-		return false
+		return 0
 	}
-	var now time.Time
-	for i, job := range jobs {
-		if job == nil {
-			job = new(Job)
-			jobs[i] = job
-		}
-		if job.Ct.IsZero() {
-			if now.IsZero() {
-				now = time.Now()
-			}
-			job.Ct = now
-		}
-	}
-	if !ctrl.loi.Test() && ctrl.inputBeforeLaunch(jobs) {
-		return true
+	mjs := copyMetaJobs(metaJob)
+	if !ctrl.loi.Test() && ctrl.inputBeforeLaunch(mjs) {
+		return len(mjs)
 	}
 	select {
 	case <-ctrl.qd.QuitChan():
-		return false
-	case ctrl.ic <- jobs:
-		return true
+		return 0
+	case ctrl.ic <- mjs:
+		return len(mjs)
 	}
 }
 
-// inputBeforeLaunch inputs new jobs before the first call of the method Launch.
-//
-// It returns true if jobs are put into the job queue successfully.
-// When it returns false, the caller should then send jobs to ctrl.ic.
-func (ctrl *controller) inputBeforeLaunch(jobs []*Job) bool {
-	ctrl.m.Lock()
-	defer ctrl.m.Unlock()
-	if ctrl.lsi {
-		return false
+// workerProc is the worker main process,
+// without panic checking and wg.Done().
+func (ctrl *controller[Job, Properties]) workerProc() {
+	quitChan := ctrl.qd.QuitChan()
+	for {
+		var mjs []*MetaJob[Job, Properties]
+		select {
+		case <-quitChan:
+			return
+		case job, ok := <-ctrl.dqc:
+			if !ok {
+				return
+			}
+			mjs = copyMetaJobs(ctrl.h(job, ctrl.qd))
+		}
+		// Always send new jobs to the allocator,
+		// regardless of whether jobs are empty.
+		select {
+		case <-quitChan:
+			return
+		case ctrl.eqc <- mjs:
+		}
 	}
-	ctrl.jq.Enqueue(jobs...)
-	return true
 }
 
 // allocatorProc is the allocator main process,
 // without panic checking and wg.Done().
-func (ctrl *controller) allocatorProc() {
+func (ctrl *controller[Job, Properties]) allocatorProc() {
 	defer close(ctrl.dqc)
-	var dqc chan<- interface{} // Disable dqc at the beginning.
-	var jobData interface{}
+	var dqc chan<- Job // disable dqc at the beginning
+	var job Job
 	if ctrl.jq.Len() > 0 {
-		jobData = ctrl.jq.Dequeue()
-		dqc = ctrl.dqc // Enable dqc.
+		job = ctrl.jq.Dequeue()
+		dqc = ctrl.dqc // enable dqc
 	}
-	ctr := 1 // Counter for available input sources. 1 at the beginning stands for the client.
+	ctr := 1 // counter for available input sources. 1 at the beginning stands for the client
 	quitChan, wsoiC := ctrl.qd.QuitChan(), ctrl.wsoi.C()
 	for ctr > 0 || dqc != nil {
 		select {
 		case <-quitChan:
 			return
 		case <-wsoiC:
-			wsoiC = nil // Disable this channel to avoid receiving twice.
+			wsoiC = nil // disable this channel to avoid receiving twice
 			ctr--
-		case jobs := <-ctrl.ic:
-			if len(jobs) > 0 {
-				ctrl.jq.Enqueue(jobs...)
+		case mjs := <-ctrl.ic:
+			if len(mjs) > 0 {
+				ctrl.jq.Enqueue(mjs...)
 			}
-		case jobs := <-ctrl.eqc:
+		case mjs := <-ctrl.eqc:
 			ctr--
-			if len(jobs) > 0 {
-				ctrl.jq.Enqueue(jobs...)
+			if len(mjs) > 0 {
+				ctrl.jq.Enqueue(mjs...)
 			}
-		case dqc <- jobData:
+		case dqc <- job:
 			ctr++
 			if ctrl.jq.Len() > 0 {
-				jobData = ctrl.jq.Dequeue()
+				job = ctrl.jq.Dequeue()
 				continue
 			} else {
-				dqc = nil // Disable dqc.
+				dqc = nil // disable dqc
 			}
 		}
 		if dqc == nil && ctrl.jq.Len() > 0 {
-			jobData = ctrl.jq.Dequeue()
-			dqc = ctrl.dqc // Enable dqc.
+			job = ctrl.jq.Dequeue()
+			dqc = ctrl.dqc // enable dqc
 		}
 	}
 }
 
-// workerProc is the worker main process, without panic checking and wg.Done().
-func (ctrl *controller) workerProc() {
-	quitChan := ctrl.qd.QuitChan()
-	for {
-		var jobs []*Job
-		select {
-		case <-quitChan:
-			return
-		case jobData, ok := <-ctrl.dqc:
-			if !ok {
-				return
-			}
-			jobs = ctrl.h(jobData, ctrl.qd)
-			var now time.Time
-			for i, job := range jobs {
-				if job == nil {
-					job = new(Job)
-					jobs[i] = job
-				}
-				if job.Ct.IsZero() {
-					if now.IsZero() {
-						now = time.Now()
-					}
-					job.Ct = now
-				}
-			}
-		}
-
-		// Always send jobs to the allocator,
-		// regardless of whether jobs are empty.
-		select {
-		case <-quitChan:
-			return
-		case ctrl.eqc <- jobs:
-		}
+// inputBeforeLaunch inputs metaJobs before the first call to the method Launch.
+//
+// It returns true if metaJobs are put into the job queue successfully.
+// When it returns false, the caller should then send metaJobs to ctrl.ic.
+func (ctrl *controller[Job, Properties]) inputBeforeLaunch(metaJobs []*MetaJob[Job, Properties]) bool {
+	ctrl.m.Lock()
+	defer ctrl.m.Unlock()
+	if ctrl.lsi {
+		return false
 	}
+	ctrl.jq.Enqueue(metaJobs...)
+	return true
+}
+
+// copyMetaJobs copies metaJobs,
+// replaces the nil items with zero-value items
+// (with the field Job to its zero value, Meta.Priority to 0,
+// Meta.CreationTime to time.Now(), and Meta.Custom to its zero value),
+// and replaces the zero-value Meta.CreationTime field with time.Now().
+func copyMetaJobs[Job, Properties any](metaJobs []*MetaJob[Job, Properties]) []*MetaJob[Job, Properties] {
+	if metaJobs == nil {
+		return nil
+	}
+	mjs := make([]*MetaJob[Job, Properties], 0, len(metaJobs))
+	var now time.Time // lazy init
+	for _, mj := range metaJobs {
+		newMj := new(MetaJob[Job, Properties])
+		if mj != nil {
+			*newMj = *mj
+		}
+		if newMj.Meta.CreationTime.IsZero() {
+			if now.IsZero() {
+				now = time.Now()
+			}
+			newMj.Meta.CreationTime = now
+		}
+		mjs = append(mjs, newMj)
+	}
+	return mjs
 }
