@@ -39,11 +39,12 @@ func ComparableEqual[T comparable](a, b T) bool {
 
 // AnyEqual is a prefab EqualFunc performing as follows:
 //
-// If any input variable is nil (the nil interface{}),
+// If any input variable is nil (the nil any (i.e., nil interface{})),
 // it returns true if and only if the other input variable is also nil or
 // is the zero value of its type.
 //
-// Otherwise (two input variables are both non-nil interface{}),
+// Otherwise (two input variables are both non-nil any
+// (i.e., non-nil interface{})),
 // it returns true if and only if the two input variables satisfies
 // the following three conditions:
 //  1. they have identical dynamic types;

@@ -58,5 +58,5 @@ type ErrorAs interface {
 	// Otherwise, it returns false.
 	//
 	// See errors.As for detail.
-	As(target interface{}) bool
+	As(target any) bool
 }

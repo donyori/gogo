@@ -37,11 +37,12 @@ const (
 // Valid returns true if the error message strategy is known.
 //
 // Known error message strategies are shown as follows:
-//  OriginalMsg: use the error message itself
-//  PrependFullFuncName: add the full function name (i.e., the package path-qualified function name) before the error message
-//  PrependFullPkgName: add the full package name before the error message
-//  PrependSimpleFuncName: add the simple function name before the error message
-//  PrependSimplePkgName: add the simple package name before the error message
+//
+//	OriginalMsg: use the error message itself
+//	PrependFullFuncName: add the full function name (i.e., the package path-qualified function name) before the error message
+//	PrependFullPkgName: add the full package name before the error message
+//	PrependSimpleFuncName: add the simple function name before the error message
+//	PrependSimplePkgName: add the simple package name before the error message
 func (i ErrorMessageStrategy) Valid() bool {
 	return i >= OriginalMsg && i <= PrependSimplePkgName
 }

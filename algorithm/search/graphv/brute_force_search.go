@@ -272,8 +272,9 @@ func BfsPath[Vertex any](itf Interface[Vertex], initArgs ...any) []Vertex {
 // initArgs are the arguments to initialize itf.
 //
 // It returns the vertex found and two indicators:
-//  found - to report whether the vertex has been found;
-//  more - to report whether there is any undiscovered vertex because of the depth limit.
+//
+//	found - to report whether the vertex has been found;
+//	more - to report whether there is any undiscovered vertex because of the depth limit.
 //
 // The indicator more makes sense only when the vertex is not found.
 // When more is false, all the vertices must have been discovered.

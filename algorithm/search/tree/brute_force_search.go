@@ -229,8 +229,9 @@ func BfsPath[Node any](itf Interface[Node], initArgs ...any) []Node {
 // initArgs are the arguments to initialize itf.
 //
 // It returns the node found and two indicators:
-//  found - to report whether the node has been found;
-//  more - to report whether there is any undiscovered node because of the depth limit.
+//
+//	found - to report whether the node has been found;
+//	more - to report whether there is any undiscovered node because of the depth limit.
 //
 // The indicator more makes sense only when the node is not found.
 // When more is false, all the nodes must have been discovered;
@@ -379,13 +380,13 @@ func dlsPath[Node any](itf Interface[Node], root Node, limit int) (pathFound []N
 //
 // The method signature should be
 //
-//  ResetSearchState()
+//	ResetSearchState()
 //
 // And the client should define this method like
 //
-//  func (m MyInterface) ResetSearchState() {
-//  	// Reset your search state.
-//  }
+//	func (m MyInterface) ResetSearchState() {
+//		// Reset your search state.
+//	}
 func Ids[Node any](itf Interface[Node], initLimit int, initArgs ...any) (nodeFound Node, found bool) {
 	itf.Init(initArgs...)
 	root := itf.Root()
@@ -422,13 +423,13 @@ func Ids[Node any](itf Interface[Node], initLimit int, initArgs ...any) (nodeFou
 //
 // The method signature should be
 //
-//  ResetSearchState()
+//	ResetSearchState()
 //
 // And the client should define this method like
 //
-//  func (m MyInterface) ResetSearchState() {
-//  	// Reset your search state.
-//  }
+//	func (m MyInterface) ResetSearchState() {
+//		// Reset your search state.
+//	}
 func IdsPath[Node any](itf Interface[Node], initLimit int, initArgs ...any) []Node {
 	itf.Init(initArgs...)
 	root := itf.Root()

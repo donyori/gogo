@@ -42,7 +42,8 @@ const sourceBufferLen = 512
 // Therefore, a necessary and sufficient condition to test whether
 // a specified byte c equals to a byte x of the lowercase character table
 // (lowercaseHexTable) case-insensitively, is:
-//  c >= '0' && c|letterCaseDiff == x
+//
+//	c >= '0' && c|letterCaseDiff == x
 const letterCaseDiff byte = 'A' ^ 'a'
 
 // sourceBufferPool is a set of temporary buffers to load source data
@@ -50,7 +51,7 @@ const letterCaseDiff byte = 'A' ^ 'a'
 //
 // The type of the buffers is *[sourceBufferLen]byte.
 var sourceBufferPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return new([sourceBufferLen]byte)
 	},
 }
@@ -60,7 +61,7 @@ var sourceBufferPool = sync.Pool{
 //
 // The type of the buffers is *[sourceBufferLen*2]byte.
 var encodeBufferPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return new([sourceBufferLen * 2]byte)
 	},
 }
@@ -73,7 +74,7 @@ const formatBufferLen = 1024
 //
 // The type of the buffers is *[formatBufferLen]byte.
 var formatBufferPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return new([formatBufferLen]byte)
 	},
 }
@@ -87,7 +88,7 @@ const int64BufferLen = 17
 //
 // The type of the buffers is *[int64BufferLen]byte.
 var int64BufferPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return new([int64BufferLen]byte)
 	},
 }

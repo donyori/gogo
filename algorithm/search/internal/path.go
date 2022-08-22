@@ -24,16 +24,17 @@ package internal
 // extending path P with element E.
 //
 // For example, the path "0 -> 1 -> 2" will be represented as
-//  &Path[int]{
-//      E: 2,
-//      P: &Path[int]{
-//          E: 1,
-//          P: &Path[int]{
-//              E: 0,
-//              P: nil,
-//          }
-//      },
-//  }
+//
+//	&Path[int]{
+//	    E: 2,
+//	    P: &Path[int]{
+//	        E: 1,
+//	        P: &Path[int]{
+//	            E: 0,
+//	            P: nil,
+//	        }
+//	    },
+//	}
 type Path[Elem any] struct {
 	E Elem
 	P *Path[Elem]

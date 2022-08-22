@@ -38,6 +38,6 @@ func Is(err, target error) bool {
 }
 
 // As directly calls standard errors.As.
-func As(err error, target interface{}) bool {
+func As(err error, target any) bool {
 	return stderrors.As(err, target)
 }
