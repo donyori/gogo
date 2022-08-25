@@ -90,15 +90,24 @@ type priorityQueue[Item any] struct {
 // (the < operator on float32 or float64 values)
 // is not a transitive ordering when not-a-number (NaN) values are involved.
 //
-// data is the initial items in the queue.
+// data is the initial items added to the queue.
 //
 // It panics if lessFn is nil.
-func New[Item any](lessFn compare.LessFunc[Item], data ...Item) PriorityQueue[Item] {
+func New[Item any](lessFn compare.LessFunc[Item], data container.Container[Item]) PriorityQueue[Item] {
 	if lessFn == nil {
 		panic(errors.AutoMsg("lessFn is nil"))
 	}
-	dataCopy := make([]Item, len(data))
-	copy(dataCopy, data)
+	var dataCopy []Item
+	if data != nil {
+		n := data.Len()
+		if n > 0 {
+			dataCopy = make([]Item, 0, n)
+			data.Range(func(x Item) (cont bool) {
+				dataCopy = append(dataCopy, x)
+				return true
+			})
+		}
+	}
 	pq := &priorityQueue[Item]{
 		odaHeapAdapter[Item]{
 			Oda: array.WrapSliceLess(&dataCopy, lessFn),

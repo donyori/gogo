@@ -42,7 +42,7 @@ func (m PriorityFirstJobQueueMaker[Job]) New() jobsched.JobQueue[Job, jobsched.N
 				return a.Meta.CreationTime.Before(b.Meta.CreationTime)
 			}
 			return a.Meta.Priority > b.Meta.Priority
-		}),
+		}, nil),
 	}
 }
 
@@ -64,7 +64,7 @@ func (m CreationTimeFirstJobQueueMaker[Job]) New() jobsched.JobQueue[Job, jobsch
 				return a.Meta.Priority > b.Meta.Priority
 			}
 			return a.Meta.CreationTime.Before(b.Meta.CreationTime)
-		}),
+		}, nil),
 	}
 }
 
