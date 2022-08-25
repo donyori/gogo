@@ -20,9 +20,9 @@ package array
 
 import "github.com/donyori/gogo/container/sequence"
 
-// dynamicArraySpecific is an interface that groups
+// DynamicArraySpecific is an interface that groups
 // the dynamic-array-specific methods.
-type dynamicArraySpecific[Item any] interface {
+type DynamicArraySpecific[Item any] interface {
 	// Cap returns the current capacity of the dynamic array.
 	Cap() int
 
@@ -121,7 +121,7 @@ type dynamicArraySpecific[Item any] interface {
 // a dynamic-length direct-access sequence.
 type DynamicArray[Item any] interface {
 	Array[Item]
-	dynamicArraySpecific[Item]
+	DynamicArraySpecific[Item]
 }
 
 // OrderedDynamicArray is an interface representing a dynamic-length
@@ -130,5 +130,5 @@ type DynamicArray[Item any] interface {
 // It conforms to interface sort.Interface.
 type OrderedDynamicArray[Item any] interface {
 	OrderedArray[Item]
-	dynamicArraySpecific[Item]
+	DynamicArraySpecific[Item]
 }
