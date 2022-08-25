@@ -61,7 +61,7 @@ var groupIdPattern = regexp.MustCompile(`[a-z0-9][a-z0-9_]*`)
 // (i.e., in regular expression: [a-z0-9][a-z0-9_]*).
 // An illegal ID will cause a panic.
 // The value is a list of the world ranks of goroutines.
-// Duplicated numbers will be ignored.
+// Duplicate numbers will be ignored.
 // Out-of-range numbers (i.e., < 0 or >= n) will cause a panic.
 // A nil or empty group will also cause a panic.
 // Each group has its own communicator for each goroutine.

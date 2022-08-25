@@ -64,9 +64,9 @@ type ErrorList interface {
 	// Append appends err to the error list.
 	Append(err ...error)
 
-	// Deduplicate removes duplicated and nil errors.
+	// Deduplicate removes duplicate and nil errors.
 	//
-	// An error is regarded as duplicated if its method Error returns
+	// An error is regarded as duplicate if its method Error returns
 	// the same string as that of a previous error.
 	Deduplicate()
 }
@@ -200,9 +200,9 @@ func (el *errorList) Append(err ...error) {
 	}
 }
 
-// Deduplicate removes duplicated and nil errors.
+// Deduplicate removes duplicate and nil errors.
 //
-// An error is regarded as duplicated if its method Error returns
+// An error is regarded as duplicate if its method Error returns
 // the same string as that of a previous error.
 func (el *errorList) Deduplicate() {
 	if len(el.list) == 0 {
