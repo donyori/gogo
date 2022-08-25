@@ -67,12 +67,16 @@ func (t *treeImpl) NextSibling(node int) (ns int, ok bool) {
 	return idx, true
 }
 
-func (t *treeImpl) Access(node, _ int) (found, cont bool) {
+func (t *treeImpl) AccessNode(node, _ int) (found, cont bool) {
 	t.AccessHistory = append(t.AccessHistory, node)
 	if !t.GoalValid {
 		return
 	}
 	return node == t.Goal, true
+}
+
+func (t *treeImpl) AccessPath(path []int, depth int) (found, cont bool) {
+	return t.AccessNode(path[len(path)-1], depth)
 }
 
 // numTreeNode is the number of nodes in treeData.
@@ -223,21 +227,21 @@ func TestIdsPath(t *testing.T) {
 }
 
 func testBruteForceSearch(t *testing.T, name string) {
-	var f func(t *testing.T, itf tree.Interface[int], initArgs ...any) (int, bool)
+	var f func(t *testing.T, itf tree.AccessNode[int], initArgs ...any) (int, bool)
 	var ordering []int
 	switch name {
 	case "Dfs":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) (int, bool) {
+		f = func(t *testing.T, itf tree.AccessNode[int], initArgs ...any) (int, bool) {
 			return tree.Dfs(itf, initArgs...)
 		}
 		ordering = treeDataOrderingMap["dfs"]
 	case "Bfs":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) (int, bool) {
+		f = func(t *testing.T, itf tree.AccessNode[int], initArgs ...any) (int, bool) {
 			return tree.Bfs(itf, initArgs...)
 		}
 		ordering = treeDataOrderingMap["bfs"]
 	case "Dls-0":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) (int, bool) {
+		f = func(t *testing.T, itf tree.AccessNode[int], initArgs ...any) (int, bool) {
 			node, found, more := tree.Dls(itf, 0, initArgs...)
 			if isFirstInitArgInt(initArgs) && !found && !more {
 				t.Error("more is false but there are undiscovered vertices")
@@ -246,7 +250,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 		}
 		ordering = treeDataOrderingMap["dls-0"]
 	case "Dls-1":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) (int, bool) {
+		f = func(t *testing.T, itf tree.AccessNode[int], initArgs ...any) (int, bool) {
 			node, found, more := tree.Dls(itf, 1, initArgs...)
 			if isFirstInitArgInt(initArgs) && !found && !more {
 				t.Error("more is false but there are undiscovered vertices")
@@ -255,7 +259,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 		}
 		ordering = treeDataOrderingMap["dls-1"]
 	case "Dls-2":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) (int, bool) {
+		f = func(t *testing.T, itf tree.AccessNode[int], initArgs ...any) (int, bool) {
 			node, found, more := tree.Dls(itf, 2, initArgs...)
 			if isFirstInitArgInt(initArgs) && !found && !more {
 				t.Error("more is false but there are undiscovered vertices")
@@ -264,14 +268,14 @@ func testBruteForceSearch(t *testing.T, name string) {
 		}
 		ordering = treeDataOrderingMap["dls-2"]
 	case "Dls-3":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) (int, bool) {
+		f = func(t *testing.T, itf tree.AccessNode[int], initArgs ...any) (int, bool) {
 			node, found, _ := tree.Dls(itf, 3, initArgs...)
 			// Both true and false are acceptable for the third return value.
 			return node, found
 		}
 		ordering = treeDataOrderingMap["dls-3"]
 	case "Dls-m1":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) (int, bool) {
+		f = func(t *testing.T, itf tree.AccessNode[int], initArgs ...any) (int, bool) {
 			node, found, more := tree.Dls(itf, -1, initArgs...)
 			if isFirstInitArgInt(initArgs) && !found && !more {
 				t.Error("more is false but there are undiscovered vertices")
@@ -280,12 +284,12 @@ func testBruteForceSearch(t *testing.T, name string) {
 		}
 		ordering = treeDataOrderingMap["dls-m1"]
 	case "Ids":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) (int, bool) {
+		f = func(t *testing.T, itf tree.AccessNode[int], initArgs ...any) (int, bool) {
 			return tree.Ids(itf, 1, initArgs...)
 		}
 		ordering = treeDataOrderingMap["ids"]
 	case "Ids-m":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) (int, bool) {
+		f = func(t *testing.T, itf tree.AccessNode[int], initArgs ...any) (int, bool) {
 			return tree.Ids(itf, -1, initArgs...)
 		}
 		ordering = treeDataOrderingMap["ids"]
@@ -333,21 +337,21 @@ func testBruteForceSearch(t *testing.T, name string) {
 }
 
 func testBruteForceSearchPath(t *testing.T, name string) {
-	var f func(t *testing.T, itf tree.Interface[int], initArgs ...any) []int
+	var f func(t *testing.T, itf tree.AccessPath[int], initArgs ...any) []int
 	var ordering []int
 	switch name {
 	case "DfsPath":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) []int {
+		f = func(t *testing.T, itf tree.AccessPath[int], initArgs ...any) []int {
 			return tree.DfsPath(itf, initArgs...)
 		}
 		ordering = treeDataOrderingMap["dfs"]
 	case "BfsPath":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) []int {
+		f = func(t *testing.T, itf tree.AccessPath[int], initArgs ...any) []int {
 			return tree.BfsPath(itf, initArgs...)
 		}
 		ordering = treeDataOrderingMap["bfs"]
 	case "DlsPath-0":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) []int {
+		f = func(t *testing.T, itf tree.AccessPath[int], initArgs ...any) []int {
 			path, more := tree.DlsPath(itf, 0, initArgs...)
 			if isFirstInitArgInt(initArgs) && path == nil && !more {
 				t.Error("more is false but there are undiscovered vertices")
@@ -356,7 +360,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		}
 		ordering = treeDataOrderingMap["dls-0"]
 	case "DlsPath-1":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) []int {
+		f = func(t *testing.T, itf tree.AccessPath[int], initArgs ...any) []int {
 			path, more := tree.DlsPath(itf, 1, initArgs...)
 			if isFirstInitArgInt(initArgs) && path == nil && !more {
 				t.Error("more is false but there are undiscovered vertices")
@@ -365,7 +369,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		}
 		ordering = treeDataOrderingMap["dls-1"]
 	case "DlsPath-2":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) []int {
+		f = func(t *testing.T, itf tree.AccessPath[int], initArgs ...any) []int {
 			path, more := tree.DlsPath(itf, 2, initArgs...)
 			if isFirstInitArgInt(initArgs) && path == nil && !more {
 				t.Error("more is false but there are undiscovered vertices")
@@ -374,14 +378,14 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		}
 		ordering = treeDataOrderingMap["dls-2"]
 	case "DlsPath-3":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) []int {
+		f = func(t *testing.T, itf tree.AccessPath[int], initArgs ...any) []int {
 			path, _ := tree.DlsPath(itf, 3, initArgs...)
 			// Both true and false are acceptable for the second return value.
 			return path
 		}
 		ordering = treeDataOrderingMap["dls-3"]
 	case "DlsPath-m1":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) []int {
+		f = func(t *testing.T, itf tree.AccessPath[int], initArgs ...any) []int {
 			path, more := tree.DlsPath(itf, -1, initArgs...)
 			if isFirstInitArgInt(initArgs) && path == nil && !more {
 				t.Error("more is false but there are undiscovered vertices")
@@ -390,12 +394,12 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 		}
 		ordering = treeDataOrderingMap["dls-m1"]
 	case "IdsPath":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) []int {
+		f = func(t *testing.T, itf tree.AccessPath[int], initArgs ...any) []int {
 			return tree.IdsPath(itf, 1, initArgs...)
 		}
 		ordering = treeDataOrderingMap["ids"]
 	case "IdsPath-m":
-		f = func(t *testing.T, itf tree.Interface[int], initArgs ...any) []int {
+		f = func(t *testing.T, itf tree.AccessPath[int], initArgs ...any) []int {
 			return tree.IdsPath(itf, -1, initArgs...)
 		}
 		ordering = treeDataOrderingMap["ids"]
