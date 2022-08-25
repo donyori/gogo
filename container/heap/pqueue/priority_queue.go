@@ -77,7 +77,7 @@ type priorityQueue[Item any] struct {
 	oha odaHeapAdapter[Item]
 }
 
-// NewPriorityQueue creates a new priority queue.
+// New creates a new priority queue.
 // In this priority queue, the smaller the item
 // (compared by the function lessFn), the higher its priority.
 //
@@ -93,7 +93,7 @@ type priorityQueue[Item any] struct {
 // data is the initial items in the queue.
 //
 // It panics if lessFn is nil.
-func NewPriorityQueue[Item any](lessFn compare.LessFunc[Item], data ...Item) PriorityQueue[Item] {
+func New[Item any](lessFn compare.LessFunc[Item], data ...Item) PriorityQueue[Item] {
 	if lessFn == nil {
 		panic(errors.AutoMsg("lessFn is nil"))
 	}

@@ -37,7 +37,7 @@ type PriorityFirstJobQueueMaker[Job any] struct{}
 // New creates a new priority-first job queue.
 func (m PriorityFirstJobQueueMaker[Job]) New() jobsched.JobQueue[Job, jobsched.NoProperty] {
 	return &priorityJobQueue[Job, jobsched.NoProperty]{
-		pq: pqueue.NewPriorityQueue(func(a, b *jobsched.MetaJob[Job, jobsched.NoProperty]) bool {
+		pq: pqueue.New(func(a, b *jobsched.MetaJob[Job, jobsched.NoProperty]) bool {
 			if a.Meta.Priority == b.Meta.Priority {
 				return a.Meta.CreationTime.Before(b.Meta.CreationTime)
 			}
@@ -59,7 +59,7 @@ type CreationTimeFirstJobQueueMaker[Job any] struct{}
 // New creates a new creation-time-first job queue.
 func (m CreationTimeFirstJobQueueMaker[Job]) New() jobsched.JobQueue[Job, jobsched.NoProperty] {
 	return &priorityJobQueue[Job, jobsched.NoProperty]{
-		pq: pqueue.NewPriorityQueue(func(a, b *jobsched.MetaJob[Job, jobsched.NoProperty]) bool {
+		pq: pqueue.New(func(a, b *jobsched.MetaJob[Job, jobsched.NoProperty]) bool {
 			if a.Meta.CreationTime.Equal(b.Meta.CreationTime) {
 				return a.Meta.Priority > b.Meta.Priority
 			}

@@ -62,7 +62,7 @@ type topKBuffer[Item any] struct {
 	pq     pqueue.PriorityQueue[Item]
 }
 
-// NewTopKBuffer creates a new TopKBuffer with the parameter k.
+// New creates a new TopKBuffer with the parameter k.
 // The buffer will hold the top-k greatest items.
 //
 // lessFn is a function to report whether a < b.
@@ -77,7 +77,7 @@ type topKBuffer[Item any] struct {
 // data is the initial items added to the buffer.
 //
 // It panics if k is non-positive or lessFn is nil.
-func NewTopKBuffer[Item any](k int, lessFn compare.LessFunc[Item], data ...Item) TopKBuffer[Item] {
+func New[Item any](k int, lessFn compare.LessFunc[Item], data ...Item) TopKBuffer[Item] {
 	if k <= 0 {
 		panic(errors.AutoMsg(fmt.Sprintf("k (%d) is non-positive", k)))
 	}
@@ -89,9 +89,9 @@ func NewTopKBuffer[Item any](k int, lessFn compare.LessFunc[Item], data ...Item)
 		lessFn: lessFn,
 	}
 	if len(data) <= k {
-		tkb.pq = pqueue.NewPriorityQueue(lessFn, data...)
+		tkb.pq = pqueue.New(lessFn, data...)
 	} else {
-		tkb.pq = pqueue.NewPriorityQueue(lessFn, data[:k]...)
+		tkb.pq = pqueue.New(lessFn, data[:k]...)
 		tkb.Add(data[k:]...)
 	}
 	return tkb
