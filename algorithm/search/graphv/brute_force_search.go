@@ -96,9 +96,9 @@ type AccessPath[Vertex any] interface {
 
 	// AccessPath examines the path from the search root to the current vertex.
 	//
-	// It has two parameters:
-	//   path - the path from the search root to the current vertex to examine;
-	//   depth - the search depth from the root to the node.
+	// Its parameter is the path from the search root to
+	// the current vertex to examine.
+	// path must be non-empty.
 	//
 	// It returns two indicators:
 	//   found - to report whether the specified vertex is the search goal;
@@ -108,19 +108,13 @@ type AccessPath[Vertex any] interface {
 	// In this case, the search result may be invalid.
 	//
 	// Sometimes it is also referred to as "visit".
-	AccessPath(path []Vertex, depth int) (found, cont bool)
+	AccessPath(path []Vertex) (found, cont bool)
 }
 
 // adjListDepth consists of adjacency list and search depth.
 type adjListDepth[Vertex any] struct {
 	adjacency []Vertex
 	depth     int
-}
-
-// pathListDepth consists of path list and search depth.
-type pathListDepth[Vertex any] struct {
-	pathList []*internal.Path[Vertex]
-	depth    int
 }
 
 // Dfs finds a vertex in itf using depth-first search algorithm
@@ -183,11 +177,9 @@ func DfsPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 	// It is similar to function Dfs,
 	// except that the item of the stack contains the list of Path
 	// instead of the adjacency list.
-	stack, idx := []pathListDepth[Vertex]{
-		{pathList: []*internal.Path[Vertex]{{E: itf.Root()}}},
-	}, 0
+	stack, idx := [][]*internal.Path[Vertex]{{{E: itf.Root()}}}, 0
 	for idx >= 0 {
-		pl, i := stack[idx].pathList, 0
+		pl, i := stack[idx], 0
 		for i < len(pl) && itf.Discovered(pl[i].E) {
 			i++
 		}
@@ -196,9 +188,8 @@ func DfsPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 			continue
 		}
 		p, pl := pl[i], pl[1+i:]
-		depth := stack[idx].depth
 		pathList := p.ToList()
-		r, cont := itf.AccessPath(pathList, depth)
+		r, cont := itf.AccessPath(pathList)
 		if r {
 			return pathList
 		}
@@ -206,7 +197,7 @@ func DfsPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 			return nil
 		}
 		if len(pl) > 0 {
-			stack[idx].pathList = pl
+			stack[idx] = pl
 		} else {
 			stack, idx = stack[:idx], idx-1
 		}
@@ -215,10 +206,7 @@ func DfsPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 			for i := range vAdj {
 				vAdjPathList[i] = &internal.Path[Vertex]{vAdj[i], p}
 			}
-			stack, idx = append(
-				stack,
-				pathListDepth[Vertex]{vAdjPathList, depth + 1},
-			), idx+1
+			stack, idx = append(stack, vAdjPathList), idx+1
 		}
 	}
 	return nil
@@ -268,16 +256,14 @@ func BfsPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 	// It is similar to function Bfs,
 	// except that the item of the queue contains the list of the Path
 	// instead of the adjacency list.
-	queue := []pathListDepth[Vertex]{
-		{pathList: []*internal.Path[Vertex]{{E: itf.Root()}}},
-	}
+	queue := [][]*internal.Path[Vertex]{{{E: itf.Root()}}}
 	for len(queue) > 0 {
 		head := queue[0]
 		queue = queue[1:]
-		for _, p := range head.pathList {
+		for _, p := range head {
 			if !itf.Discovered(p.E) {
 				pathList := p.ToList()
-				r, cont := itf.AccessPath(pathList, head.depth)
+				r, cont := itf.AccessPath(pathList)
 				if r {
 					return pathList
 				}
@@ -289,10 +275,7 @@ func BfsPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 					for i := range vAdj {
 						vAdjPathList[i] = &internal.Path[Vertex]{vAdj[i], p}
 					}
-					queue = append(
-						queue,
-						pathListDepth[Vertex]{vAdjPathList, head.depth + 1},
-					)
+					queue = append(queue, vAdjPathList)
 				}
 			}
 		}
@@ -419,11 +402,9 @@ func dlsPath[Vertex any](itf AccessPath[Vertex], root Vertex, limit int) (pathFo
 	// It is similar to function dls,
 	// except that the item of the stack contains the list of Path
 	// instead of the adjacency list.
-	stack, idx := []pathListDepth[Vertex]{
-		{pathList: []*internal.Path[Vertex]{{E: root}}},
-	}, 0
+	stack, idx := [][]*internal.Path[Vertex]{{{E: root}}}, 0
 	for idx >= 0 {
-		pl, i := stack[idx].pathList, 0
+		pl, i := stack[idx], 0
 		for i < len(pl) && itf.Discovered(pl[i].E) {
 			i++
 		}
@@ -432,9 +413,8 @@ func dlsPath[Vertex any](itf AccessPath[Vertex], root Vertex, limit int) (pathFo
 			continue
 		}
 		p, pl := pl[i], pl[1+i:]
-		depth := stack[idx].depth
 		pathList := p.ToList()
-		r, cont := itf.AccessPath(pathList, depth)
+		r, cont := itf.AccessPath(pathList)
 		if r {
 			pathFound = pathList
 			return
@@ -444,20 +424,17 @@ func dlsPath[Vertex any](itf AccessPath[Vertex], root Vertex, limit int) (pathFo
 			return
 		}
 		if len(pl) > 0 {
-			stack[idx].pathList = pl
+			stack[idx] = pl
 		} else {
 			stack, idx = stack[:idx], idx-1
 		}
 		if vAdj := itf.Adjacency(p.E); len(vAdj) > 0 {
-			if depth < limit {
+			if len(pathList) <= limit {
 				vAdjPathList := make([]*internal.Path[Vertex], len(vAdj))
 				for i := range vAdj {
 					vAdjPathList[i] = &internal.Path[Vertex]{vAdj[i], p}
 				}
-				stack, idx = append(
-					stack,
-					pathListDepth[Vertex]{vAdjPathList, depth + 1},
-				), idx+1
+				stack, idx = append(stack, vAdjPathList), idx+1
 			} else if !more {
 				for _, v := range vAdj {
 					if !itf.Discovered(v) {

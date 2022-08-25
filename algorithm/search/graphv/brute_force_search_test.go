@@ -88,8 +88,8 @@ func (g *graphImpl) AccessVertex(vertex, _ int) (found, cont bool) {
 	return vertex == g.Goal, true
 }
 
-func (g *graphImpl) AccessPath(path []int, depth int) (found, cont bool) {
-	return g.AccessVertex(path[len(path)-1], depth)
+func (g *graphImpl) AccessPath(path []int) (found, cont bool) {
+	return g.AccessVertex(path[len(path)-1], len(path)-1)
 }
 
 func (g *graphImpl) ResetSearchState() {

@@ -75,8 +75,8 @@ func (t *treeImpl) AccessNode(node, _ int) (found, cont bool) {
 	return node == t.Goal, true
 }
 
-func (t *treeImpl) AccessPath(path []int, depth int) (found, cont bool) {
-	return t.AccessNode(path[len(path)-1], depth)
+func (t *treeImpl) AccessPath(path []int) (found, cont bool) {
+	return t.AccessNode(path[len(path)-1], len(path)-1)
 }
 
 // numTreeNode is the number of nodes in treeData.
