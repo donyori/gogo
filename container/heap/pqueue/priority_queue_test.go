@@ -41,7 +41,7 @@ var dataList = [][]int{
 	{3, 2, 1, 0, 4, 5, 6}, {6, 5, 4, 3, 2, 1, 0},
 }
 
-func TestNewPriorityQueue(t *testing.T) {
+func TestNew(t *testing.T) {
 	for _, data := range dataList {
 		sorted := copyAndSort(data)
 		t.Run("data="+sliceToName(data), func(t *testing.T) {

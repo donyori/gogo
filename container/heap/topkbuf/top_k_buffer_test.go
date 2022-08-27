@@ -51,7 +51,7 @@ func init() {
 	}
 }
 
-func TestNewTopKBuffer(t *testing.T) {
+func TestNew(t *testing.T) {
 	testCases := make([]struct {
 		data []int
 		k    int
