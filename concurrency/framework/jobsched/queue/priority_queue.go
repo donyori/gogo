@@ -22,6 +22,7 @@ import (
 	"github.com/donyori/gogo/concurrency/framework/jobsched"
 	"github.com/donyori/gogo/container/heap/pqueue"
 	"github.com/donyori/gogo/errors"
+	"github.com/donyori/gogo/function/compare"
 )
 
 // PriorityFirstJobQueueMaker is a maker for creating a job queue that
@@ -65,6 +66,43 @@ func (m CreationTimeFirstJobQueueMaker[Job]) New() jobsched.JobQueue[Job, jobsch
 			}
 			return a.Meta.CreationTime.Before(b.Meta.CreationTime)
 		}, nil),
+	}
+}
+
+// JobPriorityQueueMaker is a maker for creating a job queue based on
+// a priority queue. It schedules jobs according to their custom priority.
+//
+// The priority of jobs is determined by its LessFn.
+// The "less" the job, the higher its priority, and the earlier dequeued.
+//
+// If LessFn is nil, the method New will panic.
+type JobPriorityQueueMaker[Job, Properties any] struct {
+	// A function to determine which job has higher priority.
+	//
+	// The "less" the job, the higher its priority, and the earlier dequeued.
+	//
+	// LessFn must describe a transitive ordering:
+	//   - if both LessFn(a, b) and LessFn(b, c) are true, then LessFn(a, c) must be true as well.
+	//   - if both LessFn(a, b) and LessFn(b, c) are false, then LessFn(a, c) must be false as well.
+	//
+	// Note that floating-point comparison
+	// (the < operator on float32 or float64 values)
+	// is not a transitive ordering when not-a-number (NaN) values are involved.
+	LessFn compare.LessFunc[*jobsched.MetaJob[Job, Properties]]
+}
+
+// New creates a new job priority queue.
+//
+// It panics if the maker or its LessFn is nil.
+func (m *JobPriorityQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
+	if m == nil {
+		panic(errors.AutoMsg("job queue maker is nil"))
+	}
+	if m.LessFn == nil {
+		panic(errors.AutoMsg("LessFn is nil"))
+	}
+	return &priorityJobQueue[Job, Properties]{
+		pq: pqueue.New(m.LessFn, nil),
 	}
 }
 

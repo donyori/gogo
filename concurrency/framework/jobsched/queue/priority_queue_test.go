@@ -44,3 +44,26 @@ func TestCreationTimeFirstJobQueue(t *testing.T) {
 			return a.Meta.CreationTime.Before(b.Meta.CreationTime)
 		}))
 }
+
+func TestJobPriorityQueue(t *testing.T) {
+	// Define a special priority rule:
+	// A job has a higher priority if its Meta.Priority is closer to 100.
+	// For two jobs with the same |Meta.Priority-100|,
+	// the earlier the Meta.CreationTime, the higher the priority.
+	lessFn := func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) bool {
+		pa, pb := int(a.Meta.Priority)-100, int(b.Meta.Priority)-100
+		if pa < 0 {
+			pa = -pa
+		}
+		if pb < 0 {
+			pb = -pb
+		}
+		if pa == pb {
+			return a.Meta.CreationTime.Before(b.Meta.CreationTime)
+		}
+		return pa < pb
+	}
+	testJobQueueFunc(t, &queue.JobPriorityQueueMaker[int, jobsched.NoProperty]{
+		LessFn: lessFn,
+	}, makeWant(lessFn))
+}
