@@ -57,6 +57,9 @@ func NewClosedError(deviceName string, parentErr error) *ClosedError {
 
 // Error reports the error message.
 func (ce *ClosedError) Error() string {
+	if ce == nil {
+		return "<nil>"
+	}
 	return ce.deviceName + " is already closed"
 }
 
@@ -64,6 +67,9 @@ func (ce *ClosedError) Error() string {
 //
 // If this error has no parent error, it returns nil.
 func (ce *ClosedError) Unwrap() error {
+	if ce == nil {
+		return nil
+	}
 	return ce.parentErr
 }
 

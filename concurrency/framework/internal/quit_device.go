@@ -18,7 +18,10 @@
 
 package internal
 
-import "github.com/donyori/gogo/concurrency"
+import (
+	"github.com/donyori/gogo/concurrency"
+	"github.com/donyori/gogo/errors"
+)
 
 // QuitDevice is an implementation of interface framework.QuitDevice.
 type QuitDevice struct {
@@ -27,19 +30,25 @@ type QuitDevice struct {
 
 // NewQuitDevice creates a new quit device.
 func NewQuitDevice() *QuitDevice {
-	return &QuitDevice{concurrency.NewOnceIndicator()}
+	return &QuitDevice{oi: concurrency.NewOnceIndicator()}
 }
 
 // QuitChan returns the channel for the quit signal.
 // When the job is finished or quit, this channel will be closed
 // to broadcast the quit signal.
 func (qd *QuitDevice) QuitChan() <-chan struct{} {
+	if qd == nil {
+		panic(errors.AutoMsg("*QuitDevice is nil"))
+	}
 	return qd.oi.C()
 }
 
 // IsQuit detects the quit signal on the quit channel.
 // It returns true if a quit signal is detected, and false otherwise.
 func (qd *QuitDevice) IsQuit() bool {
+	if qd == nil {
+		panic(errors.AutoMsg("*QuitDevice is nil"))
+	}
 	return qd.oi.Test()
 }
 
@@ -47,5 +56,8 @@ func (qd *QuitDevice) IsQuit() bool {
 //
 // This method will NOT wait until the job ends.
 func (qd *QuitDevice) Quit() {
+	if qd == nil {
+		panic(errors.AutoMsg("*QuitDevice is nil"))
+	}
 	qd.oi.Do(nil)
 }

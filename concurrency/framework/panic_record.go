@@ -21,6 +21,8 @@ package framework
 import (
 	"fmt"
 	"sync"
+
+	"github.com/donyori/gogo/errors"
 )
 
 // PanicRecord is a panic record, including the name of the goroutine
@@ -49,6 +51,9 @@ type PanicRecords struct {
 
 // Len returns the number of records.
 func (pr *PanicRecords) Len() int {
+	if pr == nil {
+		return 0
+	}
 	pr.lock.RLock()
 	defer pr.lock.RUnlock()
 	return len(pr.recs)
@@ -57,6 +62,9 @@ func (pr *PanicRecords) Len() int {
 // List copies and returns the panic records as a slice of PanicRecord.
 // It returns nil if there is no panic record.
 func (pr *PanicRecords) List() []PanicRecord {
+	if pr == nil {
+		return nil
+	}
 	pr.lock.RLock()
 	defer pr.lock.RUnlock()
 	if len(pr.recs) == 0 {
@@ -69,6 +77,9 @@ func (pr *PanicRecords) List() []PanicRecord {
 
 // Append adds new panic records to the back of its panic record list.
 func (pr *PanicRecords) Append(panicRec ...PanicRecord) {
+	if pr == nil {
+		panic(errors.AutoMsg("*PanicRecords is nil"))
+	}
 	if len(panicRec) == 0 {
 		return
 	}

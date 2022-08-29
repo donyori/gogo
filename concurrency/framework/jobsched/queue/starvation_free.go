@@ -46,6 +46,8 @@ type ExponentialJobQueueMaker[Job any] struct {
 }
 
 // New creates a new exponential job queue.
+//
+// If m is nil, it will use the default N (runtime.NumCPU()) and B (1.025).
 func (m *ExponentialJobQueueMaker[Job]) New() jobsched.JobQueue[Job, jobsched.NoProperty] {
 	var n int
 	var b float64

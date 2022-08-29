@@ -88,6 +88,9 @@ type JobPriorityQueueMaker[Job, Properties any] struct {
 	// Note that floating-point comparison
 	// (the < operator on float32 or float64 values)
 	// is not a transitive ordering when not-a-number (NaN) values are involved.
+	//
+	// The framework guarantees that arguments passed to LessFn are never nil
+	// and have a non-zero creation time in their meta information.
 	LessFn compare.LessFunc[*jobsched.MetaJob[Job, Properties]]
 }
 
@@ -96,7 +99,7 @@ type JobPriorityQueueMaker[Job, Properties any] struct {
 // It panics if the maker or its LessFn is nil.
 func (m *JobPriorityQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
 	if m == nil {
-		panic(errors.AutoMsg("job queue maker is nil"))
+		panic(errors.AutoMsg("*JobPriorityQueueMaker is nil"))
 	}
 	if m.LessFn == nil {
 		panic(errors.AutoMsg("LessFn is nil"))
