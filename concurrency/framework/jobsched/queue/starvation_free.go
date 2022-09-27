@@ -27,43 +27,47 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// ExponentialJobQueueMaker is a maker for creating a job queue with
+// exponentialJobQueueMaker is a maker for creating job queues with
 // a starvation-free job scheduling algorithm.
 //
 // The priority of jobs increases exponentially.
-type ExponentialJobQueueMaker[Job any] struct {
+type exponentialJobQueueMaker[Job, Properties any] struct {
 	// The number of goroutines to process jobs.
-	//
-	// If N is non-positive, runtime.NumCPU() will be used instead.
-	N int
+	n int
 
 	// The base of the exponent.
 	//
-	// The greater B is, the faster the priority of jobs increases.
-	//
-	// If B is not greater than 1, 1.025 will be used instead.
-	B float64
+	// The greater b is, the faster the priority of jobs increases.
+	b float64
+}
+
+// NewExponentialJobQueueMaker creates a job queue maker for creating job queues
+// with a starvation-free job scheduling algorithm.
+//
+// The priority of jobs increases exponentially.
+//
+// n is the number of goroutines to process jobs.
+// If n is non-positive, runtime.NumCPU() will be used instead.
+//
+// b is the base of the exponent.
+// The greater b is, the faster the priority of jobs increases.
+// If b is not greater than 1, 1.025 will be used instead.
+func NewExponentialJobQueueMaker[Job, Properties any](n int, b float64) jobsched.JobQueueMaker[Job, Properties] {
+	m := &exponentialJobQueueMaker[Job, Properties]{n: n, b: b}
+	if m.n <= 0 {
+		m.n = runtime.NumCPU()
+	}
+	if m.b <= 1. {
+		m.b = 1.025
+	}
+	return m
 }
 
 // New creates a new exponential job queue.
-//
-// If m is nil, it will use the default N (runtime.NumCPU()) and B (1.025).
-func (m *ExponentialJobQueueMaker[Job]) New() jobsched.JobQueue[Job, jobsched.NoProperty] {
-	var n int
-	var b float64
-	if m != nil {
-		n = m.N
-		b = m.B
-	}
-	if n <= 0 {
-		n = runtime.NumCPU()
-	}
-	if b <= 1. {
-		b = 1.025
-	}
-	jq := &exponentialJobQueue[Job]{
-		b:  b,
-		rn: 1. / float64(n),
+func (m *exponentialJobQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
+	jq := &exponentialJobQueue[Job, Properties]{
+		b:  m.b,
+		rn: 1. / float64(m.n),
 	}
 	jq.pq = pqueue.New(jq.jobLess, nil)
 	return jq
@@ -73,7 +77,7 @@ func (m *ExponentialJobQueueMaker[Job]) New() jobsched.JobQueue[Job, jobsched.No
 // a starvation-free job scheduling algorithm.
 //
 // The priority of jobs increases exponentially.
-type exponentialJobQueue[Job any] struct {
+type exponentialJobQueue[Job, Properties any] struct {
 	pq pqueue.PriorityQueue[*jobsched.MetaJob[Job, float64]]
 
 	// The base of the exponent.
@@ -89,7 +93,7 @@ type exponentialJobQueue[Job any] struct {
 }
 
 // Len returns the number of jobs in the queue.
-func (jq *exponentialJobQueue[Job]) Len() int {
+func (jq *exponentialJobQueue[Job, Properties]) Len() int {
 	return jq.pq.Len()
 }
 
@@ -97,7 +101,7 @@ func (jq *exponentialJobQueue[Job]) Len() int {
 //
 // The framework guarantees that all items in metaJob are never nil
 // and have a non-zero creation time in their meta information.
-func (jq *exponentialJobQueue[Job]) Enqueue(metaJob ...*jobsched.MetaJob[Job, jobsched.NoProperty]) {
+func (jq *exponentialJobQueue[Job, Properties]) Enqueue(metaJob ...*jobsched.MetaJob[Job, Properties]) {
 	if len(metaJob) == 0 {
 		return
 	}
@@ -118,7 +122,7 @@ func (jq *exponentialJobQueue[Job]) Enqueue(metaJob ...*jobsched.MetaJob[Job, jo
 // Dequeue removes and returns a job in the queue.
 //
 // It panics if the queue is nil or empty.
-func (jq *exponentialJobQueue[Job]) Dequeue() Job {
+func (jq *exponentialJobQueue[Job, Properties]) Dequeue() Job {
 	n := jq.pq.Len()
 	if n == 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))
@@ -138,7 +142,7 @@ func (jq *exponentialJobQueue[Job]) Dequeue() Job {
 // The higher the priority, the "less" the job.
 // If two jobs have nearly the same priority (difference less than 0.001),
 // the earlier its creation time, the "less" the job.
-func (jq *exponentialJobQueue[Job]) jobLess(a, b *jobsched.MetaJob[Job, float64]) bool {
+func (jq *exponentialJobQueue[Job, Properties]) jobLess(a, b *jobsched.MetaJob[Job, float64]) bool {
 	pa, pb := jq.calculatePriority(a), jq.calculatePriority(b)
 	if math.Abs(pa-pb) < 1e-3 {
 		return a.Meta.CreationTime.Before(b.Meta.CreationTime)
@@ -160,6 +164,6 @@ func (jq *exponentialJobQueue[Job]) jobLess(a, b *jobsched.MetaJob[Job, float64]
 // t is a measure of the waiting time of the job, equal to the number of
 // calls to the method Dequeue since the job was added to this queue,
 // and n is the number of goroutines to process jobs.
-func (jq *exponentialJobQueue[Job]) calculatePriority(mj *jobsched.MetaJob[Job, float64]) float64 {
+func (jq *exponentialJobQueue[Job, Properties]) calculatePriority(mj *jobsched.MetaJob[Job, float64]) float64 {
 	return (float64(mj.Meta.Priority) + 1) * math.Pow(jq.b, jq.t-mj.Meta.Custom)
 }

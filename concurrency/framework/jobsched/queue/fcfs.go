@@ -25,25 +25,36 @@ import (
 
 const emptyQueuePanicMessage string = "job queue is empty"
 
-// FcfsJobQueueMaker is a maker for creating a job queue with
+// fcfsJobQueueMaker is a maker for creating job queues with
 // FCFS (first come, first served) scheduling algorithm.
 //
 // The FCFS job queue implements a simple scheduling algorithm that
 // queues jobs in the order that they arrive.
 // All the properties (such as the priority and creation time)
 // of jobs will be ignored.
-type FcfsJobQueueMaker[Job any] struct{}
+type fcfsJobQueueMaker[Job, Properties any] struct{}
+
+// NewFcfsJobQueueMaker returns a job queue maker that creates job queues
+// with FCFS (first come, first served) scheduling algorithm.
+//
+// The FCFS job queue implements a simple scheduling algorithm that
+// queues jobs in the order that they arrive.
+// All the properties (such as the priority and creation time)
+// of jobs will be ignored.
+func NewFcfsJobQueueMaker[Job, Properties any]() jobsched.JobQueueMaker[Job, Properties] {
+	return fcfsJobQueueMaker[Job, Properties]{}
+}
 
 // New creates a new FCFS (first come, first served) job queue.
-func (m FcfsJobQueueMaker[Job]) New() jobsched.JobQueue[Job, jobsched.NoProperty] {
-	return new(fcfsJobQueue[Job])
+func (m fcfsJobQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
+	return new(fcfsJobQueue[Job, Properties])
 }
 
 // fcfsJobQueue is an FCFS (first come, first served) job queue.
-type fcfsJobQueue[Job any] []Job
+type fcfsJobQueue[Job, Properties any] []Job
 
 // Len returns the number of jobs in the queue.
-func (jq *fcfsJobQueue[Job]) Len() int {
+func (jq *fcfsJobQueue[Job, Properties]) Len() int {
 	return len(*jq)
 }
 
@@ -51,7 +62,7 @@ func (jq *fcfsJobQueue[Job]) Len() int {
 //
 // The framework guarantees that all items in metaJob are never nil
 // and have a non-zero creation time in their meta information.
-func (jq *fcfsJobQueue[Job]) Enqueue(metaJob ...*jobsched.MetaJob[Job, jobsched.NoProperty]) {
+func (jq *fcfsJobQueue[Job, Properties]) Enqueue(metaJob ...*jobsched.MetaJob[Job, Properties]) {
 	if len(metaJob) == 0 {
 		return
 	}
@@ -65,7 +76,7 @@ func (jq *fcfsJobQueue[Job]) Enqueue(metaJob ...*jobsched.MetaJob[Job, jobsched.
 // Dequeue removes and returns a job in the queue.
 //
 // It panics if the queue is nil or empty.
-func (jq *fcfsJobQueue[Job]) Dequeue() Job {
+func (jq *fcfsJobQueue[Job, Properties]) Dequeue() Job {
 	if len(*jq) == 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))
 	}

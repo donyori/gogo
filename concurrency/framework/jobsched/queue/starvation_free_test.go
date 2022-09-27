@@ -27,7 +27,7 @@ import (
 )
 
 func TestExponentialJobQueue_Basic(t *testing.T) {
-	testJobQueueFunc(t, new(queue.ExponentialJobQueueMaker[int]),
+	testJobQueueFunc(t, queue.NewExponentialJobQueueMaker[int, jobsched.NoProperty](0, 0.),
 		makeWant(func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) bool {
 			if a.Meta.Priority == b.Meta.Priority {
 				return a.Meta.CreationTime.Before(b.Meta.CreationTime)
@@ -41,7 +41,7 @@ func TestExponentialJobQueue_StarvationFree(t *testing.T) {
 	baseTime := time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
 
 	var target int
-	jq := (&queue.ExponentialJobQueueMaker[int]{N: N}).New()
+	jq := queue.NewExponentialJobQueueMaker[int, jobsched.NoProperty](N, 0.).New()
 	jq.Enqueue(&jobsched.MetaJob[int, jobsched.NoProperty]{
 		Meta: jobsched.Meta[jobsched.NoProperty]{
 			Priority:     0,

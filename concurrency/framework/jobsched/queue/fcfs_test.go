@@ -21,6 +21,7 @@ package queue_test
 import (
 	"testing"
 
+	"github.com/donyori/gogo/concurrency/framework/jobsched"
 	"github.com/donyori/gogo/concurrency/framework/jobsched/queue"
 )
 
@@ -29,5 +30,5 @@ func TestFcfsJobQueue(t *testing.T) {
 	for i := range want {
 		want[i] = []int{metaJobs[i].Job}
 	}
-	testJobQueueFunc(t, queue.FcfsJobQueueMaker[int]{}, want)
+	testJobQueueFunc(t, queue.NewFcfsJobQueueMaker[int, jobsched.NoProperty](), want)
 }

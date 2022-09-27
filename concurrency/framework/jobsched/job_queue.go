@@ -44,14 +44,14 @@ type JobQueue[Job, Properties any] interface {
 	Dequeue() Job
 }
 
-// JobQueueMaker is a maker for creating a job queue.
+// JobQueueMaker is a maker for creating job queues.
 //
 // The first type parameter Job is the type of jobs.
 // The second type parameter Properties is the type of custom properties
 // in the meta information of jobs.
 //
 // It has a method New, with no parameter.
-// The client should set any parameters required for creating a job queue
+// The client should set any parameters required for creating job queues
 // in the instance of this interface.
 type JobQueueMaker[Job, Properties any] interface {
 	// New creates a new job queue.

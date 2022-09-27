@@ -25,20 +25,33 @@ import (
 	"github.com/donyori/gogo/function/compare"
 )
 
-// PriorityFirstJobQueueMaker is a maker for creating a job queue that
-// schedules jobs according to their priority, and then creation time.
+// priorityFirstJobQueueMaker is a maker for creating job queues that
+// schedule jobs according to their priority, and then creation time.
 //
 // A job with a higher priority (the field Priority in its meta information)
 // will be dequeued earlier.
 // The jobs with the same priority will be scheduled according to their
 // creation time (the field CreationTime in the meta information).
 // The earlier the creation time, the earlier dequeued.
-type PriorityFirstJobQueueMaker[Job any] struct{}
+type priorityFirstJobQueueMaker[Job, Properties any] struct{}
+
+// NewPriorityFirstJobQueueMaker returns a job queue maker for
+// creating job queues that schedule jobs according to their priority,
+// and then creation time.
+//
+// A job with a higher priority (the field Priority in its meta information)
+// will be dequeued earlier.
+// The jobs with the same priority will be scheduled according to their
+// creation time (the field CreationTime in the meta information).
+// The earlier the creation time, the earlier dequeued.
+func NewPriorityFirstJobQueueMaker[Job, Properties any]() jobsched.JobQueueMaker[Job, Properties] {
+	return priorityFirstJobQueueMaker[Job, Properties]{}
+}
 
 // New creates a new priority-first job queue.
-func (m PriorityFirstJobQueueMaker[Job]) New() jobsched.JobQueue[Job, jobsched.NoProperty] {
-	return &priorityJobQueue[Job, jobsched.NoProperty]{
-		pq: pqueue.New(func(a, b *jobsched.MetaJob[Job, jobsched.NoProperty]) bool {
+func (m priorityFirstJobQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
+	return &priorityJobQueue[Job, Properties]{
+		pq: pqueue.New(func(a, b *jobsched.MetaJob[Job, Properties]) bool {
 			if a.Meta.Priority == b.Meta.Priority {
 				return a.Meta.CreationTime.Before(b.Meta.CreationTime)
 			}
@@ -47,20 +60,33 @@ func (m PriorityFirstJobQueueMaker[Job]) New() jobsched.JobQueue[Job, jobsched.N
 	}
 }
 
-// CreationTimeFirstJobQueueMaker is a maker for creating a job queue that
-// schedules jobs according to their creation time, and then priority.
+// creationTimeFirstJobQueueMaker is a maker for creating job queues that
+// schedule jobs according to their creation time, and then priority.
 //
 // A job with an earlier creation time (the field CreationTime
 // in its meta information) will be dequeued earlier.
 // The jobs with the same creation time will be scheduled according to
 // their priority (the field Priority in the meta information).
 // The higher the priority, the earlier dequeued.
-type CreationTimeFirstJobQueueMaker[Job any] struct{}
+type creationTimeFirstJobQueueMaker[Job, Properties any] struct{}
+
+// NewCreationTimeFirstJobQueueMaker returns a job queue maker for
+// creating job queues that schedule jobs according to their creation time,
+// and then priority.
+//
+// A job with a higher priority (the field Priority in its meta information)
+// will be dequeued earlier.
+// The jobs with the same priority will be scheduled according to their
+// creation time (the field CreationTime in the meta information).
+// The earlier the creation time, the earlier dequeued.
+func NewCreationTimeFirstJobQueueMaker[Job, Properties any]() jobsched.JobQueueMaker[Job, Properties] {
+	return creationTimeFirstJobQueueMaker[Job, Properties]{}
+}
 
 // New creates a new creation-time-first job queue.
-func (m CreationTimeFirstJobQueueMaker[Job]) New() jobsched.JobQueue[Job, jobsched.NoProperty] {
-	return &priorityJobQueue[Job, jobsched.NoProperty]{
-		pq: pqueue.New(func(a, b *jobsched.MetaJob[Job, jobsched.NoProperty]) bool {
+func (m creationTimeFirstJobQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
+	return &priorityJobQueue[Job, Properties]{
+		pq: pqueue.New(func(a, b *jobsched.MetaJob[Job, Properties]) bool {
 			if a.Meta.CreationTime.Equal(b.Meta.CreationTime) {
 				return a.Meta.Priority > b.Meta.Priority
 			}
@@ -69,43 +95,61 @@ func (m CreationTimeFirstJobQueueMaker[Job]) New() jobsched.JobQueue[Job, jobsch
 	}
 }
 
-// JobPriorityQueueMaker is a maker for creating a job queue based on
-// a priority queue. It schedules jobs according to their custom priority.
+// jobPriorityQueueMaker is a maker for creating job queues based on
+// a priority queue.
+// The job queues schedule jobs according to their custom priority.
 //
-// The priority of jobs is determined by its LessFn.
+// The priority of jobs is determined by its lessFn.
 // The "less" the job, the higher its priority, and the earlier dequeued.
-//
-// If LessFn is nil, the method New will panic.
-type JobPriorityQueueMaker[Job, Properties any] struct {
+type jobPriorityQueueMaker[Job, Properties any] struct {
 	// A function to determine which job has higher priority.
 	//
 	// The "less" the job, the higher its priority, and the earlier dequeued.
 	//
-	// LessFn must describe a transitive ordering:
-	//   - if both LessFn(a, b) and LessFn(b, c) are true, then LessFn(a, c) must be true as well.
-	//   - if both LessFn(a, b) and LessFn(b, c) are false, then LessFn(a, c) must be false as well.
+	// lessFn must describe a transitive ordering:
+	//   - if both lessFn(a, b) and lessFn(b, c) are true, then lessFn(a, c) must be true as well.
+	//   - if both lessFn(a, b) and lessFn(b, c) are false, then lessFn(a, c) must be false as well.
 	//
 	// Note that floating-point comparison
 	// (the < operator on float32 or float64 values)
 	// is not a transitive ordering when not-a-number (NaN) values are involved.
 	//
-	// The framework guarantees that arguments passed to LessFn are never nil
+	// The framework guarantees that arguments passed to lessFn are never nil
 	// and have a non-zero creation time in their meta information.
-	LessFn compare.LessFunc[*jobsched.MetaJob[Job, Properties]]
+	lessFn compare.LessFunc[*jobsched.MetaJob[Job, Properties]]
+}
+
+// NewJobPriorityQueueMaker creates a job queue maker for creating job queues
+// based on a priority queue.
+// The job queues schedule jobs according to their custom priority.
+//
+// The priority of jobs is determined by the function lessFn.
+// The "less" the job, the higher its priority, and the earlier dequeued.
+//
+// lessFn must describe a transitive ordering:
+//   - if both lessFn(a, b) and lessFn(b, c) are true, then lessFn(a, c) must be true as well.
+//   - if both lessFn(a, b) and lessFn(b, c) are false, then lessFn(a, c) must be false as well.
+//
+// Note that floating-point comparison
+// (the < operator on float32 or float64 values)
+// is not a transitive ordering when not-a-number (NaN) values are involved.
+//
+// The framework guarantees that arguments passed to lessFn are never nil
+// and have a non-zero creation time in their meta information.
+//
+// NewJobPriorityQueueMaker panics if lessFn is nil.
+func NewJobPriorityQueueMaker[Job, Properties any](
+	lessFn compare.LessFunc[*jobsched.MetaJob[Job, Properties]]) jobsched.JobQueueMaker[Job, Properties] {
+	if lessFn == nil {
+		panic(errors.AutoMsg("lessFn is nil"))
+	}
+	return &jobPriorityQueueMaker[Job, Properties]{lessFn: lessFn}
 }
 
 // New creates a new job priority queue.
-//
-// It panics if the maker or its LessFn is nil.
-func (m *JobPriorityQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
-	if m == nil {
-		panic(errors.AutoMsg("*JobPriorityQueueMaker is nil"))
-	}
-	if m.LessFn == nil {
-		panic(errors.AutoMsg("LessFn is nil"))
-	}
+func (m *jobPriorityQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
 	return &priorityJobQueue[Job, Properties]{
-		pq: pqueue.New(m.LessFn, nil),
+		pq: pqueue.New(m.lessFn, nil),
 	}
 }
 

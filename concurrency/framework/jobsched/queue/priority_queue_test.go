@@ -26,7 +26,7 @@ import (
 )
 
 func TestPriorityFirstJobQueue(t *testing.T) {
-	testJobQueueFunc(t, queue.PriorityFirstJobQueueMaker[int]{},
+	testJobQueueFunc(t, queue.NewPriorityFirstJobQueueMaker[int, jobsched.NoProperty](),
 		makeWant(func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) bool {
 			if a.Meta.Priority == b.Meta.Priority {
 				return a.Meta.CreationTime.Before(b.Meta.CreationTime)
@@ -36,7 +36,7 @@ func TestPriorityFirstJobQueue(t *testing.T) {
 }
 
 func TestCreationTimeFirstJobQueue(t *testing.T) {
-	testJobQueueFunc(t, queue.CreationTimeFirstJobQueueMaker[int]{},
+	testJobQueueFunc(t, queue.NewCreationTimeFirstJobQueueMaker[int, jobsched.NoProperty](),
 		makeWant(func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) bool {
 			if a.Meta.CreationTime.Equal(b.Meta.CreationTime) {
 				return a.Meta.Priority > b.Meta.Priority
@@ -63,7 +63,5 @@ func TestJobPriorityQueue(t *testing.T) {
 		}
 		return pa < pb
 	}
-	testJobQueueFunc(t, &queue.JobPriorityQueueMaker[int, jobsched.NoProperty]{
-		LessFn: lessFn,
-	}, makeWant(lessFn))
+	testJobQueueFunc(t, queue.NewJobPriorityQueueMaker[int, jobsched.NoProperty](lessFn), makeWant(lessFn))
 }
