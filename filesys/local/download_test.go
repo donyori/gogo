@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package local
+package local_test
 
 import (
 	"crypto/sha256"
@@ -30,30 +30,31 @@ import (
 
 	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/filesys"
+	"github.com/donyori/gogo/filesys/local"
 )
 
 var (
 	testHttpDlUrl      = `https://www.gnu.org/licenses/agpl-3.0.txt`
-	testHttpDlChecksum = filesys.Checksum{
-		HashGen: sha256.New,
+	testHttpDlChecksum = filesys.HashChecksum{
+		NewHash: sha256.New,
 		// This SHA256 checksum was generated on March 9, 2021.
-		HexExpSum: "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+		ExpHex: "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
 	}
-	testHttpDlWrongChecksum = filesys.Checksum{
-		HashGen:   sha256.New,
-		HexExpSum: "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db07912345",
+	testHttpDlWrongChecksum = filesys.HashChecksum{
+		NewHash: sha256.New,
+		ExpHex:  "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db07912345",
 	}
 )
 
 func TestHttpDownload(t *testing.T) {
 	testHttpDownloadFn(t, func(filename string) error {
-		return HttpDownload(testHttpDlUrl, filename, 0600, testHttpDlChecksum)
+		return local.HttpDownload(testHttpDlUrl, filename, 0600, testHttpDlChecksum)
 	})
 }
 
 func TestHttpDownload_ChecksumFailed(t *testing.T) {
-	testHttpDownloadFnChecksumFailed(t, func(filename string, cs ...filesys.Checksum) error {
-		return HttpDownload(testHttpDlUrl, filename, 0600, cs...)
+	testHttpDownloadFnChecksumFailed(t, func(filename string, cs ...filesys.HashChecksum) error {
+		return local.HttpDownload(testHttpDlUrl, filename, 0600, cs...)
 	})
 }
 
@@ -63,29 +64,29 @@ func TestHttpCustomDownload(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		return HttpCustomDownload(req, filename, 0600, testHttpDlChecksum)
+		return local.HttpCustomDownload(req, filename, 0600, testHttpDlChecksum)
 	})
 }
 
 func TestHttpCustomDownload_ChecksumFailed(t *testing.T) {
-	testHttpDownloadFnChecksumFailed(t, func(filename string, cs ...filesys.Checksum) error {
+	testHttpDownloadFnChecksumFailed(t, func(filename string, cs ...filesys.HashChecksum) error {
 		req, err := http.NewRequest("", testHttpDlUrl, nil)
 		if err != nil {
 			return err
 		}
-		return HttpCustomDownload(req, filename, 0600, cs...)
+		return local.HttpCustomDownload(req, filename, 0600, cs...)
 	})
 }
 
 func TestHttpUpdate(t *testing.T) {
-	testHttpUpdateFn(t, func(filename string, cs ...filesys.Checksum) (updated bool, err error) {
-		return HttpUpdate(testHttpDlUrl, filename, 0600, cs...)
+	testHttpUpdateFn(t, func(filename string, cs ...filesys.HashChecksum) (updated bool, err error) {
+		return local.HttpUpdate(testHttpDlUrl, filename, 0600, cs...)
 	})
 }
 
 func TestHttpUpdate_ChecksumFailed(t *testing.T) {
-	testHttpDownloadFnChecksumFailed(t, func(filename string, cs ...filesys.Checksum) error {
-		updated, err := HttpUpdate(testHttpDlUrl, filename, 0600, cs...)
+	testHttpDownloadFnChecksumFailed(t, func(filename string, cs ...filesys.HashChecksum) error {
+		updated, err := local.HttpUpdate(testHttpDlUrl, filename, 0600, cs...)
 		if updated {
 			t.Error("Checksum Failed Case, updated is true.")
 		}
@@ -94,22 +95,22 @@ func TestHttpUpdate_ChecksumFailed(t *testing.T) {
 }
 
 func TestHttpCustomUpdate(t *testing.T) {
-	testHttpUpdateFn(t, func(filename string, cs ...filesys.Checksum) (updated bool, err error) {
+	testHttpUpdateFn(t, func(filename string, cs ...filesys.HashChecksum) (updated bool, err error) {
 		req, err := http.NewRequest("", testHttpDlUrl, nil)
 		if err != nil {
 			return false, err
 		}
-		return HttpCustomUpdate(req, filename, 0600, cs...)
+		return local.HttpCustomUpdate(req, filename, 0600, cs...)
 	})
 }
 
 func TestHttpCustomUpdate_ChecksumFailed(t *testing.T) {
-	testHttpDownloadFnChecksumFailed(t, func(filename string, cs ...filesys.Checksum) error {
+	testHttpDownloadFnChecksumFailed(t, func(filename string, cs ...filesys.HashChecksum) error {
 		req, err := http.NewRequest("", testHttpDlUrl, nil)
 		if err != nil {
 			return err
 		}
-		updated, err := HttpCustomUpdate(req, filename, 0600, cs...)
+		updated, err := local.HttpCustomUpdate(req, filename, 0600, cs...)
 		if updated {
 			t.Error("Checksum Failed Case, updated is true.")
 		}
@@ -146,12 +147,12 @@ func testHttpDownloadFn(t *testing.T, fn func(filename string) error) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum := hex.EncodeToString(h.Sum(nil)); sum != testHttpDlChecksum.HexExpSum {
-		t.Errorf("Checksum: %s != %s.", sum, testHttpDlChecksum.HexExpSum)
+	if sum := hex.EncodeToString(h.Sum(nil)); sum != testHttpDlChecksum.ExpHex {
+		t.Errorf("Checksum: %s != %s.", sum, testHttpDlChecksum.ExpHex)
 	}
 }
 
-func testHttpUpdateFn(t *testing.T, fn func(filename string, cs ...filesys.Checksum) (updated bool, err error)) {
+func testHttpUpdateFn(t *testing.T, fn func(filename string, cs ...filesys.HashChecksum) (updated bool, err error)) {
 	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
@@ -239,7 +240,7 @@ func testHttpUpdateFn(t *testing.T, fn func(filename string, cs ...filesys.Check
 	}
 }
 
-func testHttpDownloadFnChecksumFailed(t *testing.T, fn func(filename string, cs ...filesys.Checksum) error) {
+func testHttpDownloadFnChecksumFailed(t *testing.T, fn func(filename string, cs ...filesys.HashChecksum) error) {
 	dir, err := os.MkdirTemp("", "gogo_test_")
 	if err != nil {
 		t.Fatal(err)
@@ -287,8 +288,8 @@ func testHttpDownloadFnChecksumFailed(t *testing.T, fn func(filename string, cs 
 	modTime := info.ModTime()
 
 	err = fn(filename, testHttpDlWrongChecksum)
-	if !errors.Is(err, ErrVerificationFail) {
-		t.Errorf("Checksum Failed Case, err: %v != %v.", err, ErrVerificationFail)
+	if !errors.Is(err, local.ErrVerificationFail) {
+		t.Errorf("Checksum Failed Case, err: %v != %v.", err, local.ErrVerificationFail)
 	}
 
 	info, err = os.Lstat(filename)

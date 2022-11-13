@@ -40,8 +40,8 @@ import (
 // A damaged file will be removed and ErrVerificationFail will be returned.
 //
 // It reports an error and downloads nothing if anyone of cs contains
-// a nil HashGen or an empty HexExpSum.
-func HttpDownload(url, filename string, perm filesys.FileMode, cs ...filesys.Checksum) error {
+// a nil NewHash or an empty ExpHex.
+func HttpDownload(url, filename string, perm filesys.FileMode, cs ...filesys.HashChecksum) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return errors.AutoWrap(err)
@@ -62,8 +62,8 @@ func HttpDownload(url, filename string, perm filesys.FileMode, cs ...filesys.Che
 // A damaged file will be removed and ErrVerificationFail will be returned.
 //
 // It reports an error and downloads nothing if anyone of cs contains
-// a nil HashGen or an empty HexExpSum.
-func HttpCustomDownload(req *http.Request, filename string, perm filesys.FileMode, cs ...filesys.Checksum) error {
+// a nil NewHash or an empty ExpHex.
+func HttpCustomDownload(req *http.Request, filename string, perm filesys.FileMode, cs ...filesys.HashChecksum) error {
 	if req == nil {
 		return errors.AutoNew("req is nil")
 	}
@@ -78,7 +78,7 @@ func HttpCustomDownload(req *http.Request, filename string, perm filesys.FileMod
 //
 // It returns an indicator updated and any error encountered.
 // updated is true if and only if this function has created or edited the file.
-func HttpUpdate(url, filename string, perm filesys.FileMode, cs ...filesys.Checksum) (updated bool, err error) {
+func HttpUpdate(url, filename string, perm filesys.FileMode, cs ...filesys.HashChecksum) (updated bool, err error) {
 	if VerifyChecksum(filename, cs...) {
 		return
 	}
@@ -94,7 +94,7 @@ func HttpUpdate(url, filename string, perm filesys.FileMode, cs ...filesys.Check
 //
 // It returns an indicator updated and any error encountered.
 // updated is true if and only if this function has created or edited the file.
-func HttpCustomUpdate(req *http.Request, filename string, perm filesys.FileMode, cs ...filesys.Checksum) (updated bool, err error) {
+func HttpCustomUpdate(req *http.Request, filename string, perm filesys.FileMode, cs ...filesys.HashChecksum) (updated bool, err error) {
 	if VerifyChecksum(filename, cs...) {
 		return
 	}
@@ -113,24 +113,24 @@ func HttpCustomUpdate(req *http.Request, filename string, perm filesys.FileMode,
 // A damaged file will be removed and ErrVerificationFail will be returned.
 //
 // It reports an error and downloads nothing if anyone of cs contains
-// a nil HashGen or an empty HexExpSum.
+// a nil NewHash or an empty ExpHex.
 //
 // Caller should guarantee that req != nil.
-func httpRequestDownload(req *http.Request, filename string, perm filesys.FileMode, cs ...filesys.Checksum) (err error) {
-	var hashes []hash.Hash
+func httpRequestDownload(req *http.Request, filename string, perm filesys.FileMode, cs ...filesys.HashChecksum) (err error) {
+	var hs []hash.Hash
 	var ws []io.Writer
 	if len(cs) > 0 {
-		hashes = make([]hash.Hash, len(cs))
+		hs = make([]hash.Hash, len(cs))
 		ws = make([]io.Writer, len(cs))
 		for i := range cs {
-			if cs[i].HashGen == nil {
-				return errors.AutoNew("specified hash generator is nil")
+			if cs[i].NewHash == nil {
+				return errors.AutoNew("specified hash is nil")
 			}
-			if cs[i].HexExpSum == "" {
+			if cs[i].ExpHex == "" {
 				return errors.AutoNew("specified expected checksum is empty")
 			}
-			hashes[i] = cs[i].HashGen()
-			ws[i] = hashes[i]
+			hs[i] = cs[i].NewHash()
+			ws[i] = hs[i]
 		}
 	}
 	var client http.Client
@@ -158,7 +158,7 @@ func httpRequestDownload(req *http.Request, filename string, perm filesys.FileMo
 				return false
 			}
 			for i := range cs {
-				if !hex.CanEncodeToString(hashes[i].Sum(nil), cs[i].HexExpSum) {
+				if !hex.CanEncodeToString(hs[i].Sum(nil), cs[i].ExpHex) {
 					return false
 				}
 			}

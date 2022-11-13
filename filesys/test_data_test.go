@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package filesys
+package filesys_test
 
 import (
 	"archive/tar"
@@ -31,6 +31,8 @@ import (
 	"strings"
 	"testing/fstest"
 	"time"
+
+	"github.com/donyori/gogo/filesys"
 )
 
 var (
@@ -44,7 +46,7 @@ var (
 	testFsTarFilenames   []string
 	testFsTgzFilenames   []string
 
-	testFsChecksumMap map[string][]Checksum
+	testFsChecksumMap map[string][]filesys.HashChecksum
 )
 
 func init() {
@@ -204,7 +206,7 @@ func init() {
 		}
 	}
 
-	testFsChecksumMap = make(map[string][]Checksum, len(testFs))
+	testFsChecksumMap = make(map[string][]filesys.HashChecksum, len(testFs))
 	for name, file := range testFs {
 		r := bytes.NewReader(file.Data)
 		hSha256 := sha256.New()
@@ -214,14 +216,14 @@ func init() {
 		if err != nil {
 			panic(err)
 		}
-		testFsChecksumMap[name] = []Checksum{
+		testFsChecksumMap[name] = []filesys.HashChecksum{
 			{
-				HashGen:   sha256.New,
-				HexExpSum: hex.EncodeToString(hSha256.Sum(nil)),
+				NewHash: sha256.New,
+				ExpHex:  hex.EncodeToString(hSha256.Sum(nil)),
 			},
 			{
-				HashGen:   md5.New,
-				HexExpSum: hex.EncodeToString(hMd5.Sum(nil)),
+				NewHash: md5.New,
+				ExpHex:  hex.EncodeToString(hMd5.Sum(nil)),
 			},
 		}
 	}

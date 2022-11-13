@@ -111,6 +111,8 @@ type reader struct {
 
 // Read creates a reader on the specified file with options opts.
 //
+// If opts are nil, a zero-value ReadOptions will be used.
+//
 // To ensure that this function and the returned reader can work as expected,
 // the input file must not be operated by anyone else
 // before closing the returned reader.
@@ -166,41 +168,62 @@ func Read(file File, opts *ReadOptions, closeFile bool) (r Reader, err error) {
 		f:    file,
 	}
 	r = fr
-	if opts.Offset > 0 {
-		if seeker, ok := file.(io.Seeker); ok {
-			_, err = seeker.Seek(opts.Offset, io.SeekStart)
-		} else {
-			// Discard opts.Offset bytes.
-			_, err = io.CopyN(io.Discard, file, opts.Offset)
-		}
-	} else if opts.Offset < 0 {
-		if seeker, ok := file.(io.Seeker); ok {
-			_, err = seeker.Seek(opts.Offset, io.SeekEnd)
-		} else {
-			// Discard (size + opts.Offset) bytes.
-			_, err = io.CopyN(io.Discard, file, info.Size()+opts.Offset)
-		}
-	}
+	err = readSubOffsetAndLimit(fr, info)
 	if err != nil {
 		el.Append(err)
 		return
 	}
-	if opts.Limit > 0 {
-		fr.ubr = io.LimitReader(fr.ubr, opts.Limit)
+	err = readSubRawAndBufOpen(fr, info, &closers)
+	if err != nil {
+		el.Append(err)
 	}
-	if !opts.Raw {
+	return
+}
+
+// readSubOffsetAndLimit is a sub-process of function Read
+// to deal with the options Offset and Limit.
+func readSubOffsetAndLimit(fr *reader, info FileInfo) error {
+	var err error
+	if fr.opts.Offset > 0 {
+		if seeker, ok := fr.f.(io.Seeker); ok {
+			_, err = seeker.Seek(fr.opts.Offset, io.SeekStart)
+		} else {
+			// Discard fr.opts.Offset bytes.
+			_, err = io.CopyN(io.Discard, fr.f, fr.opts.Offset)
+		}
+	} else if fr.opts.Offset < 0 {
+		if seeker, ok := fr.f.(io.Seeker); ok {
+			_, err = seeker.Seek(fr.opts.Offset, io.SeekEnd)
+		} else {
+			// Discard (size + fr.opts.Offset) bytes.
+			_, err = io.CopyN(io.Discard, fr.f, info.Size()+fr.opts.Offset)
+		}
+	}
+	if err != nil {
+		return err
+	}
+	if fr.opts.Limit > 0 {
+		fr.ubr = io.LimitReader(fr.ubr, fr.opts.Limit)
+	}
+	return nil
+}
+
+// readSubRawAndBufOpen is a sub-process of function Read
+// to deal with the options Raw and BufOpen.
+// It also sets fr.c and updates closers.
+func readSubRawAndBufOpen(fr *reader, info FileInfo, pClosers *[]io.Closer) error {
+	if !fr.opts.Raw {
 		base := strings.ToLower(path.Clean(filepath.ToSlash(info.Name())))
 		ext := path.Ext(base)
 		loop := true
 		for loop {
 			switch ext {
 			case ".gz", ".tgz":
-				gr, err1 := gzip.NewReader(fr.ubr)
-				if err1 != nil {
-					el.Append(err1)
-					return
+				gr, err := gzip.NewReader(fr.ubr)
+				if err != nil {
+					return err
 				}
-				closers = append(closers, gr)
+				*pClosers = append(*pClosers, gr)
 				fr.ubr = gr
 				if ext == ".tgz" {
 					ext = ".tar"
@@ -219,18 +242,18 @@ func Read(file File, opts *ReadOptions, closeFile bool) (r Reader, err error) {
 			ext = path.Ext(base)
 		}
 	}
-	switch len(closers) {
+	switch len(*pClosers) {
 	case 1:
-		fr.c = inout.WrapNoErrorCloser(closers[0])
+		fr.c = inout.WrapNoErrorCloser((*pClosers)[0])
 	case 0:
 		fr.c = inout.NewNoOpCloser()
 	default:
-		fr.c = inout.NewMultiCloser(true, true, closers...)
+		fr.c = inout.NewMultiCloser(true, true, *pClosers...)
 	}
-	if opts.BufOpen {
+	if fr.opts.BufOpen {
 		fr.createBr()
 	}
-	return
+	return nil
 }
 
 // ReadFromFs opens a file from fsys with specified name for reading.

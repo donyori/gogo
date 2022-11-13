@@ -16,53 +16,72 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package filesys
+package filesys_test
 
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/donyori/gogo/filesys"
 )
 
 func TestVerifyChecksumFromFs(t *testing.T) {
-	wrongChecksum := Checksum{
-		HashGen:   sha256.New,
-		HexExpSum: strings.Repeat("0", hex.EncodedLen(sha256.Size)),
+	wrongChecksum := filesys.HashChecksum{
+		NewHash: sha256.New,
+		ExpHex:  strings.Repeat("0", hex.EncodedLen(sha256.Size)),
 	}
-	if VerifyChecksumFromFs(testFs, "nonexist") {
-		t.Error("True for non-exist file.")
+
+	testCases := make([]struct {
+		name     string
+		filename string
+		cs       []filesys.HashChecksum
+		want     bool
+	}, 1+len(testFsFilenames)*8)
+	testCases[0].name = `file="nonexist"&cs=<nil>`
+	testCases[0].filename = "nonexist"
+	idx := 1
+	for _, filename := range testFsFilenames {
+		for i := 0; i < 8; i++ {
+			testCases[idx+i].filename = filename
+		}
+		namePrefix := fmt.Sprintf("file=%q&cs=", filename)
+
+		testCases[idx].name = namePrefix + "<nil>"
+		testCases[idx].want = true
+
+		testCases[idx+1].name = namePrefix + "correct"
+		testCases[idx+1].cs = testFsChecksumMap[filename]
+		testCases[idx+1].want = true
+
+		testCases[idx+2].name = namePrefix + "wrong"
+		testCases[idx+2].cs = []filesys.HashChecksum{wrongChecksum}
+
+		testCases[idx+3].name = namePrefix + "correct+wrong"
+		testCases[idx+3].cs = []filesys.HashChecksum{testFsChecksumMap[filename][0], wrongChecksum}
+
+		testCases[idx+4].name = namePrefix + "zero-value"
+		testCases[idx+4].cs = []filesys.HashChecksum{{}}
+
+		testCases[idx+5].name = namePrefix + "noExpHex"
+		testCases[idx+5].cs = []filesys.HashChecksum{{NewHash: sha256.New}}
+
+		testCases[idx+6].name = namePrefix + "noHash"
+		testCases[idx+6].cs = []filesys.HashChecksum{{ExpHex: testFsChecksumMap[filename][0].ExpHex}}
+
+		testCases[idx+7].name = namePrefix + "correct+empty"
+		testCases[idx+7].cs = []filesys.HashChecksum{testFsChecksumMap[filename][0], {}}
+
+		idx += 8
 	}
-	for _, name := range testFsFilenames {
-		if !VerifyChecksumFromFs(testFs, name) {
-			t.Errorf("file: %s, no checksum, false for existing file.", name)
-		}
-		if !VerifyChecksumFromFs(testFs, name, testFsChecksumMap[name]...) {
-			t.Errorf("file: %s, false for intact file.", name)
-		}
-		if VerifyChecksumFromFs(testFs, name, wrongChecksum) {
-			t.Errorf("file: %s, only wrong checksum, true for wrong checksum.", name)
-		}
-		if VerifyChecksumFromFs(testFs, name, testFsChecksumMap[name][0], wrongChecksum) {
-			t.Errorf("file: %s, wrong checksum, true for wrong checksum.", name)
-		}
-		if VerifyChecksumFromFs(testFs, name, wrongChecksum, wrongChecksum) {
-			t.Errorf("file: %s, two wrong checksums, true for wrong checksum.", name)
-		}
-		if VerifyChecksumFromFs(testFs, name, Checksum{}) {
-			t.Errorf("file: %s, only empty checksum, true for empty checksum.", name)
-		}
-		if VerifyChecksumFromFs(testFs, name, Checksum{HashGen: sha256.New}) {
-			t.Errorf("file: %s, only empty checksum HexExpSum, true for empty checksum HexExpSum.", name)
-		}
-		if VerifyChecksumFromFs(testFs, name, Checksum{HexExpSum: testFsChecksumMap[name][0].HexExpSum}) {
-			t.Errorf("file: %s, only nil checksum HashGen, true for nil checksum HashGen.", name)
-		}
-		if VerifyChecksumFromFs(testFs, name, testFsChecksumMap[name][0], Checksum{}) {
-			t.Errorf("file: %s, empty checksum, true for empty checksum.", name)
-		}
-		if VerifyChecksumFromFs(testFs, name, Checksum{}, Checksum{}) {
-			t.Errorf("file: %s, two empty checksums, true for empty checksum.", name)
-		}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := filesys.VerifyChecksumFromFs(testFs, tc.filename, tc.cs...); got != tc.want {
+				t.Errorf("got %t; want %t", got, tc.want)
+			}
+		})
 	}
 }

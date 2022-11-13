@@ -25,14 +25,14 @@ import (
 	"github.com/donyori/gogo/encoding/hex"
 )
 
-// Checksum is a combination of a hash function generator and
+// HashChecksum is a combination of a hash function maker and
 // an expected checksum.
-type Checksum struct {
-	// A function to generate a hash function. E.g. crypto/sha256.New.
-	HashGen func() hash.Hash
+type HashChecksum struct {
+	// A function that creates a new hash function (e.g., crypto/sha256.New).
+	NewHash func() hash.Hash
 
 	// Expected checksum, in hexadecimal representation.
-	HexExpSum string
+	ExpHex string
 }
 
 // VerifyChecksum verifies a file by checksum.
@@ -47,26 +47,26 @@ type Checksum struct {
 // It returns true if the file can be read and matches all checksums.
 //
 // Note that it returns false if file is nil,
-// or anyone of cs contains a nil HashGen or an empty HexExpSum.
-// And it returns true if len(cs) is 0.
-func VerifyChecksum(file File, cs ...Checksum) bool {
+// or anyone of cs contains a nil NewHash or an empty ExpHex.
+// And it returns true if file is not nil and len(cs) is 0.
+func VerifyChecksum(file File, cs ...HashChecksum) bool {
 	if file == nil {
 		return false
 	}
 	if len(cs) == 0 {
 		return true
 	}
-	hashes := make([]hash.Hash, len(cs))
+	hs := make([]hash.Hash, len(cs))
 	ws := make([]io.Writer, len(cs))
 	for i := range cs {
-		if cs[i].HashGen == nil {
+		if cs[i].NewHash == nil {
 			return false
 		}
-		if cs[i].HexExpSum == "" {
+		if cs[i].ExpHex == "" {
 			return false
 		}
-		hashes[i] = cs[i].HashGen()
-		ws[i] = hashes[i]
+		hs[i] = cs[i].NewHash()
+		ws[i] = hs[i]
 	}
 	w := ws[0]
 	if len(ws) > 1 {
@@ -77,7 +77,7 @@ func VerifyChecksum(file File, cs ...Checksum) bool {
 		return false
 	}
 	for i := range cs {
-		if !hex.CanEncodeToString(hashes[i].Sum(nil), cs[i].HexExpSum) {
+		if !hex.CanEncodeToString(hs[i].Sum(nil), cs[i].ExpHex) {
 			return false
 		}
 	}
@@ -91,9 +91,9 @@ func VerifyChecksum(file File, cs ...Checksum) bool {
 // and matches all checksums.
 //
 // Note that it returns false if fsys is nil,
-// or anyone of cs contains a nil HashGen or an empty HexExpSum.
+// or anyone of cs contains a nil NewHash or an empty ExpHex.
 // And it returns true if len(cs) is 0 and the file can be opened for reading.
-func VerifyChecksumFromFs(fsys FS, name string, cs ...Checksum) bool {
+func VerifyChecksumFromFs(fsys FS, name string, cs ...HashChecksum) bool {
 	if fsys == nil {
 		return false
 	}
@@ -101,8 +101,8 @@ func VerifyChecksumFromFs(fsys FS, name string, cs ...Checksum) bool {
 	if err != nil {
 		return false
 	}
-	defer func() {
-		_ = f.Close()
-	}()
+	defer func(f File) {
+		_ = f.Close() // ignore error
+	}(f)
 	return VerifyChecksum(f, cs...)
 }

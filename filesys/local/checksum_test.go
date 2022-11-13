@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package local
+package local_test
 
 import (
 	"crypto/sha256"
@@ -25,9 +25,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/filesys"
+	"github.com/donyori/gogo/filesys/local"
 )
 
 func TestVerifyChecksum(t *testing.T) {
@@ -40,83 +43,84 @@ func TestVerifyChecksum(t *testing.T) {
 			t.Error(err)
 		}
 	}(dir)
-	filename := filepath.Join(dir, "testfile.dat")
-
-	if VerifyChecksum(filename) {
-		t.Error("True for non-exist file.")
-	}
-
-	// Make test files:
-	fw, err := os.Create(filename)
+	f1, f2, h, err := makeTestFiles(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if fw != nil {
-			if err := fw.Close(); err != nil {
-				t.Error(err)
+
+	ck := filesys.HashChecksum{
+		NewHash: sha256.New,
+		ExpHex:  h,
+	}
+	wrongCk := filesys.HashChecksum{
+		NewHash: sha256.New,
+		ExpHex:  strings.Repeat("0", len(h)),
+	}
+	namePrefix := fmt.Sprintf("file=%q&cs=", f1)
+
+	testCases := []struct {
+		name     string
+		filename string
+		cs       []filesys.HashChecksum
+		want     bool
+	}{
+		{`file="nonexist"&cs=<nil>`, "nonexist", nil, false},
+		{namePrefix + "<nil>", f1, nil, true},
+		{namePrefix + "correct", f1, []filesys.HashChecksum{ck}, true},
+		{namePrefix + "wrong", f1, []filesys.HashChecksum{wrongCk}, false},
+		{namePrefix + "correct+wrong", f1, []filesys.HashChecksum{ck, wrongCk}, false},
+		{namePrefix + "zero-value", f1, []filesys.HashChecksum{{}}, false},
+		{namePrefix + "noExpHex", f1, []filesys.HashChecksum{{NewHash: sha256.New}}, false},
+		{namePrefix + "noHash", f1, []filesys.HashChecksum{{ExpHex: h}}, false},
+		{namePrefix + "correct+empty", f1, []filesys.HashChecksum{ck, {}}, false},
+		{fmt.Sprintf("file=%q&cs=wrong", f2), f2, []filesys.HashChecksum{ck}, false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := local.VerifyChecksum(tc.filename, tc.cs...); got != tc.want {
+				t.Errorf("got %t; want %t", got, tc.want)
 			}
-		}
-	}()
-	filename2 := filepath.Join(dir, "testfile2.dat")
-	fw2, err := os.Create(filename2)
-	if err != nil {
-		t.Fatal(err)
+		})
 	}
-	defer func() {
-		if fw2 != nil {
-			if err := fw2.Close(); err != nil {
-				t.Error(err)
-			}
-		}
-	}()
-	h := sha256.New()
-	w := io.MultiWriter(fw, h)
-	w2 := io.MultiWriter(fw, fw2, h)
-	for i := 0; i < 5000; i++ {
-		_, err = fmt.Fprintln(w2, "gogo test file.")
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-	for i := 0; i < 5000; i++ {
-		_, err = fmt.Fprintln(w, "gogo test file.")
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-	err = fw.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	fw = nil
-	err = fw2.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	fw2 = nil
+}
 
-	ck := filesys.Checksum{
-		HashGen:   sha256.New,
-		HexExpSum: hex.EncodeToString(h.Sum(nil)),
+// makeTestFiles makes two files with different content for TestVerifyChecksum.
+//
+// It returns the filenames and the SHA256 hash (in hexadecimal representation)
+// of the first file (f1), and any error encountered.
+func makeTestFiles(dir string) (f1, f2, h string, err error) {
+	f1 = filepath.Join(dir, "test1.txt")
+	f2 = filepath.Join(dir, "test2.txt")
+	file1, err := os.Create(f1)
+	if err != nil {
+		return "", "", "", errors.AutoWrap(err)
 	}
-
-	if !VerifyChecksum(filename) {
-		t.Error("False for existing file.")
+	closeFile := func(f *os.File) {
+		err1 := f.Close()
+		if err1 != nil {
+			err = errors.AutoWrapSkip(errors.Combine(err, err1), 1) // skip = 1 to skip the inner function
+		}
 	}
-	if !VerifyChecksum(filename, ck) {
-		t.Error("False for intact file.")
+	defer closeFile(file1)
+	file2, err := os.Create(f2)
+	if err != nil {
+		return "", "", "", errors.AutoWrap(err)
 	}
-	if VerifyChecksum(filename2, ck) {
-		t.Error("True for damaged file.")
+	defer closeFile(file2)
+	hFn := sha256.New()
+	mw1 := io.MultiWriter(file1, hFn)
+	mw2 := io.MultiWriter(mw1, file2)
+	for i := 0; i < 100; i++ {
+		_, err = fmt.Fprintln(mw2, i)
+		if err != nil {
+			return "", "", "", errors.AutoWrap(err)
+		}
 	}
-	if VerifyChecksum(filename, filesys.Checksum{}) {
-		t.Error("True for empty checksum.")
+	_, err = fmt.Fprintln(mw1, 100)
+	if err != nil {
+		return "", "", "", errors.AutoWrap(err)
 	}
-	if VerifyChecksum(filename, filesys.Checksum{HashGen: sha256.New}) {
-		t.Error("True for empty checksum HexExpSum.")
-	}
-	if VerifyChecksum(filename, filesys.Checksum{HexExpSum: ck.HexExpSum}) {
-		t.Error("True for nil checksum HashGen.")
-	}
+	h = hex.EncodeToString(hFn.Sum(nil))
+	return
 }

@@ -29,16 +29,16 @@ import (
 // It returns true if and only if the file can be read
 // and matches all checksums.
 //
-// Note that it returns false if anyone of cs contains a nil HashGen
-// or an empty HexExpSum.
+// Note that it returns false if anyone of cs contains a nil NewHash
+// or an empty ExpHex.
 // And it returns true if len(cs) is 0 and the file can be opened for reading.
-func VerifyChecksum(filename string, cs ...filesys.Checksum) bool {
+func VerifyChecksum(filename string, cs ...filesys.HashChecksum) bool {
 	f, err := os.Open(filename)
 	if err != nil {
 		return false
 	}
 	defer func(f *os.File) {
-		_ = f.Close()
+		_ = f.Close() // ignore error
 	}(f)
 	return filesys.VerifyChecksum(f, cs...)
 }
