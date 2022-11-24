@@ -33,7 +33,7 @@ import (
 )
 
 func TestRead_NotCloseFile(t *testing.T) {
-	const name = "testFile1.txt"
+	const name = "file1.txt"
 	file, err := testFs.Open(name)
 	if err != nil {
 		t.Fatalf("open file - %v", err)
@@ -68,7 +68,7 @@ func TestRead_NotCloseFile(t *testing.T) {
 }
 
 func TestRead_NotCloseFile_ErrorOnCreate(t *testing.T) {
-	const name = "testFile1.txt"
+	const name = "file1.txt"
 	file, err := testFs.Open(name)
 	if err != nil {
 		t.Fatalf("open file - %v", err)
@@ -211,7 +211,7 @@ func TestReadFromFs_Tar_Tgz(t *testing.T) {
 }
 
 func TestReadFromFs_Offset(t *testing.T) {
-	const name = "testFile1.txt"
+	const name = "file1.txt"
 	fileData := testFs[name].Data
 	size := int64(len(fileData))
 

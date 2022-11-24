@@ -1,0 +1,42 @@
+[
+    {
+        "filename": "1MB.dat",
+        "sha256": "6db2ec1fe4e9e00ffe1706d933284d6dc7eb8cd7f50c5b02f209161b3705dcfe",
+        "md5": "9e368c3cf0cb4b7e089d8d284ef6db99"
+    },
+    {
+        "filename": "file1.txt",
+        "sha256": "78b7fd1ec6bc2644eb70957a122af5eb6cbd90809bc9aecdfd8faa5089bd1385",
+        "md5": "b5e1a6441c183370164f3a8430554778"
+    },
+    {
+        "filename": "file2.txt",
+        "sha256": "7378a1358889b9c3bf40316beef43119dc75b6d519e1f8d43b5fe9a54a853a0a",
+        "md5": "c1a0e1d739320f98e00016303924b8d7"
+    },
+    {
+        "filename": "gzip.gz",
+        "sha256": "3696ce974435a6df487c70cb8daa35ab28a91ca6ca22833cf3f6661a2b79a9ad",
+        "md5": "38847d37f3068456001bf4ba80b356ba"
+    },
+    {
+        "filename": "roses are red.txt",
+        "sha256": "bba21e25892cb764bd542f5338de76189e10d63e4c79868182065155ebdb56fb",
+        "md5": "f4fa88f7928e45a165d503bc4d2ee8ab"
+    },
+    {
+        "filename": "tar file.tar",
+        "sha256": "0fb55dffb71bf2012ac6a7b85e2de07a7f61265a273e10a24f8b265ee96c1ead",
+        "md5": "943e50b3002757a29f6559a287ed11f6"
+    },
+    {
+        "filename": "tar gzip.tar.gz",
+        "sha256": "a4b4e7e042dd894b8d6a735f208587c2ccf654b06ea0d90227caf7b48106031d",
+        "md5": "86129c295d0611ab900a0b60bb999a4a"
+    },
+    {
+        "filename": "tar gzip.tgz",
+        "sha256": "a4b4e7e042dd894b8d6a735f208587c2ccf654b06ea0d90227caf7b48106031d",
+        "md5": "86129c295d0611ab900a0b60bb999a4a"
+    }
+]

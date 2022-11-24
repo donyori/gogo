@@ -26,9 +26,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
+	"math/rand"
 	"path"
 	"sort"
-	"strings"
 	"testing/fstest"
 	"time"
 
@@ -51,37 +51,39 @@ var (
 
 func init() {
 	testFs = fstest.MapFS{
-		"testFile1.txt": {
-			Data:    []byte("This is test file 1."),
+		"file1.txt": {
+			Data:    []byte("This is File 1."),
 			ModTime: time.Now(),
 		},
-		"testFile2.txt": {
-			Data:    []byte("Here is test file 2!"),
+		"file2.txt": {
+			Data:    []byte("Here is File 2!"),
+			ModTime: time.Now(),
+		},
+		"roses are red.txt": {
+			Data:    []byte("Roses are red.\n  Violets are blue.\nSugar is sweet.\n  And so are you.\n"),
 			ModTime: time.Now(),
 		},
 	}
 
-	var sb strings.Builder
-	sb.Grow(100_000)
-	for i := 0; i < 100_000; i++ {
-		sb.WriteByte(byte(i % (1 << 8)))
-	}
-	testFs["big.dat"] = &fstest.MapFile{
-		Data:    []byte(sb.String()),
+	big := make([]byte, 1_048_576)
+	rand.New(rand.NewSource(10)).Read(big)
+	testFs["1MB.dat"] = &fstest.MapFile{
+		Data:    big,
 		ModTime: time.Now(),
 	}
 	testFsTarFiles = []struct{ name, body string }{
-		{"tarfile1.txt", "This is tar file 1."},
-		{"tarfile2.txt", "Here is tar file 2!"},
-		{"tarfile3.dat", sb.String()},
+		{"tar file1.txt", "This is tar file 1."},
+		{"tar file2.txt", "Here is tar file 2!"},
+		{"roses are red.txt", "Roses are red.\n  Violets are blue.\nSugar is sweet.\n  And so are you.\n"},
+		{"1MB.dat", string(big)},
 	}
 
-	var buf strings.Builder
-	gzw, err := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	buf := new(bytes.Buffer)
+	gzw, err := gzip.NewWriterLevel(buf, gzip.BestCompression)
 	if err != nil {
 		panic(err)
 	}
-	_, err = gzw.Write([]byte(sb.String()))
+	_, err = gzw.Write(big)
 	if err != nil {
 		panic(err)
 	}
@@ -90,12 +92,12 @@ func init() {
 		panic(err)
 	}
 	testFs["gzip.gz"] = &fstest.MapFile{
-		Data:    []byte(buf.String()),
+		Data:    copyBuffer(buf),
 		ModTime: time.Now(),
 	}
-	buf.Reset()
 
-	tw := tar.NewWriter(&buf)
+	buf.Reset()
+	tw := tar.NewWriter(buf)
 	for i := range testFsTarFiles {
 		err = tw.WriteHeader(&tar.Header{
 			Name:    testFsTarFiles[i].name,
@@ -115,13 +117,13 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	testFs["tarfile.tar"] = &fstest.MapFile{
-		Data:    []byte(buf.String()),
+	testFs["tar file.tar"] = &fstest.MapFile{
+		Data:    copyBuffer(buf),
 		ModTime: time.Now(),
 	}
-	buf.Reset()
 
-	gzw, err = gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	buf.Reset()
+	gzw, err = gzip.NewWriterLevel(buf, gzip.BestCompression)
 	if err != nil {
 		panic(err)
 	}
@@ -149,12 +151,12 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	testFs["targzip.tgz"] = &fstest.MapFile{
-		Data:    []byte(buf.String()),
+	testFs["tar gzip.tgz"] = &fstest.MapFile{
+		Data:    copyBuffer(buf),
 		ModTime: time.Now(),
 	}
-	testFs["targzip.tar.gz"] = &fstest.MapFile{
-		Data:    []byte(buf.String()),
+	testFs["tar gzip.tar.gz"] = &fstest.MapFile{
+		Data:    copyBuffer(buf),
 		ModTime: time.Now(),
 	}
 
@@ -227,4 +229,14 @@ func init() {
 			},
 		}
 	}
+}
+
+// copyBuffer returns a copy of buf.Bytes().
+func copyBuffer(buf *bytes.Buffer) []byte {
+	if buf == nil {
+		return nil
+	}
+	data := make([]byte, buf.Len())
+	copy(data, buf.Bytes())
+	return data
 }

@@ -215,8 +215,8 @@ func readSubRawAndBufOpen(fr *reader, info FileInfo, pClosers *[]io.Closer) erro
 	if !fr.opts.Raw {
 		base := strings.ToLower(path.Clean(filepath.ToSlash(info.Name())))
 		ext := path.Ext(base)
-		loop := true
-		for loop {
+		var endLoop bool
+		for {
 			switch ext {
 			case ".gz", ".tgz":
 				gr, err := gzip.NewReader(fr.ubr)
@@ -234,9 +234,12 @@ func readSubRawAndBufOpen(fr *reader, info FileInfo, pClosers *[]io.Closer) erro
 			case ".tar":
 				fr.tr = tar.NewReader(fr.ubr)
 				fr.ubr = fr.tr
-				loop = false
+				endLoop = true
 			default:
-				loop = false
+				endLoop = true
+			}
+			if endLoop {
+				break
 			}
 			base = base[:len(base)-len(ext)]
 			ext = path.Ext(base)
@@ -596,8 +599,7 @@ func (fr *reader) TarNext() (header *tar.Header, err error) {
 		fr.err = nil // don't record io.EOF to enable following reading
 	}
 	if fr.br != nil {
-		fr.ubr = fr.tr
-		fr.br.Reset(fr.ubr)
+		fr.br.Reset(fr.ubr) // discard current buffered data
 	}
 	return header, err
 }

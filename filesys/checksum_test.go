@@ -34,53 +34,33 @@ func TestVerifyChecksumFromFs(t *testing.T) {
 		ExpHex:  strings.Repeat("0", hex.EncodedLen(sha256.Size)),
 	}
 
-	testCases := make([]struct {
-		name     string
-		filename string
-		cs       []filesys.HashChecksum
-		want     bool
-	}, 1+len(testFsFilenames)*8)
-	testCases[0].name = `file="nonexist"&cs=<nil>`
-	testCases[0].filename = "nonexist"
-	idx := 1
-	for _, filename := range testFsFilenames {
-		for i := 0; i < 8; i++ {
-			testCases[idx+i].filename = filename
+	t.Run(`file="nonexist"&cs=<nil>`, func(t *testing.T) {
+		if got := filesys.VerifyChecksumFromFs(testFs, "nonexist"); got {
+			t.Error("got true; want false")
 		}
-		namePrefix := fmt.Sprintf("file=%q&cs=", filename)
-
-		testCases[idx].name = namePrefix + "<nil>"
-		testCases[idx].want = true
-
-		testCases[idx+1].name = namePrefix + "correct"
-		testCases[idx+1].cs = testFsChecksumMap[filename]
-		testCases[idx+1].want = true
-
-		testCases[idx+2].name = namePrefix + "wrong"
-		testCases[idx+2].cs = []filesys.HashChecksum{wrongChecksum}
-
-		testCases[idx+3].name = namePrefix + "correct+wrong"
-		testCases[idx+3].cs = []filesys.HashChecksum{testFsChecksumMap[filename][0], wrongChecksum}
-
-		testCases[idx+4].name = namePrefix + "zero-value"
-		testCases[idx+4].cs = []filesys.HashChecksum{{}}
-
-		testCases[idx+5].name = namePrefix + "noExpHex"
-		testCases[idx+5].cs = []filesys.HashChecksum{{NewHash: sha256.New}}
-
-		testCases[idx+6].name = namePrefix + "noHash"
-		testCases[idx+6].cs = []filesys.HashChecksum{{ExpHex: testFsChecksumMap[filename][0].ExpHex}}
-
-		testCases[idx+7].name = namePrefix + "correct+empty"
-		testCases[idx+7].cs = []filesys.HashChecksum{testFsChecksumMap[filename][0], {}}
-
-		idx += 8
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := filesys.VerifyChecksumFromFs(testFs, tc.filename, tc.cs...); got != tc.want {
-				t.Errorf("got %t; want %t", got, tc.want)
+	})
+	for _, filename := range testFsFilenames {
+		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
+			testCases := []struct {
+				csName string
+				cs     []filesys.HashChecksum
+				want   bool
+			}{
+				{"<nil>", nil, true},
+				{"correct", testFsChecksumMap[filename], true},
+				{"wrong", []filesys.HashChecksum{wrongChecksum}, false},
+				{"correct+wrong", []filesys.HashChecksum{testFsChecksumMap[filename][0], wrongChecksum}, false},
+				{"zero-value", []filesys.HashChecksum{{}}, false},
+				{"no-ExpHex", []filesys.HashChecksum{{NewHash: testFsChecksumMap[filename][0].NewHash}}, false},
+				{"no-NewHash", []filesys.HashChecksum{{ExpHex: testFsChecksumMap[filename][0].ExpHex}}, false},
+				{"correct+zero-value", []filesys.HashChecksum{testFsChecksumMap[filename][0], {}}, false},
+			}
+			for _, tc := range testCases {
+				t.Run("cs="+tc.csName, func(t *testing.T) {
+					if got := filesys.VerifyChecksumFromFs(testFs, filename, tc.cs...); got != tc.want {
+						t.Errorf("got %t; want %t", got, tc.want)
+					}
+				})
 			}
 		})
 	}
