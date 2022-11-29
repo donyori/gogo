@@ -37,8 +37,5 @@ func VerifyChecksum(filename string, cs ...filesys.HashChecksum) bool {
 	if err != nil {
 		return false
 	}
-	defer func(f *os.File) {
-		_ = f.Close() // ignore error
-	}(f)
-	return filesys.VerifyChecksum(f, cs...)
+	return filesys.VerifyChecksum(f, true, cs...)
 }

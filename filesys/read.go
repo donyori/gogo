@@ -24,6 +24,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"io/fs"
 	"path"
 	"path/filepath"
 	"strings"
@@ -93,7 +94,7 @@ type Reader interface {
 	Options() *ReadOptions
 
 	// FileInfo returns the information of the file.
-	FileInfo() (info FileInfo, err error)
+	FileInfo() (info fs.FileInfo, err error)
 }
 
 // reader is an implementation of interface Reader.
@@ -105,7 +106,7 @@ type reader struct {
 	ubr  io.Reader // unbuffered reader
 	opts ReadOptions
 	c    inout.Closer
-	f    File
+	f    fs.File
 	tr   *tar.Reader
 }
 
@@ -129,7 +130,7 @@ type reader struct {
 // and it will also be closed by this function when encountering an error.
 //
 // This function panics if file is nil.
-func Read(file File, opts *ReadOptions, closeFile bool) (r Reader, err error) {
+func Read(file fs.File, opts *ReadOptions, closeFile bool) (r Reader, err error) {
 	if file == nil {
 		panic(errors.AutoMsg("file is nil"))
 	}
@@ -173,7 +174,7 @@ func Read(file File, opts *ReadOptions, closeFile bool) (r Reader, err error) {
 		el.Append(err)
 		return
 	}
-	err = readSubRawAndBufOpen(fr, info, &closers)
+	err = readSubRawBufOpenAndClosers(fr, info, &closers)
 	if err != nil {
 		el.Append(err)
 	}
@@ -182,7 +183,7 @@ func Read(file File, opts *ReadOptions, closeFile bool) (r Reader, err error) {
 
 // readSubOffsetAndLimit is a sub-process of function Read
 // to deal with the options Offset and Limit.
-func readSubOffsetAndLimit(fr *reader, info FileInfo) error {
+func readSubOffsetAndLimit(fr *reader, info fs.FileInfo) error {
 	var err error
 	if fr.opts.Offset > 0 {
 		if seeker, ok := fr.f.(io.Seeker); ok {
@@ -208,10 +209,10 @@ func readSubOffsetAndLimit(fr *reader, info FileInfo) error {
 	return nil
 }
 
-// readSubRawAndBufOpen is a sub-process of function Read
+// readSubRawBufOpenAndClosers is a sub-process of function Read
 // to deal with the options Raw and BufOpen.
 // It also sets fr.c and updates closers.
-func readSubRawAndBufOpen(fr *reader, info FileInfo, pClosers *[]io.Closer) error {
+func readSubRawBufOpenAndClosers(fr *reader, info fs.FileInfo, pClosers *[]io.Closer) error {
 	if !fr.opts.Raw {
 		base := strings.ToLower(path.Clean(filepath.ToSlash(info.Name())))
 		ext := path.Ext(base)
@@ -264,7 +265,7 @@ func readSubRawAndBufOpen(fr *reader, info FileInfo, pClosers *[]io.Closer) erro
 // The file will be closed when closing the returned reader.
 //
 // This function panics if fsys is nil.
-func ReadFromFs(fsys FS, name string, opts *ReadOptions) (r Reader, err error) {
+func ReadFromFs(fsys fs.FS, name string, opts *ReadOptions) (r Reader, err error) {
 	if fsys == nil {
 		panic(errors.AutoMsg("fsys is nil"))
 	}
@@ -612,7 +613,7 @@ func (fr *reader) Options() *ReadOptions {
 }
 
 // FileInfo returns the information of the file.
-func (fr *reader) FileInfo() (info FileInfo, err error) {
+func (fr *reader) FileInfo() (info fs.FileInfo, err error) {
 	return fr.f.Stat()
 }
 

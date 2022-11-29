@@ -21,6 +21,7 @@ package filesys
 import (
 	"hash"
 	"io"
+	"io/fs"
 
 	"github.com/donyori/gogo/encoding/hex"
 )
@@ -41,17 +42,24 @@ type HashChecksum struct {
 // the input file must be ready to be read from the beginning and
 // must not be operated by anyone else during the call to this function.
 //
-// This function will not close file.
-// The client is responsible for closing file after use.
+// closeFile indicates whether this function should close the file.
+// If closeFile is false, the client is responsible for closing file after use.
+// If closeFile is true and file is not nil,
+// file will be closed by this function.
 //
 // It returns true if the file can be read and matches all checksums.
 //
 // Note that it returns false if file is nil,
 // or anyone of cs contains a nil NewHash or an empty ExpHex.
 // And it returns true if file is not nil and len(cs) is 0.
-func VerifyChecksum(file File, cs ...HashChecksum) bool {
+func VerifyChecksum(file fs.File, closeFile bool, cs ...HashChecksum) bool {
 	if file == nil {
 		return false
+	}
+	if closeFile {
+		defer func(f fs.File) {
+			_ = f.Close() // ignore error
+		}(file)
 	}
 	if len(cs) == 0 {
 		return true
@@ -93,7 +101,7 @@ func VerifyChecksum(file File, cs ...HashChecksum) bool {
 // Note that it returns false if fsys is nil,
 // or anyone of cs contains a nil NewHash or an empty ExpHex.
 // And it returns true if len(cs) is 0 and the file can be opened for reading.
-func VerifyChecksumFromFs(fsys FS, name string, cs ...HashChecksum) bool {
+func VerifyChecksumFromFs(fsys fs.FS, name string, cs ...HashChecksum) bool {
 	if fsys == nil {
 		return false
 	}
@@ -101,8 +109,5 @@ func VerifyChecksumFromFs(fsys FS, name string, cs ...HashChecksum) bool {
 	if err != nil {
 		return false
 	}
-	defer func(f File) {
-		_ = f.Close() // ignore error
-	}(f)
-	return VerifyChecksum(f, cs...)
+	return VerifyChecksum(f, true, cs...)
 }

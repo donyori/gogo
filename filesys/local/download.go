@@ -21,6 +21,7 @@ package local
 import (
 	"hash"
 	"io"
+	"io/fs"
 	"net/http"
 	"strconv"
 
@@ -41,7 +42,7 @@ import (
 //
 // It reports an error and downloads nothing if anyone of cs contains
 // a nil NewHash or an empty ExpHex.
-func HttpDownload(url, filename string, perm filesys.FileMode, cs ...filesys.HashChecksum) error {
+func HttpDownload(url, filename string, perm fs.FileMode, cs ...filesys.HashChecksum) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return errors.AutoWrap(err)
@@ -63,7 +64,7 @@ func HttpDownload(url, filename string, perm filesys.FileMode, cs ...filesys.Has
 //
 // It reports an error and downloads nothing if anyone of cs contains
 // a nil NewHash or an empty ExpHex.
-func HttpCustomDownload(req *http.Request, filename string, perm filesys.FileMode, cs ...filesys.HashChecksum) error {
+func HttpCustomDownload(req *http.Request, filename string, perm fs.FileMode, cs ...filesys.HashChecksum) error {
 	if req == nil {
 		return errors.AutoNew("req is nil")
 	}
@@ -78,7 +79,7 @@ func HttpCustomDownload(req *http.Request, filename string, perm filesys.FileMod
 //
 // It returns an indicator updated and any error encountered.
 // updated is true if and only if this function has created or edited the file.
-func HttpUpdate(url, filename string, perm filesys.FileMode, cs ...filesys.HashChecksum) (updated bool, err error) {
+func HttpUpdate(url, filename string, perm fs.FileMode, cs ...filesys.HashChecksum) (updated bool, err error) {
 	if VerifyChecksum(filename, cs...) {
 		return
 	}
@@ -94,7 +95,7 @@ func HttpUpdate(url, filename string, perm filesys.FileMode, cs ...filesys.HashC
 //
 // It returns an indicator updated and any error encountered.
 // updated is true if and only if this function has created or edited the file.
-func HttpCustomUpdate(req *http.Request, filename string, perm filesys.FileMode, cs ...filesys.HashChecksum) (updated bool, err error) {
+func HttpCustomUpdate(req *http.Request, filename string, perm fs.FileMode, cs ...filesys.HashChecksum) (updated bool, err error) {
 	if VerifyChecksum(filename, cs...) {
 		return
 	}
@@ -116,7 +117,7 @@ func HttpCustomUpdate(req *http.Request, filename string, perm filesys.FileMode,
 // a nil NewHash or an empty ExpHex.
 //
 // Caller should guarantee that req != nil.
-func httpRequestDownload(req *http.Request, filename string, perm filesys.FileMode, cs ...filesys.HashChecksum) (err error) {
+func httpRequestDownload(req *http.Request, filename string, perm fs.FileMode, cs ...filesys.HashChecksum) (err error) {
 	var hs []hash.Hash
 	var ws []io.Writer
 	if len(cs) > 0 {
