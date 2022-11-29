@@ -43,8 +43,8 @@ import (
 // If there is no custom group, commMap is nil.
 type BusinessFunc[Message any] func(world Communicator[Message], commMap map[string]Communicator[Message])
 
-// groupIdPattern is a regular expression pattern for verifying group ID.
-var groupIdPattern = regexp.MustCompile(`[a-z0-9][a-z0-9_]*`)
+// groupIDPattern is a regular expression pattern for verifying group ID.
+var groupIDPattern = regexp.MustCompile(`[a-z0-9][a-z0-9_]*`)
 
 // New creates a Controller for a new job.
 //
@@ -90,7 +90,7 @@ func New[Message any](n int, biz BusinessFunc[Message], groupMap map[string][]in
 	}
 	ctrl.world = newContext(ctrl, "_world", worldRanks)
 	for id, group := range groupMap {
-		if !groupIdPattern.MatchString(id) {
+		if !groupIDPattern.MatchString(id) {
 			panic(errors.AutoMsg("group ID is illegal: " + id))
 		}
 		if len(group) == 0 {

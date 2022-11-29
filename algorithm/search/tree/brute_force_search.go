@@ -97,13 +97,13 @@ type nodeDepth[Node any] struct {
 	depth int
 }
 
-// Dfs finds a node in itf using depth-first search algorithm
+// DFS finds a node in itf using depth-first search algorithm
 // and returns that node.
 //
 // It also returns an indicator found to report whether the node has been found.
 //
 // initArgs are the arguments to initialize itf.
-func Dfs[Node any](itf AccessNode[Node], initArgs ...any) (nodeFound Node, found bool) {
+func DFS[Node any](itf AccessNode[Node], initArgs ...any) (nodeFound Node, found bool) {
 	itf.Init(initArgs...)
 	stack, idx := []nodeDepth[Node]{{node: itf.Root()}}, 0 // Neither idx nor len(stack) is the depth.
 	for idx >= 0 {
@@ -136,14 +136,14 @@ func Dfs[Node any](itf AccessNode[Node], initArgs ...any) (nodeFound Node, found
 	return
 }
 
-// DfsPath is similar to function Dfs,
+// DFSPath is similar to function DFS,
 // except that it returns the path from the root of itf to the node found
 // instead of only the node.
 //
 // It returns nil if the node is not found.
-func DfsPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
+func DFSPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 	itf.Init(initArgs...)
-	// It is similar to function Dfs,
+	// It is similar to function DFS,
 	// except that the item of the stack contains the Path instead of the node.
 	stack, idx := []*internal.Path[Node]{{E: itf.Root()}}, 0
 	for idx >= 0 {
@@ -172,13 +172,13 @@ func DfsPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 	return nil
 }
 
-// Bfs finds a node in itf using breadth-first search algorithm
+// BFS finds a node in itf using breadth-first search algorithm
 // and returns that node.
 //
 // It also returns an indicator found to report whether the node has been found.
 //
 // initArgs are the arguments to initialize itf.
-func Bfs[Node any](itf AccessNode[Node], initArgs ...any) (nodeFound Node, found bool) {
+func BFS[Node any](itf AccessNode[Node], initArgs ...any) (nodeFound Node, found bool) {
 	itf.Init(initArgs...)
 	queue := []nodeDepth[Node]{{node: itf.Root()}} // A queue for the first child of each node.
 	for len(queue) > 0 {
@@ -200,14 +200,14 @@ func Bfs[Node any](itf AccessNode[Node], initArgs ...any) (nodeFound Node, found
 	return
 }
 
-// BfsPath is similar to function Bfs,
+// BFSPath is similar to function BFS,
 // except that it returns the path from the root of itf to the node found
 // instead of only the node.
 //
 // It returns nil if the node is not found.
-func BfsPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
+func BFSPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 	itf.Init(initArgs...)
-	// It is similar to function Bfs,
+	// It is similar to function BFS,
 	// except that the item of the queue contains the Path instead of the node.
 	queue := []*internal.Path[Node]{{E: itf.Root()}}
 	for len(queue) > 0 {
@@ -232,7 +232,7 @@ func BfsPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 	return nil
 }
 
-// Dls finds a node in itf using depth-limited depth-first search algorithm.
+// DLS finds a node in itf using depth-limited depth-first search algorithm.
 //
 // limit is the maximum depth during this search.
 // The depth of the root is 0, of children of the root is 1, and so on.
@@ -247,17 +247,17 @@ func BfsPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 // The indicator more makes sense only when the node is not found.
 // When more is false, all the nodes must have been discovered;
 // when more is true, there must be at least one undiscovered node.
-func Dls[Node any](itf AccessNode[Node], limit int, initArgs ...any) (nodeFound Node, found, more bool) {
+func DLS[Node any](itf AccessNode[Node], limit int, initArgs ...any) (nodeFound Node, found, more bool) {
 	itf.Init(initArgs...)
 	nodeFound, found, more, _ = dls(itf, itf.Root(), limit)
 	return
 }
 
-// dls is the main body of function Dls,
+// dls is the main body of function DLS,
 // without initializing itf and acquiring the root from itf.
 //
 // It requires the root to avoid redundant calls to itf.Root
-// in some functions such as Ids.
+// in some functions such as IDS.
 // The client should guarantee that root is itf.Root().
 //
 // It returns one more indicator quit to report whether
@@ -268,7 +268,7 @@ func dls[Node any](itf AccessNode[Node], root Node, limit int) (nodeFound Node, 
 		more = true // There must be an undiscovered node because of the depth limit: the root.
 		return
 	}
-	// It is similar to function Dfs,
+	// It is similar to function DFS,
 	// except that it examines the depth before pushing a new item to the stack
 	// to guarantee that the depth does not exceed the limit.
 	stack, idx := []nodeDepth[Node]{{node: root}}, 0 // Neither idx nor len(stack) is the depth.
@@ -307,22 +307,22 @@ func dls[Node any](itf AccessNode[Node], root Node, limit int) (nodeFound Node, 
 	return
 }
 
-// DlsPath is similar to function Dls,
+// DLSPath is similar to function DLS,
 // except that it returns the path from the root of itf to the node found
 // instead of only the node.
 //
 // It returns nil for the path if the node is not found.
-func DlsPath[Node any](itf AccessPath[Node], limit int, initArgs ...any) (pathFound []Node, more bool) {
+func DLSPath[Node any](itf AccessPath[Node], limit int, initArgs ...any) (pathFound []Node, more bool) {
 	itf.Init(initArgs...)
 	pathFound, more, _ = dlsPath(itf, itf.Root(), limit)
 	return
 }
 
-// dlsPath is the main body of function DlsPath,
+// dlsPath is the main body of function DLSPath,
 // without initializing itf and acquiring the root from itf.
 //
 // It requires the root to avoid redundant calls to itf.Root
-// in some functions such as IdsPath.
+// in some functions such as IDSPath.
 // The client should guarantee that root is itf.Root().
 //
 // It returns one more indicator quit to report whether
@@ -368,7 +368,7 @@ func dlsPath[Node any](itf AccessPath[Node], root Node, limit int) (pathFound []
 	return
 }
 
-// Ids finds a node in itf using iterative deepening depth-first
+// IDS finds a node in itf using iterative deepening depth-first
 // search algorithm and returns that node.
 //
 // It also returns an indicator found to report whether the node has been found.
@@ -393,7 +393,7 @@ func dlsPath[Node any](itf AccessPath[Node], root Node, limit int) (pathFound []
 //	func (m MyInterface) ResetSearchState() {
 //		// Reset your search state.
 //	}
-func Ids[Node any](itf AccessNode[Node], initLimit int, initArgs ...any) (nodeFound Node, found bool) {
+func IDS[Node any](itf AccessNode[Node], initLimit int, initArgs ...any) (nodeFound Node, found bool) {
 	itf.Init(initArgs...)
 	root := itf.Root()
 	resetter, resettable := (any)(itf).(interface{ ResetSearchState() })
@@ -416,13 +416,13 @@ func Ids[Node any](itf AccessNode[Node], initLimit int, initArgs ...any) (nodeFo
 	}
 }
 
-// IdsPath is similar to function Ids,
+// IDSPath is similar to function IDS,
 // except that it returns the path from the root of itf to the node found
 // instead of only the node.
 //
 // It returns nil if the node is not found.
 //
-// Same as function Ids, if the client needs to reset any search state
+// Same as function IDS, if the client needs to reset any search state
 // at the beginning of each iteration,
 // just add the method ResetSearchState to itf.
 // This method will be called before each iteration except for the first one.
@@ -436,7 +436,7 @@ func Ids[Node any](itf AccessNode[Node], initLimit int, initArgs ...any) (nodeFo
 //	func (m MyInterface) ResetSearchState() {
 //		// Reset your search state.
 //	}
-func IdsPath[Node any](itf AccessPath[Node], initLimit int, initArgs ...any) []Node {
+func IDSPath[Node any](itf AccessPath[Node], initLimit int, initArgs ...any) []Node {
 	itf.Init(initArgs...)
 	root := itf.Root()
 	resetter, resettable := (any)(itf).(interface{ ResetSearchState() })

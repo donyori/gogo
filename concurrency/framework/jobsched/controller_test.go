@@ -40,7 +40,7 @@ func TestRun(t *testing.T) {
 		wg.Done()
 		wg.Wait()
 		panic(panicMsg)
-	}, queue.NewFcfsJobQueueMaker[int, jobsched.NoProperty](), nil, nil, nil)
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty](), nil, nil, nil)
 	if got := atomic.LoadInt32(&x); got != 3 {
 		t.Errorf("got %d; want 3", got)
 	}
@@ -63,7 +63,7 @@ func TestController_Wait_BeforeLaunch(t *testing.T) {
 	ctrl := jobsched.New[int, jobsched.NoProperty](0, func(job int, quitDevice framework.QuitDevice) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty]) {
 		return // do nothing
-	}, queue.NewFcfsJobQueueMaker[int, jobsched.NoProperty]())
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty]())
 	if got := ctrl.Wait(); got != -1 {
 		t.Errorf("got %d; want -1", got)
 	}
@@ -75,7 +75,7 @@ func TestController_Input_BeforeLaunch(t *testing.T) {
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty]) {
 		atomic.AddInt32(&x, 1)
 		return
-	}, queue.NewFcfsJobQueueMaker[int, jobsched.NoProperty]())
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty]())
 	if got := ctrl.Input(nil, nil, nil); got != 3 {
 		t.Fatalf("before calling Launch, got %d; want 3", got)
 	}
@@ -95,7 +95,7 @@ func TestController_Input_DuringLaunch(t *testing.T) {
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty]) {
 		atomic.AddInt32(&x, 1)
 		return
-	}, queue.NewFcfsJobQueueMaker[int, jobsched.NoProperty]())
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty]())
 	go func() {
 		ctrl.Launch()
 		close(c)
@@ -119,7 +119,7 @@ func TestController_Input_AfterLaunch(t *testing.T) {
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty]) {
 		atomic.AddInt32(&x, 1)
 		return
-	}, queue.NewFcfsJobQueueMaker[int, jobsched.NoProperty]())
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty]())
 	ctrl.Launch()
 	if got := ctrl.Input(nil, nil, nil); got != 3 {
 		t.Fatalf("after calling Launch, got %d; want 3", got)
@@ -141,7 +141,7 @@ func TestController_Input_DuringWaiting(t *testing.T) {
 		atomic.AddInt32(&x, 1)
 		<-c2
 		return
-	}, queue.NewFcfsJobQueueMaker[int, jobsched.NoProperty]())
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty]())
 	ctrl.Launch()
 	go func() {
 		close(c1)
@@ -166,7 +166,7 @@ func TestController_Input_AfterWait(t *testing.T) {
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty]) {
 		atomic.AddInt32(&x, 1)
 		return
-	}, queue.NewFcfsJobQueueMaker[int, jobsched.NoProperty]())
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty]())
 	ctrl.Run()
 	if got := ctrl.Input(nil, nil, nil); got != 0 {
 		t.Fatalf("after calling Wait, got %d; want 0", got)
@@ -185,7 +185,7 @@ func TestController_Input_AfterIneffectiveWait(t *testing.T) {
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty]) {
 		atomic.AddInt32(&x, 1)
 		return
-	}, queue.NewFcfsJobQueueMaker[int, jobsched.NoProperty]())
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty]())
 	if got := ctrl.Wait(); got != -1 {
 		t.Errorf("got %d on ineffective call to Wait; want -1", got)
 	}

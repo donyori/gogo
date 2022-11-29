@@ -117,14 +117,14 @@ type adjListDepth[Vertex any] struct {
 	depth     int
 }
 
-// Dfs finds a vertex in itf using depth-first search algorithm
+// DFS finds a vertex in itf using depth-first search algorithm
 // and returns that vertex.
 //
 // It also returns an indicator found to report
 // whether the vertex has been found.
 //
 // initArgs are the arguments to initialize itf.
-func Dfs[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (vertexFound Vertex, found bool) {
+func DFS[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (vertexFound Vertex, found bool) {
 	itf.Init(initArgs...)
 	stack, idx := []adjListDepth[Vertex]{{adjacency: []Vertex{itf.Root()}}}, 0 // Neither idx nor len(stack) is the depth.
 	for idx >= 0 {
@@ -167,14 +167,14 @@ func Dfs[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (vertexFound Ver
 	return
 }
 
-// DfsPath is similar to function Dfs,
+// DFSPath is similar to function DFS,
 // except that it returns the path from the root of itf to the vertex found
 // instead of only the vertex.
 //
 // It returns nil if the vertex is not found.
-func DfsPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
+func DFSPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 	itf.Init(initArgs...)
-	// It is similar to function Dfs,
+	// It is similar to function DFS,
 	// except that the item of the stack contains the list of Path
 	// instead of the adjacency list.
 	stack, idx := [][]*internal.Path[Vertex]{{{E: itf.Root()}}}, 0
@@ -212,14 +212,14 @@ func DfsPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 	return nil
 }
 
-// Bfs finds a vertex in itf using breadth-first search algorithm
+// BFS finds a vertex in itf using breadth-first search algorithm
 // and returns that vertex.
 //
 // It also returns an indicator found to report
 // whether the vertex has been found.
 //
 // initArgs are the arguments to initialize itf.
-func Bfs[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (vertexFound Vertex, found bool) {
+func BFS[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (vertexFound Vertex, found bool) {
 	itf.Init(initArgs...)
 	queue := []adjListDepth[Vertex]{{adjacency: []Vertex{itf.Root()}}}
 	for len(queue) > 0 {
@@ -246,14 +246,14 @@ func Bfs[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (vertexFound Ver
 	return
 }
 
-// BfsPath is similar to function Bfs,
+// BFSPath is similar to function BFS,
 // except that it returns the path from the root of itf to the vertex found
 // instead of only the vertex.
 //
 // It returns nil if the vertex is not found.
-func BfsPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
+func BFSPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 	itf.Init(initArgs...)
-	// It is similar to function Bfs,
+	// It is similar to function BFS,
 	// except that the item of the queue contains the list of the Path
 	// instead of the adjacency list.
 	queue := [][]*internal.Path[Vertex]{{{E: itf.Root()}}}
@@ -283,7 +283,7 @@ func BfsPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 	return nil
 }
 
-// Dls finds a vertex in itf using depth-limited depth-first search algorithm.
+// DLS finds a vertex in itf using depth-limited depth-first search algorithm.
 //
 // limit is the maximum depth during this search.
 // The depth of the root is 0, of adjacent vertices of the root is 1, and so on.
@@ -300,17 +300,17 @@ func BfsPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 // However, when more is true, it does not guarantee that
 // there must be an undiscovered vertex,
 // because the vertex may be discovered in another search path.
-func Dls[Vertex any](itf AccessVertex[Vertex], limit int, initArgs ...any) (vertexFound Vertex, found, more bool) {
+func DLS[Vertex any](itf AccessVertex[Vertex], limit int, initArgs ...any) (vertexFound Vertex, found, more bool) {
 	itf.Init(initArgs...)
 	vertexFound, found, more, _ = dls(itf, itf.Root(), limit)
 	return
 }
 
-// dls is the main body of function Dls,
+// dls is the main body of function DLS,
 // without initializing itf and acquiring the root from itf.
 //
 // It requires the root to avoid redundant calls to itf.Root
-// in some functions such as Ids.
+// in some functions such as IDS.
 // The client should guarantee that root is itf.Root().
 //
 // It returns one more indicator quit to report whether
@@ -321,7 +321,7 @@ func dls[Vertex any](itf AccessVertex[Vertex], root Vertex, limit int) (vertexFo
 		more = true // There must be an undiscovered vertex because of the depth limit: the root.
 		return
 	}
-	// It is similar to function Dfs,
+	// It is similar to function DFS,
 	// except that it examines the depth before pushing a new item to the stack
 	// to guarantee that the depth does not exceed the limit.
 	stack, idx := []adjListDepth[Vertex]{{adjacency: []Vertex{root}}}, 0 // Neither idx nor len(stack) is the depth.
@@ -373,22 +373,22 @@ func dls[Vertex any](itf AccessVertex[Vertex], root Vertex, limit int) (vertexFo
 	return
 }
 
-// DlsPath is similar to function Dls,
+// DLSPath is similar to function DLS,
 // except that it returns the path from the root of itf to the vertex found
 // instead of only the vertex.
 //
 // It returns nil for the path if the vertex is not found.
-func DlsPath[Vertex any](itf AccessPath[Vertex], limit int, initArgs ...any) (pathFound []Vertex, more bool) {
+func DLSPath[Vertex any](itf AccessPath[Vertex], limit int, initArgs ...any) (pathFound []Vertex, more bool) {
 	itf.Init(initArgs...)
 	pathFound, more, _ = dlsPath(itf, itf.Root(), limit)
 	return
 }
 
-// dlsPath is the main body of function DlsPath,
+// dlsPath is the main body of function DLSPath,
 // without initializing itf and acquiring the root from itf.
 //
 // It requires the root to avoid redundant calls to itf.Root
-// in some functions such as IdsPath.
+// in some functions such as IDSPath.
 // The client should guarantee that root is itf.Root().
 //
 // It returns one more indicator quit to report whether
@@ -448,12 +448,12 @@ func dlsPath[Vertex any](itf AccessPath[Vertex], root Vertex, limit int) (pathFo
 	return
 }
 
-// IdsSpecific contains a method ResetSearchState for
+// IDSSpecific contains a method ResetSearchState for
 // iterative deepening depth-first search (IDS) algorithms.
-type IdsSpecific[Vertex any] interface {
+type IDSSpecific[Vertex any] interface {
 	// ResetSearchState resets the search state for the next iteration.
 	//
-	// It will be called before each iteration in functions Ids and IdsPath,
+	// It will be called before each iteration in functions IDS and IDSPath,
 	// except for the first iteration.
 	//
 	// Its implementation must reset all the vertices to undiscovered,
@@ -462,25 +462,25 @@ type IdsSpecific[Vertex any] interface {
 	ResetSearchState()
 }
 
-// IdsAccessVertex extends interface AccessVertex for function Ids.
+// IDSAccessVertex extends interface AccessVertex for function IDS.
 //
 // It appends a new method ResetSearchState to reset
 // the search state for each iteration.
-type IdsAccessVertex[Vertex any] interface {
+type IDSAccessVertex[Vertex any] interface {
 	AccessVertex[Vertex]
-	IdsSpecific[Vertex]
+	IDSSpecific[Vertex]
 }
 
-// IdsAccessPath extends interface AccessPath for function IdsPath.
+// IDSAccessPath extends interface AccessPath for function IDSPath.
 //
 // It appends a new method ResetSearchState to reset
 // the search state for each iteration.
-type IdsAccessPath[Vertex any] interface {
+type IDSAccessPath[Vertex any] interface {
 	AccessPath[Vertex]
-	IdsSpecific[Vertex]
+	IDSSpecific[Vertex]
 }
 
-// Ids finds a vertex in itf using iterative deepening depth-first
+// IDS finds a vertex in itf using iterative deepening depth-first
 // search algorithm and returns that vertex.
 //
 // It also returns an indicator found to report
@@ -491,7 +491,7 @@ type IdsAccessPath[Vertex any] interface {
 // If initLimit < 1, the depth limit in the first iteration will be 1.
 //
 // initArgs are the arguments to initialize itf.
-func Ids[Vertex any](itf IdsAccessVertex[Vertex], initLimit int, initArgs ...any) (vertexFound Vertex, found bool) {
+func IDS[Vertex any](itf IDSAccessVertex[Vertex], initLimit int, initArgs ...any) (vertexFound Vertex, found bool) {
 	itf.Init(initArgs...)
 	root, limit := itf.Root(), initLimit
 	if limit < 1 {
@@ -510,12 +510,12 @@ func Ids[Vertex any](itf IdsAccessVertex[Vertex], initLimit int, initArgs ...any
 	}
 }
 
-// IdsPath is similar to function Ids,
+// IDSPath is similar to function IDS,
 // except that it returns the path from the root of itf to the vertex found
 // instead of only the vertex.
 //
 // It returns nil if the vertex is not found.
-func IdsPath[Vertex any](itf IdsAccessPath[Vertex], initLimit int, initArgs ...any) []Vertex {
+func IDSPath[Vertex any](itf IDSAccessPath[Vertex], initLimit int, initArgs ...any) []Vertex {
 	itf.Init(initArgs...)
 	root, limit := itf.Root(), initLimit
 	if limit < 1 {

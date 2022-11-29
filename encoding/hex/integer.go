@@ -45,7 +45,7 @@ func EncodeInt64DstLen(digits int) int {
 // EncodeInt64 encodes x in hexadecimal representation to dst.
 //
 // upper indicates to use uppercase in hexadecimal representation.
-// digits specifies the minimum length of the output content
+// digits specify the minimum length of the output content
 // (excluding the negative sign "-").
 // It pads with leading zeros after the sign (if any)
 // if the length is not enough.
@@ -118,7 +118,7 @@ func EncodeInt64(dst []byte, x int64, upper bool, digits int) int {
 // EncodeInt64ToString returns hexadecimal representation of integer x.
 //
 // upper indicates to use uppercase in hexadecimal representation.
-// digits specifies the minimum length of the return string
+// digits specify the minimum length of the return string
 // (excluding the negative sign "-").
 // It pads with leading zeros after the sign (if any)
 // if the length is not enough.
@@ -166,7 +166,7 @@ func EncodeInt64ToString(x int64, upper bool, digits int) string {
 // EncodeInt64To encodes x in hexadecimal representation to w.
 //
 // upper indicates to use uppercase in hexadecimal representation.
-// digits specifies the minimum length of the output content
+// digits specify the minimum length of the output content
 // (excluding the negative sign "-").
 // It pads with leading zeros after the sign (if any)
 // if the length is not enough.
@@ -245,7 +245,7 @@ func EncodeInt64To(w io.Writer, x int64, upper bool, digits int) (written int, e
 //
 // buf is the buffer obtained from int64BufferPool.
 // upper indicates to use uppercase in hexadecimal representation.
-// digits specifies the minimum length of the output content
+// digits specify the minimum length of the output content
 // (excluding the negative sign "-").
 // It pads with leading zeros after the sign (if any)
 // if the length is not enough.
@@ -255,7 +255,7 @@ func EncodeInt64To(w io.Writer, x int64, upper bool, digits int) (written int, e
 // and only the hexadecimal representation of x without any sign will be
 // written to buf.
 // In this case, the caller should add any needed sign and leading zeros
-// by themself after calling this function.
+// after calling this function.
 //
 // It returns the start index of the valid content in buf.
 // This function writes the encoding result to buf[idx:].
