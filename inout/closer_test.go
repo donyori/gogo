@@ -82,7 +82,7 @@ func TestErrorCloser(t *testing.T) {
 	}
 	err := ec.Close()
 	if err != nil {
-		t.Errorf("error on first call to Close: %v", err)
+		t.Error("error on first call to Close:", err)
 	}
 	if !ec.Closed() {
 		t.Error("ec.Closed was false after first call to Close")

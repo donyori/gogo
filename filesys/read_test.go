@@ -36,34 +36,34 @@ func TestRead_NotCloseFile(t *testing.T) {
 	const name = "file1.txt"
 	file, err := testFs.Open(name)
 	if err != nil {
-		t.Fatalf("open file - %v", err)
+		t.Fatal("open file -", err)
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
-			t.Errorf("close file - %v", err)
+			t.Error("close file -", err)
 		}
 	}()
 	r, err := filesys.Read(file, &filesys.ReadOptions{Raw: true}, false)
 	if err != nil {
-		t.Fatalf("create reader - %v", err)
+		t.Fatal("create reader -", err)
 	}
 	halfSize := int64(len(testFs[name].Data) / 2)
 	hr := io.LimitReader(r, halfSize)
 	err = iotest.TestReader(hr, testFs[name].Data[:halfSize])
 	if err != nil {
-		t.Errorf("test read a half - %v", err)
+		t.Error("test read a half -", err)
 	}
 	err = r.Close()
 	if err != nil {
-		t.Fatalf("close reader - %v", err)
+		t.Fatal("close reader -", err)
 	}
 	data, err := io.ReadAll(file)
 	if err != nil {
-		t.Fatalf("read all from rest part - %v", err)
+		t.Fatal("read all from rest part -", err)
 	}
-	wanted := testFs[name].Data[halfSize:]
-	if !bytes.Equal(data, wanted) {
-		t.Errorf("read all from rest part - got %s; want %s", data, wanted)
+	want := testFs[name].Data[halfSize:]
+	if !bytes.Equal(data, want) {
+		t.Errorf("read all from rest part - got %s; want %s", data, want)
 	}
 }
 
@@ -71,11 +71,11 @@ func TestRead_NotCloseFile_ErrorOnCreate(t *testing.T) {
 	const name = "file1.txt"
 	file, err := testFs.Open(name)
 	if err != nil {
-		t.Fatalf("open file - %v", err)
+		t.Fatal("open file -", err)
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
-			t.Errorf("close file - %v", err)
+			t.Error("close file -", err)
 		}
 	}()
 	r, err := filesys.Read(file, &filesys.ReadOptions{Offset: math.MaxInt64, Raw: true}, false)
@@ -84,15 +84,15 @@ func TestRead_NotCloseFile_ErrorOnCreate(t *testing.T) {
 		t.Fatal("create reader - no error but offset is out of range")
 	}
 	if !strings.HasSuffix(err.Error(), fmt.Sprintf("option Offset is out of range, file size: %d, Offset: %d", len(testFs[name].Data), math.MaxInt64)) {
-		t.Fatalf("create reader - %v", err)
+		t.Fatal("create reader -", err)
 	}
 	data, err := io.ReadAll(file)
 	if err != nil {
-		t.Fatalf("read all from file - %v", err)
+		t.Fatal("read all from file -", err)
 	}
-	wanted := testFs[name].Data
-	if !bytes.Equal(data, wanted) {
-		t.Errorf("read all from file - got %s; want %s", data, wanted)
+	want := testFs[name].Data
+	if !bytes.Equal(data, want) {
+		t.Errorf("read all from file - got %s; want %s", data, want)
 	}
 }
 
@@ -101,17 +101,16 @@ func TestReadFromFs_Raw(t *testing.T) {
 		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
 			r, err := filesys.ReadFromFs(testFs, name, &filesys.ReadOptions{Raw: true})
 			if err != nil {
-				t.Errorf("create - %v", err)
-				return
+				t.Fatal("create -", err)
 			}
 			defer func() {
 				if err := r.Close(); err != nil {
-					t.Errorf("close - %v", err)
+					t.Error("close -", err)
 				}
 			}()
 			err = iotest.TestReader(r, testFs[name].Data)
 			if err != nil {
-				t.Errorf("test read - %v", err)
+				t.Error("test read -", err)
 			}
 		})
 	}
@@ -122,17 +121,16 @@ func TestReadFromFs_Basic(t *testing.T) {
 		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
 			r, err := filesys.ReadFromFs(testFs, name, nil)
 			if err != nil {
-				t.Errorf("create - %v", err)
-				return
+				t.Fatal("create -", err)
 			}
 			defer func() {
 				if err := r.Close(); err != nil {
-					t.Errorf("close - %v", err)
+					t.Error("close -", err)
 				}
 			}()
 			err = iotest.TestReader(r, testFs[name].Data)
 			if err != nil {
-				t.Errorf("test read - %v", err)
+				t.Error("test read -", err)
 			}
 		})
 	}
@@ -143,27 +141,24 @@ func TestReadFromFs_Gz(t *testing.T) {
 		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
 			r, err := filesys.ReadFromFs(testFs, name, nil)
 			if err != nil {
-				t.Errorf("create - %v", err)
-				return
+				t.Fatal("create -", err)
 			}
 			defer func() {
 				if err := r.Close(); err != nil {
-					t.Errorf("close - %v", err)
+					t.Error("close -", err)
 				}
 			}()
 			gr, err := gzip.NewReader(bytes.NewReader(testFs[name].Data))
 			if err != nil {
-				t.Errorf("create gzip reader - %v", err)
-				return
+				t.Fatal("create gzip reader -", err)
 			}
-			wanted, err := io.ReadAll(gr)
+			want, err := io.ReadAll(gr)
 			if err != nil {
-				t.Errorf("decompress gzip - %v", err)
-				return
+				t.Fatal("decompress gzip -", err)
 			}
-			err = iotest.TestReader(r, wanted)
+			err = iotest.TestReader(r, want)
 			if err != nil {
-				t.Errorf("test read - %v", err)
+				t.Error("test read -", err)
 			}
 		})
 	}
@@ -174,29 +169,26 @@ func TestReadFromFs_Tar_Tgz(t *testing.T) {
 		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
 			r, err := filesys.ReadFromFs(testFs, name, nil)
 			if err != nil {
-				t.Errorf("create - %v", err)
-				return
+				t.Fatal("create -", err)
 			}
 			defer func() {
 				if err := r.Close(); err != nil {
-					t.Errorf("close - %v", err)
+					t.Error("close -", err)
 				}
 			}()
-			for i := 0; true; i++ {
+			for i := 0; ; i++ {
 				hdr, err := r.TarNext()
 				if err != nil {
 					if errors.Is(err, io.EOF) {
 						if i != len(testFsTarFiles) {
 							t.Errorf("tar header number: %d != %d, but got EOF", i, len(testFsTarFiles))
 						}
-						break
+						break // end of archive
 					}
-					t.Errorf("read No.%d tar header - %v", i, err)
-					return
+					t.Fatalf("read No.%d tar header - %v", i, err)
 				}
 				if i >= len(testFsTarFiles) {
-					t.Errorf("tar headers more than %d", len(testFsTarFiles))
-					return
+					t.Fatal("tar headers more than", len(testFsTarFiles))
 				}
 				if hdr.Name != testFsTarFiles[i].name {
 					t.Errorf("No.%d tar header name unequal - got %s; want %s", i, hdr.Name, testFsTarFiles[i].name)
@@ -227,17 +219,16 @@ func TestReadFromFs_Offset(t *testing.T) {
 		t.Run(fmt.Sprintf("offset=%d", offset), func(t *testing.T) {
 			r, err := filesys.ReadFromFs(testFs, name, &filesys.ReadOptions{Offset: offset, Raw: true})
 			if err != nil {
-				t.Errorf("create - %v", err)
-				return
+				t.Fatal("create -", err)
 			}
 			defer func() {
 				if err := r.Close(); err != nil {
-					t.Errorf("close - %v", err)
+					t.Error("close -", err)
 				}
 			}()
 			err = iotest.TestReader(r, fileData[pos:])
 			if err != nil {
-				t.Errorf("test read - %v", err)
+				t.Error("test read -", err)
 			}
 		})
 	}
@@ -247,11 +238,10 @@ func TestReadFromFs_Offset(t *testing.T) {
 			r, err := filesys.ReadFromFs(testFs, name, &filesys.ReadOptions{Offset: offset, Raw: true})
 			if err == nil {
 				_ = r.Close() // ignore error
-				t.Error("create - no error but offset is out of range")
-				return
+				t.Fatal("create - no error but offset is out of range")
 			}
 			if !strings.HasSuffix(err.Error(), fmt.Sprintf("option Offset is out of range, file size: %d, Offset: %d", size, offset)) {
-				t.Errorf("create - %v", err)
+				t.Error("create -", err)
 			}
 		})
 	}

@@ -16,336 +16,318 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package local
+package local_test
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"errors"
+	"fmt"
 	"io"
+	"io/fs"
+	"math"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
 	"testing/iotest"
-	"time"
 
 	"github.com/donyori/gogo/filesys"
+	"github.com/donyori/gogo/filesys/local"
 )
 
+const testDataDir = "testdata"
+
+var fileEntries []fs.DirEntry
+
+func init() {
+	entries, err := os.ReadDir(testDataDir)
+	if err != nil {
+		panic(err)
+	}
+	fileEntries = make([]fs.DirEntry, 0, len(entries))
+	for _, entry := range entries {
+		if entry != nil && !entry.IsDir() {
+			fileEntries = append(fileEntries, entry)
+		}
+	}
+}
+
+func TestRead_Raw(t *testing.T) {
+	for _, entry := range fileEntries {
+		filename := entry.Name()
+		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
+			name := filepath.Join(testDataDir, filename)
+			r, err := local.Read(name, &filesys.ReadOptions{Raw: true})
+			if err != nil {
+				t.Fatal("create -", err)
+			}
+			defer func() {
+				if err := r.Close(); err != nil {
+					t.Error("close -", err)
+				}
+			}()
+			data, err := lazyLoadTestData(name)
+			if err != nil {
+				t.Fatal("read file -", err)
+			}
+			err = iotest.TestReader(r, data)
+			if err != nil {
+				t.Error("test read -", err)
+			}
+		})
+	}
+}
+
 func TestRead_Basic(t *testing.T) {
-	dir, err := os.MkdirTemp("", "gogo_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(dir string) {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Error(err)
+	for _, entry := range fileEntries {
+		filename := entry.Name()
+		if ext := filepath.Ext(filename); ext == ".gz" || ext == ".tar" || ext == ".tgz" {
+			continue
 		}
-	}(dir)
-	data := []byte("Some data in the temporary file.\n")
-	filename := filepath.Join(dir, "basic.txt")
-	err = os.WriteFile(filename, data, 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
-	r, err := Read(filename, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(r filesys.Reader) {
-		if err := r.Close(); err != nil {
-			t.Error(err)
-		}
-	}(r)
-	err = iotest.TestReader(r, data)
-	if err != nil {
-		t.Error(err)
+		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
+			name := filepath.Join(testDataDir, filename)
+			r, err := local.Read(name, nil)
+			if err != nil {
+				t.Fatal("create -", err)
+			}
+			defer func() {
+				if err := r.Close(); err != nil {
+					t.Error("close -", err)
+				}
+			}()
+			data, err := lazyLoadTestData(name)
+			if err != nil {
+				t.Fatal("read file -", err)
+			}
+			err = iotest.TestReader(r, data)
+			if err != nil {
+				t.Error("test read -", err)
+			}
+		})
 	}
 }
 
 func TestRead_Gz(t *testing.T) {
-	dir, err := os.MkdirTemp("", "gogo_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(dir string) {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Error(err)
+	for _, entry := range fileEntries {
+		filename := entry.Name()
+		if filepath.Ext(filename) != ".gz" || filepath.Ext(filename[:len(filename)-3]) == ".tar" {
+			continue
 		}
-	}(dir)
-	data := []byte("Some data in the temporary gzip file.\n")
-	filename := filepath.Join(dir, "simple.txt.gz")
-	f, err := os.Create(filename)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if f != nil {
-			if err := f.Close(); err != nil {
-				t.Error(err)
+		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
+			name := filepath.Join(testDataDir, filename)
+			r, err := local.Read(name, nil)
+			if err != nil {
+				t.Fatal("create -", err)
 			}
-		}
-	}()
-	gzw := gzip.NewWriter(f)
-	defer func() {
-		if gzw != nil {
-			if err := gzw.Close(); err != nil {
-				t.Error(err)
+			defer func() {
+				if err := r.Close(); err != nil {
+					t.Error("close -", err)
+				}
+			}()
+			data, err := lazyLoadTestData(name)
+			if err != nil {
+				t.Fatal("read file -", err)
 			}
-		}
-	}()
-	_, err = gzw.Write(data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = gzw.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	gzw = nil
-	err = f.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	f = nil
-
-	r, err := Read(filename, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(r filesys.Reader) {
-		if err := r.Close(); err != nil {
-			t.Error(err)
-		}
-	}(r)
-	err = iotest.TestReader(r, data)
-	if err != nil {
-		t.Error(err)
+			gr, err := gzip.NewReader(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal("create gzip reader -", err)
+			}
+			want, err := io.ReadAll(gr)
+			if err != nil {
+				t.Fatal("decompress gzip -", err)
+			}
+			err = iotest.TestReader(r, want)
+			if err != nil {
+				t.Error("test read -", err)
+			}
+		})
 	}
 }
 
-func TestRead_Tar(t *testing.T) {
-	dir, err := os.MkdirTemp("", "gogo_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(dir string) {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Error(err)
+func TestRead_Tar_Tgz(t *testing.T) {
+	for _, entry := range fileEntries {
+		filename := entry.Name()
+		ext := filepath.Ext(filename)
+		if ext == ".gz" {
+			ext = filepath.Ext(filename[:len(filename)-3])
 		}
-	}(dir)
-	filename := filepath.Join(dir, "simple.tar")
-	f, err := os.Create(filename)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if f != nil {
-			if err := f.Close(); err != nil {
-				t.Error(err)
+		if ext != ".tar" && ext != ".tgz" {
+			continue
+		}
+		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
+			name := filepath.Join(testDataDir, filename)
+			r, err := local.Read(name, nil)
+			if err != nil {
+				t.Fatal("create -", err)
 			}
-		}
-	}()
-	tw := tar.NewWriter(f)
-	defer func() {
-		if tw != nil {
-			if err := tw.Close(); err != nil {
-				t.Error(err)
+			defer func() {
+				if err := r.Close(); err != nil {
+					t.Error("close -", err)
+				}
+			}()
+			list, err := loadTarFile(name)
+			if err != nil {
+				t.Fatal("load tar file -", err)
 			}
+			n := len(list)
+			for i := 0; ; i++ {
+				hdr, err := r.TarNext()
+				if err != nil {
+					if errors.Is(err, io.EOF) {
+						if i != n {
+							t.Errorf("tar header number: %d != %d, but got EOF", i, n)
+						}
+						break // end of archive
+					}
+					t.Fatalf("read No.%d tar header - %v", i, err)
+				}
+				if i >= n {
+					t.Fatal("tar headers more than", n)
+				}
+				if hdr.Name != list[i].name {
+					t.Errorf("No.%d tar header name unequal - got %s; want %s", i, hdr.Name, list[i].name)
+				}
+				err = iotest.TestReader(r, list[i].body)
+				if err != nil {
+					t.Errorf("No.%d tar test read - %v", i, err)
+				}
+			}
+		})
+	}
+}
+
+func TestRead_Offset(t *testing.T) {
+	name := filepath.Join(testDataDir, "file1.txt")
+	data, err := lazyLoadTestData(name)
+	if err != nil {
+		t.Fatal("read file -", err)
+	}
+	size := int64(len(data))
+
+	for offset := -size; offset <= size; offset++ {
+		var pos int64
+		if offset > 0 {
+			pos = offset
+		} else if offset < 0 {
+			pos = size + offset
+		} else {
+			continue
 		}
-	}()
-	files := []struct {
+		t.Run(fmt.Sprintf("offset=%d", offset), func(t *testing.T) {
+			r, err := local.Read(name, &filesys.ReadOptions{Offset: offset, Raw: true})
+			if err != nil {
+				t.Fatal("create -", err)
+			}
+			defer func() {
+				if err := r.Close(); err != nil {
+					t.Error("close -", err)
+				}
+			}()
+			err = iotest.TestReader(r, data[pos:])
+			if err != nil {
+				t.Error("test read -", err)
+			}
+		})
+	}
+
+	for _, offset := range []int64{math.MinInt64, -size - 1, size + 1, math.MaxInt64} {
+		t.Run(fmt.Sprintf("offset=%d", offset), func(t *testing.T) {
+			r, err := local.Read(name, &filesys.ReadOptions{Offset: offset, Raw: true})
+			if err == nil {
+				_ = r.Close() // ignore error
+				t.Fatal("create - no error but offset is out of range")
+			}
+			if !strings.HasSuffix(err.Error(), fmt.Sprintf("option Offset is out of range, file size: %d, Offset: %d", size, offset)) {
+				t.Error("create -", err)
+			}
+		})
+	}
+}
+
+var (
+	testDataMap      map[string][]byte
+	loadTestDataLock sync.Mutex
+)
+
+// lazyLoadTestData loads a file with specified name.
+//
+// It stores the file content in the memory the first time reading that file.
+// Subsequent reads will get the file content from the memory instead of
+// reading the file again.
+// Therefore, all modifications to the file after the first read cannot
+// take effect on this function.
+func lazyLoadTestData(name string) ([]byte, error) {
+	loadTestDataLock.Lock()
+	defer loadTestDataLock.Unlock()
+	var data []byte
+	if testDataMap != nil {
+		data = testDataMap[name]
+		if data != nil {
+			return data, nil
+		}
+	}
+	data, err := os.ReadFile(name)
+	if err != nil {
+		return nil, err
+	}
+	if testDataMap == nil {
+		testDataMap = make(map[string][]byte, len(fileEntries))
+	}
+	testDataMap[name] = data
+	return data, nil
+}
+
+// loadTarFile loads a ".tar", ".tgz", or ".tar.gz" file.
+//
+// It returns a list of (filename, file body) pairs.
+// It also returns any error encountered.
+//
+// Caller should guarantee that the file name has
+// a suffix ".tar", ".tgz", or ".tar.gz".
+func loadTarFile(name string) ([]struct {
+	name string
+	body []byte
+}, error) {
+	data, err := lazyLoadTestData(name)
+	if err != nil {
+		return nil, err
+	}
+	var r io.Reader = bytes.NewReader(data)
+	ext := filepath.Ext(name)
+	if ext == ".gz" || ext == ".tgz" {
+		gr, err := gzip.NewReader(r)
+		if err != nil {
+			return nil, err
+		}
+		defer func(gr *gzip.Reader) {
+			_ = gr.Close() // ignore error
+		}(gr)
+		r = gr
+	}
+	tr := tar.NewReader(r)
+	var list []struct {
 		name string
 		body []byte
-	}{
-		{"file1.txt", []byte("This is file1.")},
-		{"file2.txt", []byte("This is file2.")},
-		{"file3.txt", []byte("This is file3.")},
 	}
-	for i := range files {
-		err = tw.WriteHeader(&tar.Header{
-			Name:    files[i].name,
-			Size:    int64(len(files[i].body)),
-			Mode:    0600,
-			ModTime: time.Now(),
-		})
+	for {
+		hdr, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			break // end of archive
+		}
 		if err != nil {
-			t.Fatal(err)
+			return nil, err
 		}
-		_, err = tw.Write(files[i].body)
+		data, err := io.ReadAll(tr)
 		if err != nil {
-			t.Fatal(err)
+			return nil, err
 		}
+		list = append(list, struct {
+			name string
+			body []byte
+		}{hdr.Name, data})
 	}
-	err = tw.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	tw = nil
-	err = f.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	f = nil
-
-	r, err := Read(filename, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(r filesys.Reader) {
-		if err := r.Close(); err != nil {
-			t.Error(err)
-		}
-	}(r)
-	for i := 0; true; i++ {
-		hdr, err := r.TarNext()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				if i != len(files) {
-					t.Error("i:", i, "!= len(files):", len(files), "but got EOF.")
-				}
-				break
-			}
-			t.Fatal(err)
-		}
-		if i >= len(files) {
-			t.Fatal("i:", i, ">= len(files):", len(files))
-		}
-		if hdr.Name != files[i].name {
-			t.Errorf("hdr.Name: %q != %q.", hdr.Name, files[i].name)
-		}
-		err = iotest.TestReader(r, files[i].body)
-		if err != nil {
-			t.Error(err)
-		}
-	}
-}
-
-func TestRead_TarGz_Tgz(t *testing.T) {
-	testReadTarGz(t, false)
-	testReadTarGz(t, true)
-}
-
-func testReadTarGz(t *testing.T, useTgz bool) {
-	dir, err := os.MkdirTemp("", "gogo_test_")
-	if err != nil {
-		t.Error("useTgz:", useTgz, err)
-		return
-	}
-	defer func(dir string) {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Error("useTgz:", useTgz, err)
-		}
-	}(dir)
-	basename := "simple.tar.gz"
-	if useTgz {
-		basename = "simple.tgz"
-	}
-	filename := filepath.Join(dir, basename)
-	f, err := os.Create(filename)
-	if err != nil {
-		t.Error("useTgz:", useTgz, err)
-		return
-	}
-	defer func() {
-		if f != nil {
-			if err := f.Close(); err != nil {
-				t.Error("useTgz:", useTgz, err)
-			}
-		}
-	}()
-	gzw := gzip.NewWriter(f)
-	defer func() {
-		if gzw != nil {
-			if err := gzw.Close(); err != nil {
-				t.Error("useTgz:", useTgz, err)
-			}
-		}
-	}()
-	tw := tar.NewWriter(gzw)
-	defer func() {
-		if tw != nil {
-			if err := tw.Close(); err != nil {
-				t.Error("useTgz:", useTgz, err)
-			}
-		}
-	}()
-	files := []struct {
-		name string
-		body []byte
-	}{
-		{"file1.txt", []byte("This is file1.")},
-		{"file2.txt", []byte("This is file2.")},
-		{"file3.txt", []byte("This is file3.")},
-	}
-	for i := range files {
-		err = tw.WriteHeader(&tar.Header{
-			Name:    files[i].name,
-			Size:    int64(len(files[i].body)),
-			Mode:    0600,
-			ModTime: time.Now(),
-		})
-		if err != nil {
-			t.Error("useTgz:", useTgz, err)
-			return
-		}
-		_, err = tw.Write(files[i].body)
-		if err != nil {
-			t.Error("useTgz:", useTgz, err)
-			return
-		}
-	}
-	err = tw.Close()
-	if err != nil {
-		t.Error("useTgz:", useTgz, err)
-		return
-	}
-	tw = nil
-	err = gzw.Close()
-	if err != nil {
-		t.Error("useTgz:", useTgz, err)
-		return
-	}
-	gzw = nil
-	err = f.Close()
-	if err != nil {
-		t.Error("useTgz:", useTgz, err)
-		return
-	}
-	f = nil
-
-	r, err := Read(filename, &filesys.ReadOptions{BufOpen: true})
-	if err != nil {
-		t.Error("useTgz:", useTgz, err)
-		return
-	}
-	defer func(r filesys.Reader) {
-		if err := r.Close(); err != nil {
-			t.Error("useTgz:", useTgz, err)
-		}
-	}(r)
-	for i := 0; true; i++ {
-		hdr, err := r.TarNext()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				if i != len(files) {
-					t.Error("useTgz:", useTgz, "i:", i, "!= len(files):", len(files), "but got EOF.")
-				}
-				break
-			}
-			t.Error("useTgz:", useTgz, err)
-			return
-		}
-		if i >= len(files) {
-			t.Error("useTgz:", useTgz, "i:", i, ">= len(files):", len(files))
-			return
-		}
-		if hdr.Name != files[i].name {
-			t.Errorf("useTgz: %t hdr.Name: %q != %q.", useTgz, hdr.Name, files[i].name)
-		}
-		err = iotest.TestReader(r, files[i].body)
-		if err != nil {
-			t.Error("useTgz:", useTgz, err)
-		}
-	}
+	return list, nil
 }

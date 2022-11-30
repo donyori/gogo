@@ -260,7 +260,10 @@ func readSubRawBufOpenAndClosers(fr *reader, info fs.FileInfo, pClosers *[]io.Cl
 	return nil
 }
 
-// ReadFromFs opens a file from fsys with specified name for reading.
+// ReadFromFs opens a file from fsys with specified name and
+// options opts for reading.
+//
+// If opts are nil, a zero-value ReadOptions will be used.
 //
 // The file will be closed when closing the returned reader.
 //

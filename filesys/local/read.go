@@ -26,7 +26,9 @@ import (
 	"github.com/donyori/gogo/filesys"
 )
 
-// Read opens a file with specified name for reading.
+// Read opens a file with specified name and options opts for reading.
+//
+// If opts are nil, a zero-value filesys.ReadOptions will be used.
 //
 // The file will be closed when closing the returned reader.
 //
