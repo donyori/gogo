@@ -36,21 +36,21 @@ import (
 )
 
 var (
-	testFs fstest.MapFS
+	testFS fstest.MapFS
 
-	testFsTarFiles []struct{ name, body string }
+	testFSTarFiles []struct{ name, body string }
 
-	testFsFilenames      []string
-	testFsBasicFilenames []string
-	testFsGzFilenames    []string
-	testFsTarFilenames   []string
-	testFsTgzFilenames   []string
+	testFSFilenames      []string
+	testFSBasicFilenames []string
+	testFSGzFilenames    []string
+	testFSTarFilenames   []string
+	testFSTgzFilenames   []string
 
-	testFsChecksumMap map[string][]filesys.HashChecksum
+	testFSChecksumMap map[string][]filesys.HashChecksum
 )
 
 func init() {
-	testFs = fstest.MapFS{
+	testFS = fstest.MapFS{
 		"file1.txt": {
 			Data:    []byte("This is File 1."),
 			ModTime: time.Now(),
@@ -67,11 +67,11 @@ func init() {
 
 	big := make([]byte, 1_048_576)
 	rand.New(rand.NewSource(10)).Read(big)
-	testFs["1MB.dat"] = &fstest.MapFile{
+	testFS["1MB.dat"] = &fstest.MapFile{
 		Data:    big,
 		ModTime: time.Now(),
 	}
-	testFsTarFiles = []struct{ name, body string }{
+	testFSTarFiles = []struct{ name, body string }{
 		{"tar file1.txt", "This is tar file 1."},
 		{"tar file2.txt", "Here is tar file 2!"},
 		{"roses are red.txt", "Roses are red.\n  Violets are blue.\nSugar is sweet.\n  And so are you.\n"},
@@ -91,24 +91,24 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	testFs["gzip.gz"] = &fstest.MapFile{
+	testFS["gzip.gz"] = &fstest.MapFile{
 		Data:    copyBuffer(buf),
 		ModTime: time.Now(),
 	}
 
 	buf.Reset()
 	tw := tar.NewWriter(buf)
-	for i := range testFsTarFiles {
+	for i := range testFSTarFiles {
 		err = tw.WriteHeader(&tar.Header{
-			Name:    testFsTarFiles[i].name,
-			Size:    int64(len(testFsTarFiles[i].body)),
+			Name:    testFSTarFiles[i].name,
+			Size:    int64(len(testFSTarFiles[i].body)),
 			Mode:    0600,
 			ModTime: time.Now(),
 		})
 		if err != nil {
 			panic(err)
 		}
-		_, err = tw.Write([]byte(testFsTarFiles[i].body))
+		_, err = tw.Write([]byte(testFSTarFiles[i].body))
 		if err != nil {
 			panic(err)
 		}
@@ -117,7 +117,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	testFs["tar file.tar"] = &fstest.MapFile{
+	testFS["tar file.tar"] = &fstest.MapFile{
 		Data:    copyBuffer(buf),
 		ModTime: time.Now(),
 	}
@@ -128,17 +128,17 @@ func init() {
 		panic(err)
 	}
 	tw = tar.NewWriter(gzw)
-	for i := range testFsTarFiles {
+	for i := range testFSTarFiles {
 		err = tw.WriteHeader(&tar.Header{
-			Name:    testFsTarFiles[i].name,
-			Size:    int64(len(testFsTarFiles[i].body)),
+			Name:    testFSTarFiles[i].name,
+			Size:    int64(len(testFSTarFiles[i].body)),
 			Mode:    0600,
 			ModTime: time.Now(),
 		})
 		if err != nil {
 			panic(err)
 		}
-		_, err = tw.Write([]byte(testFsTarFiles[i].body))
+		_, err = tw.Write([]byte(testFSTarFiles[i].body))
 		if err != nil {
 			panic(err)
 		}
@@ -151,19 +151,19 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	testFs["tar gzip.tgz"] = &fstest.MapFile{
+	testFS["tar gzip.tgz"] = &fstest.MapFile{
 		Data:    copyBuffer(buf),
 		ModTime: time.Now(),
 	}
-	testFs["tar gzip.tar.gz"] = &fstest.MapFile{
+	testFS["tar gzip.tar.gz"] = &fstest.MapFile{
 		Data:    copyBuffer(buf),
 		ModTime: time.Now(),
 	}
 
-	testFsFilenames = make([]string, len(testFs))
+	testFSFilenames = make([]string, len(testFS))
 	var idx, gzIdx, tarIdx, tgzIdx int
-	for name := range testFs {
-		testFsFilenames[idx] = name
+	for name := range testFS {
+		testFSFilenames[idx] = name
 		idx++
 		cname := path.Clean(name)
 		switch path.Ext(cname) {
@@ -179,37 +179,37 @@ func init() {
 			tgzIdx++
 		}
 	}
-	sort.Strings(testFsFilenames)
-	testFsBasicFilenames = make([]string, idx-gzIdx-tarIdx-tgzIdx)
-	testFsGzFilenames = make([]string, gzIdx)
-	testFsTarFilenames = make([]string, tarIdx)
-	testFsTgzFilenames = make([]string, tgzIdx)
+	sort.Strings(testFSFilenames)
+	testFSBasicFilenames = make([]string, idx-gzIdx-tarIdx-tgzIdx)
+	testFSGzFilenames = make([]string, gzIdx)
+	testFSTarFilenames = make([]string, tarIdx)
+	testFSTgzFilenames = make([]string, tgzIdx)
 	idx, gzIdx, tarIdx, tgzIdx = 0, 0, 0, 0
-	for _, name := range testFsFilenames {
+	for _, name := range testFSFilenames {
 		cname := path.Clean(name)
 		switch path.Ext(cname) {
 		case ".gz":
 			if path.Ext(cname[:len(cname)-3]) == ".tar" {
-				testFsTgzFilenames[tgzIdx] = name
+				testFSTgzFilenames[tgzIdx] = name
 				tgzIdx++
 			} else {
-				testFsGzFilenames[gzIdx] = name
+				testFSGzFilenames[gzIdx] = name
 				gzIdx++
 			}
 		case ".tar":
-			testFsTarFilenames[tarIdx] = name
+			testFSTarFilenames[tarIdx] = name
 			tarIdx++
 		case ".tgz":
-			testFsTgzFilenames[tgzIdx] = name
+			testFSTgzFilenames[tgzIdx] = name
 			tgzIdx++
 		default:
-			testFsBasicFilenames[idx] = name
+			testFSBasicFilenames[idx] = name
 			idx++
 		}
 	}
 
-	testFsChecksumMap = make(map[string][]filesys.HashChecksum, len(testFs))
-	for name, file := range testFs {
+	testFSChecksumMap = make(map[string][]filesys.HashChecksum, len(testFS))
+	for name, file := range testFS {
 		r := bytes.NewReader(file.Data)
 		hSha256 := sha256.New()
 		hMd5 := md5.New()
@@ -218,7 +218,7 @@ func init() {
 		if err != nil {
 			panic(err)
 		}
-		testFsChecksumMap[name] = []filesys.HashChecksum{
+		testFSChecksumMap[name] = []filesys.HashChecksum{
 			{
 				NewHash: sha256.New,
 				ExpHex:  hex.EncodeToString(hSha256.Sum(nil)),

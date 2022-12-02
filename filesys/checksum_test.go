@@ -28,18 +28,18 @@ import (
 	"github.com/donyori/gogo/filesys"
 )
 
-func TestVerifyChecksumFromFs(t *testing.T) {
+func TestVerifyChecksumFromFS(t *testing.T) {
 	wrongChecksum := filesys.HashChecksum{
 		NewHash: sha256.New,
 		ExpHex:  strings.Repeat("0", hex.EncodedLen(sha256.Size)),
 	}
 
 	t.Run(`file="nonexist"&cs=<nil>`, func(t *testing.T) {
-		if got := filesys.VerifyChecksumFromFs(testFs, "nonexist"); got {
+		if got := filesys.VerifyChecksumFromFS(testFS, "nonexist"); got {
 			t.Error("got true; want false")
 		}
 	})
-	for _, filename := range testFsFilenames {
+	for _, filename := range testFSFilenames {
 		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
 			testCases := []struct {
 				csName string
@@ -47,17 +47,17 @@ func TestVerifyChecksumFromFs(t *testing.T) {
 				want   bool
 			}{
 				{"<nil>", nil, true},
-				{"correct", testFsChecksumMap[filename], true},
+				{"correct", testFSChecksumMap[filename], true},
 				{"wrong", []filesys.HashChecksum{wrongChecksum}, false},
-				{"correct+wrong", []filesys.HashChecksum{testFsChecksumMap[filename][0], wrongChecksum}, false},
+				{"correct+wrong", []filesys.HashChecksum{testFSChecksumMap[filename][0], wrongChecksum}, false},
 				{"zero-value", []filesys.HashChecksum{{}}, false},
-				{"no-ExpHex", []filesys.HashChecksum{{NewHash: testFsChecksumMap[filename][0].NewHash}}, false},
-				{"no-NewHash", []filesys.HashChecksum{{ExpHex: testFsChecksumMap[filename][0].ExpHex}}, false},
-				{"correct+zero-value", []filesys.HashChecksum{testFsChecksumMap[filename][0], {}}, false},
+				{"no-ExpHex", []filesys.HashChecksum{{NewHash: testFSChecksumMap[filename][0].NewHash}}, false},
+				{"no-NewHash", []filesys.HashChecksum{{ExpHex: testFSChecksumMap[filename][0].ExpHex}}, false},
+				{"correct+zero-value", []filesys.HashChecksum{testFSChecksumMap[filename][0], {}}, false},
 			}
 			for _, tc := range testCases {
 				t.Run("cs="+tc.csName, func(t *testing.T) {
-					if got := filesys.VerifyChecksumFromFs(testFs, filename, tc.cs...); got != tc.want {
+					if got := filesys.VerifyChecksumFromFS(testFS, filename, tc.cs...); got != tc.want {
 						t.Errorf("got %t; want %t", got, tc.want)
 					}
 				})

@@ -65,8 +65,8 @@ type ReadOptions struct {
 
 // Reader is a device to read data from a file.
 //
-// Its method Close closes all closable objects opened by this reader,
-// including the file.
+// Its method Close closes all closable objects opened by this reader
+// (may include the file).
 // After successfully closing this reader,
 // its method Close will do nothing and return nil.
 type Reader interface {
@@ -216,8 +216,8 @@ func readSubRawBufOpenAndClosers(fr *reader, info fs.FileInfo, pClosers *[]io.Cl
 	if !fr.opts.Raw {
 		base := strings.ToLower(path.Clean(filepath.ToSlash(info.Name())))
 		ext := path.Ext(base)
-		var endLoop bool
 		for {
+			var endLoop bool
 			switch ext {
 			case ".gz", ".tgz":
 				gr, err := gzip.NewReader(fr.ubr)
@@ -260,7 +260,7 @@ func readSubRawBufOpenAndClosers(fr *reader, info fs.FileInfo, pClosers *[]io.Cl
 	return nil
 }
 
-// ReadFromFs opens a file from fsys with specified name and
+// ReadFromFS opens a file from fsys with specified name and
 // options opts for reading.
 //
 // If opts are nil, a zero-value ReadOptions will be used.
@@ -268,7 +268,7 @@ func readSubRawBufOpenAndClosers(fr *reader, info fs.FileInfo, pClosers *[]io.Cl
 // The file will be closed when closing the returned reader.
 //
 // This function panics if fsys is nil.
-func ReadFromFs(fsys fs.FS, name string, opts *ReadOptions) (r Reader, err error) {
+func ReadFromFS(fsys fs.FS, name string, opts *ReadOptions) (r Reader, err error) {
 	if fsys == nil {
 		panic(errors.AutoMsg("fsys is nil"))
 	}

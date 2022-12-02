@@ -16,95 +16,89 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package local
+package local_test
 
 import (
 	"os"
 	"sync"
 	"testing"
+
+	"github.com/donyori/gogo/filesys/local"
 )
 
-func TestTmp(t *testing.T) {
-	tmpRoot, err := os.MkdirTemp("", "gogo_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(dir string) {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Error(err)
-		}
-	}(tmpRoot)
-	var locker sync.Mutex
+func TestTmp_Sync(t *testing.T) {
+	tmpRoot := t.TempDir()
+	const N int = 10
+	var mutex sync.Mutex
 	var wg sync.WaitGroup
-	files := make([]string, 0, 10)
-	wg.Add(10)
-	for i := 0; i < 10; i++ {
+	files := make([]string, 0, N)
+	wg.Add(N)
+	for i := 0; i < N; i++ {
 		go func(no int) {
 			defer wg.Done()
-			f, err := Tmp(tmpRoot, "f.", ".tmp", 0740)
+			f, err := local.Tmp(tmpRoot, "f.", ".tmp", 0740)
+			mutex.Lock()
+			defer mutex.Unlock()
 			if err != nil {
-				t.Error(no, err)
+				t.Error("Goroutine", no, "local.Tmp -", err)
 				return
 			}
 			defer func(f *os.File) {
 				if err := f.Close(); err != nil {
-					t.Error(no, err)
+					t.Error("Goroutine", no, "close file -", err)
 				}
 			}(f)
-			locker.Lock()
-			defer locker.Unlock()
 			files = append(files, f.Name())
 		}(i)
 	}
 	wg.Wait()
-	if n := len(files); n != 10 {
-		t.Error("len(files):", n, "!= 10.")
+	if t.Failed() {
+		return
+	}
+	if n := len(files); n != N {
+		t.Errorf("got %d files; want %d", n, N)
 	}
 	set := make(map[string]bool)
 	for _, filename := range files {
 		if set[filename] {
-			t.Error("Conflict:", filename)
+			t.Error("collided filename", filename)
 			continue
 		}
 		set[filename] = true
 	}
 }
 
-func TestTmpDir(t *testing.T) {
-	tmpRoot, err := os.MkdirTemp("", "gogo_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(dir string) {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Error(err)
-		}
-	}(tmpRoot)
-	var locker sync.Mutex
+func TestTmpDir_Sync(t *testing.T) {
+	tmpRoot := t.TempDir()
+	const N int = 10
+	var mutex sync.Mutex
 	var wg sync.WaitGroup
-	dirs := make([]string, 0, 10)
-	wg.Add(10)
-	for i := 0; i < 10; i++ {
+	dirs := make([]string, 0, N)
+	wg.Add(N)
+	for i := 0; i < N; i++ {
 		go func(no int) {
 			defer wg.Done()
-			dir, err := TmpDir(tmpRoot, "tmp", "", 0700)
+			dir, err := local.TmpDir(tmpRoot, "tmp-", "", 0700)
+			mutex.Lock()
+			defer mutex.Unlock()
 			if err != nil {
-				t.Error(no, err)
+				t.Error("Goroutine", no, "local.TmpDir -", err)
 				return
 			}
-			locker.Lock()
-			defer locker.Unlock()
 			dirs = append(dirs, dir)
 		}(i)
 	}
 	wg.Wait()
-	if n := len(dirs); n != 10 {
-		t.Error("len(dirs):", n, "!= 10.")
+	if t.Failed() {
+		return
+	}
+	if n := len(dirs); n != N {
+		t.Errorf("got %d dirs; want %d", n, N)
 	}
 	set := make(map[string]bool)
 	for _, dir := range dirs {
 		if set[dir] {
-			t.Error("Conflict:", dir)
+			t.Error("collided directory", dir)
 			continue
 		}
 		set[dir] = true

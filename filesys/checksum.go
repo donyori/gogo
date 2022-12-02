@@ -92,7 +92,7 @@ func VerifyChecksum(file fs.File, closeFile bool, cs ...HashChecksum) bool {
 	return true
 }
 
-// VerifyChecksumFromFs verifies a file by checksum,
+// VerifyChecksumFromFS verifies a file by checksum,
 // where the file is opened from fsys by the specified name.
 //
 // It returns true if and only if the file can be read
@@ -101,7 +101,7 @@ func VerifyChecksum(file fs.File, closeFile bool, cs ...HashChecksum) bool {
 // Note that it returns false if fsys is nil,
 // or anyone of cs contains a nil NewHash or an empty ExpHex.
 // And it returns true if len(cs) is 0 and the file can be opened for reading.
-func VerifyChecksumFromFs(fsys fs.FS, name string, cs ...HashChecksum) bool {
+func VerifyChecksumFromFS(fsys fs.FS, name string, cs ...HashChecksum) bool {
 	if fsys == nil {
 		return false
 	}
