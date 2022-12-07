@@ -41,7 +41,7 @@ var defaultExclusionSet = NewErrorReadOnlySetIs(io.EOF)
 // (i.e., err == nil || errors.Is(err, io.EOF)).
 //
 // If the target error message is empty,
-// it will use "(no error message)" instead.
+// it will use "<no error message>" instead.
 func AutoWrap(err error) error {
 	return AutoWrapCustom(err, PrependFullFuncName, 1, defaultExclusionSet)
 }
@@ -64,7 +64,7 @@ func AutoWrap(err error) error {
 // (i.e., err == nil || errors.Is(err, io.EOF)).
 //
 // If the target error message is empty,
-// it will use "(no error message)" instead.
+// it will use "<no error message>" instead.
 func AutoWrapSkip(err error, skip int) error {
 	return AutoWrapCustom(err, PrependFullFuncName, skip+1, defaultExclusionSet)
 }
@@ -87,7 +87,7 @@ func AutoWrapSkip(err error, skip int) error {
 // If err is nil or in exclusions, AutoWrapCustom returns err itself.
 //
 // If the target error message is empty,
-// it will use "(no error message)" instead.
+// it will use "<no error message>" instead.
 // If ms is invalid, it will use PrependFullFuncName instead.
 func AutoWrapCustom(err error, ms ErrorMessageStrategy, skip int, exclusions ErrorReadOnlySet) error {
 	if err == nil || exclusions != nil && exclusions.Contain(err) {

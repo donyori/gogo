@@ -25,7 +25,7 @@ import stderrors "errors"
 // (i.e., the package path-qualified function name) of its caller
 // to that error message.
 //
-// If msg is empty, it will use "(no error message)" instead.
+// If msg is empty, it will use "<no error message>" instead.
 func AutoNew(msg string) error {
 	return AutoWrapCustom(stderrors.New(msg), PrependFullFuncName, 1, nil)
 }
@@ -40,7 +40,7 @@ func AutoNew(msg string) error {
 // For example, if skip is 1, instead of the caller of AutoNewCustom,
 // the information of that caller's caller will be used.
 //
-// If msg is empty, it will use "(no error message)" instead.
+// If msg is empty, it will use "<no error message>" instead.
 // If ms is invalid, it will use PrependFullFuncName instead.
 func AutoNewCustom(msg string, ms ErrorMessageStrategy, skip int) error {
 	return AutoWrapCustom(stderrors.New(msg), ms, skip+1, nil)

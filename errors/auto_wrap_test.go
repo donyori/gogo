@@ -43,7 +43,7 @@ func TestAutoWrap(t *testing.T) {
 		{err0, false, wantMsg},
 		{err1, false, wantMsg},
 		{err2, false, wantMsg},
-		{stderrors.New(""), false, "github.com/donyori/gogo/errors.TestAutoWrap.func1: (no error message)"},
+		{stderrors.New(""), false, "github.com/donyori/gogo/errors.TestAutoWrap.func1: <no error message>"},
 	}
 
 	for i, tc := range testCases {
@@ -76,8 +76,8 @@ func TestAutoWrapSkip(t *testing.T) {
 	wantMsg0To2Skip0 := "github.com/donyori/gogo/errors.TestAutoWrapSkip.func1.1: " + err0.Error()
 	wantMsg0To2Skip1 := "github.com/donyori/gogo/errors.TestAutoWrapSkip.func1: " + err0.Error()
 	err3 := stderrors.New("")
-	wantMsg3Skip0 := "github.com/donyori/gogo/errors.TestAutoWrapSkip.func1.1: (no error message)"
-	wantMsg3Skip1 := "github.com/donyori/gogo/errors.TestAutoWrapSkip.func1: (no error message)"
+	wantMsg3Skip0 := "github.com/donyori/gogo/errors.TestAutoWrapSkip.func1.1: <no error message>"
+	wantMsg3Skip1 := "github.com/donyori/gogo/errors.TestAutoWrapSkip.func1: <no error message>"
 	// In the above wantXxx, ".func1" is the anonymous function passed to t.Run;
 	// ".func1.1" is the anonymous inner function that calls function AutoWrapSkip.
 
@@ -190,7 +190,7 @@ func TestAutoWrapCustom(t *testing.T) {
 							if errMsg != "" {
 								wantMsg += errMsg
 							} else {
-								wantMsg += "(no error message)"
+								wantMsg += "<no error message>"
 							}
 						} else {
 							wantMsg = err.Error()
