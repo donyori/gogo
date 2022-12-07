@@ -20,6 +20,7 @@ package inout
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 
 	"github.com/donyori/gogo/errors"
@@ -34,10 +35,12 @@ import (
 // To get a BufferedWriter, use function NewBufferedWriter
 // or NewBufferedWriterSize.
 type BufferedWriter interface {
-	io.Writer
-	io.ByteWriter
-	io.StringWriter
+	Writer
+	ByteWriter
+	RuneWriter
+	StringWriter
 	io.ReaderFrom
+	Printer
 	Flusher
 
 	// Size returns the size of the underlying buffer in bytes.
@@ -49,11 +52,6 @@ type BufferedWriter interface {
 
 	// Available returns the number of bytes unused in the current buffer.
 	Available() int
-
-	// WriteRune writes a single Unicode code point.
-	//
-	// It returns the number of bytes written and any write error encountered.
-	WriteRune(r rune) (size int, err error)
 }
 
 // ResettableBufferedWriter is an interface
@@ -111,11 +109,54 @@ func (rbw *resettableBufferedWriter) Write(p []byte) (n int, err error) {
 	return n, errors.AutoWrap(err)
 }
 
+// MustWrite is like Write but panics when encountering an error.
+//
+// If it panics, the error value passed to the call of panic
+// must be exactly of type *WritePanic.
+func (rbw *resettableBufferedWriter) MustWrite(p []byte) (n int) {
+	n, err := rbw.bw.Write(p)
+	if err != nil {
+		panic(NewWritePanic(errors.AutoWrap(err)))
+	}
+	return
+}
+
 // WriteByte writes a single byte.
 //
 // It returns any write error encountered.
 func (rbw *resettableBufferedWriter) WriteByte(c byte) error {
 	return errors.AutoWrap(rbw.bw.WriteByte(c))
+}
+
+// MustWriteByte is like WriteByte but panics when encountering an error.
+//
+// If it panics, the error value passed to the call of panic
+// must be exactly of type *WritePanic.
+func (rbw *resettableBufferedWriter) MustWriteByte(c byte) {
+	err := rbw.bw.WriteByte(c)
+	if err != nil {
+		panic(NewWritePanic(errors.AutoWrap(err)))
+	}
+}
+
+// WriteRune writes a single Unicode code point.
+//
+// It returns the number of bytes written and any write error encountered.
+func (rbw *resettableBufferedWriter) WriteRune(r rune) (size int, err error) {
+	size, err = rbw.bw.WriteRune(r)
+	return size, errors.AutoWrap(err)
+}
+
+// MustWriteRune is like WriteRune but panics when encountering an error.
+//
+// If it panics, the error value passed to the call of panic
+// must be exactly of type *WritePanic.
+func (rbw *resettableBufferedWriter) MustWriteRune(r rune) (size int) {
+	size, err := rbw.bw.WriteRune(r)
+	if err != nil {
+		panic(NewWritePanic(errors.AutoWrap(err)))
+	}
+	return
 }
 
 // WriteString writes a string.
@@ -126,6 +167,18 @@ func (rbw *resettableBufferedWriter) WriteByte(c byte) error {
 func (rbw *resettableBufferedWriter) WriteString(s string) (n int, err error) {
 	n, err = rbw.bw.WriteString(s)
 	return n, errors.AutoWrap(err)
+}
+
+// MustWriteString is like WriteString but panics when encountering an error.
+//
+// If it panics, the error value passed to the call of panic
+// must be exactly of type *WritePanic.
+func (rbw *resettableBufferedWriter) MustWriteString(s string) (n int) {
+	n, err := rbw.bw.WriteString(s)
+	if err != nil {
+		panic(NewWritePanic(errors.AutoWrap(err)))
+	}
+	return
 }
 
 // ReadFrom reads data from r until EOF or error.
@@ -139,6 +192,63 @@ func (rbw *resettableBufferedWriter) WriteString(s string) (n int, err error) {
 func (rbw *resettableBufferedWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	n, err = rbw.bw.ReadFrom(r)
 	return n, errors.AutoWrap(err)
+}
+
+// Printf formats arguments and writes to the buffer.
+// Arguments are handled in the manner of fmt.Printf.
+func (rbw *resettableBufferedWriter) Printf(format string, a ...any) (n int, err error) {
+	n, err = fmt.Fprintf(rbw.bw, format, a...)
+	return n, errors.AutoWrap(err)
+}
+
+// MustPrintf is like Printf but panics when encountering an error.
+//
+// If it panics, the error value passed to the call of panic
+// must be exactly of type *WritePanic.
+func (rbw *resettableBufferedWriter) MustPrintf(format string, a ...any) (n int) {
+	n, err := fmt.Fprintf(rbw.bw, format, a...)
+	if err != nil {
+		panic(NewWritePanic(errors.AutoWrap(err)))
+	}
+	return
+}
+
+// Print formats arguments and writes to the buffer.
+// Arguments are handled in the manner of fmt.Print.
+func (rbw *resettableBufferedWriter) Print(a ...any) (n int, err error) {
+	n, err = fmt.Fprint(rbw.bw, a...)
+	return n, errors.AutoWrap(err)
+}
+
+// MustPrint is like Print but panics when encountering an error.
+//
+// If it panics, the error value passed to the call of panic
+// must be exactly of type *WritePanic.
+func (rbw *resettableBufferedWriter) MustPrint(a ...any) (n int) {
+	n, err := fmt.Fprint(rbw.bw, a...)
+	if err != nil {
+		panic(NewWritePanic(errors.AutoWrap(err)))
+	}
+	return
+}
+
+// Println formats arguments and writes to the buffer.
+// Arguments are handled in the manner of fmt.Println.
+func (rbw *resettableBufferedWriter) Println(a ...any) (n int, err error) {
+	n, err = fmt.Fprintln(rbw.bw, a...)
+	return n, errors.AutoWrap(err)
+}
+
+// MustPrintln is like Println but panics when encountering an error.
+//
+// If it panics, the error value passed to the call of panic
+// must be exactly of type *WritePanic.
+func (rbw *resettableBufferedWriter) MustPrintln(a ...any) (n int) {
+	n, err := fmt.Fprintln(rbw.bw, a...)
+	if err != nil {
+		panic(NewWritePanic(errors.AutoWrap(err)))
+	}
+	return
 }
 
 // Flush writes any buffered data to the underlying writer.
@@ -162,14 +272,6 @@ func (rbw *resettableBufferedWriter) Buffered() int {
 // Available returns the number of bytes unused in the current buffer.
 func (rbw *resettableBufferedWriter) Available() int {
 	return rbw.bw.Available()
-}
-
-// WriteRune writes a single Unicode code point.
-//
-// It returns the number of bytes written and any write error encountered.
-func (rbw *resettableBufferedWriter) WriteRune(r rune) (size int, err error) {
-	size, err = rbw.bw.WriteRune(r)
-	return size, errors.AutoWrap(err)
 }
 
 // Reset discards any unflushed data, resets all states,

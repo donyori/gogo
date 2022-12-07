@@ -118,6 +118,11 @@ type errorCloser struct {
 // If deviceName is empty, it will use "closer" instead.
 //
 // parentErr is the parent error of the ClosedError returned by method Close.
+// The parent error here is used to classify ClosedError instances,
+// not the error that caused the current ClosedError.
+// parentErr must either be nil or satisfy that
+// errors.Is(parentErr, ErrClosed) is true.
+// If not, WrapErrorCloser panics.
 // If parentErr is nil, it will use ErrClosed instead.
 func WrapErrorCloser(closer io.Closer, deviceName string, parentErr error) Closer {
 	if closer == nil {
@@ -128,6 +133,8 @@ func WrapErrorCloser(closer io.Closer, deviceName string, parentErr error) Close
 	}
 	if parentErr == nil {
 		parentErr = ErrClosed
+	} else if !errors.Is(parentErr, ErrClosed) {
+		panic(errors.AutoMsg("parentErr is neither nil nor an ErrClosed (errors.Is(parentErr, ErrClosed) returns false)"))
 	}
 	return &errorCloser{
 		c:  closer,
@@ -189,16 +196,16 @@ type MultiCloser interface {
 
 // Masks for the field flag of struct multiCloser.
 const (
-	multiCloserTryAllMask  uint8 = 0x01
-	multiCloserNoErrorMask uint8 = 0x02
+	multiCloserTryAllMask  byte = 0x01
+	multiCloserNoErrorMask byte = 0x02
 )
 
 // multiCloser is an implementation of interface MultiCloser.
 type multiCloser struct {
 	cm   map[io.Closer]bool // Closed map, to record whether the closer is closed successfully.
 	cs   []io.Closer
-	idx  int   // Index of the last successfully closed closer. (It equals to len(cs) initially.)
-	flag uint8 // The first bit (0x01) is the option tryAll, and the second bit (0x02) is the option noError.
+	idx  int  // Index of the last successfully closed closer. (It equals to len(cs) initially.)
+	flag byte // The first bit (0x01) is the option tryAll, and the second bit (0x02) is the option noError.
 }
 
 // NewMultiCloser creates a new MultiCloser.

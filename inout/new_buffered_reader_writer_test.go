@@ -19,7 +19,7 @@
 package inout
 
 // This file requires the unexported variables: minReadBufferSize and defaultBufferSize,
-// and the unexported type: resettableBufferedReader.
+// and the unexported types: resettableBufferedReader and resettableBufferedWriter.
 
 import (
 	"bufio"
@@ -39,7 +39,7 @@ func TestNewBufferedReaderSize(t *testing.T) {
 	br64 := NewBufferedReaderSize(r, 64)
 	br128 := NewBufferedReaderSize(r, 128)
 	br256 := NewBufferedReaderSize(r, 256)
-	const size = 128
+	const size128 = 128
 
 	testCases := []struct {
 		name             string
@@ -49,15 +49,15 @@ func TestNewBufferedReaderSize(t *testing.T) {
 		wantAsUnderlying bool
 		wantAsSelf       bool
 	}{
-		{name: "on r", r: r, argSize: size, wantSize: size},
-		{name: "on bufr", r: bufr, argSize: size, wantAsUnderlying: true},
-		{name: "on bufr64", r: bufr64, argSize: size, wantSize: size},
-		{name: "on bufr128", r: bufr128, argSize: size, wantAsUnderlying: true},
-		{name: "on bufr256", r: bufr256, argSize: size, wantAsUnderlying: true},
-		{name: "on br", r: br, argSize: size, wantAsSelf: true},
-		{name: "on br64", r: br64, argSize: size, wantSize: size},
-		{name: "on br128", r: br128, argSize: size, wantAsSelf: true},
-		{name: "on br256", r: br256, argSize: size, wantAsSelf: true},
+		{name: "on r", r: r, argSize: size128, wantSize: size128},
+		{name: "on bufr", r: bufr, argSize: size128, wantAsUnderlying: true},
+		{name: "on bufr64", r: bufr64, argSize: size128, wantSize: size128},
+		{name: "on bufr128", r: bufr128, argSize: size128, wantAsUnderlying: true},
+		{name: "on bufr256", r: bufr256, argSize: size128, wantAsUnderlying: true},
+		{name: "on br", r: br, argSize: size128, wantAsSelf: true},
+		{name: "on br64", r: br64, argSize: size128, wantSize: size128},
+		{name: "on br128", r: br128, argSize: size128, wantAsSelf: true},
+		{name: "on br256", r: br256, argSize: size128, wantAsSelf: true},
 		{name: "on r?size=0", r: r, argSize: 0, wantSize: minReadBufferSize},
 	}
 
@@ -94,24 +94,25 @@ func TestNewBufferedWriterSize(t *testing.T) {
 	bw64 := NewBufferedWriterSize(w, 64)
 	bw128 := NewBufferedWriterSize(w, 128)
 	bw256 := NewBufferedWriterSize(w, 256)
-	const size = 128
+	const size128 = 128
 
 	testCases := []struct {
-		name       string
-		w          io.Writer
-		argSize    int
-		wantSize   int
-		wantAsSelf bool
+		name             string
+		w                io.Writer
+		argSize          int
+		wantSize         int
+		wantAsUnderlying bool
+		wantAsSelf       bool
 	}{
-		{name: "on w", w: w, argSize: size, wantSize: size},
-		{name: "on bufw", w: bufw, argSize: size, wantAsSelf: true},
-		{name: "on bufw64", w: bufw64, argSize: size, wantSize: size},
-		{name: "on bufw128", w: bufw128, argSize: size, wantAsSelf: true},
-		{name: "on bufw256", w: bufw256, argSize: size, wantAsSelf: true},
-		{name: "on bw", w: bw, argSize: size, wantAsSelf: true},
-		{name: "on bw64", w: bw64, argSize: size, wantSize: size},
-		{name: "on bw128", w: bw128, argSize: size, wantAsSelf: true},
-		{name: "on bw256", w: bw256, argSize: size, wantAsSelf: true},
+		{name: "on w", w: w, argSize: size128, wantSize: size128},
+		{name: "on bufw", w: bufw, argSize: size128, wantAsUnderlying: true},
+		{name: "on bufw64", w: bufw64, argSize: size128, wantSize: size128},
+		{name: "on bufw128", w: bufw128, argSize: size128, wantAsUnderlying: true},
+		{name: "on bufw256", w: bufw256, argSize: size128, wantAsUnderlying: true},
+		{name: "on bw", w: bw, argSize: size128, wantAsSelf: true},
+		{name: "on bw64", w: bw64, argSize: size128, wantSize: size128},
+		{name: "on bw128", w: bw128, argSize: size128, wantAsSelf: true},
+		{name: "on bw256", w: bw256, argSize: size128, wantAsSelf: true},
 		{name: "on w?size=0", w: w, argSize: 0, wantSize: defaultBufferSize},
 	}
 
@@ -122,6 +123,10 @@ func TestNewBufferedWriterSize(t *testing.T) {
 			case tc.wantSize != 0:
 				if n := b.Size(); n != tc.wantSize {
 					t.Errorf("got size %d; want %d", n, tc.wantSize)
+				}
+			case tc.wantAsUnderlying:
+				if b.(*resettableBufferedWriter).bw != tc.w {
+					t.Error("underlying buffered writer not input")
 				}
 			case tc.wantAsSelf:
 				if b != tc.w {

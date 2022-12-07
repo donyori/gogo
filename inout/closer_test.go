@@ -165,7 +165,7 @@ func testMultiCloserOneCall(t *testing.T, tryAll, noError bool, failErr error,
 			if tryAll {
 				el, ok := err.(errors.ErrorList)
 				if !ok {
-					t.Errorf("mc.Close returned %v, not a ErrorList", err)
+					t.Errorf("mc.Close returned %v, not an ErrorList", err)
 				}
 				errs := el.ToList()
 				if len(errs) != 2 || errs[0] != failErr || errs[1] != failErr {
