@@ -53,6 +53,15 @@ func TestRead_NotCloseFile(t *testing.T) {
 	if err != nil {
 		t.Error("test read a half -", err)
 	}
+	var buffered []byte
+	if n := r.Buffered(); n > 0 {
+		peek, err := r.Peek(n)
+		if err != nil {
+			t.Fatal("peek buffered data -", err)
+		}
+		buffered = make([]byte, len(peek), len(peek)+int(halfSize))
+		copy(buffered, peek)
+	}
 	err = r.Close()
 	if err != nil {
 		t.Fatal("close reader -", err)
@@ -61,6 +70,7 @@ func TestRead_NotCloseFile(t *testing.T) {
 	if err != nil {
 		t.Fatal("read all from rest part -", err)
 	}
+	data = append(buffered, data...)
 	want := testFS[name].Data[halfSize:]
 	if !bytes.Equal(data, want) {
 		t.Errorf("read all from rest part - got %s; want %s", data, want)

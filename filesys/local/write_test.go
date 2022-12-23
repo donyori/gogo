@@ -19,11 +19,17 @@
 package local_test
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"errors"
+	"fmt"
+	"io"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/donyori/gogo/filesys/local"
 )
@@ -36,17 +42,17 @@ func TestWriteTrunc(t *testing.T) {
 		func(t *testing.T, i int) {
 			w, err := local.WriteTrunc(name, 0600, nil)
 			if err != nil {
-				t.Errorf("i: %d, WriteTrunc - %v", i, err)
+				t.Errorf("i: %d, create - %v", i, err)
 				return
 			}
 			defer func() {
 				if err := w.Close(); err != nil {
-					t.Errorf("i: %d, w.Close - %v", i, err)
+					t.Errorf("i: %d, close - %v", i, err)
 				}
 			}()
 			_, err = w.Write(data)
 			if err != nil {
-				t.Errorf("i: %d, w.Write - %v", i, err)
+				t.Errorf("i: %d, write - %v", i, err)
 			}
 		}(t, i)
 		if t.Failed() {
@@ -71,17 +77,17 @@ func TestWriteAppend(t *testing.T) {
 		func(t *testing.T, i int) {
 			w, err := local.WriteAppend(name, 0600, nil)
 			if err != nil {
-				t.Errorf("i: %d, WriteAppend - %v", i, err)
+				t.Errorf("i: %d, create - %v", i, err)
 				return
 			}
 			defer func() {
 				if err := w.Close(); err != nil {
-					t.Errorf("i: %d, w.Close - %v", i, err)
+					t.Errorf("i: %d, close - %v", i, err)
 				}
 			}()
 			_, err = w.Write(data)
 			if err != nil {
-				t.Errorf("i: %d, w.Write - %v", i, err)
+				t.Errorf("i: %d, write - %v", i, err)
 			}
 		}(t, i)
 		if t.Failed() {
@@ -105,19 +111,22 @@ func TestWriteExcl(t *testing.T) {
 	func(t *testing.T) {
 		w, err := local.WriteExcl(name, 0600, nil)
 		if err != nil {
-			t.Error("WriteExcl -", err)
+			t.Error("create -", err)
 			return
 		}
 		defer func() {
 			if err := w.Close(); err != nil {
-				t.Error("w.Close -", err)
+				t.Error("close -", err)
 			}
 		}()
 		_, err = w.Write(data)
 		if err != nil {
-			t.Error("w.Write -", err)
+			t.Error("write -", err)
 		}
 	}(t)
+	if t.Failed() {
+		return
+	}
 	_, err := local.WriteExcl(name, 0600, nil)
 	if !errors.Is(err, os.ErrExist) {
 		t.Fatal("errors.Is(err, os.ErrExist) is false on 2nd call to WriteExcl, err:", err)
@@ -128,5 +137,133 @@ func TestWriteExcl(t *testing.T) {
 	}
 	if !bytes.Equal(got, data) {
 		t.Errorf("got %q; want %q", got, data)
+	}
+}
+
+func TestWriteTrunc_Tar_Tgz(t *testing.T) {
+	big := make([]byte, 1_048_576)
+	rand.New(rand.NewSource(10)).Read(big)
+	tarFiles := []struct {
+		name string
+		body []byte
+	}{
+		{"tar file1.txt", []byte("This is tar file 1.")},
+		{"tar file2.txt", []byte("Here is tar file 2!")},
+		{"roses are red.txt", []byte("Roses are red.\n  Violets are blue.\nSugar is sweet.\n  And so are you.\n")},
+		{"1MB.dat", big},
+	}
+	filenames := []string{"test.tar", "test.tar.gz", "test.tgz"}
+	tmpRoot := t.TempDir()
+	for _, filename := range filenames {
+		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
+			name := filepath.Join(tmpRoot, "sub", filename)
+			writeTarFiles(t, name, tarFiles)
+			if t.Failed() {
+				return
+			}
+			testTarTgzFile(t, name, tarFiles)
+		})
+	}
+}
+
+// writeTarFiles uses WriteTrunc to write a tar or tgz file.
+//
+// name is the local file name.
+//
+// tarFiles are the files with their names and bodies to be archived in the tar.
+//
+// Caller should guarantee that name has extension ".tar", ".tar.gz", or ".tgz".
+func writeTarFiles(t *testing.T, name string, tarFiles []struct {
+	name string
+	body []byte
+}) {
+	w, err := local.WriteTrunc(name, 0600, nil)
+	if err != nil {
+		t.Error("create -", err)
+		return
+	}
+	defer func() {
+		if err := w.Close(); err != nil {
+			t.Error("close -", err)
+		}
+	}()
+	for i := range tarFiles {
+		err = w.TarWriteHeader(&tar.Header{
+			Name:    tarFiles[i].name,
+			Size:    int64(len(tarFiles[i].body)),
+			Mode:    0600,
+			ModTime: time.Now(),
+		})
+		if err != nil {
+			t.Errorf("write No.%d tar header - %v", i, err)
+			return
+		}
+		_, err = w.Write(tarFiles[i].body)
+		if err != nil {
+			t.Errorf("write No.%d tar file body - %v", i, err)
+			return
+		}
+	}
+}
+
+// testTarTgzFile checks a tar or tgz file written by function writeTarFiles.
+//
+// Caller should guarantee that name has extension ".tar", ".tar.gz", or ".tgz".
+func testTarTgzFile(t *testing.T, name string, wantTarFiles []struct {
+	name string
+	body []byte
+}) {
+	f, err := os.Open(name)
+	if err != nil {
+		t.Error("open -", err)
+		return
+	}
+	defer func(f *os.File) {
+		if err := f.Close(); err != nil {
+			t.Error("close file -", err)
+		}
+	}(f)
+	var rc io.ReadCloser = f
+	ext := filepath.Ext(name)
+	if ext == ".gz" || ext == ".tgz" {
+		rc, err = gzip.NewReader(rc)
+		if err != nil {
+			t.Error("create gzip reader -", err)
+			return
+		}
+		defer func(c io.Closer) {
+			if err := c.Close(); err != nil {
+				t.Error("close gzip reader -", err)
+			}
+		}(rc)
+	}
+	tr := tar.NewReader(rc)
+	for i := 0; ; i++ {
+		hdr, err := tr.Next()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				if i != len(wantTarFiles) {
+					t.Errorf("tar header number: %d != %d, but got EOF", i, len(wantTarFiles))
+				}
+				break // end of archive
+			}
+			t.Errorf("read No.%d tar header - %v", i, err)
+			return
+		}
+		if i >= len(wantTarFiles) {
+			t.Error("tar headers more than", len(wantTarFiles))
+			return
+		}
+		if hdr.Name != wantTarFiles[i].name {
+			t.Errorf("No.%d tar header name unequal - got %s; want %s", i, hdr.Name, wantTarFiles[i].name)
+		}
+		body, err := io.ReadAll(tr)
+		if err != nil {
+			t.Errorf("read No.%d tar file body - %v", i, err)
+			return
+		}
+		if !bytes.Equal(body, wantTarFiles[i].body) {
+			t.Errorf("got No.%d tar file body\n%s\nwant\n%s", i, body, wantTarFiles[i].body)
+		}
 	}
 }

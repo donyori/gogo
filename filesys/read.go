@@ -58,11 +58,6 @@ type ReadOptions struct {
 	// Size of the buffer for reading the file at least.
 	// Non-positive values for using default value.
 	BufSize int
-
-	// If true, a buffer will be created when the file is opened.
-	// Otherwise, the buffer will not be created until a method
-	// that needs a buffer is called.
-	BufOpen bool
 }
 
 // Reader is a device to read data from a file.
@@ -176,7 +171,7 @@ func Read(file fs.File, opts *ReadOptions, closeFile bool) (r Reader, err error)
 		el.Append(err)
 		return
 	}
-	err = readSubRawBufOpenAndClosers(fr, info, &closers)
+	err = readSubRawClosersAndCreateBuffer(fr, info, &closers)
 	if err != nil {
 		el.Append(err)
 	}
@@ -211,10 +206,9 @@ func readSubOffsetAndLimit(fr *reader, info fs.FileInfo) error {
 	return nil
 }
 
-// readSubRawBufOpenAndClosers is a sub-process of function Read
-// to deal with the options Raw and BufOpen.
-// It also sets fr.c and updates closers.
-func readSubRawBufOpenAndClosers(fr *reader, info fs.FileInfo, pClosers *[]io.Closer) error {
+// readSubRawClosersAndCreateBuffer is a sub-process of function Read
+// to deal with the options Raw, set fr.c, update closers, and create a buffer.
+func readSubRawClosersAndCreateBuffer(fr *reader, info fs.FileInfo, pClosers *[]io.Closer) error {
 	if !fr.opts.Raw {
 		name := strings.ToLower(path.Clean(filepath.ToSlash(info.Name())))
 		ext := path.Ext(name)
@@ -256,8 +250,10 @@ func readSubRawBufOpenAndClosers(fr *reader, info fs.FileInfo, pClosers *[]io.Cl
 	default:
 		fr.c = inout.NewMultiCloser(true, true, *pClosers...)
 	}
-	if fr.opts.BufOpen {
-		fr.createBr()
+	if fr.opts.BufSize <= 0 {
+		fr.br = inout.NewBufferedReader(fr.ur)
+	} else {
+		fr.br = inout.NewBufferedReaderSize(fr.ur, fr.opts.BufSize)
 	}
 	return nil
 }
@@ -310,13 +306,7 @@ func (fr *reader) Read(p []byte) (n int, err error) {
 	if fr.err != nil {
 		return 0, fr.err
 	}
-	var r io.Reader
-	if fr.br != nil {
-		r = fr.br
-	} else {
-		r = fr.ur
-	}
-	n, err = r.Read(p)
+	n, err = fr.br.Read(p)
 	fr.err = errors.AutoWrap(err)
 	return n, fr.err
 }
@@ -328,16 +318,7 @@ func (fr *reader) ReadByte() (byte, error) {
 	if fr.err != nil {
 		return 0, fr.err
 	}
-	var c byte
-	var err error
-	if fr.br != nil {
-		c, err = fr.br.ReadByte()
-	} else if br, ok := fr.ur.(io.ByteReader); ok {
-		c, err = br.ReadByte()
-	} else {
-		fr.createBr()
-		c, err = fr.br.ReadByte()
-	}
+	c, err := fr.br.ReadByte()
 	fr.err = errors.AutoWrap(err)
 	return c, fr.err
 }
@@ -350,14 +331,7 @@ func (fr *reader) UnreadByte() error {
 	if fr.err != nil {
 		return fr.err
 	}
-	if fr.br != nil {
-		fr.err = errors.AutoWrap(fr.br.UnreadByte())
-	} else if bs, ok := fr.ur.(io.ByteScanner); ok {
-		fr.err = errors.AutoWrap(bs.UnreadByte())
-	} else {
-		fr.createBr()
-		fr.err = errors.AutoWrap(fr.br.UnreadByte())
-	}
+	fr.err = errors.AutoWrap(fr.br.UnreadByte())
 	return fr.err
 }
 
@@ -369,14 +343,7 @@ func (fr *reader) ReadRune() (r rune, size int, err error) {
 	if fr.err != nil {
 		return 0, 0, fr.err
 	}
-	if fr.br != nil {
-		r, size, err = fr.br.ReadRune()
-	} else if rr, ok := fr.ur.(io.RuneReader); ok {
-		r, size, err = rr.ReadRune()
-	} else {
-		fr.createBr()
-		r, size, err = fr.br.ReadRune()
-	}
+	r, size, err = fr.br.ReadRune()
 	fr.err = errors.AutoWrap(err)
 	return r, size, fr.err
 }
@@ -388,14 +355,7 @@ func (fr *reader) UnreadRune() error {
 	if fr.err != nil {
 		return fr.err
 	}
-	if fr.br != nil {
-		fr.err = errors.AutoWrap(fr.br.UnreadRune())
-	} else if rs, ok := fr.ur.(io.RuneScanner); ok {
-		fr.err = errors.AutoWrap(rs.UnreadRune())
-	} else {
-		fr.createBr()
-		fr.err = errors.AutoWrap(fr.br.UnreadRune())
-	}
+	fr.err = errors.AutoWrap(fr.br.UnreadRune())
 	return fr.err
 }
 
@@ -410,16 +370,7 @@ func (fr *reader) WriteTo(w io.Writer) (n int64, err error) {
 	if fr.err != nil {
 		return 0, fr.err
 	}
-	if fr.br != nil {
-		n, err = fr.br.WriteTo(w)
-	} else if r, ok := fr.ur.(io.WriterTo); ok {
-		n, err = r.WriteTo(w)
-	} else if rf, ok := w.(io.ReaderFrom); ok {
-		n, err = rf.ReadFrom(fr.ur)
-	} else {
-		fr.createBr()
-		n, err = fr.br.WriteTo(w)
-	}
+	n, err = fr.br.WriteTo(w)
 	fr.err = errors.AutoWrap(err)
 	return n, fr.err
 }
@@ -448,9 +399,6 @@ func (fr *reader) ReadLine() (line []byte, more bool, err error) {
 	if fr.err != nil {
 		return nil, false, fr.err
 	}
-	if fr.br == nil {
-		fr.createBr()
-	}
 	line, more, err = fr.br.ReadLine()
 	fr.err = errors.AutoWrap(err)
 	return line, more, fr.err
@@ -478,9 +426,6 @@ func (fr *reader) ReadEntireLine() (line []byte, err error) {
 	if fr.err != nil {
 		return nil, fr.err
 	}
-	if fr.br == nil {
-		fr.createBr()
-	}
 	line, err = fr.br.ReadEntireLine()
 	fr.err = errors.AutoWrap(err)
 	return line, fr.err
@@ -506,45 +451,20 @@ func (fr *reader) WriteLineTo(w io.Writer) (n int64, err error) {
 	if fr.err != nil {
 		return 0, fr.err
 	}
-	if fr.br == nil {
-		fr.createBr()
-	}
 	n, err = fr.br.WriteLineTo(w)
 	fr.err = errors.AutoWrap(err)
 	return n, fr.err
 }
 
 // Size returns the size of the underlying buffer in bytes.
-//
-// If there is no buffer, it returns 0.
 func (fr *reader) Size() int {
-	if fr.br != nil {
-		return fr.br.Size()
-	}
-	if br, ok := fr.ur.(inout.BufferedReader); ok {
-		return br.Size()
-	}
-	if br, ok := fr.ur.(*bufio.Reader); ok {
-		return br.Size()
-	}
-	return 0
+	return fr.br.Size()
 }
 
 // Buffered returns the number of bytes
 // that can be read from the current buffer.
-//
-// If there is no buffer, it returns 0.
 func (fr *reader) Buffered() int {
-	if fr.br != nil {
-		return fr.br.Buffered()
-	}
-	if br, ok := fr.ur.(inout.BufferedReader); ok {
-		return br.Buffered()
-	}
-	if br, ok := fr.ur.(*bufio.Reader); ok {
-		return br.Buffered()
-	}
-	return 0
+	return fr.br.Buffered()
 }
 
 // Peek returns the next n bytes without advancing the reader.
@@ -561,12 +481,12 @@ func (fr *reader) Peek(n int) (data []byte, err error) {
 	if fr.err != nil {
 		return nil, fr.err
 	}
-	if fr.br == nil {
-		fr.createBr()
-	}
 	data, err = fr.br.Peek(n)
-	fr.err = errors.AutoWrap(err)
-	return data, fr.err
+	err = errors.AutoWrap(err)
+	if !errors.Is(err, bufio.ErrBufferFull) { // don't record bufio.ErrBufferFull
+		fr.err = err
+	}
+	return
 }
 
 // Discard skips the next n bytes and returns the number of bytes discarded.
@@ -578,9 +498,6 @@ func (fr *reader) Peek(n int) (data []byte, err error) {
 func (fr *reader) Discard(n int) (discarded int, err error) {
 	if fr.err != nil {
 		return 0, fr.err
-	}
-	if fr.br == nil {
-		fr.createBr()
 	}
 	discarded, err = fr.br.Discard(n)
 	fr.err = errors.AutoWrap(err)
@@ -617,9 +534,7 @@ func (fr *reader) TarNext() (header *tar.Header, err error) {
 	if errors.Is(err, io.EOF) {
 		fr.err = nil // don't record io.EOF to enable following reading
 	}
-	if fr.br != nil {
-		fr.br.Reset(fr.ur) // discard current buffered data
-	}
+	fr.br.Reset(fr.ur) // discard current buffered data
 	return header, err
 }
 
@@ -633,15 +548,4 @@ func (fr *reader) Options() *ReadOptions {
 // FileInfo returns the information of the file.
 func (fr *reader) FileInfo() (info fs.FileInfo, err error) {
 	return fr.f.Stat()
-}
-
-// createBr wraps a BufferedReader on current reader.
-//
-// Caller should guarantee that fr.br == nil.
-func (fr *reader) createBr() {
-	if fr.opts.BufSize <= 0 {
-		fr.br = inout.NewBufferedReader(fr.ur)
-	} else {
-		fr.br = inout.NewBufferedReaderSize(fr.ur, fr.opts.BufSize)
-	}
 }

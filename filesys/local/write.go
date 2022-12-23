@@ -20,9 +20,7 @@ package local
 
 import (
 	"archive/tar"
-	"bufio"
 	"compress/gzip"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -55,11 +53,6 @@ type WriteOptions struct {
 	// Size of the buffer for writing the file at least.
 	// Non-positive values for using default value.
 	BufSize int
-
-	// If true, a buffer will be created when the file is opened.
-	// Otherwise, the buffer will not be created until a method
-	// that needs a buffer is called.
-	BufOpen bool
 }
 
 // defaultWriteOptions are default options for functions WriteTrunc,
@@ -120,12 +113,10 @@ type writer struct {
 //
 // If opts are nil, the default options will be used.
 // The default options are as follows:
-//
-//	MkDirs: true,
-//	Raw: false,
-//	GzipLv: compress/gzip.DefaultCompression,
-//	BufSize: 0,
-//	BufOpen: false,
+//   - MkDirs: true,
+//   - Raw: false,
+//   - GzipLv: compress/gzip.DefaultCompression,
+//   - BufSize: 0,
 //
 // To ensure that this function and the returned writer can work as expected,
 // the specified file must not be operated by anyone else
@@ -171,17 +162,16 @@ func Write(file *os.File, opts *WriteOptions, closeFile bool) (w Writer, err err
 		f:    file,
 	}
 	w = fw
-	err = writeSubRawBufOpenAndClosers(fw, &closers)
+	err = writeSubRawClosersAndCreateBuffer(fw, &closers)
 	if err != nil {
 		el.Append(err)
 	}
 	return
 }
 
-// writeSubRawBufOpenAndClosers is a sub-process of function Write
-// to deal with the options Raw and BufOpen.
-// It also sets fw.c and updates closers.
-func writeSubRawBufOpenAndClosers(fw *writer, pClosers *[]io.Closer) error {
+// writeSubRawClosersAndCreateBuffer is a sub-process of function Write
+// to deal with the options Raw, set fw.c, update closers, and create a buffer.
+func writeSubRawClosersAndCreateBuffer(fw *writer, pClosers *[]io.Closer) error {
 	if !fw.opts.Raw {
 		name := strings.ToLower(path.Clean(filepath.ToSlash(fw.f.Name())))
 		ext := path.Ext(name)
@@ -222,9 +212,7 @@ func writeSubRawBufOpenAndClosers(fw *writer, pClosers *[]io.Closer) error {
 	default:
 		fw.c = inout.NewMultiCloser(true, true, *pClosers...)
 	}
-	if fw.opts.BufOpen {
-		fw.bw = inout.NewBufferedWriterSize(fw.uw, fw.opts.BufSize)
-	}
+	fw.bw = inout.NewBufferedWriterSize(fw.uw, fw.opts.BufSize)
 	return nil
 }
 
@@ -309,7 +297,7 @@ func (fw *writer) Close() error {
 	}
 	el := errors.NewErrorList(true)
 	if fw.err == nil {
-		el.Append(fw.Flush())
+		el.Append(fw.bw.Flush())
 	}
 	el.Append(fw.c.Close())
 	err := errors.AutoWrap(el.ToError())
@@ -338,13 +326,7 @@ func (fw *writer) Write(p []byte) (n int, err error) {
 	if fw.err != nil {
 		return 0, fw.err
 	}
-	var w io.Writer
-	if fw.bw != nil {
-		w = fw.bw
-	} else {
-		w = fw.uw
-	}
-	n, err = w.Write(p)
+	n, err = fw.bw.Write(p)
 	fw.err = errors.AutoWrap(err)
 	return n, fw.err
 }
@@ -370,15 +352,7 @@ func (fw *writer) WriteByte(c byte) error {
 	if fw.err != nil {
 		return fw.err
 	}
-	var err error
-	if fw.bw != nil {
-		err = fw.bw.WriteByte(c)
-	} else if bw, ok := fw.uw.(io.ByteWriter); ok {
-		err = bw.WriteByte(c)
-	} else {
-		fw.bw = inout.NewBufferedWriterSize(fw.uw, fw.opts.BufSize)
-		err = fw.bw.WriteByte(c)
-	}
+	err := fw.bw.WriteByte(c)
 	fw.err = errors.AutoWrap(err)
 	return fw.err
 }
@@ -401,16 +375,7 @@ func (fw *writer) WriteRune(r rune) (size int, err error) {
 	if fw.err != nil {
 		return 0, fw.err
 	}
-	if fw.bw != nil {
-		size, err = fw.bw.WriteRune(r)
-	} else if rw, ok := fw.uw.(interface {
-		WriteRune(r rune) (size int, err error)
-	}); ok {
-		size, err = rw.WriteRune(r)
-	} else {
-		fw.bw = inout.NewBufferedWriterSize(fw.uw, fw.opts.BufSize)
-		size, err = fw.bw.WriteRune(r)
-	}
+	size, err = fw.bw.WriteRune(r)
 	fw.err = errors.AutoWrap(err)
 	return size, fw.err
 }
@@ -438,13 +403,7 @@ func (fw *writer) WriteString(s string) (n int, err error) {
 	if fw.err != nil {
 		return 0, fw.err
 	}
-	if fw.bw != nil {
-		n, err = fw.bw.WriteString(s)
-	} else if sw, ok := fw.uw.(io.StringWriter); ok {
-		n, err = sw.WriteString(s)
-	} else {
-		n, err = fw.uw.Write([]byte(s))
-	}
+	n, err = fw.bw.WriteString(s)
 	fw.err = errors.AutoWrap(err)
 	return n, fw.err
 }
@@ -471,16 +430,7 @@ func (fw *writer) ReadFrom(r io.Reader) (n int64, err error) {
 	if fw.err != nil {
 		return 0, fw.err
 	}
-	if fw.bw != nil {
-		n, err = fw.bw.ReadFrom(r)
-	} else if w, ok := fw.uw.(io.ReaderFrom); ok {
-		n, err = w.ReadFrom(r)
-	} else if wt, ok := r.(io.WriterTo); ok {
-		n, err = wt.WriteTo(fw.uw)
-	} else {
-		fw.bw = inout.NewBufferedWriterSize(fw.uw, fw.opts.BufSize)
-		n, err = fw.bw.ReadFrom(r)
-	}
+	n, err = fw.bw.ReadFrom(r)
 	fw.err = errors.AutoWrap(err)
 	return n, fw.err
 }
@@ -491,15 +441,7 @@ func (fw *writer) Printf(format string, args ...any) (n int, err error) {
 	if fw.err != nil {
 		return 0, fw.err
 	}
-	if fw.bw != nil {
-		n, err = fw.bw.Printf(format, args...)
-	} else if p, ok := fw.uw.(interface {
-		Printf(format string, args ...any) (n int, err error)
-	}); ok {
-		n, err = p.Printf(format, args...)
-	} else {
-		n, err = fmt.Fprintf(fw.uw, format, args...)
-	}
+	n, err = fw.bw.Printf(format, args...)
 	fw.err = errors.AutoWrap(err)
 	return n, fw.err
 }
@@ -522,15 +464,7 @@ func (fw *writer) Print(args ...any) (n int, err error) {
 	if fw.err != nil {
 		return 0, fw.err
 	}
-	if fw.bw != nil {
-		n, err = fw.bw.Print(args...)
-	} else if p, ok := fw.uw.(interface {
-		Print(args ...any) (n int, err error)
-	}); ok {
-		n, err = p.Print(args...)
-	} else {
-		n, err = fmt.Fprint(fw.uw, args...)
-	}
+	n, err = fw.bw.Print(args...)
 	fw.err = errors.AutoWrap(err)
 	return n, fw.err
 }
@@ -553,15 +487,7 @@ func (fw *writer) Println(args ...any) (n int, err error) {
 	if fw.err != nil {
 		return 0, fw.err
 	}
-	if fw.bw != nil {
-		n, err = fw.bw.Println(args...)
-	} else if p, ok := fw.uw.(interface {
-		Println(args ...any) (n int, err error)
-	}); ok {
-		n, err = p.Println(args...)
-	} else {
-		n, err = fmt.Fprintln(fw.uw, args...)
-	}
+	n, err = fw.bw.Println(args...)
 	fw.err = errors.AutoWrap(err)
 	return n, fw.err
 }
@@ -581,71 +507,29 @@ func (fw *writer) MustPrintln(args ...any) (n int) {
 // Flush writes any buffered data to the file.
 //
 // It returns any write error encountered.
-//
-// If there is no buffer, it does nothing and returns nil.
 func (fw *writer) Flush() error {
 	if fw.err != nil {
 		return fw.err
 	}
-	var err error
-	if fw.bw != nil {
-		err = fw.bw.Flush()
-	} else if f, ok := fw.uw.(inout.Flusher); ok {
-		if _, ok = fw.uw.(*tar.Writer); !ok { // don't flush tar.Writer!
-			err = f.Flush()
-		}
-	}
+	err := fw.bw.Flush()
 	fw.err = errors.AutoWrap(err)
 	return fw.err
 }
 
 // Size returns the size of the underlying buffer in bytes.
-//
-// If there is no buffer, it returns 0.
 func (fw *writer) Size() int {
-	if fw.bw != nil {
-		return fw.bw.Size()
-	}
-	if bw, ok := fw.uw.(inout.BufferedWriter); ok {
-		return bw.Size()
-	}
-	if bw, ok := fw.uw.(*bufio.Writer); ok {
-		return bw.Size()
-	}
-	return 0
+	return fw.bw.Size()
 }
 
 // Buffered returns the number of bytes that
 // have been written into the current buffer.
-//
-// If there is no buffer, it returns 0.
 func (fw *writer) Buffered() int {
-	if fw.bw != nil {
-		return fw.bw.Buffered()
-	}
-	if bw, ok := fw.uw.(inout.BufferedWriter); ok {
-		return bw.Buffered()
-	}
-	if bw, ok := fw.uw.(*bufio.Writer); ok {
-		return bw.Buffered()
-	}
-	return 0
+	return fw.bw.Buffered()
 }
 
 // Available returns the number of bytes unused in the current buffer.
-//
-// If there is no buffer, it returns 0.
 func (fw *writer) Available() int {
-	if fw.bw != nil {
-		return fw.bw.Available()
-	}
-	if bw, ok := fw.uw.(inout.BufferedWriter); ok {
-		return bw.Available()
-	}
-	if bw, ok := fw.uw.(*bufio.Writer); ok {
-		return bw.Available()
-	}
-	return 0
+	return fw.bw.Available()
 }
 
 // TarEnabled returns true if the file is archived by tar
@@ -672,13 +556,11 @@ func (fw *writer) TarWriteHeader(hdr *tar.Header) error {
 	if errors.Is(fw.err, inout.ErrWriterClosed) {
 		return fw.err
 	}
-	if err := fw.Flush(); err != nil {
+	if err := fw.bw.Flush(); err != nil {
 		return errors.AutoWrap(err)
 	}
 	fw.err = errors.AutoWrap(fw.tw.WriteHeader(hdr))
-	if fw.bw != nil {
-		fw.bw.Reset(fw.uw) // discard current buffered data
-	}
+	fw.bw.Reset(fw.uw) // discard current buffered data
 	return fw.err
 }
 
