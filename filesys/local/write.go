@@ -20,10 +20,13 @@ package local
 
 import (
 	"archive/tar"
+	"bufio"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -32,73 +35,46 @@ import (
 	"github.com/donyori/gogo/inout"
 )
 
-// ErrVerificationFail is an error indicating that the file verification failed.
-var ErrVerificationFail = errors.AutoNewCustom("file verification failed",
-	errors.PrependFullPkgName, 0)
-
-// WriteOptions are options for function Write.
+// WriteOptions are options for Write functions.
 type WriteOptions struct {
-	// Only take effect when the target file already exists.
-	// If true, it will append data to the file.
-	// Otherwise, it will truncate the file.
-	Append bool
+	// True to make parent directories (if necessary) before opening the file.
+	MkDirs bool
 
 	// True if not to compress the file with gzip and not to archive the file
-	// with tar (i.e., tape archive) according to the filename.
+	// with tar (i.e., tape archive) according to the file extension.
 	Raw bool
+
+	// The compression level for gzip.
+	// Only take effect when Raw is false and the file extension
+	// is either ".gz" or ".tgz".
+	// The zero value (0) stands for no compression
+	// other than the default value.
+	// To use the default value, set it to compress/gzip.DefaultCompression.
+	GzipLv int
 
 	// Size of the buffer for writing the file at least.
 	// Non-positive values for using default value.
 	BufSize int
 
-	// If true, a buffer will be created when open the file. Otherwise,
-	// a buffer won't be created until calling methods that need a buffer.
+	// If true, a buffer will be created when the file is opened.
+	// Otherwise, the buffer will not be created until a method
+	// that needs a buffer is called.
 	BufOpen bool
-
-	// Let the writer write data to a temporary file. After calling method
-	// Close, the writer move the temporary file to the target file. If any
-	// error occurs during writing, the temporary file will be discarded, and
-	// the original target file won't be changed.
-	Backup bool
-
-	// Only take effect when the option Backup is disabled.
-	// Let the writer preserve the written file when encountering an error.
-	// If false (the default), the written file will be removed
-	// by the method Close if any error occurs during writing.
-	PreserveOnFail bool
-
-	// Make parent directories before creating the file.
-	MkDirs bool
-
-	// A verify function to report whether the data written to the file is
-	// correct. The function will be called in our writer's method Close.
-	// If the function returns true, our writer will finish writing.
-	// Otherwise, our writer will return ErrVerificationFail, and discard
-	// the file if Backup is true.
-	VerifyFn func() bool
-
-	// The compression level for GNU zip. Note that the zero value (0) stands
-	// for no compression other than the default value. Remember setting it to
-	// gzip.DefaultCompression if you want to use the default.
-	GzipLv int
 }
 
-// defaultWriteOptions are default options for function Write.
+// defaultWriteOptions are default options for functions WriteTrunc,
+// WriteAppend, and WriteExcl.
 var defaultWriteOptions = &WriteOptions{
-	Backup: true,
 	MkDirs: true,
 	GzipLv: gzip.DefaultCompression,
 }
 
-// Writer is a device to write data to a file.
+// Writer is a device to write data to a local file.
 //
-// Its method Close closes all closable objects opened by this writer,
-// including the file, and processes the temporary file used by this writer.
+// Its method Close closes all closable objects opened by this writer
+// (may include the file).
 // After successfully closing this writer,
 // its method Close will do nothing and return nil.
-//
-// The written file will be removed by its method Close if any error occurs
-// during writing and the option PreserveOnFail is disabled.
 type Writer interface {
 	inout.Closer
 	inout.BufferedWriter
@@ -107,286 +83,252 @@ type Writer interface {
 	// (i.e., tape archive) and is not opened in raw mode.
 	TarEnabled() bool
 
-	// TarWriteHeader writes hdr and prepares to accept the file's contents.
+	// TarWriteHeader writes hdr and prepares to accept the content of
+	// the next file.
 	//
-	// The tar.Header.Size determines how many bytes can be written
-	// for the next file.
+	// The tar.Header.Size determines how many bytes can be written for
+	// the next file.
 	// If the current file is not fully written, it will return an error.
 	// It implicitly flushes any padding necessary before writing the header.
 	//
 	// If the file is not archived by tar, or the file is opened in raw mode,
-	// it does nothing and returns ErrNotTar.
+	// it does nothing and reports github.com/donyori/gogo/filesys.ErrNotTar.
 	// (To test whether the error is ErrNotTar, use function errors.Is.)
 	TarWriteHeader(hdr *tar.Header) error
 
 	// Options returns a copy of options used by this writer.
 	Options() *WriteOptions
 
-	// Filename returns the filename as presented to function Write.
+	// Filename returns the name of the file opened by this writer.
 	Filename() string
-
-	// TmpFilename returns the name of the temporary file created by
-	// function Write if the option Backup enabled.
-	// Otherwise, it returns an empty string.
-	TmpFilename() string
 }
 
 // writer is an implementation of interface Writer.
 //
-// Use it with function Write.
+// Use it with Write functions.
 type writer struct {
-	err    error
-	opts   WriteOptions
-	bw     inout.ResettableBufferedWriter
-	ubw    io.Writer // unbuffered writer
-	tmp    string    // name of the temporary file
-	name   string    // name of the destination file
-	closed bool      // true if method Close has been called once and no error occurred during that call
-	c      inout.Closer
-	tw     *tar.Writer
+	err  error
+	bw   inout.ResettableBufferedWriter
+	uw   io.Writer // unbuffered writer
+	opts WriteOptions
+	c    inout.Closer
+	f    *os.File
+	tw   *tar.Writer
 }
 
-// Write creates (if necessary) and opens a file
-// with specified name for writing.
+// Write creates a writer on the specified file with options opts.
 //
-// If name is empty, it does nothing and returns an error.
-// If opts is nil, it will use the default write options instead.
-// The default write options are shown as follows:
+// If opts are nil, the default options will be used.
+// The default options are as follows:
 //
-//	Append: false,
+//	MkDirs: true,
 //	Raw: false,
+//	GzipLv: compress/gzip.DefaultCompression,
 //	BufSize: 0,
 //	BufOpen: false,
-//	Backup: true,
-//	MkDirs: true,
-//	VerifyFn: nil,
-//	GzipLv: gzip.DefaultCompression,
 //
-// Data ultimately written to the file will also be written to copyTo.
-// (Due to possible compression, data written to the file may be
-// different from data provided to the writer when the option Raw is disabled.)
-// The client can use copyTo to monitor the data,
-// such as calculating the checksum to verify the file.
+// To ensure that this function and the returned writer can work as expected,
+// the specified file must not be operated by anyone else
+// before closing the returned writer.
 //
-// But note that:
-// 1. The client is responsible for managing copyTo,
-// including flushing or closing them after use.
-// 2. If an error occurs when writing to copyTo,
-// other writing will also stop and the writer will fall into the error state.
-// 3. During one write operation, data will be written to the file first,
-// and then to copyTo sequentially. If an error occurs when writing to copyTo,
-// the data of current write operation has already been written to the file.
+// closeFile indicates whether the writer should close the file
+// when calling its method Close.
+// If closeFile is false, the client is responsible for closing file
+// after closing the writer.
+// If closeFile is true, the client should not close the file,
+// even if this function reports an error.
+// In this case, the file will be closed during the method Close of the writer,
+// and it will also be closed by this function when encountering an error.
 //
-// As for the write options,
-// notice that when options Append and Backup are both enabled
-// and the specified file already exists,
-// this function will copy the specified file to a temporary file,
-// which may cost a lot of time and space resource.
-// Data copied from the specified file won't be written to copyTo.
-func Write(name string, perm fs.FileMode, opts *WriteOptions, copyTo ...io.Writer) (w Writer, err error) {
-	if name == "" {
-		return nil, errors.AutoNew("name is empty")
+// This function panics if file is nil.
+func Write(file *os.File, opts *WriteOptions, closeFile bool) (w Writer, err error) {
+	if file == nil {
+		panic(errors.AutoMsg("file is nil"))
 	}
 	if opts == nil {
 		opts = defaultWriteOptions
 	}
-	fw := &writer{
-		opts: *opts,
-		name: name,
-	}
-	w = fw
-
-	dir, base := filepath.Split(name)
-	if opts.MkDirs {
-		err = os.MkdirAll(dir, perm)
-		if err != nil {
-			return nil, errors.AutoWrap(err)
-		}
-	}
-
 	el := errors.NewErrorList(true)
 	defer func() {
 		if el.Erroneous() {
 			w, err = nil, errors.AutoWrapSkip(el.ToError(), 1) // skip = 1 to skip the inner function
 		}
 	}()
-
-	var f *os.File
-	if opts.Backup {
-		f, err = Tmp(dir, base+".", ".tmp", perm)
-		if err != nil {
-			el.Append(err)
-			return
-		}
-		fw.tmp = f.Name()
-		defer func() {
-			if el.Erroneous() {
-				el.Append(f.Close())
-				el.Append(os.Remove(fw.tmp))
-			}
-		}()
-		if opts.Append {
-			r, err1 := os.Open(name)
-			if err1 == nil {
-				// Don't use
-				//  defer el.Append(r.Close())
-				// because the argument (i.e., r.Close()) will be evaluated here
-				// rather than when executing the deferred function.
-				defer func() {
-					el.Append(r.Close())
-				}()
-				_, err1 = io.Copy(f, r)
-				if err1 != nil {
-					el.Append(err1)
-					return
-				}
-			} else if !errors.Is(err1, os.ErrNotExist) {
-				el.Append(err1)
-				return
-			}
-		}
-	} else {
-		flag := os.O_WRONLY | os.O_CREATE
-		if opts.Append {
-			flag |= os.O_APPEND
-		} else {
-			flag |= os.O_TRUNC
-		}
-		f, err = os.OpenFile(name, flag, perm)
-		if err != nil {
-			el.Append(err)
-			return
-		}
-		defer func() {
-			if el.Erroneous() {
-				el.Append(f.Close())
-			}
-		}()
+	closers := make([]io.Closer, 0, 3)
+	if closeFile {
+		closers = append(closers, file)
 	}
-
-	fw.ubw = f
-	closers := make([]io.Closer, 1, 3)
-	closers[0] = f
 	defer func() {
 		if el.Erroneous() {
-			// Close all closers except fw.closers[0] (i.e., f),
-			// which will be closed in previous defer function.
-			for i := len(closers) - 1; i > 0; i-- {
+			for i := len(closers) - 1; i >= 0; i-- {
 				el.Append(closers[i].Close())
 			}
 		}
 	}()
-
-	if len(copyTo) > 0 {
-		fw.ubw = io.MultiWriter(append([]io.Writer{fw.ubw}, copyTo...)...)
+	fw := &writer{
+		uw:   file,
+		opts: *opts,
+		f:    file,
 	}
-	if !opts.Raw {
-		base = strings.ToLower(base)
-		ext := filepath.Ext(base)
-		loop := true
-		for loop {
+	w = fw
+	err = writeSubRawBufOpenAndClosers(fw, &closers)
+	if err != nil {
+		el.Append(err)
+	}
+	return
+}
+
+// writeSubRawBufOpenAndClosers is a sub-process of function Write
+// to deal with the options Raw and BufOpen.
+// It also sets fw.c and updates closers.
+func writeSubRawBufOpenAndClosers(fw *writer, pClosers *[]io.Closer) error {
+	if !fw.opts.Raw {
+		name := strings.ToLower(path.Clean(filepath.ToSlash(fw.f.Name())))
+		ext := path.Ext(name)
+		for {
+			var endLoop bool
 			switch ext {
 			case ".gz", ".tgz":
-				gw, err1 := gzip.NewWriterLevel(fw.ubw, opts.GzipLv)
-				if err1 != nil {
-					el.Append(err1)
-					return
+				gw, err := gzip.NewWriterLevel(fw.uw, fw.opts.GzipLv)
+				if err != nil {
+					return err
 				}
-				closers = append(closers, gw)
-				fw.ubw = gw
+				*pClosers = append(*pClosers, gw)
+				fw.uw = gw
 				if ext == ".tgz" {
 					ext = ".tar"
 					continue
 				}
 			case ".tar":
-				fw.tw = tar.NewWriter(fw.ubw)
-				closers = append(closers, fw.tw)
-				fw.ubw = fw.tw
-				loop = false
+				fw.tw = tar.NewWriter(fw.uw)
+				*pClosers = append(*pClosers, fw.tw)
+				fw.uw = fw.tw
+				endLoop = true
 			default:
-				loop = false
+				endLoop = true
 			}
-			base = base[:len(base)-len(ext)]
-			ext = filepath.Ext(base)
+			if endLoop {
+				break
+			}
+			name = name[:len(name)-len(ext)]
+			ext = path.Ext(name)
 		}
 	}
-
-	if len(closers) > 1 {
-		fw.c = inout.NewMultiCloser(true, true, closers...)
-	} else {
-		fw.c = inout.WrapNoErrorCloser(f)
+	switch len(*pClosers) {
+	case 1:
+		fw.c = inout.WrapNoErrorCloser((*pClosers)[0])
+	case 0:
+		fw.c = inout.NewNoOpCloser()
+	default:
+		fw.c = inout.NewMultiCloser(true, true, *pClosers...)
 	}
-	if opts.BufOpen {
-		fw.bw = inout.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
+	if fw.opts.BufOpen {
+		fw.bw = inout.NewBufferedWriterSize(fw.uw, fw.opts.BufSize)
 	}
-	return
+	return nil
 }
 
-// Close closes all closers used by this writer (including the file),
-// verify the written file,
-// and process the temporary file if the option Backup enabled.
+// writeOpenFile opens a file using os.OpenFile and creates a writer on it.
 //
-// The written file will be removed if any error occurs during writing and
-// the option PreserveOnFail is disabled.
-func (fw *writer) Close() (err error) {
-	if fw.closed {
-		return
+// The first three arguments are passed to function os.OpenFile.
+// The last is passed to function Write and
+// is used to determine whether to make directories.
+//
+// The file will be closed when the returned writer is closed.
+func writeOpenFile(name string, flag int, perm fs.FileMode, opts *WriteOptions) (w Writer, err error) {
+	if name == "" {
+		return nil, errors.AutoNew("name is empty")
 	}
-	el := errors.NewErrorList(true) // el records the errors occurred during Close.
-	var rmDone bool
-	defer func() {
-		if !rmDone {
-			var name string
-			if fw.opts.Backup {
-				name = fw.tmp
-			} else if !fw.opts.PreserveOnFail {
-				name = fw.name
-			}
-			if name != "" {
-				el.Append(os.Remove(name))
-				err = errors.AutoWrapSkip(el.ToError(), 1) // skip = 1 to skip the inner function
-			}
+	name = filepath.Clean(name)
+	if opts == nil {
+		opts = defaultWriteOptions
+	}
+	if opts.MkDirs {
+		err = os.MkdirAll(filepath.Dir(name), perm)
+		if err != nil {
+			return nil, errors.AutoWrap(err)
 		}
-		fw.closed = err == nil
-	}()
-	if fw.bw != nil {
-		el.Append(fw.bw.Flush())
+	}
+	f, err := os.OpenFile(name, flag, perm)
+	if err != nil {
+		return nil, errors.AutoWrap(err)
+	}
+	w, err = Write(f, opts, true)
+	return w, errors.AutoWrap(err)
+}
+
+// WriteTrunc creates (if necessary) and opens a file
+// with specified name and options opts for writing.
+//
+// If the file exists, it will be truncated.
+// If the file does not exist, it will be created
+// with specified permission perm (before umask).
+//
+// opts are handled the same as in function Write.
+//
+// The file will be closed when the returned writer is closed.
+func WriteTrunc(name string, perm fs.FileMode, opts *WriteOptions) (w Writer, err error) {
+	w, err = writeOpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm, opts)
+	return w, errors.AutoWrap(err)
+}
+
+// WriteAppend creates (if necessary) and opens a file
+// with specified name and options opts for writing.
+//
+// If the file exists, new data will be appended to the file.
+// If the file does not exist, it will be created
+// with specified permission perm (before umask).
+//
+// opts are handled the same as in function Write.
+//
+// The file will be closed when the returned writer is closed.
+func WriteAppend(name string, perm fs.FileMode, opts *WriteOptions) (w Writer, err error) {
+	w, err = writeOpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_APPEND, perm, opts)
+	return w, errors.AutoWrap(err)
+}
+
+// WriteExcl creates and opens a file with specified name
+// and options opts for writing.
+//
+// The file will be created with specified permission perm (before umask).
+// If the file exists, it reports an error that satisfies
+// errors.Is(err, os.ErrExist) is true.
+//
+// opts are handled the same as in function Write.
+//
+// The file will be closed when the returned writer is closed.
+func WriteExcl(name string, perm fs.FileMode, opts *WriteOptions) (w Writer, err error) {
+	w, err = writeOpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm, opts)
+	return w, errors.AutoWrap(err)
+}
+
+// Close closes all closers used by this writer.
+func (fw *writer) Close() error {
+	if fw.c.Closed() {
+		return nil
+	}
+	el := errors.NewErrorList(true)
+	if fw.err == nil {
+		el.Append(fw.Flush())
 	}
 	el.Append(fw.c.Close())
-	if fw.err == nil && !el.Erroneous() &&
-		fw.opts.VerifyFn != nil && !fw.opts.VerifyFn() {
-		el.Append(ErrVerificationFail)
-	}
-	if fw.opts.Backup {
-		if fw.err == nil && !el.Erroneous() {
-			el.Append(os.Rename(fw.tmp, fw.name))
-			if el.Erroneous() {
-				el.Append(os.Remove(fw.tmp))
-			}
-		} else {
-			el.Append(os.Remove(fw.tmp))
-		}
-	} else if (fw.err != nil || el.Erroneous()) && !fw.opts.PreserveOnFail {
-		el.Append(os.Remove(fw.name))
-	}
-	err = errors.AutoWrap(el.ToError()) // only return the errors occurred during Close
-	rmDone = true
+	err := errors.AutoWrap(el.ToError())
 	if fw.err == nil {
-		if err == nil {
+		if fw.c.Closed() {
 			fw.err = errors.AutoWrap(inout.ErrWriterClosed)
 		} else {
 			fw.err = err
 		}
 	}
-	return
+	return err
 }
 
 // Closed reports whether this writer is closed successfully.
 func (fw *writer) Closed() bool {
-	return fw.closed
+	return fw.c.Closed()
 }
 
-// Write writes the contents of p into the buffer.
+// Write writes the content of p into the file.
 //
 // It returns the number of bytes written and any write error encountered.
 // If n < len(p), it also returns an error explaining why the write is short.
@@ -397,14 +339,26 @@ func (fw *writer) Write(p []byte) (n int, err error) {
 		return 0, fw.err
 	}
 	var w io.Writer
-	if fw.bw == nil {
-		w = fw.ubw
-	} else {
+	if fw.bw != nil {
 		w = fw.bw
+	} else {
+		w = fw.uw
 	}
 	n, err = w.Write(p)
 	fw.err = errors.AutoWrap(err)
 	return n, fw.err
+}
+
+// MustWrite is like Write but panics when encountering an error.
+//
+// If it panics, the error value passed to the call of panic
+// must be exactly of type *github.com/donyori/gogo/inout.WritePanic.
+func (fw *writer) MustWrite(p []byte) (n int) {
+	n, err := fw.Write(p)
+	if err != nil {
+		panic(inout.NewWritePanic(errors.AutoWrap(err)))
+	}
+	return
 }
 
 // WriteByte writes a single byte.
@@ -419,14 +373,58 @@ func (fw *writer) WriteByte(c byte) error {
 	var err error
 	if fw.bw != nil {
 		err = fw.bw.WriteByte(c)
-	} else if bw, ok := fw.ubw.(io.ByteWriter); ok {
+	} else if bw, ok := fw.uw.(io.ByteWriter); ok {
 		err = bw.WriteByte(c)
 	} else {
-		fw.bw = inout.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
+		fw.bw = inout.NewBufferedWriterSize(fw.uw, fw.opts.BufSize)
 		err = fw.bw.WriteByte(c)
 	}
 	fw.err = errors.AutoWrap(err)
 	return fw.err
+}
+
+// MustWriteByte is like WriteByte but panics when encountering an error.
+//
+// If it panics, the error value passed to the call of panic
+// must be exactly of type *github.com/donyori/gogo/inout.WritePanic.
+func (fw *writer) MustWriteByte(c byte) {
+	err := fw.WriteByte(c)
+	if err != nil {
+		panic(inout.NewWritePanic(errors.AutoWrap(err)))
+	}
+}
+
+// WriteRune writes a single Unicode code point.
+//
+// It returns the number of bytes written and any write error encountered.
+func (fw *writer) WriteRune(r rune) (size int, err error) {
+	if fw.err != nil {
+		return 0, fw.err
+	}
+	if fw.bw != nil {
+		size, err = fw.bw.WriteRune(r)
+	} else if rw, ok := fw.uw.(interface {
+		WriteRune(r rune) (size int, err error)
+	}); ok {
+		size, err = rw.WriteRune(r)
+	} else {
+		fw.bw = inout.NewBufferedWriterSize(fw.uw, fw.opts.BufSize)
+		size, err = fw.bw.WriteRune(r)
+	}
+	fw.err = errors.AutoWrap(err)
+	return size, fw.err
+}
+
+// MustWriteRune is like WriteRune but panics when encountering an error.
+//
+// If it panics, the error value passed to the call of panic
+// must be exactly of type *github.com/donyori/gogo/inout.WritePanic.
+func (fw *writer) MustWriteRune(r rune) (size int) {
+	size, err := fw.WriteRune(r)
+	if err != nil {
+		panic(inout.NewWritePanic(errors.AutoWrap(err)))
+	}
+	return
 }
 
 // WriteString writes a string.
@@ -442,13 +440,25 @@ func (fw *writer) WriteString(s string) (n int, err error) {
 	}
 	if fw.bw != nil {
 		n, err = fw.bw.WriteString(s)
-	} else if sw, ok := fw.ubw.(io.StringWriter); ok {
+	} else if sw, ok := fw.uw.(io.StringWriter); ok {
 		n, err = sw.WriteString(s)
 	} else {
-		n, err = fw.ubw.Write([]byte(s))
+		n, err = fw.uw.Write([]byte(s))
 	}
 	fw.err = errors.AutoWrap(err)
 	return n, fw.err
+}
+
+// MustWriteString is like WriteString but panics when encountering an error.
+//
+// If it panics, the error value passed to the call of panic
+// must be exactly of type *github.com/donyori/gogo/inout.WritePanic.
+func (fw *writer) MustWriteString(s string) (n int) {
+	n, err := fw.WriteString(s)
+	if err != nil {
+		panic(inout.NewWritePanic(errors.AutoWrap(err)))
+	}
+	return
 }
 
 // ReadFrom reads data from r until EOF or error.
@@ -463,19 +473,112 @@ func (fw *writer) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 	if fw.bw != nil {
 		n, err = fw.bw.ReadFrom(r)
-	} else if w, ok := fw.ubw.(io.ReaderFrom); ok {
+	} else if w, ok := fw.uw.(io.ReaderFrom); ok {
 		n, err = w.ReadFrom(r)
 	} else if wt, ok := r.(io.WriterTo); ok {
-		n, err = wt.WriteTo(fw.ubw)
+		n, err = wt.WriteTo(fw.uw)
 	} else {
-		fw.bw = inout.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
+		fw.bw = inout.NewBufferedWriterSize(fw.uw, fw.opts.BufSize)
 		n, err = fw.bw.ReadFrom(r)
 	}
 	fw.err = errors.AutoWrap(err)
 	return n, fw.err
 }
 
-// Flush writes any buffered data to the underlying writer.
+// Printf formats arguments and writes to the file.
+// Arguments are handled in the manner of fmt.Printf.
+func (fw *writer) Printf(format string, args ...any) (n int, err error) {
+	if fw.err != nil {
+		return 0, fw.err
+	}
+	if fw.bw != nil {
+		n, err = fw.bw.Printf(format, args...)
+	} else if p, ok := fw.uw.(interface {
+		Printf(format string, args ...any) (n int, err error)
+	}); ok {
+		n, err = p.Printf(format, args...)
+	} else {
+		n, err = fmt.Fprintf(fw.uw, format, args...)
+	}
+	fw.err = errors.AutoWrap(err)
+	return n, fw.err
+}
+
+// MustPrintf is like Printf but panics when encountering an error.
+//
+// If it panics, the error value passed to the call of panic
+// must be exactly of type *github.com/donyori/gogo/inout.WritePanic.
+func (fw *writer) MustPrintf(format string, args ...any) (n int) {
+	n, err := fw.Printf(format, args...)
+	if err != nil {
+		panic(inout.NewWritePanic(errors.AutoWrap(err)))
+	}
+	return
+}
+
+// Print formats arguments and writes to the file.
+// Arguments are handled in the manner of fmt.Print.
+func (fw *writer) Print(args ...any) (n int, err error) {
+	if fw.err != nil {
+		return 0, fw.err
+	}
+	if fw.bw != nil {
+		n, err = fw.bw.Print(args...)
+	} else if p, ok := fw.uw.(interface {
+		Print(args ...any) (n int, err error)
+	}); ok {
+		n, err = p.Print(args...)
+	} else {
+		n, err = fmt.Fprint(fw.uw, args...)
+	}
+	fw.err = errors.AutoWrap(err)
+	return n, fw.err
+}
+
+// MustPrint is like Print but panics when encountering an error.
+//
+// If it panics, the error value passed to the call of panic
+// must be exactly of type *github.com/donyori/gogo/inout.WritePanic.
+func (fw *writer) MustPrint(args ...any) (n int) {
+	n, err := fw.Print(args...)
+	if err != nil {
+		panic(inout.NewWritePanic(errors.AutoWrap(err)))
+	}
+	return
+}
+
+// Println formats arguments and writes to the file.
+// Arguments are handled in the manner of fmt.Println.
+func (fw *writer) Println(args ...any) (n int, err error) {
+	if fw.err != nil {
+		return 0, fw.err
+	}
+	if fw.bw != nil {
+		n, err = fw.bw.Println(args...)
+	} else if p, ok := fw.uw.(interface {
+		Println(args ...any) (n int, err error)
+	}); ok {
+		n, err = p.Println(args...)
+	} else {
+		n, err = fmt.Fprintln(fw.uw, args...)
+	}
+	fw.err = errors.AutoWrap(err)
+	return n, fw.err
+}
+
+// MustPrintln is like Println but panics when encountering an error.
+//
+// If it panics, the error value passed to the call of panic
+// must be exactly of type *github.com/donyori/gogo/inout.WritePanic.
+func (fw *writer) MustPrintln(args ...any) (n int) {
+	n, err := fw.Println(args...)
+	if err != nil {
+		panic(inout.NewWritePanic(errors.AutoWrap(err)))
+	}
+	return
+}
+
+// Flush writes any buffered data to the file.
 //
 // It returns any write error encountered.
 //
@@ -484,10 +587,15 @@ func (fw *writer) Flush() error {
 	if fw.err != nil {
 		return fw.err
 	}
-	if fw.bw == nil {
-		return nil
+	var err error
+	if fw.bw != nil {
+		err = fw.bw.Flush()
+	} else if f, ok := fw.uw.(inout.Flusher); ok {
+		if _, ok = fw.uw.(*tar.Writer); !ok { // don't flush tar.Writer!
+			err = f.Flush()
+		}
 	}
-	fw.err = errors.AutoWrap(fw.bw.Flush())
+	fw.err = errors.AutoWrap(err)
 	return fw.err
 }
 
@@ -495,10 +603,16 @@ func (fw *writer) Flush() error {
 //
 // If there is no buffer, it returns 0.
 func (fw *writer) Size() int {
-	if fw.bw == nil {
-		return 0
+	if fw.bw != nil {
+		return fw.bw.Size()
 	}
-	return fw.bw.Size()
+	if bw, ok := fw.uw.(inout.BufferedWriter); ok {
+		return bw.Size()
+	}
+	if bw, ok := fw.uw.(*bufio.Writer); ok {
+		return bw.Size()
+	}
+	return 0
 }
 
 // Buffered returns the number of bytes that
@@ -506,35 +620,32 @@ func (fw *writer) Size() int {
 //
 // If there is no buffer, it returns 0.
 func (fw *writer) Buffered() int {
-	if fw.bw == nil {
-		return 0
+	if fw.bw != nil {
+		return fw.bw.Buffered()
 	}
-	return fw.bw.Buffered()
+	if bw, ok := fw.uw.(inout.BufferedWriter); ok {
+		return bw.Buffered()
+	}
+	if bw, ok := fw.uw.(*bufio.Writer); ok {
+		return bw.Buffered()
+	}
+	return 0
 }
 
 // Available returns the number of bytes unused in the current buffer.
 //
 // If there is no buffer, it returns 0.
 func (fw *writer) Available() int {
-	if fw.bw == nil {
-		return 0
+	if fw.bw != nil {
+		return fw.bw.Available()
 	}
-	return fw.bw.Available()
-}
-
-// WriteRune writes a single Unicode code point.
-//
-// It returns the number of bytes written and any write error encountered.
-func (fw *writer) WriteRune(r rune) (size int, err error) {
-	if fw.err != nil {
-		return 0, fw.err
+	if bw, ok := fw.uw.(inout.BufferedWriter); ok {
+		return bw.Available()
 	}
-	if fw.bw == nil {
-		fw.bw = inout.NewBufferedWriterSize(fw.ubw, fw.opts.BufSize)
+	if bw, ok := fw.uw.(*bufio.Writer); ok {
+		return bw.Available()
 	}
-	size, err = fw.bw.WriteRune(r)
-	fw.err = errors.AutoWrap(err)
-	return size, fw.err
+	return 0
 }
 
 // TarEnabled returns true if the file is archived by tar
@@ -543,15 +654,16 @@ func (fw *writer) TarEnabled() bool {
 	return fw.tw != nil
 }
 
-// TarWriteHeader writes hdr and prepares to accept the file's contents.
+// TarWriteHeader writes hdr and prepares to accept the content of
+// the next file.
 //
-// The tar.Header.Size determines how many bytes can be written
-// for the next file.
+// The tar.Header.Size determines how many bytes can be written for
+// the next file.
 // If the current file is not fully written, it will return an error.
 // It implicitly flushes any padding necessary before writing the header.
 //
 // If the file is not archived by tar, or the file is opened in raw mode,
-// it does nothing and returns ErrNotTar.
+// it does nothing and reports github.com/donyori/gogo/filesys.ErrNotTar.
 // (To test whether the error is ErrNotTar, use function errors.Is.)
 func (fw *writer) TarWriteHeader(hdr *tar.Header) error {
 	if !fw.TarEnabled() {
@@ -560,16 +672,12 @@ func (fw *writer) TarWriteHeader(hdr *tar.Header) error {
 	if errors.Is(fw.err, inout.ErrWriterClosed) {
 		return fw.err
 	}
-	if fw.bw != nil {
-		fw.err = errors.AutoWrap(fw.bw.Flush())
-		if fw.err != nil {
-			return fw.err
-		}
+	if err := fw.Flush(); err != nil {
+		return errors.AutoWrap(err)
 	}
 	fw.err = errors.AutoWrap(fw.tw.WriteHeader(hdr))
 	if fw.bw != nil {
-		fw.ubw = fw.tw
-		fw.bw.Reset(fw.ubw)
+		fw.bw.Reset(fw.uw) // discard current buffered data
 	}
 	return fw.err
 }
@@ -581,14 +689,7 @@ func (fw *writer) Options() *WriteOptions {
 	return opts
 }
 
-// Filename returns the filename as presented to function Write.
+// Filename returns the name of the file opened by this writer.
 func (fw *writer) Filename() string {
-	return fw.name
-}
-
-// TmpFilename returns the name of the temporary file created by
-// function Write if the option Backup enabled.
-// Otherwise, it returns an empty string.
-func (fw *writer) TmpFilename() string {
-	return fw.tmp
+	return fw.f.Name()
 }

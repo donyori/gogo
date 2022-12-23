@@ -16,345 +16,117 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package local
+package local_test
 
 import (
-	"archive/tar"
-	"compress/gzip"
-	"io"
-	"io/fs"
+	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
-	"github.com/donyori/gogo/errors"
+	"github.com/donyori/gogo/filesys/local"
 )
 
-func TestWrite_Tgz(t *testing.T) {
-	dir, err := os.MkdirTemp("", "gogo_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(dir string) {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Error(err)
-		}
-	}(dir)
-	filename := filepath.Join(dir, "simple.tgz")
-	var perm fs.FileMode = 0740
-	w, err := Write(filename, perm, &WriteOptions{
-		BufOpen: true,
-		Backup:  true,
-		MkDirs:  true,
-		GzipLv:  gzip.BestCompression,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if w != nil {
-			if err := w.Close(); err != nil {
-				t.Error(err)
+func TestWriteTrunc(t *testing.T) {
+	tmpRoot := t.TempDir()
+	name := filepath.Join(tmpRoot, "sub", "test.txt")
+	data := []byte("test local.WriteTrunc\n")
+	for i := 0; i < 3; i++ {
+		func(t *testing.T, i int) {
+			w, err := local.WriteTrunc(name, 0600, nil)
+			if err != nil {
+				t.Errorf("i: %d, WriteTrunc - %v", i, err)
+				return
 			}
-		}
-	}()
-	files := []struct {
-		name, body string
-	}{
-		{"file1.txt", "This is file1."},
-		{"file2.txt", "This is file2."},
-		{"file3.txt", "This is file3."},
-	}
-	for i := range files {
-		hdr := &tar.Header{
-			Name: files[i].name,
-			Mode: 0600,
-			Size: int64(len(files[i].body)),
-		}
-		err = w.TarWriteHeader(hdr)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = w.WriteString(files[i].body)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = w.Flush()
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-	err = w.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	w = nil
-
-	f, err := os.Open(filename)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(f *os.File) {
-		if err := f.Close(); err != nil {
-			t.Error(err)
-		}
-	}(f)
-	if runtime.GOOS != "windows" {
-		dirInfo, err := os.Lstat(dir)
-		if err != nil {
-			t.Fatal(err)
-		}
-		info, err := f.Stat()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if p := info.Mode().Perm(); p != dirInfo.Mode().Perm()&perm {
-			t.Errorf("Permission: %3o != %3o.", p, perm)
-		}
-	}
-	gzr, err := gzip.NewReader(f)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(gzr *gzip.Reader) {
-		if err := gzr.Close(); err != nil {
-			t.Error(err)
-		}
-	}(gzr)
-	tr := tar.NewReader(gzr)
-	for i := 0; true; i++ {
-		hdr, err := tr.Next()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				if i != len(files) {
-					t.Error("i:", i, "!= len(files):", len(files), "but got EOF.")
+			defer func() {
+				if err := w.Close(); err != nil {
+					t.Errorf("i: %d, w.Close - %v", i, err)
 				}
-				break
+			}()
+			_, err = w.Write(data)
+			if err != nil {
+				t.Errorf("i: %d, w.Write - %v", i, err)
 			}
-			t.Fatal(err)
-		}
-		if i >= len(files) {
-			t.Fatal("i:", i, ">= len(files):", len(files))
-		}
-		read, err := io.ReadAll(tr)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if hdr.Name != files[i].name {
-			t.Errorf("hdr.Name: %q != %q.", hdr.Name, files[i].name)
-		}
-		if string(read) != files[i].body {
-			t.Errorf("Got: %q != %q.", read, files[i].body)
-		}
-	}
-}
-
-func TestWrite_Append(t *testing.T) {
-	testWriteAppend(t, true)
-	testWriteAppend(t, false)
-}
-
-func testWriteAppend(t *testing.T, backup bool) {
-	dir, err := os.MkdirTemp("", "gogo_test_")
-	if err != nil {
-		t.Error("backup:", backup, err)
-		return
-	}
-	defer func(dir string) {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Error("backup:", backup, err)
-		}
-	}(dir)
-	const content = "gogo test file."
-	filename := filepath.Join(dir, "testfile.dat")
-	options := &WriteOptions{
-		Append: true,
-		Raw:    true,
-		Backup: backup,
-		MkDirs: true,
-	}
-	var perm fs.FileMode = 0740
-	w1, err := Write(filename, perm, options)
-	if err != nil {
-		t.Error("backup:", backup, err)
-		return
-	}
-	defer func() {
-		if w1 != nil {
-			if err := w1.Close(); err != nil {
-				t.Error("backup:", backup, err)
-			}
-		}
-	}()
-	_, err = w1.WriteString(content)
-	if err != nil {
-		t.Error("backup:", backup, err)
-		return
-	}
-	err = w1.Close()
-	if err != nil {
-		t.Error("backup:", backup, err)
-		return
-	}
-	w1 = nil
-
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		t.Error("backup:", backup, err)
-		return
-	}
-	if string(data) != content {
-		t.Errorf("Backup: %t. After first write, data: %s\nwanted: %s",
-			backup, data, content)
-	}
-
-	w2, err := Write(filename, perm, options)
-	if err != nil {
-		t.Error("backup:", backup, err)
-		return
-	}
-	defer func() {
-		if w2 != nil {
-			if err := w2.Close(); err != nil {
-				t.Error("backup:", backup, err)
-			}
-		}
-	}()
-	_, err = w2.WriteString(content)
-	if err != nil {
-		t.Error("backup:", backup, err)
-		return
-	}
-	err = w2.Close()
-	if err != nil {
-		t.Error("backup:", backup, err)
-		return
-	}
-	w2 = nil
-
-	data, err = os.ReadFile(filename)
-	if err != nil {
-		t.Error("backup:", backup, err)
-		return
-	}
-	if string(data) != content+content {
-		t.Errorf("Backup: %t. After second write, data: %s\nwanted: %s",
-			backup, data, content+content)
-	}
-}
-
-// testErrorWriter always returns an error err
-// to simulate the failed writing scenario.
-type testErrorWriter struct {
-	err error
-}
-
-func (tew *testErrorWriter) Write([]byte) (n int, err error) {
-	return 0, tew.err
-}
-
-func TestWrite_Error(t *testing.T) {
-	testWriteError(t, false, false)
-	testWriteError(t, false, true)
-	testWriteError(t, true, false)
-	testWriteError(t, true, true)
-}
-
-func testWriteError(t *testing.T, backup, preserveOnFail bool) {
-	dir, err := os.MkdirTemp("", "gogo_test_")
-	if err != nil {
-		t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
-		return
-	}
-	defer func(dir string) {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
-		}
-	}(dir)
-	const content = "gogo test file."
-	filename := filepath.Join(dir, "testfile.dat")
-	fw, err := os.Create(filename)
-	if err != nil {
-		t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
-		return
-	}
-	defer func() {
-		if fw != nil {
-			if err := fw.Close(); err != nil {
-				t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
-			}
-		}
-	}()
-	_, err = fw.WriteString(content)
-	if err != nil {
-		t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
-		return
-	}
-	err = fw.Close()
-	if err != nil {
-		t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
-		return
-	}
-	fw = nil
-
-	options := &WriteOptions{
-		Raw:            true,
-		Backup:         backup,
-		PreserveOnFail: preserveOnFail,
-		MkDirs:         true,
-	}
-	var perm fs.FileMode = 0740
-	wErr := errors.New("testErrorWriter error")
-	w, err := Write(filename, perm, options, &testErrorWriter{wErr})
-	if err != nil {
-		t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
-		return
-	}
-	defer func() {
-		if w != nil {
-			if err := w.Close(); err != nil {
-				t.Error("backup:", backup, "preserveOnFail:", preserveOnFail, err)
-			}
-		}
-	}()
-	_, err = w.WriteString(content + content)
-	if !errors.Is(err, wErr) {
-		t.Errorf("Write err: %v != %v. Backup: %t, PreserveOnFail: %t.",
-			err, wErr, backup, preserveOnFail)
-	}
-	err = w.Close()
-	if err != nil {
-		t.Errorf("Close err: %v != nil. Backup: %t, PreserveOnFail: %t.",
-			err, backup, preserveOnFail)
-	} else if !w.Closed() {
-		t.Errorf("Closed: false. Backup: %t, PreserveOnFail: %t.",
-			backup, preserveOnFail)
-	}
-	w = nil
-
-	data, err := os.ReadFile(filename)
-	var wantedContent string
-	if backup || preserveOnFail {
-		if err != nil {
-			t.Errorf("Open file after writing, err: %v != nil. Backup: %t, PreserveOnFail: %t.",
-				err, backup, preserveOnFail)
+		}(t, i)
+		if t.Failed() {
 			return
 		}
-		if backup {
-			wantedContent = content
-		} else {
-			// The data should be written to the file before
-			// the testErrorWriter returns an error.
-			wantedContent = content + content
-		}
-	} else if !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("Open file after writing, err: %v is not %v. Backup: %t, PreserveOnFail: %t.",
-			err, os.ErrNotExist, backup, preserveOnFail)
-		return
 	}
-	if string(data) != wantedContent {
-		t.Errorf("After writing, Backup: %t, PreserveOnFail: %t, file: %q\nwanted: %q",
-			backup, preserveOnFail, data, wantedContent)
+	got, err := os.ReadFile(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, data) {
+		t.Errorf("got %q; want %q", got, data)
+	}
+}
+
+func TestWriteAppend(t *testing.T) {
+	const N = 3
+	tmpRoot := t.TempDir()
+	name := filepath.Join(tmpRoot, "sub", "test.txt")
+	data := []byte("test local.WriteAppend\n")
+	for i := 0; i < N; i++ {
+		func(t *testing.T, i int) {
+			w, err := local.WriteAppend(name, 0600, nil)
+			if err != nil {
+				t.Errorf("i: %d, WriteAppend - %v", i, err)
+				return
+			}
+			defer func() {
+				if err := w.Close(); err != nil {
+					t.Errorf("i: %d, w.Close - %v", i, err)
+				}
+			}()
+			_, err = w.Write(data)
+			if err != nil {
+				t.Errorf("i: %d, w.Write - %v", i, err)
+			}
+		}(t, i)
+		if t.Failed() {
+			return
+		}
+	}
+	got, err := os.ReadFile(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := bytes.Repeat(data, N)
+	if !bytes.Equal(got, want) {
+		t.Errorf("got %q; want %q", got, want)
+	}
+}
+
+func TestWriteExcl(t *testing.T) {
+	tmpRoot := t.TempDir()
+	name := filepath.Join(tmpRoot, "sub", "test.txt")
+	data := []byte("test local.WriteExcl\n")
+	func(t *testing.T) {
+		w, err := local.WriteExcl(name, 0600, nil)
+		if err != nil {
+			t.Error("WriteExcl -", err)
+			return
+		}
+		defer func() {
+			if err := w.Close(); err != nil {
+				t.Error("w.Close -", err)
+			}
+		}()
+		_, err = w.Write(data)
+		if err != nil {
+			t.Error("w.Write -", err)
+		}
+	}(t)
+	_, err := local.WriteExcl(name, 0600, nil)
+	if !errors.Is(err, os.ErrExist) {
+		t.Fatal("errors.Is(err, os.ErrExist) is false on 2nd call to WriteExcl, err:", err)
+	}
+	got, err := os.ReadFile(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, data) {
+		t.Errorf("got %q; want %q", got, data)
 	}
 }

@@ -30,7 +30,7 @@ import (
 //
 // If opts are nil, a zero-value filesys.ReadOptions will be used.
 //
-// The file will be closed when closing the returned reader.
+// The file will be closed when the returned reader is closed.
 //
 // If the file is a symlink, it will be evaluated by filepath.EvalSymlinks.
 //
@@ -45,5 +45,6 @@ func Read(name string, opts *filesys.ReadOptions) (r filesys.Reader, err error) 
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
-	return filesys.Read(f, opts, true)
+	r, err = filesys.Read(f, opts, true)
+	return r, errors.AutoWrap(err)
 }
