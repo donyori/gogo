@@ -90,7 +90,7 @@ func AutoWrapSkip(err error, skip int) error {
 // it will use "<no error message>" instead.
 // If ms is invalid, it will use PrependFullFuncName instead.
 func AutoWrapCustom(err error, ms ErrorMessageStrategy, skip int, exclusions ErrorReadOnlySet) error {
-	if err == nil || exclusions != nil && exclusions.Contain(err) {
+	if err == nil || exclusions != nil && exclusions.Contains(err) {
 		return err
 	}
 	ae := &autoWrapError{wrapped: err}

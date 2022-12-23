@@ -160,7 +160,7 @@ func TestAutoWrapCustom(t *testing.T) {
 					}
 					var wantMsg string
 					if err != nil {
-						if excl == nil || !excl.Contain(err) {
+						if excl == nil || !excl.Contains(err) {
 							switch ms {
 							case OriginalMsg:
 								// The prefix is "". Do nothing here.
@@ -201,7 +201,7 @@ func TestAutoWrapCustom(t *testing.T) {
 					testCases[idx].ms = ms
 					testCases[idx].skip = skip
 					testCases[idx].excl = excl
-					testCases[idx].equal = err == nil || excl != nil && excl.Contain(err)
+					testCases[idx].equal = err == nil || excl != nil && excl.Contains(err)
 					testCases[idx].wantMsg = wantMsg
 					idx++
 				}

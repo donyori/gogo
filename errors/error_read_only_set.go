@@ -30,10 +30,10 @@ type ErrorReadOnlySet interface {
 	// Len returns the number of errors in the error set.
 	Len() int
 
-	// Contain reports whether err belongs to this error set.
+	// Contains reports whether err belongs to this error set.
 	//
 	// The criterion for "belong to" depends on the specific implementation.
-	Contain(err error) bool
+	Contains(err error) bool
 
 	// Range calls handler on all items in the set.
 	//
@@ -68,11 +68,11 @@ func (erose *errorReadOnlySetEqual) Len() int {
 	return len(erose.set)
 }
 
-// Contain reports whether err belongs to this error set.
+// Contains reports whether err belongs to this error set.
 //
 // err is regarded as "belonging to" this set
 // if it is equal to any item in this set.
-func (erose *errorReadOnlySetEqual) Contain(err error) bool {
+func (erose *errorReadOnlySetEqual) Contains(err error) bool {
 	return erose.set[err]
 }
 
@@ -144,11 +144,11 @@ func (erosi *errorReadOnlySetIs) Len() int {
 	return n
 }
 
-// Contain reports whether err belongs to this error set.
+// Contains reports whether err belongs to this error set.
 //
 // err is regarded as "belonging to" this set if there is an item x
 // in this set such that errors.Is(err, x) returns true.
-func (erosi *errorReadOnlySetIs) Contain(err error) bool {
+func (erosi *errorReadOnlySetIs) Contains(err error) bool {
 	root := err
 	for tmp := stderrors.Unwrap(err); tmp != nil; tmp = stderrors.Unwrap(tmp) {
 		root = tmp
@@ -222,11 +222,11 @@ func (erossm *errorReadOnlySetSameMessage) Len() int {
 	return n
 }
 
-// Contain reports whether err belongs to this error set.
+// Contains reports whether err belongs to this error set.
 //
 // err is regarded as "belonging to" this set
 // if it has the same message as any item in this set.
-func (erossm *errorReadOnlySetSameMessage) Contain(err error) bool {
+func (erossm *errorReadOnlySetSameMessage) Contains(err error) bool {
 	if err == nil {
 		return erossm.set["<nil>"] != nil
 	}

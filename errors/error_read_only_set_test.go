@@ -49,7 +49,7 @@ func init() {
 	}
 }
 
-type errorReadOnlySetContainCase struct {
+type errorReadOnlySetContainsCase struct {
 	target error
 	want   bool
 }
@@ -76,40 +76,40 @@ func TestErrorReadOnlySetEqual_Len_Nil(t *testing.T) {
 	}
 }
 
-func TestErrorReadOnlySetEqual_Contain(t *testing.T) {
+func TestErrorReadOnlySetEqual_Contains(t *testing.T) {
 	var setErrs []error
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
-	testCases := make([]errorReadOnlySetContainCase, 0, len(setErrs)*5+1)
+	testCases := make([]errorReadOnlySetContainsCase, 0, len(setErrs)*5+1)
 	for _, err := range setErrs {
 		testCases = append(
 			testCases,
-			errorReadOnlySetContainCase{err, true},
-			errorReadOnlySetContainCase{stderrors.New(err.Error()), false},
-			errorReadOnlySetContainCase{&errorUnwrap{err}, false},
-			errorReadOnlySetContainCase{&errorIsAlwaysTrue{err}, false},
-			errorReadOnlySetContainCase{&errorIsAlwaysFalse{err}, false},
+			errorReadOnlySetContainsCase{err, true},
+			errorReadOnlySetContainsCase{stderrors.New(err.Error()), false},
+			errorReadOnlySetContainsCase{&errorUnwrap{err}, false},
+			errorReadOnlySetContainsCase{&errorIsAlwaysTrue{err}, false},
+			errorReadOnlySetContainsCase{&errorIsAlwaysFalse{err}, false},
 		)
 	}
-	testCases = append(testCases, errorReadOnlySetContainCase{}) // {nil, false}
+	testCases = append(testCases, errorReadOnlySetContainsCase{}) // {nil, false}
 
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("case %d?target=%q", i, tc.target), func(t *testing.T) {
 			set := errors.NewErrorReadOnlySetEqual(setErrs...)
-			if set.Contain(tc.target) != tc.want {
+			if set.Contains(tc.target) != tc.want {
 				t.Errorf("got %t; want %t", !tc.want, tc.want)
 			}
 		})
 	}
 }
 
-func TestErrorReadOnlySetEqual_Contain_Nil(t *testing.T) {
+func TestErrorReadOnlySetEqual_Contains_Nil(t *testing.T) {
 	setErrs := []error{nil}
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
-	testCases := []errorReadOnlySetContainCase{
+	testCases := []errorReadOnlySetContainsCase{
 		{nil, true},
 		{stderrors.New("<nil>"), false},
 		{new(errorUnwrap), false},
@@ -120,7 +120,7 @@ func TestErrorReadOnlySetEqual_Contain_Nil(t *testing.T) {
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("case %d?target=%q", i, tc.target), func(t *testing.T) {
 			set := errors.NewErrorReadOnlySetEqual(setErrs...)
-			if set.Contain(tc.target) != tc.want {
+			if set.Contains(tc.target) != tc.want {
 				t.Errorf("got %t; want %t", !tc.want, tc.want)
 			}
 		})
@@ -149,48 +149,48 @@ func TestErrorReadOnlySetIs_Len_Nil(t *testing.T) {
 	}
 }
 
-func TestErrorReadOnlySetIs_Contain(t *testing.T) {
+func TestErrorReadOnlySetIs_Contains(t *testing.T) {
 	var setErrs []error
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
-	testCases := make([]errorReadOnlySetContainCase, 0, len(setErrs)*5+4)
+	testCases := make([]errorReadOnlySetContainsCase, 0, len(setErrs)*5+4)
 	for _, err := range setErrs {
 		testCases = append(
 			testCases,
-			errorReadOnlySetContainCase{err, true},
-			errorReadOnlySetContainCase{stderrors.New(err.Error()), false},
-			errorReadOnlySetContainCase{&errorUnwrap{err}, true},
-			errorReadOnlySetContainCase{&errorIsAlwaysTrue{err}, true},
+			errorReadOnlySetContainsCase{err, true},
+			errorReadOnlySetContainsCase{stderrors.New(err.Error()), false},
+			errorReadOnlySetContainsCase{&errorUnwrap{err}, true},
+			errorReadOnlySetContainsCase{&errorIsAlwaysTrue{err}, true},
 			// When method Is returns false, errors.Is will continue testing along the Unwrap error chain rather than return false.
-			errorReadOnlySetContainCase{&errorIsAlwaysFalse{err}, true},
+			errorReadOnlySetContainsCase{&errorIsAlwaysFalse{err}, true},
 		)
 	}
 	err := stderrors.New("test error +1")
 	testCases = append(
 		testCases,
-		errorReadOnlySetContainCase{}, // {nil, false}
-		errorReadOnlySetContainCase{&errorUnwrap{err}, false},
-		errorReadOnlySetContainCase{&errorIsAlwaysTrue{err}, true},
-		errorReadOnlySetContainCase{&errorIsAlwaysFalse{err}, false},
+		errorReadOnlySetContainsCase{}, // {nil, false}
+		errorReadOnlySetContainsCase{&errorUnwrap{err}, false},
+		errorReadOnlySetContainsCase{&errorIsAlwaysTrue{err}, true},
+		errorReadOnlySetContainsCase{&errorIsAlwaysFalse{err}, false},
 	)
 
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("case %d?target=%q", i, tc.target), func(t *testing.T) {
 			set := errors.NewErrorReadOnlySetIs(setErrs...)
-			if set.Contain(tc.target) != tc.want {
+			if set.Contains(tc.target) != tc.want {
 				t.Errorf("got %t; want %t", !tc.want, tc.want)
 			}
 		})
 	}
 }
 
-func TestErrorReadOnlySetIs_Contain_Nil(t *testing.T) {
+func TestErrorReadOnlySetIs_Contains_Nil(t *testing.T) {
 	setErrs := []error{nil}
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
-	testCases := []errorReadOnlySetContainCase{
+	testCases := []errorReadOnlySetContainsCase{
 		{nil, true},
 		{stderrors.New("<nil>"), false},
 		{new(errorUnwrap), false},
@@ -201,7 +201,7 @@ func TestErrorReadOnlySetIs_Contain_Nil(t *testing.T) {
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("case %d?target=%q", i, tc.target), func(t *testing.T) {
 			set := errors.NewErrorReadOnlySetIs(setErrs...)
-			if set.Contain(tc.target) != tc.want {
+			if set.Contains(tc.target) != tc.want {
 				t.Errorf("got %t; want %t", !tc.want, tc.want)
 			}
 		})
@@ -230,7 +230,7 @@ func TestErrorReadOnlySetSameMessage_Len_Nil(t *testing.T) {
 	}
 }
 
-func TestErrorReadOnlySetSameMessage_Contain(t *testing.T) {
+func TestErrorReadOnlySetSameMessage_Contains(t *testing.T) {
 	var setErrs []error
 	msgSet := make(map[string]bool)
 	for _, errs := range errorsForErrorReadOnlySet {
@@ -239,36 +239,36 @@ func TestErrorReadOnlySetSameMessage_Contain(t *testing.T) {
 			msgSet[err.Error()] = true
 		}
 	}
-	testCases := make([]errorReadOnlySetContainCase, 0, len(setErrs)*5+1)
+	testCases := make([]errorReadOnlySetContainsCase, 0, len(setErrs)*5+1)
 	for _, err := range setErrs {
 		eu, et, ef := &errorUnwrap{err}, &errorIsAlwaysTrue{err}, &errorIsAlwaysFalse{err}
 		testCases = append(
 			testCases,
-			errorReadOnlySetContainCase{err, true},
-			errorReadOnlySetContainCase{stderrors.New(err.Error()), true},
-			errorReadOnlySetContainCase{eu, msgSet[eu.Error()]},
-			errorReadOnlySetContainCase{et, msgSet[et.Error()]},
-			errorReadOnlySetContainCase{ef, msgSet[ef.Error()]},
+			errorReadOnlySetContainsCase{err, true},
+			errorReadOnlySetContainsCase{stderrors.New(err.Error()), true},
+			errorReadOnlySetContainsCase{eu, msgSet[eu.Error()]},
+			errorReadOnlySetContainsCase{et, msgSet[et.Error()]},
+			errorReadOnlySetContainsCase{ef, msgSet[ef.Error()]},
 		)
 	}
-	testCases = append(testCases, errorReadOnlySetContainCase{}) // {nil, false}
+	testCases = append(testCases, errorReadOnlySetContainsCase{}) // {nil, false}
 
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("case %d?target=%q", i, tc.target), func(t *testing.T) {
 			set := errors.NewErrorReadOnlySetSameMessage(setErrs...)
-			if set.Contain(tc.target) != tc.want {
+			if set.Contains(tc.target) != tc.want {
 				t.Errorf("got %t; want %t", !tc.want, tc.want)
 			}
 		})
 	}
 }
 
-func TestErrorReadOnlySetSameMessage_Contain_Nil(t *testing.T) {
+func TestErrorReadOnlySetSameMessage_Contains_Nil(t *testing.T) {
 	setErrs := []error{nil}
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
-	testCases := []errorReadOnlySetContainCase{
+	testCases := []errorReadOnlySetContainsCase{
 		{nil, true},
 		{stderrors.New("<nil>"), true},
 		{new(errorUnwrap), false},
@@ -279,7 +279,7 @@ func TestErrorReadOnlySetSameMessage_Contain_Nil(t *testing.T) {
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("case %d?target=%q", i, tc.target), func(t *testing.T) {
 			set := errors.NewErrorReadOnlySetSameMessage(setErrs...)
-			if set.Contain(tc.target) != tc.want {
+			if set.Contains(tc.target) != tc.want {
 				t.Errorf("got %t; want %t", !tc.want, tc.want)
 			}
 		})
