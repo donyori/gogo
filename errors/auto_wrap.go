@@ -43,6 +43,9 @@ var defaultExclusionSet = NewErrorReadOnlySetIs(io.EOF)
 // If the target error message is empty,
 // it will use "<no error message>" instead.
 func AutoWrap(err error) error {
+	if err == nil { // nil error is the most common case, so add a short path here
+		return nil
+	}
 	return AutoWrapCustom(err, PrependFullFuncName, 1, defaultExclusionSet)
 }
 
@@ -66,6 +69,9 @@ func AutoWrap(err error) error {
 // If the target error message is empty,
 // it will use "<no error message>" instead.
 func AutoWrapSkip(err error, skip int) error {
+	if err == nil { // nil error is the most common case, so add a short path here
+		return nil
+	}
 	return AutoWrapCustom(err, PrependFullFuncName, skip+1, defaultExclusionSet)
 }
 
