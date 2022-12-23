@@ -44,40 +44,40 @@ func TestMustFunctionsWritePanic(t *testing.T) {
 	}
 	testCases := []struct {
 		name string
-		f    func(t *testing.T)
+		f    func()
 	}{
-		{"method-MustWrite", func(t *testing.T) {
+		{"method-MustWrite", func() {
 			newBufferedWriter().MustWrite([]byte("ABCD"))
 		}},
-		{"method-MustWriteByte", func(t *testing.T) {
+		{"method-MustWriteByte", func() {
 			w := newBufferedWriter()
 			w.MustWriteByte('A')
 			w.MustWriteByte('B')
 			w.MustWriteByte('C')
 			w.MustWriteByte('D')
 		}},
-		{"method-MustWriteRune", func(t *testing.T) {
+		{"method-MustWriteRune", func() {
 			newBufferedWriter().MustWriteRune('汉')
 		}},
-		{"method-MustWriteString", func(t *testing.T) {
+		{"method-MustWriteString", func() {
 			newBufferedWriter().MustWriteString("ABCD")
 		}},
-		{"method-MustPrintf", func(t *testing.T) {
+		{"method-MustPrintf", func() {
 			newBufferedWriter().MustPrintf("A%sD", "BC")
 		}},
-		{"method-MustPrint", func(t *testing.T) {
+		{"method-MustPrint", func() {
 			newBufferedWriter().MustPrint("ABCD")
 		}},
-		{"method-MustPrintln", func(t *testing.T) {
+		{"method-MustPrintln", func() {
 			newBufferedWriter().MustPrintln("ABCD")
 		}},
-		{"function-MustFprintf", func(t *testing.T) {
+		{"function-MustFprintf", func() {
 			inout.MustFprintf(ew, "")
 		}},
-		{"function-MustFprint", func(t *testing.T) {
+		{"function-MustFprint", func() {
 			inout.MustFprint(ew)
 		}},
-		{"function-MustFprintln", func(t *testing.T) {
+		{"function-MustFprintln", func() {
 			inout.MustFprintln(ew)
 		}},
 	}
@@ -94,7 +94,7 @@ func TestMustFunctionsWritePanic(t *testing.T) {
 					t.Error("errors.Is(wp, errErrorWriter) is false")
 				}
 			}()
-			tc.f(t)
+			tc.f()
 		})
 	}
 }

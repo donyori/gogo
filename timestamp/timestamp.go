@@ -46,8 +46,8 @@ const (
 // Timestamp is a timestamp wrapped on time.Time.
 //
 // It automatically detects the time unit (seconds, milliseconds, microseconds,
-// or nanoseconds) when parsing from string.
-// It is treated as a UNIX timestamp (in seconds) when formatting to string.
+// or nanoseconds) when parsed from strings.
+// It is treated as a UNIX timestamp (in seconds) when formatted to strings.
 //
 // It determines the time unit by the integer part digits, as follows:
 //
@@ -391,8 +391,8 @@ type timestampType int8
 // Types of timestamp.
 const (
 	// autoTimestamp is a timestamp that automatically detects the time unit
-	// when parsing from string.
-	// It is treated as a UNIX timestamp (in seconds) when formatting to string.
+	// when parsed from strings.
+	// It is treated as a UNIX timestamp (in seconds) when formatted to strings.
 	//
 	// It determines the time unit by the integer part digits, as follows:
 	//  less than 12-digits - second,

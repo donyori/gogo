@@ -193,7 +193,7 @@ func TestBroadcaster_Unsubscribe_AfterClose(t *testing.T) {
 	bcast.Close()
 	defer func() {
 		if e := recover(); e != nil {
-			t.Errorf("panic when calling Unsubscribe after the broadcaster closed, %v", e)
+			t.Error("panic when calling Unsubscribe after the broadcaster closed,", e)
 		}
 	}()
 	bcast.Unsubscribe(c)

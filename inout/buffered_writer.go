@@ -100,7 +100,7 @@ func NewBufferedWriterSize(w io.Writer, size int) ResettableBufferedWriter {
 	return &resettableBufferedWriter{bw}
 }
 
-// Write writes the contents of p into the buffer.
+// Write writes the content of p into the buffer.
 //
 // It returns the number of bytes written and any write error encountered.
 // If n < len(p), it also returns an error explaining why the write is short.
@@ -196,8 +196,8 @@ func (rbw *resettableBufferedWriter) ReadFrom(r io.Reader) (n int64, err error) 
 
 // Printf formats arguments and writes to the buffer.
 // Arguments are handled in the manner of fmt.Printf.
-func (rbw *resettableBufferedWriter) Printf(format string, a ...any) (n int, err error) {
-	n, err = fmt.Fprintf(rbw.bw, format, a...)
+func (rbw *resettableBufferedWriter) Printf(format string, args ...any) (n int, err error) {
+	n, err = fmt.Fprintf(rbw.bw, format, args...)
 	return n, errors.AutoWrap(err)
 }
 
@@ -205,8 +205,8 @@ func (rbw *resettableBufferedWriter) Printf(format string, a ...any) (n int, err
 //
 // If it panics, the error value passed to the call of panic
 // must be exactly of type *WritePanic.
-func (rbw *resettableBufferedWriter) MustPrintf(format string, a ...any) (n int) {
-	n, err := fmt.Fprintf(rbw.bw, format, a...)
+func (rbw *resettableBufferedWriter) MustPrintf(format string, args ...any) (n int) {
+	n, err := fmt.Fprintf(rbw.bw, format, args...)
 	if err != nil {
 		panic(NewWritePanic(errors.AutoWrap(err)))
 	}
@@ -215,8 +215,8 @@ func (rbw *resettableBufferedWriter) MustPrintf(format string, a ...any) (n int)
 
 // Print formats arguments and writes to the buffer.
 // Arguments are handled in the manner of fmt.Print.
-func (rbw *resettableBufferedWriter) Print(a ...any) (n int, err error) {
-	n, err = fmt.Fprint(rbw.bw, a...)
+func (rbw *resettableBufferedWriter) Print(args ...any) (n int, err error) {
+	n, err = fmt.Fprint(rbw.bw, args...)
 	return n, errors.AutoWrap(err)
 }
 
@@ -224,8 +224,8 @@ func (rbw *resettableBufferedWriter) Print(a ...any) (n int, err error) {
 //
 // If it panics, the error value passed to the call of panic
 // must be exactly of type *WritePanic.
-func (rbw *resettableBufferedWriter) MustPrint(a ...any) (n int) {
-	n, err := fmt.Fprint(rbw.bw, a...)
+func (rbw *resettableBufferedWriter) MustPrint(args ...any) (n int) {
+	n, err := fmt.Fprint(rbw.bw, args...)
 	if err != nil {
 		panic(NewWritePanic(errors.AutoWrap(err)))
 	}
@@ -234,8 +234,8 @@ func (rbw *resettableBufferedWriter) MustPrint(a ...any) (n int) {
 
 // Println formats arguments and writes to the buffer.
 // Arguments are handled in the manner of fmt.Println.
-func (rbw *resettableBufferedWriter) Println(a ...any) (n int, err error) {
-	n, err = fmt.Fprintln(rbw.bw, a...)
+func (rbw *resettableBufferedWriter) Println(args ...any) (n int, err error) {
+	n, err = fmt.Fprintln(rbw.bw, args...)
 	return n, errors.AutoWrap(err)
 }
 
@@ -243,8 +243,8 @@ func (rbw *resettableBufferedWriter) Println(a ...any) (n int, err error) {
 //
 // If it panics, the error value passed to the call of panic
 // must be exactly of type *WritePanic.
-func (rbw *resettableBufferedWriter) MustPrintln(a ...any) (n int) {
-	n, err := fmt.Fprintln(rbw.bw, a...)
+func (rbw *resettableBufferedWriter) MustPrintln(args ...any) (n int) {
+	n, err := fmt.Fprintln(rbw.bw, args...)
 	if err != nil {
 		panic(NewWritePanic(errors.AutoWrap(err)))
 	}
