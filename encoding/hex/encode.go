@@ -90,6 +90,7 @@ type encoder struct {
 // NewEncoder creates an encoder to write hexadecimal characters to w.
 //
 // upper indicates to use uppercase in hexadecimal representation.
+//
 // It panics if w is nil.
 func NewEncoder(w io.Writer, upper bool) Encoder {
 	if w == nil {

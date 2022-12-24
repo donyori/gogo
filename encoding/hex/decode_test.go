@@ -16,22 +16,36 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package hex
+package hex_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/donyori/gogo/encoding/hex"
+)
 
 func TestDecodedLen(t *testing.T) {
-	for _, c := range testEncodeCases {
-		if n := DecodedLen(len(c.dst)); n != len(c.src) {
-			t.Errorf("DecodedLen: %d != %d, src: %q, dst: %q, upper: %t.", n, len(c.src), c.src, c.dst, c.upper)
+	for _, tc := range testEncodeCases {
+		if tc.upper { // only use the lower cases
+			continue
 		}
+		t.Run("dst="+tc.dstName, func(t *testing.T) {
+			if n := hex.DecodedLen(len(tc.dst)); n != len(tc.src) {
+				t.Errorf("got %d; want %d", n, len(tc.src))
+			}
+		})
 	}
 }
 
 func TestDecodedLen64(t *testing.T) {
-	for _, c := range testEncodeCases {
-		if n := DecodedLen64(int64(len(c.dst))); n != int64(len(c.src)) {
-			t.Errorf("DecodedLen: %d != %d, src: %q, dst: %q, upper: %t.", n, len(c.src), c.src, c.dst, c.upper)
+	for _, tc := range testEncodeCases {
+		if tc.upper { // only use the lower cases
+			continue
 		}
+		t.Run("dst="+tc.dstName, func(t *testing.T) {
+			if n := hex.DecodedLen64(int64(len(tc.dst))); n != int64(len(tc.src)) {
+				t.Errorf("got %d; want %d", n, len(tc.src))
+			}
+		})
 	}
 }

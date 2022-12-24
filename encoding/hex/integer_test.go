@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package hex
+package hex_test
 
 import (
 	"bytes"
@@ -27,6 +27,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/donyori/gogo/encoding/hex"
 	"github.com/donyori/gogo/errors"
 )
 
@@ -106,13 +107,15 @@ func TestEncodeInt64(t *testing.T) {
 	for _, x := range testEncodeInt64Xs {
 		for _, upper := range []bool{false, true} {
 			for _, digits := range testEncodeIntegerDigits {
-				length := EncodeInt64DstLen(digits)
-				dst1, dst2 := make([]byte, length), make([]byte, length)
-				n1 := EncodeInt64(dst1, x, upper, digits)
-				n2 := encodeInt64Baseline(dst2, x, upper, digits)
-				if n1 != n2 || string(dst1[:n1]) != string(dst2[:n2]) {
-					t.Errorf("x: %d, upper: %t, digits: %d, r != wanted.\n\tr: %s\n\twanted: %s", x, upper, digits, dst1[:n1], dst2[:n2])
-				}
+				t.Run(fmt.Sprintf("x=%d&upper=%t&digits=%d", x, upper, digits), func(t *testing.T) {
+					length := hex.EncodeInt64DstLen(digits)
+					dst1, dst2 := make([]byte, length), make([]byte, length)
+					n1 := hex.EncodeInt64(dst1, x, upper, digits)
+					n2 := encodeInt64Baseline(dst2, x, upper, digits)
+					if n1 != n2 || !bytes.Equal(dst1[:n1], dst2[:n2]) {
+						t.Errorf("got (%d) %s; want (%d) %s", n1, dst1[:n1], n2, dst2[:n2])
+					}
+				})
 			}
 		}
 	}
@@ -122,11 +125,13 @@ func TestEncodeInt64ToString(t *testing.T) {
 	for _, x := range testEncodeInt64Xs {
 		for _, upper := range []bool{false, true} {
 			for _, digits := range testEncodeIntegerDigits {
-				r := EncodeInt64ToString(x, upper, digits)
-				wanted := encodeInt64ToStringBaseline(x, upper, digits)
-				if r != wanted {
-					t.Errorf("x: %d, upper: %t, digits: %d, r != wanted.\n\tr: %s\n\twanted: %s", x, upper, digits, r, wanted)
-				}
+				t.Run(fmt.Sprintf("x=%d&upper=%t&digits=%d", x, upper, digits), func(t *testing.T) {
+					r := hex.EncodeInt64ToString(x, upper, digits)
+					want := encodeInt64ToStringBaseline(x, upper, digits)
+					if r != want {
+						t.Errorf("got %s; want %s", r, want)
+					}
+				})
 			}
 		}
 	}
@@ -137,21 +142,21 @@ func TestEncodeInt64To(t *testing.T) {
 	for _, x := range testEncodeInt64Xs {
 		for _, upper := range []bool{false, true} {
 			for _, digits := range testEncodeIntegerDigits {
-				b1.Reset()
-				b2.Reset()
-				n1, err1 := EncodeInt64To(&b1, x, upper, digits)
-				if err1 != nil {
-					t.Errorf("x: %d, upper: %t, digits: %d, written: %d\n\tr: %s\nerror: %v", x, upper, digits, n1, b1.String(), err1)
-					continue
-				}
-				n2, err2 := encodeInt64ToBaseline(&b2, x, upper, digits)
-				if err2 != nil {
-					t.Errorf("Baseline - x: %d, upper: %t, digits: %d, written: %d\n\tr: %s\nerror: %v", x, upper, digits, n2, b2.String(), err2)
-					continue
-				}
-				if n1 != n2 || b1.String() != b2.String() {
-					t.Errorf("x: %d, upper: %t, digits: %d, written: %d\n\tr: %s\n\twanted: %s", x, upper, digits, n1, b1.String(), b2.String())
-				}
+				t.Run(fmt.Sprintf("x=%d&upper=%t&digits=%d", x, upper, digits), func(t *testing.T) {
+					b1.Reset()
+					b2.Reset()
+					n1, err1 := hex.EncodeInt64To(&b1, x, upper, digits)
+					if err1 != nil {
+						t.Fatalf("written %d - %v", n1, err1)
+					}
+					n2, err2 := encodeInt64ToBaseline(&b2, x, upper, digits)
+					if err2 != nil {
+						t.Fatalf("baseline, written %d - %v", n2, err2)
+					}
+					if n1 != n2 || b1.String() != b2.String() {
+						t.Errorf("got (%d) %s; want (%d) %s", n1, b1.String(), n2, b2.String())
+					}
+				})
 			}
 		}
 	}

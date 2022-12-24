@@ -66,19 +66,6 @@ var encodeBufferPool = sync.Pool{
 	},
 }
 
-// formatBufferLen is the length of a buffer that holds formatting results.
-const formatBufferLen = 1024
-
-// formatBufferPool is a set of temporary buffers to hold formatting results
-// that will be written to destination writers.
-//
-// The type of the buffers is *[formatBufferLen]byte.
-var formatBufferPool = sync.Pool{
-	New: func() any {
-		return new([formatBufferLen]byte)
-	},
-}
-
 // int64BufferLen is the length of a buffer that holds
 // a hexadecimal representation of a 64-bit integer.
 const int64BufferLen = 17
