@@ -16,10 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package inout
-
-// This file requires the unexported variables: minReadBufferSize and defaultBufferSize,
-// and the unexported types: resettableBufferedReader and resettableBufferedWriter.
+package inout_test
 
 import (
 	"bufio"
@@ -27,6 +24,8 @@ import (
 	"io"
 	"strings"
 	"testing"
+
+	"github.com/donyori/gogo/inout"
 )
 
 func TestNewBufferedReaderSize(t *testing.T) {
@@ -35,10 +34,10 @@ func TestNewBufferedReaderSize(t *testing.T) {
 	bufr64 := bufio.NewReaderSize(r, 64)
 	bufr128 := bufio.NewReaderSize(r, 128)
 	bufr256 := bufio.NewReaderSize(r, 256)
-	br := NewBufferedReader(r)
-	br64 := NewBufferedReaderSize(r, 64)
-	br128 := NewBufferedReaderSize(r, 128)
-	br256 := NewBufferedReaderSize(r, 256)
+	br := inout.NewBufferedReader(r)
+	br64 := inout.NewBufferedReaderSize(r, 64)
+	br128 := inout.NewBufferedReaderSize(r, 128)
+	br256 := inout.NewBufferedReaderSize(r, 256)
 	const size128 = 128
 
 	testCases := []struct {
@@ -58,19 +57,19 @@ func TestNewBufferedReaderSize(t *testing.T) {
 		{name: "on br64", r: br64, argSize: size128, wantSize: size128},
 		{name: "on br128", r: br128, argSize: size128, wantAsSelf: true},
 		{name: "on br256", r: br256, argSize: size128, wantAsSelf: true},
-		{name: "on r?size=0", r: r, argSize: 0, wantSize: minReadBufferSize},
+		{name: "on r?size=0", r: r, argSize: 0, wantSize: inout.MinReadBufferSize},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			b := NewBufferedReaderSize(tc.r, tc.argSize)
+			b := inout.NewBufferedReaderSize(tc.r, tc.argSize)
 			switch true {
 			case tc.wantSize != 0:
 				if n := b.Size(); n != tc.wantSize {
 					t.Errorf("got size %d; want %d", n, tc.wantSize)
 				}
 			case tc.wantAsUnderlying:
-				if b.(*resettableBufferedReader).br != tc.r {
+				if b.(*inout.ResettableBufferedReaderImpl).GetBufferedReader() != tc.r {
 					t.Error("underlying buffered reader not input")
 				}
 			case tc.wantAsSelf:
@@ -90,10 +89,10 @@ func TestNewBufferedWriterSize(t *testing.T) {
 	bufw64 := bufio.NewWriterSize(w, 64)
 	bufw128 := bufio.NewWriterSize(w, 128)
 	bufw256 := bufio.NewWriterSize(w, 256)
-	bw := NewBufferedWriter(w)
-	bw64 := NewBufferedWriterSize(w, 64)
-	bw128 := NewBufferedWriterSize(w, 128)
-	bw256 := NewBufferedWriterSize(w, 256)
+	bw := inout.NewBufferedWriter(w)
+	bw64 := inout.NewBufferedWriterSize(w, 64)
+	bw128 := inout.NewBufferedWriterSize(w, 128)
+	bw256 := inout.NewBufferedWriterSize(w, 256)
 	const size128 = 128
 
 	testCases := []struct {
@@ -113,19 +112,19 @@ func TestNewBufferedWriterSize(t *testing.T) {
 		{name: "on bw64", w: bw64, argSize: size128, wantSize: size128},
 		{name: "on bw128", w: bw128, argSize: size128, wantAsSelf: true},
 		{name: "on bw256", w: bw256, argSize: size128, wantAsSelf: true},
-		{name: "on w?size=0", w: w, argSize: 0, wantSize: defaultBufferSize},
+		{name: "on w?size=0", w: w, argSize: 0, wantSize: inout.DefaultBufferSize},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			b := NewBufferedWriterSize(tc.w, tc.argSize)
+			b := inout.NewBufferedWriterSize(tc.w, tc.argSize)
 			switch true {
 			case tc.wantSize != 0:
 				if n := b.Size(); n != tc.wantSize {
 					t.Errorf("got size %d; want %d", n, tc.wantSize)
 				}
 			case tc.wantAsUnderlying:
-				if b.(*resettableBufferedWriter).bw != tc.w {
+				if b.(*inout.ResettableBufferedWriterImpl).GetBufferedWriter() != tc.w {
 					t.Error("underlying buffered writer not input")
 				}
 			case tc.wantAsSelf:

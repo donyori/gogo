@@ -16,11 +16,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package spmd
+package spmd_test
 
-// This file requires the unexported type: controller.
+import (
+	"testing"
 
-import "testing"
+	"github.com/donyori/gogo/concurrency/framework/spmd"
+)
 
 func TestNew_lnchCommMaps(t *testing.T) {
 	const N int = 8
@@ -32,9 +34,9 @@ func TestNew_lnchCommMaps(t *testing.T) {
 		"g5": {4, 1, 1, 1},
 		"g6": {4, 1, 1, 2, 1, 1, 4},
 	}
-	ctrl := New(N, func(world Communicator[int], commMap map[string]Communicator[int]) {
+	ctrl := spmd.New(N, func(world spmd.Communicator[int], commMap map[string]spmd.Communicator[int]) {
 		// Empty function body.
-	}, groupMap).(*controller[int])
+	}, groupMap)
 
 	deduplicatedGroupMap := make(map[string][]int, len(groupMap))
 	for k, v := range groupMap {
@@ -49,8 +51,9 @@ func TestNew_lnchCommMaps(t *testing.T) {
 		}
 		deduplicatedGroupMap[k] = newV
 	}
+	lnchCommMaps := spmd.WrapController[int](ctrl).GetLnchCommMaps()
 	// Verify that all commMaps are consistent with groupMap.
-	for wr, commMap := range ctrl.lnchCommMaps {
+	for wr, commMap := range lnchCommMaps {
 		for id, comm := range commMap {
 			if comm == nil {
 				t.Errorf("goroutine %d, group %q, comm is nil", wr, id)
@@ -63,7 +66,7 @@ func TestNew_lnchCommMaps(t *testing.T) {
 	// Verify that all items in groupMap have corresponding communicators.
 	for id, group := range deduplicatedGroupMap {
 		for r, wr := range group {
-			comm := ctrl.lnchCommMaps[wr][id]
+			comm := lnchCommMaps[wr][id]
 			if comm == nil {
 				t.Errorf("goroutine %d, group %q, comm is nil", wr, id)
 			} else if rank := comm.Rank(); rank != r {
@@ -75,7 +78,7 @@ func TestNew_lnchCommMaps(t *testing.T) {
 }
 
 func TestController_Wait_BeforeLaunch(t *testing.T) {
-	ctrl := New(0, func(world Communicator[int], commMap map[string]Communicator[int]) {
+	ctrl := spmd.New(0, func(world spmd.Communicator[int], commMap map[string]spmd.Communicator[int]) {
 		// Do nothing.
 	}, nil)
 	if r := ctrl.Wait(); r != -1 {

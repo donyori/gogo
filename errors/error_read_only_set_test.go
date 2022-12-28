@@ -287,33 +287,33 @@ func TestErrorReadOnlySetSameMessage_Contains_Nil(t *testing.T) {
 }
 
 type errorUnwrap struct {
-	wrapped error
+	err error
 }
 
 func (eu *errorUnwrap) Error() string {
-	if eu.wrapped == nil {
+	if eu.err == nil {
 		return "test error - <nil>"
 	}
-	return "test error unwrap - " + eu.wrapped.Error()
+	return "test error unwrap - " + eu.err.Error()
 }
 
 func (eu *errorUnwrap) Unwrap() error {
-	return eu.wrapped
+	return eu.err
 }
 
 type errorIsAlwaysTrue struct {
-	wrapped error
+	err error
 }
 
 func (eiat *errorIsAlwaysTrue) Error() string {
-	if eiat.wrapped == nil {
+	if eiat.err == nil {
 		return "test error Is always true - <nil>"
 	}
-	return "test error Is always true - " + eiat.wrapped.Error()
+	return "test error Is always true - " + eiat.err.Error()
 }
 
 func (eiat *errorIsAlwaysTrue) Unwrap() error {
-	return eiat.wrapped
+	return eiat.err
 }
 
 func (eiat *errorIsAlwaysTrue) Is(error) bool {
@@ -321,18 +321,18 @@ func (eiat *errorIsAlwaysTrue) Is(error) bool {
 }
 
 type errorIsAlwaysFalse struct {
-	wrapped error
+	err error
 }
 
 func (eiaf *errorIsAlwaysFalse) Error() string {
-	if eiaf.wrapped == nil {
+	if eiaf.err == nil {
 		return "test error Is always false - <nil>"
 	}
-	return "test error Is always false - " + eiaf.wrapped.Error()
+	return "test error Is always false - " + eiaf.err.Error()
 }
 
 func (eiaf *errorIsAlwaysFalse) Unwrap() error {
-	return eiaf.wrapped
+	return eiaf.err
 }
 
 func (eiaf *errorIsAlwaysFalse) Is(error) bool {

@@ -16,9 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package vlq
-
-// This file requires the unexported variable: minUint64s.
+package vlq_test
 
 import (
 	"bytes"
@@ -26,12 +24,13 @@ import (
 	"testing"
 
 	"github.com/donyori/gogo/encoding/varnum/uintconv"
+	"github.com/donyori/gogo/encoding/varnum/vlq"
 )
 
 func TestUint64EncodedLen(t *testing.T) {
 	for i, u := range uint64s {
 		t.Run(fmt.Sprintf("u=%#X", u), func(t *testing.T) {
-			if n := Uint64EncodedLen(u); n != len(encodedUint64s[i]) {
+			if n := vlq.Uint64EncodedLen(u); n != len(encodedUint64s[i]) {
 				t.Errorf("got %d; want %d", n, len(encodedUint64s[i]))
 			}
 		})
@@ -43,19 +42,19 @@ func BenchmarkUint64EncodedLen(b *testing.B) {
 		name string
 		f    func(u uint64) int
 	}{
-		{"package func", Uint64EncodedLen},
+		{"package func", vlq.Uint64EncodedLen},
 		{"binary func", func(u uint64) int {
 			// Binary search.
 			// Define: minUint64s[-1] < u,
 			//         minUint64s[len(minUint64s)] > u
 			// Invariant: minUint64s[low-1] < u,
 			//            minUint64s[high] > u
-			low, high := 0, len(minUint64s)
+			low, high := 0, len(vlq.MinUint64s)
 			for low < high {
 				mid := (low + high) / 2
-				if minUint64s[mid] < u {
+				if vlq.MinUint64s[mid] < u {
 					low = mid + 1 // Preserve: minUint64s[low-1] < u
-				} else if minUint64s[mid] > u {
+				} else if vlq.MinUint64s[mid] > u {
 					high = mid // Preserve: minUint64s[high] > u
 				} else {
 					return mid + 2
@@ -79,7 +78,7 @@ func TestEncodeUint64(t *testing.T) {
 	for i, u := range uint64s {
 		t.Run(fmt.Sprintf("u=%#X", u), func(t *testing.T) {
 			dst := make([]byte, 10)
-			n := EncodeUint64(dst, u)
+			n := vlq.EncodeUint64(dst, u)
 			if !bytes.Equal(dst[:n], encodedUint64s[i]) {
 				t.Errorf("got %X; want %X", dst[:n], encodedUint64s[i])
 			}
@@ -91,7 +90,7 @@ func TestInt64EncodedLen(t *testing.T) {
 	for i, u := range uint64s {
 		x := uintconv.ToInt64Zigzag(u)
 		t.Run(fmt.Sprintf("i=%#X", x), func(t *testing.T) {
-			if n := Int64EncodedLen(x); n != len(encodedUint64s[i]) {
+			if n := vlq.Int64EncodedLen(x); n != len(encodedUint64s[i]) {
 				t.Errorf("got %d; want %d", n, len(encodedUint64s[i]))
 			}
 		})
@@ -103,7 +102,7 @@ func TestEncodeInt64(t *testing.T) {
 		x := uintconv.ToInt64Zigzag(u)
 		t.Run(fmt.Sprintf("i=%#X", x), func(t *testing.T) {
 			dst := make([]byte, 10)
-			n := EncodeInt64(dst, x)
+			n := vlq.EncodeInt64(dst, x)
 			if !bytes.Equal(dst[:n], encodedUint64s[i]) {
 				t.Errorf("got %X; want %X", dst[:n], encodedUint64s[i])
 			}
@@ -115,7 +114,7 @@ func TestFloat64EncodedLen(t *testing.T) {
 	for i, u := range uint64s {
 		f := uintconv.ToFloat64ByteReversal(u)
 		t.Run(fmt.Sprintf("f=%f", f), func(t *testing.T) {
-			if n := Float64EncodedLen(f); n != len(encodedUint64s[i]) {
+			if n := vlq.Float64EncodedLen(f); n != len(encodedUint64s[i]) {
 				t.Errorf("got %d; want %d", n, len(encodedUint64s[i]))
 			}
 		})
@@ -127,7 +126,7 @@ func TestEncodeFloat64(t *testing.T) {
 		f := uintconv.ToFloat64ByteReversal(u)
 		t.Run(fmt.Sprintf("f=%f", f), func(t *testing.T) {
 			dst := make([]byte, 10)
-			n := EncodeFloat64(dst, f)
+			n := vlq.EncodeFloat64(dst, f)
 			if !bytes.Equal(dst[:n], encodedUint64s[i]) {
 				t.Errorf("got %X; want %X", dst[:n], encodedUint64s[i])
 			}

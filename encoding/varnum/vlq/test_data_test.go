@@ -16,11 +16,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package vlq
+package vlq_test
 
-// This file requires the unexported variable: minUint64s.
+import (
+	"math"
 
-import "math"
+	"github.com/donyori/gogo/encoding/varnum/vlq"
+)
 
 var (
 	uint64s        []uint64
@@ -38,7 +40,7 @@ var (
 func init() {
 	uint64s = make([]uint64, 53)
 	uint64s[1], uint64s[2], uint64s[3], uint64s[4] = 1, 7, 8, 9
-	for i, x := range minUint64s {
+	for i, x := range vlq.MinUint64s {
 		uint64s[5+i*5] = x - 2
 		uint64s[6+i*5] = x - 1
 		uint64s[7+i*5] = x
@@ -51,7 +53,7 @@ func init() {
 	for i := 0; i < 7; i++ {
 		encodedUint64s[i] = []byte{byte(uint64s[i])}
 	}
-	for i := 1; i <= len(minUint64s); i++ {
+	for i := 1; i <= len(vlq.MinUint64s); i++ {
 		for k, lastByte := range []byte{0, 1, 2, 0x7E, 0x7F} {
 			idx := 2 + i*5 + k
 			if idx >= 50 {

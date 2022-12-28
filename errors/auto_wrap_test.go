@@ -16,22 +16,22 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package errors
-
-// This file requires the unexported type: autoWrapError.
+package errors_test
 
 import (
 	stderrors "errors"
 	"fmt"
 	"io"
 	"testing"
+
+	"github.com/donyori/gogo/errors"
 )
 
 func TestAutoWrap(t *testing.T) {
 	err0 := stderrors.New("error 0")
-	err1 := &autoWrapError{err0, "manually created: error 1 - " + err0.Error()}
-	err2 := &autoWrapError{err1, "manually created: error 2 - " + err1.Error()}
-	wantMsg := "github.com/donyori/gogo/errors.TestAutoWrap.func1: " + err0.Error() // ".func1" is the anonymous function passed to t.Run.
+	err1 := errors.NewAutoWrapError(err0, "manually created: error 1 - "+err0.Error())
+	err2 := errors.NewAutoWrapError(err1, "manually created: error 2 - "+err1.Error())
+	wantMsg := "github.com/donyori/gogo/errors_test.TestAutoWrap.func1: " + err0.Error() // ".func1" is the anonymous function passed to t.Run.
 
 	testCases := []struct {
 		err     error
@@ -43,12 +43,12 @@ func TestAutoWrap(t *testing.T) {
 		{err0, false, wantMsg},
 		{err1, false, wantMsg},
 		{err2, false, wantMsg},
-		{stderrors.New(""), false, "github.com/donyori/gogo/errors.TestAutoWrap.func1: <no error message>"},
+		{stderrors.New(""), false, "github.com/donyori/gogo/errors_test.TestAutoWrap.func1: <no error message>"},
 	}
 
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("case %d?err=%q", i, tc.err), func(t *testing.T) {
-			got := AutoWrap(tc.err)
+			got := errors.AutoWrap(tc.err)
 			if (got == tc.err) != tc.equal {
 				if tc.equal {
 					t.Errorf("got %q; != tc.err", got)
@@ -71,13 +71,13 @@ func TestAutoWrap(t *testing.T) {
 
 func TestAutoWrapSkip(t *testing.T) {
 	err0 := stderrors.New("error 0")
-	err1 := &autoWrapError{err0, "manually created: error 1 - " + err0.Error()}
-	err2 := &autoWrapError{err1, "manually created: error 2 - " + err1.Error()}
-	wantMsg0To2Skip0 := "github.com/donyori/gogo/errors.TestAutoWrapSkip.func1.1: " + err0.Error()
-	wantMsg0To2Skip1 := "github.com/donyori/gogo/errors.TestAutoWrapSkip.func1: " + err0.Error()
+	err1 := errors.NewAutoWrapError(err0, "manually created: error 1 - "+err0.Error())
+	err2 := errors.NewAutoWrapError(err1, "manually created: error 2 - "+err1.Error())
+	wantMsg0To2Skip0 := "github.com/donyori/gogo/errors_test.TestAutoWrapSkip.func1.1: " + err0.Error()
+	wantMsg0To2Skip1 := "github.com/donyori/gogo/errors_test.TestAutoWrapSkip.func1: " + err0.Error()
 	err3 := stderrors.New("")
-	wantMsg3Skip0 := "github.com/donyori/gogo/errors.TestAutoWrapSkip.func1.1: <no error message>"
-	wantMsg3Skip1 := "github.com/donyori/gogo/errors.TestAutoWrapSkip.func1: <no error message>"
+	wantMsg3Skip0 := "github.com/donyori/gogo/errors_test.TestAutoWrapSkip.func1.1: <no error message>"
+	wantMsg3Skip1 := "github.com/donyori/gogo/errors_test.TestAutoWrapSkip.func1: <no error message>"
 	// In the above wantXxx, ".func1" is the anonymous function passed to t.Run;
 	// ".func1.1" is the anonymous inner function that calls function AutoWrapSkip.
 
@@ -104,7 +104,7 @@ func TestAutoWrapSkip(t *testing.T) {
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("case %d?err=%q&skip=%d", i, tc.err, tc.skip), func(t *testing.T) {
 			func() { // Use an inner function to test the "skip".
-				got := AutoWrapSkip(tc.err, tc.skip)
+				got := errors.AutoWrapSkip(tc.err, tc.skip)
 				if (got == tc.err) != tc.equal {
 					if tc.equal {
 						t.Errorf("got %q; != tc.err", got)
@@ -128,31 +128,31 @@ func TestAutoWrapSkip(t *testing.T) {
 
 func TestAutoWrapCustom(t *testing.T) {
 	err0 := stderrors.New("error 0")
-	err1 := &autoWrapError{err0, "manually created: error 1 - " + err0.Error()}
-	err2 := &autoWrapError{err1, "manually created: error 2 - " + err1.Error()}
-	excl := NewErrorReadOnlySetIs(io.EOF, err0)
-	wantMsgPrefixPrependFullFuncNameSkip0 := "github.com/donyori/gogo/errors.TestAutoWrapCustom.func1.1: "
-	wantMsgPrefixPrependFullFuncNameSkip1 := "github.com/donyori/gogo/errors.TestAutoWrapCustom.func1: "
-	wantMsgPrefixPrependFullPkgName := "github.com/donyori/gogo/errors: "
+	err1 := errors.NewAutoWrapError(err0, "manually created: error 1 - "+err0.Error())
+	err2 := errors.NewAutoWrapError(err1, "manually created: error 2 - "+err1.Error())
+	excl := errors.NewErrorReadOnlySetIs(io.EOF, err0)
+	wantMsgPrefixPrependFullFuncNameSkip0 := "github.com/donyori/gogo/errors_test.TestAutoWrapCustom.func1.1: "
+	wantMsgPrefixPrependFullFuncNameSkip1 := "github.com/donyori/gogo/errors_test.TestAutoWrapCustom.func1: "
+	wantMsgPrefixPrependFullPkgName := "github.com/donyori/gogo/errors_test: "
 	wantMsgPrefixPrependSimpleFuncNameSkip0 := "TestAutoWrapCustom.func1.1: "
 	wantMsgPrefixPrependSimpleFuncNameSkip1 := "TestAutoWrapCustom.func1: "
-	wantMsgPrefixPrependSimplePkgName := "errors: "
+	wantMsgPrefixPrependSimplePkgName := "errors_test: "
 	// In the above wantXxx, ".func1" is the anonymous function passed to t.Run;
 	// ".func1.1" is the anonymous inner function that calls function AutoWrapCustom.
 
 	errorList := []error{nil, io.EOF, err0, err1, err2, stderrors.New("")}
-	excls := []ErrorReadOnlySet{nil, excl}
+	excls := []errors.ErrorReadOnlySet{nil, excl}
 	testCases := make([]struct {
 		err     error
-		ms      ErrorMessageStrategy
+		ms      errors.ErrorMessageStrategy
 		skip    int
-		excl    ErrorReadOnlySet
+		excl    errors.ErrorReadOnlySet
 		equal   bool
 		wantMsg string
-	}, len(errorList)*len(excls)*(int(PrependSimplePkgName)+3)*2)
+	}, len(errorList)*len(excls)*(int(errors.PrependSimplePkgName)+3)*2)
 	var idx int
 	for _, err := range errorList {
-		for ms := ErrorMessageStrategy(-1); ms <= PrependSimplePkgName+1; ms++ {
+		for ms := errors.ErrorMessageStrategy(-1); ms <= errors.PrependSimplePkgName+1; ms++ {
 			for skip := 0; skip <= 1; skip++ {
 				for _, excl := range excls {
 					if idx >= len(testCases) {
@@ -162,17 +162,17 @@ func TestAutoWrapCustom(t *testing.T) {
 					if err != nil {
 						if excl == nil || !excl.Contains(err) {
 							switch ms {
-							case OriginalMsg:
+							case errors.OriginalMsg:
 								// The prefix is "". Do nothing here.
-							case PrependFullPkgName:
+							case errors.PrependFullPkgName:
 								wantMsg = wantMsgPrefixPrependFullPkgName
-							case PrependSimpleFuncName:
+							case errors.PrependSimpleFuncName:
 								if skip == 0 {
 									wantMsg = wantMsgPrefixPrependSimpleFuncNameSkip0
 								} else {
 									wantMsg = wantMsgPrefixPrependSimpleFuncNameSkip1
 								}
-							case PrependSimplePkgName:
+							case errors.PrependSimplePkgName:
 								wantMsg = wantMsgPrefixPrependSimplePkgName
 							default:
 								if skip == 0 {
@@ -217,7 +217,7 @@ func TestAutoWrapCustom(t *testing.T) {
 			fmt.Sprintf("case %d?err=%q&ms=%s(%[3]d)&skip=%d&hasExcl=%t", i, tc.err, tc.ms, tc.skip, tc.excl != nil),
 			func(t *testing.T) {
 				func() { // Use an inner function to test the "skip".
-					got := AutoWrapCustom(tc.err, tc.ms, tc.skip, tc.excl)
+					got := errors.AutoWrapCustom(tc.err, tc.ms, tc.skip, tc.excl)
 					if (got == tc.err) != tc.equal {
 						if tc.equal {
 							t.Errorf("got %q; != tc.err", got)

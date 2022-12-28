@@ -99,7 +99,7 @@ func AutoWrapCustom(err error, ms ErrorMessageStrategy, skip int, exclusions Err
 	if err == nil || exclusions != nil && exclusions.Contains(err) {
 		return err
 	}
-	ae := &autoWrapError{wrapped: err}
+	ae := &autoWrapError{err: err}
 
 	// Find the first error that isn't *autoWrapError
 	// along the Unwrap error chain.
@@ -117,8 +117,8 @@ func AutoWrapCustom(err error, ms ErrorMessageStrategy, skip int, exclusions Err
 //
 // It consists of the wrapped error and an error message.
 type autoWrapError struct {
-	wrapped error // the wrapped error, must be non-nil
-	msg     string
+	err error // the wrapped error, must be non-nil
+	msg string
 }
 
 // Error reports the error message.
@@ -128,5 +128,5 @@ func (ae *autoWrapError) Error() string {
 
 // Unwrap returns the wrapped error.
 func (ae *autoWrapError) Unwrap() error {
-	return ae.wrapped
+	return ae.err
 }

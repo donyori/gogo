@@ -44,11 +44,11 @@ const CopyrightNoticeWithSourcePatternLayout = "^    %s  Copyright [(]C[)] %v  %
 func TestPrintCopyrightNotice(t *testing.T) {
 	const (
 		program = "testgogo"
-		year    = "2019-2022"
 		author  = "donyori"
 		source  = "https://github.com/donyori/gogo"
 	)
-	var nowYear = time.Now().Year()
+	nowYear := time.Now().Year()
+	year := fmt.Sprintf("2019-%d", nowYear)
 
 	testCases := []struct {
 		program, year, author, source string

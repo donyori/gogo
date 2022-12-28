@@ -78,11 +78,11 @@ type ResettableBufferedReader interface {
 
 // defaultBufferSize is the default buffer size used by functions
 // NewBufferedReader, NewBufferedWriter, and NewBufferedWriterSize.
-const defaultBufferSize = 4096
+const defaultBufferSize int = 4096
 
 // minReadBufferSize is the minimum buffer size of the reader
 // used by function NewBufferedReaderSize.
-const minReadBufferSize = 16
+const minReadBufferSize int = 16
 
 // resettableBufferedReader is an implementation of
 // interface ResettableBufferedReader based on bufio.Reader.

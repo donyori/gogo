@@ -16,9 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package errors
-
-// This file requires the unexported type: errorList.
+package errors_test
 
 import (
 	stderrors "errors"
@@ -26,6 +24,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/donyori/gogo/errors"
 )
 
 var errorsForErrorList []error // It will be set in function init.
@@ -61,13 +61,13 @@ func TestNewErrorList(t *testing.T) {
 
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
-			el := NewErrorList(true, tc.errs...)
+			el := errors.NewErrorList(true, tc.errs...)
 			if el == nil {
 				t.Error("got a nil error list")
 			} else {
-				e := el.(*errorList)
-				if errorsNotEqual(e.list, tc.want) {
-					t.Errorf("got %v; want %v", e.list, tc.want)
+				e := el.(*errors.ErrorListImpl)
+				if list := e.GetList(); errorsNotEqual(list, tc.want) {
+					t.Errorf("got %v; want %v", list, tc.want)
 				}
 			}
 		})
@@ -98,10 +98,10 @@ func TestErrorList_Append(t *testing.T) {
 
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
-			el := NewErrorList(true).(*errorList)
+			el := errors.NewErrorList(true).(*errors.ErrorListImpl)
 			el.Append(tc.errs...)
-			if errorsNotEqual(el.list, tc.want) {
-				t.Errorf("got %v; want %v", el.list, tc.want)
+			if list := el.GetList(); errorsNotEqual(list, tc.want) {
+				t.Errorf("got %v; want %v", list, tc.want)
 			}
 		})
 	}
@@ -109,19 +109,19 @@ func TestErrorList_Append(t *testing.T) {
 
 func TestErrorList_ToError(t *testing.T) {
 	testCases := []struct {
-		el  *errorList
+		el  *errors.ErrorListImpl
 		err error
 	}{
-		{NewErrorList(true).(*errorList), nil},
-		{NewErrorList(true, []error{}...).(*errorList), nil},
-		{NewErrorList(true, nil).(*errorList), nil},
-		{NewErrorList(true, errorsForErrorList[0]).(*errorList), errorsForErrorList[0]},
-		{NewErrorList(true, errorsForErrorList...).(*errorList), nil}, // this case, err will be set later
+		{errors.NewErrorList(true).(*errors.ErrorListImpl), nil},
+		{errors.NewErrorList(true, []error{}...).(*errors.ErrorListImpl), nil},
+		{errors.NewErrorList(true, nil).(*errors.ErrorListImpl), nil},
+		{errors.NewErrorList(true, errorsForErrorList[0]).(*errors.ErrorListImpl), errorsForErrorList[0]},
+		{errors.NewErrorList(true, errorsForErrorList...).(*errors.ErrorListImpl), nil}, // this case, err will be set later
 	}
 	testCases[4].err = testCases[4].el
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.el.list), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.el.GetList()), func(t *testing.T) {
 			err := tc.el.ToError()
 			if !reflect.DeepEqual(err, tc.err) {
 				t.Errorf("got %v; want %v", err, tc.err)
@@ -152,9 +152,9 @@ func TestErrorList_Deduplicate(t *testing.T) {
 
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
-			el := NewErrorList(false, tc.errs...)
+			el := errors.NewErrorList(false, tc.errs...)
 			el.Deduplicate()
-			if errorsNotEqual(el.(*errorList).list, tc.want) {
+			if errorsNotEqual(el.(*errors.ErrorListImpl).GetList(), tc.want) {
 				t.Errorf("el after deduplicate: %v; want %v", el, tc.want)
 			}
 		})
@@ -189,7 +189,7 @@ func TestErrorList_Error(t *testing.T) {
 
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
-			el := NewErrorList(false, tc.errs...)
+			el := errors.NewErrorList(false, tc.errs...)
 			s := el.Error()
 			if s != tc.want {
 				t.Errorf("got %q; want %q", s, tc.want)
@@ -221,10 +221,10 @@ func TestCombine(t *testing.T) {
 
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
-			err := Combine(tc.errs...)
-			if el, ok := err.(*errorList); ok {
-				if errorsNotEqual(el.list, tc.want) {
-					t.Errorf("got %v; want %v", el.list, tc.want)
+			err := errors.Combine(tc.errs...)
+			if el, ok := err.(*errors.ErrorListImpl); ok {
+				if list := el.GetList(); errorsNotEqual(list, tc.want) {
+					t.Errorf("got %v; want %v", list, tc.want)
 				}
 			} else if len(tc.want) > 1 {
 				t.Errorf("got %v; want multiple errors in a list: %v", err, tc.want)

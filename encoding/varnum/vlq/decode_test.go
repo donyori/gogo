@@ -16,9 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package vlq
-
-// This file indirectly requires the unexported variable: minUint64s.
+package vlq_test
 
 import (
 	"errors"
@@ -27,12 +25,13 @@ import (
 	"testing"
 
 	"github.com/donyori/gogo/encoding/varnum/uintconv"
+	"github.com/donyori/gogo/encoding/varnum/vlq"
 )
 
 func TestDecodeUint64(t *testing.T) {
 	for i, src := range encodedUint64s {
 		t.Run(fmt.Sprintf("src=%X", src), func(t *testing.T) {
-			u, err := DecodeUint64(src)
+			u, err := vlq.DecodeUint64(src)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -53,16 +52,16 @@ func TestDecodeUint64(t *testing.T) {
 			name = fmt.Sprintf("src=%X(Incomplete)", src)
 		}
 		t.Run(name, func(t *testing.T) {
-			u, err := DecodeUint64(src)
-			if !errors.Is(err, ErrSrcIncomplete) {
+			u, err := vlq.DecodeUint64(src)
+			if !errors.Is(err, vlq.ErrSrcIncomplete) {
 				t.Errorf("got %#X, %v", u, err)
 			}
 		})
 	}
 	for _, src := range tooLargeSrcs {
 		t.Run(fmt.Sprintf("src=%X(TooLarge)", src), func(t *testing.T) {
-			u, err := DecodeUint64(src)
-			if !errors.Is(err, ErrSrcTooLarge) {
+			u, err := vlq.DecodeUint64(src)
+			if !errors.Is(err, vlq.ErrSrcTooLarge) {
 				t.Errorf("got %#X, %v", u, err)
 			}
 		})
@@ -72,7 +71,7 @@ func TestDecodeUint64(t *testing.T) {
 func TestDecodeInt64(t *testing.T) {
 	for i, src := range encodedUint64s {
 		t.Run(fmt.Sprintf("src=%X", src), func(t *testing.T) {
-			x, err := DecodeInt64(src)
+			x, err := vlq.DecodeInt64(src)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -86,7 +85,7 @@ func TestDecodeInt64(t *testing.T) {
 func TestDecodeFloat64(t *testing.T) {
 	for i, src := range encodedUint64s {
 		t.Run(fmt.Sprintf("src=%X", src), func(t *testing.T) {
-			f, err := DecodeFloat64(src)
+			f, err := vlq.DecodeFloat64(src)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -16,14 +16,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package spmd
-
-// This file requires the unexported type: controller.
+package spmd_test
 
 import (
 	"testing"
 	"time"
 
+	"github.com/donyori/gogo/concurrency/framework/spmd"
 	"github.com/donyori/gogo/container/sequence/array"
 )
 
@@ -40,7 +39,7 @@ func TestCommunicator_Send_Receive(t *testing.T) {
 	// Round 4: 1 -> 0, 3 -> 2
 	// Round 5: 2 -> 0, 3 -> 1
 	// Round 6: 3 -> 0, 2 -> 1
-	prs := Run(4, func(world Communicator[int], commMap map[string]Communicator[int]) {
+	prs := spmd.Run(4, func(world spmd.Communicator[int], commMap map[string]spmd.Communicator[int]) {
 		r := world.Rank()
 		var src, dst int
 		sendTest := func() {
@@ -52,8 +51,8 @@ func TestCommunicator_Send_Receive(t *testing.T) {
 			msg, ok := world.Receive(src)
 			if !ok {
 				t.Errorf("goroutine %d, src %d, Receive returns ok to false", r, src)
-			} else if wanted := dataFn(src, r); msg != wanted {
-				t.Errorf("goroutine %d, src %d, Receive got %d; want %d", r, src, msg, wanted)
+			} else if want := dataFn(src, r); msg != want {
+				t.Errorf("goroutine %d, src %d, Receive got %d; want %d", r, src, msg, want)
 			}
 		}
 		switch r {
@@ -104,7 +103,7 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 	dataFn := func(src, dst int) int {
 		return src*10 + dst
 	}
-	prs := Run(7, func(world Communicator[int], commMap map[string]Communicator[int]) {
+	prs := spmd.Run(7, func(world spmd.Communicator[int], commMap map[string]spmd.Communicator[int]) {
 		if world.Rank() == 6 {
 			timer := time.AfterFunc(time.Second, func() {
 				t.Error("timeout")
@@ -134,8 +133,8 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 		checkSrcMsg := func() {
 			if src < 0 {
 				t.Errorf("goroutine %d, detected an unexpected quit signal", r)
-			} else if wanted := dataFn(src, r); msg != wanted {
-				t.Errorf("goroutine %d, src %d, Receive got %d; want %d", r, src, msg, wanted)
+			} else if want := dataFn(src, r); msg != want {
+				t.Errorf("goroutine %d, src %d, Receive got %d; want %d", r, src, msg, want)
 			}
 		}
 		switch r {
@@ -179,8 +178,8 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 				msg, ok := comm.Receive(src)
 				if !ok {
 					t.Errorf("goroutine %d, detected an unexpected quit signal", r)
-				} else if wanted := dataFn(src, r); msg != wanted {
-					t.Errorf("goroutine %d, src %d, Receive got %d; want %d", r, src, msg, wanted)
+				} else if want := dataFn(src, r); msg != want {
+					t.Errorf("goroutine %d, src %d, Receive got %d; want %d", r, src, msg, want)
 				}
 			}
 			world.Barrier()
@@ -205,7 +204,7 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 
 func TestCommunicator_Barrier(t *testing.T) {
 	times := make([]time.Time, 4)
-	prs := Run(4, func(world Communicator[int], commMap map[string]Communicator[int]) {
+	prs := spmd.Run(4, func(world spmd.Communicator[int], commMap map[string]spmd.Communicator[int]) {
 		r := world.Rank()
 		time.Sleep(time.Millisecond * time.Duration(r))
 		world.Barrier()
@@ -233,7 +232,7 @@ func TestCommunicator_Broadcast(t *testing.T) {
 		{nil, nil, nil, complex(1, -1)},
 		{},
 	}
-	ctrl := New(4, func(world Communicator[any], commMap map[string]Communicator[any]) {
+	ctrl := spmd.New(4, func(world spmd.Communicator[any], commMap map[string]spmd.Communicator[any]) {
 		r := world.Rank()
 		for i, a := range data {
 			msg, ok := world.Broadcast(i%4, a[r])
@@ -244,19 +243,19 @@ func TestCommunicator_Broadcast(t *testing.T) {
 				t.Errorf("goroutine %d, root %d, got %v; want %v", r, i%4, msg, a[i%4])
 			}
 		}
-	}, nil).(*controller[any])
+	}, nil)
 	ctrl.Run()
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
 	}
-	if n := len(ctrl.world.bcastMap); n > 0 {
+	if n := spmd.WrapController[any](ctrl).GetWorldBcastMapLen(); n > 0 {
 		t.Errorf("broadcast channel map is NOT clean: %d element(s) remained", n)
 	}
 }
 
 func TestCommunicator_Scatter(t *testing.T) {
 	a := array.SliceDynamicArray[int]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	wanted := [4]array.SliceDynamicArray[int]{
+	want := [4]array.SliceDynamicArray[int]{
 		{1, 2, 3},
 		{4, 5, 6},
 		{7, 8},
@@ -269,7 +268,7 @@ func TestCommunicator_Scatter(t *testing.T) {
 		{nil, nil, nil, a},
 		{},
 	}
-	ctrl := New(4, func(world Communicator[int], commMap map[string]Communicator[int]) {
+	ctrl := spmd.New(4, func(world spmd.Communicator[int], commMap map[string]spmd.Communicator[int]) {
 		r := world.Rank()
 		for i, a := range data {
 			intArray, ok := world.Scatter(i%4, a[r])
@@ -278,30 +277,30 @@ func TestCommunicator_Scatter(t *testing.T) {
 			}
 			if intArray == nil {
 				if i < 4 {
-					t.Errorf("goroutine %d, root %d, intArray is nil; want %v", r, i%4, wanted[r])
+					t.Errorf("goroutine %d, root %d, intArray is nil; want %v", r, i%4, want[r])
 				}
 				continue
 			}
-			if n := intArray.Len(); n != wanted[r].Len() {
-				t.Errorf("goroutine %d, root %d, got intArray.Len %d; want %d", r, i%4, n, wanted[r].Len())
+			if n := intArray.Len(); n != want[r].Len() {
+				t.Errorf("goroutine %d, root %d, got intArray.Len %d; want %d", r, i%4, n, want[r].Len())
 				continue
 			}
 			var k int
 			intArray.Range(func(x int) (cont bool) {
-				if x != wanted[r][k] {
-					t.Errorf("goroutine %d, root %d, got intArray[%d] %d; want %d", r, i%4, k, x, wanted[r][k])
+				if x != want[r][k] {
+					t.Errorf("goroutine %d, root %d, got intArray[%d] %d; want %d", r, i%4, k, x, want[r][k])
 					return false
 				}
 				k++
 				return true
 			})
 		}
-	}, nil).(*controller[int])
+	}, nil)
 	ctrl.Run()
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
 	}
-	if n := len(ctrl.world.scatterMap); n > 0 {
+	if n := spmd.WrapController[int](ctrl).GetWorldScatterMapLen(); n > 0 {
 		t.Errorf("scatter channel map is NOT clean: %d element(s) remained", n)
 	}
 }
@@ -313,7 +312,7 @@ func TestCommunicator_Gather(t *testing.T) {
 		{nil, 2, 3},
 		{},
 	}
-	ctrl := New(4, func(world Communicator[any], commMap map[string]Communicator[any]) {
+	ctrl := spmd.New(4, func(world spmd.Communicator[any], commMap map[string]spmd.Communicator[any]) {
 		r := world.Rank()
 		for _, a := range data {
 			for root := 0; root < 4; root++ {
@@ -337,12 +336,12 @@ func TestCommunicator_Gather(t *testing.T) {
 				}
 			}
 		}
-	}, nil).(*controller[any])
+	}, nil)
 	ctrl.Run()
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
 	}
-	if n := len(ctrl.world.gatherMap); n > 0 {
+	if n := spmd.WrapController[any](ctrl).GetWorldGatherMapLen(); n > 0 {
 		t.Errorf("gather channel map is NOT clean: %d element(s) remained", n)
 	}
 }
