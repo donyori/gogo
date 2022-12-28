@@ -50,8 +50,8 @@ func subtestOrderedLess[T constraints.Ordered](t *testing.T, name string, data [
 		for _, pair := range data {
 			a, b := pair[0], pair[1]
 			t.Run(fmt.Sprintf("a=%v(%[1]T)&b=%v(%[2]T)", a, b), func(t *testing.T) {
-				if r := compare.OrderedLess[T](a, b); r != (a < b) {
-					t.Errorf("got %t", r)
+				if got := compare.OrderedLess[T](a, b); got != (a < b) {
+					t.Errorf("got %t", got)
 				}
 			})
 		}
@@ -78,8 +78,8 @@ func TestFloatLess(t *testing.T) {
 		for i := range float64Pairs {
 			a, b := float64Pairs[i][0], float64Pairs[i][1]
 			t.Run(fmt.Sprintf("a=%.1f&b=%.1f", a, b), func(t *testing.T) {
-				if r := compare.FloatLess(a, b); r != wants[i] {
-					t.Errorf("got %t", r)
+				if got := compare.FloatLess(a, b); got != wants[i] {
+					t.Errorf("got %t", got)
 				}
 			})
 		}
@@ -92,8 +92,8 @@ func TestFloatLess(t *testing.T) {
 		for i := range float32Pairs {
 			a, b := float32Pairs[i][0], float32Pairs[i][1]
 			t.Run(fmt.Sprintf("a=%.1f&b=%.1f", a, b), func(t *testing.T) {
-				if r := compare.FloatLess(a, b); r != wants[i] {
-					t.Errorf("got %t", r)
+				if got := compare.FloatLess(a, b); got != wants[i] {
+					t.Errorf("got %t", got)
 				}
 			})
 		}
@@ -107,8 +107,8 @@ func TestLessFunc_Not(t *testing.T) {
 	for _, pair := range intPairs {
 		a, b := pair[0], pair[1]
 		t.Run(fmt.Sprintf("a=%d&b=%d", a, b), func(t *testing.T) {
-			if r := nLess(a, b); r != !(a < b) {
-				t.Errorf("got %t", r)
+			if got := nLess(a, b); got != !(a < b) {
+				t.Errorf("got %t", got)
 			}
 		})
 	}
@@ -121,8 +121,8 @@ func TestLessFunc_Reverse(t *testing.T) {
 	for _, pair := range intPairs {
 		a, b := pair[0], pair[1]
 		t.Run(fmt.Sprintf("a=%d&b=%d", a, b), func(t *testing.T) {
-			if r := rLess(a, b); r != (b < a) {
-				t.Errorf("got %t", r)
+			if got := rLess(a, b); got != (b < a) {
+				t.Errorf("got %t", got)
 			}
 		})
 	}
@@ -135,8 +135,8 @@ func TestLessFunc_ToEqual(t *testing.T) {
 	for _, pair := range intPairs {
 		a, b := pair[0], pair[1]
 		t.Run(fmt.Sprintf("a=%d&b=%d", a, b), func(t *testing.T) {
-			if r := eq(a, b); r != !(a < b || b < a) {
-				t.Errorf("got %t", r)
+			if got := eq(a, b); got != !(a < b || b < a) {
+				t.Errorf("got %t", got)
 			}
 		})
 	}

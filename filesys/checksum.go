@@ -85,7 +85,7 @@ func VerifyChecksum(file fs.File, closeFile bool, cs ...HashChecksum) bool {
 		return false
 	}
 	for i := range cs {
-		if !hex.CanEncodeToString(hs[i].Sum(nil), cs[i].ExpHex) {
+		if !hex.CanEncodeTo(hs[i].Sum(nil), cs[i].ExpHex) {
 			return false
 		}
 	}

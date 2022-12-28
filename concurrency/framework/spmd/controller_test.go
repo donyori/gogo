@@ -81,7 +81,7 @@ func TestController_Wait_BeforeLaunch(t *testing.T) {
 	ctrl := spmd.New(0, func(world spmd.Communicator[int], commMap map[string]spmd.Communicator[int]) {
 		// Do nothing.
 	}, nil)
-	if r := ctrl.Wait(); r != -1 {
-		t.Errorf("got %d; want -1", r)
+	if got := ctrl.Wait(); got != -1 {
+		t.Errorf("got %d; want -1", got)
 	}
 }

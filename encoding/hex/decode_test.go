@@ -26,12 +26,12 @@ import (
 
 func TestDecodedLen(t *testing.T) {
 	for _, tc := range testEncodeCases {
-		if tc.upper { // only use the lower cases
+		if tc.upper { // only use the lower cases to avoid redundant sources
 			continue
 		}
 		t.Run("dst="+tc.dstName, func(t *testing.T) {
-			if n := hex.DecodedLen(len(tc.dst)); n != len(tc.src) {
-				t.Errorf("got %d; want %d", n, len(tc.src))
+			if n := hex.DecodedLen(len(tc.dstStr)); n != len(tc.srcStr) {
+				t.Errorf("got %d; want %d", n, len(tc.srcStr))
 			}
 		})
 	}
@@ -39,12 +39,12 @@ func TestDecodedLen(t *testing.T) {
 
 func TestDecodedLen64(t *testing.T) {
 	for _, tc := range testEncodeCases {
-		if tc.upper { // only use the lower cases
+		if tc.upper { // only use the lower cases to avoid redundant sources
 			continue
 		}
 		t.Run("dst="+tc.dstName, func(t *testing.T) {
-			if n := hex.DecodedLen64(int64(len(tc.dst))); n != int64(len(tc.src)) {
-				t.Errorf("got %d; want %d", n, len(tc.src))
+			if n := hex.DecodedLen64(int64(len(tc.dstStr))); n != int64(len(tc.srcStr)) {
+				t.Errorf("got %d; want %d", n, len(tc.srcStr))
 			}
 		})
 	}

@@ -29,61 +29,6 @@ import (
 	"github.com/donyori/gogo/encoding/hex"
 )
 
-type testEncodeCase struct {
-	srcName string
-	dstName string
-	dst     string
-	src     string
-	upper   bool
-}
-
-var testEncodeCases []*testEncodeCase
-var testEncodeCasesDstMaxLen int
-
-func init() {
-	srcs := []string{"", "Hello world! 你好，世界！", ""}
-	var longStringBuilder strings.Builder
-	longStringBuilder.Grow(16384 + len(srcs[1]))
-	for longStringBuilder.Len() < 16384 {
-		longStringBuilder.WriteString(srcs[1])
-	}
-	srcs[2] = longStringBuilder.String()
-	uppers := []bool{false, true}
-	testEncodeCases = make([]*testEncodeCase, len(srcs)*len(uppers))
-	var i int
-	for _, src := range srcs {
-		for _, upper := range uppers {
-			s := stdhex.EncodeToString([]byte(src))
-			if upper {
-				s = strings.ToUpper(s)
-			}
-			var srcName string
-			if len(src) <= 80 {
-				srcName = strconv.Quote(src)
-			} else {
-				srcName = fmt.Sprintf("<long string %d>", len(src))
-			}
-			var dstName string
-			if len(s) <= 80 {
-				dstName = strconv.Quote(s)
-			} else {
-				dstName = fmt.Sprintf("<long string %d>", len(s))
-			}
-			testEncodeCases[i] = &testEncodeCase{
-				srcName: srcName,
-				dstName: dstName,
-				dst:     s,
-				src:     src,
-				upper:   upper,
-			}
-			i++
-			if testEncodeCasesDstMaxLen < len(s) {
-				testEncodeCasesDstMaxLen = len(s)
-			}
-		}
-	}
-}
-
 func TestEncode_CompareWithOfficial(t *testing.T) {
 	srcs := [][]byte{nil, {}, []byte("Hello world! 你好，世界！")}
 	dst := make([]byte, stdhex.EncodedLen(len(srcs[len(srcs)-1])))
@@ -109,12 +54,12 @@ func TestEncode_CompareWithOfficial(t *testing.T) {
 
 func TestEncodedLen(t *testing.T) {
 	for _, tc := range testEncodeCases {
-		if tc.upper { // only use the lower cases
+		if tc.upper { // only use the lower cases to avoid redundant sources
 			continue
 		}
 		t.Run("src="+tc.srcName, func(t *testing.T) {
-			if n := hex.EncodedLen(len(tc.src)); n != len(tc.dst) {
-				t.Errorf("got %d; want %d", n, len(tc.dst))
+			if n := hex.EncodedLen(len(tc.srcStr)); n != len(tc.dstStr) {
+				t.Errorf("got %d; want %d", n, len(tc.dstStr))
 			}
 		})
 	}
@@ -122,12 +67,12 @@ func TestEncodedLen(t *testing.T) {
 
 func TestEncodedLen64(t *testing.T) {
 	for _, tc := range testEncodeCases {
-		if tc.upper { // only use the lower cases
+		if tc.upper { // only use the lower cases to avoid redundant sources
 			continue
 		}
 		t.Run("src="+tc.srcName, func(t *testing.T) {
-			if n := hex.EncodedLen64(int64(len(tc.src))); n != int64(len(tc.dst)) {
-				t.Errorf("got %d; want %d", n, len(tc.dst))
+			if n := hex.EncodedLen64(int64(len(tc.srcStr))); n != int64(len(tc.dstStr)) {
+				t.Errorf("got %d; want %d", n, len(tc.dstStr))
 			}
 		})
 	}
@@ -137,10 +82,18 @@ func TestEncode(t *testing.T) {
 	dst := make([]byte, testEncodeCasesDstMaxLen+1024)
 	for _, tc := range testEncodeCases {
 		t.Run(fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper), func(t *testing.T) {
-			n := hex.Encode(dst, []byte(tc.src), tc.upper)
-			if string(dst[:n]) != tc.dst {
-				t.Errorf("got %q; want %q", dst[:n], tc.dst)
-			}
+			t.Run("type=[]byte", func(t *testing.T) {
+				n := hex.Encode(dst, tc.srcBytes, tc.upper)
+				if string(dst[:n]) != tc.dstStr {
+					t.Errorf("got %q; want %q", dst[:n], tc.dstStr)
+				}
+			})
+			t.Run("type=string", func(t *testing.T) {
+				n := hex.Encode(dst, tc.srcStr, tc.upper)
+				if string(dst[:n]) != tc.dstStr {
+					t.Errorf("got %q; want %q", dst[:n], tc.dstStr)
+				}
+			})
 		})
 	}
 }
@@ -148,10 +101,18 @@ func TestEncode(t *testing.T) {
 func TestEncodeToString(t *testing.T) {
 	for _, tc := range testEncodeCases {
 		t.Run(fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper), func(t *testing.T) {
-			s := hex.EncodeToString([]byte(tc.src), tc.upper)
-			if s != tc.dst {
-				t.Errorf("got %q; want %q", s, tc.dst)
-			}
+			t.Run("type=[]byte", func(t *testing.T) {
+				s := hex.EncodeToString(tc.srcBytes, tc.upper)
+				if s != tc.dstStr {
+					t.Errorf("got %q; want %q", s, tc.dstStr)
+				}
+			})
+			t.Run("type=string", func(t *testing.T) {
+				s := hex.EncodeToString(tc.srcStr, tc.upper)
+				if s != tc.dstStr {
+					t.Errorf("got %q; want %q", s, tc.dstStr)
+				}
+			})
 		})
 	}
 }
@@ -170,13 +131,13 @@ func TestEncoder_Write(t *testing.T) {
 			} else {
 				encoder = lowerEncoder
 			}
-			n, err := encoder.Write([]byte(tc.src))
+			n, err := encoder.Write(tc.srcBytes)
 			if err != nil {
 				t.Fatal(err)
 			}
 			n = hex.EncodedLen(n)
-			if string(buf[:n]) != tc.dst {
-				t.Errorf("got %q; want %q", buf[:n], tc.dst)
+			if string(buf[:n]) != tc.dstStr {
+				t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
 			}
 		})
 	}
@@ -197,7 +158,7 @@ func TestEncoder_WriteByte(t *testing.T) {
 				encoder = lowerEncoder
 			}
 			var n int
-			for _, b := range []byte(tc.src) {
+			for _, b := range tc.srcBytes {
 				err := encoder.WriteByte(b)
 				if err != nil {
 					t.Fatalf("WriteByte(%q) - %v", b, err)
@@ -205,8 +166,34 @@ func TestEncoder_WriteByte(t *testing.T) {
 				n++
 			}
 			n = hex.EncodedLen(n)
-			if string(buf[:n]) != tc.dst {
-				t.Errorf("got %q; want %q", buf[:n], tc.dst)
+			if string(buf[:n]) != tc.dstStr {
+				t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
+			}
+		})
+	}
+}
+
+func TestEncoder_WriteString(t *testing.T) {
+	buf := make([]byte, testEncodeCasesDstMaxLen+1024)
+	w := bytes.NewBuffer(buf)
+	upperEncoder := hex.NewEncoder(w, true)
+	lowerEncoder := hex.NewEncoder(w, false)
+	for _, tc := range testEncodeCases {
+		t.Run(fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper), func(t *testing.T) {
+			w.Reset()
+			var encoder hex.Encoder
+			if tc.upper {
+				encoder = upperEncoder
+			} else {
+				encoder = lowerEncoder
+			}
+			n, err := encoder.WriteString(tc.srcStr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			n = hex.EncodedLen(n)
+			if string(buf[:n]) != tc.dstStr {
+				t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
 			}
 		})
 	}
@@ -226,13 +213,13 @@ func TestEncoder_ReadFrom(t *testing.T) {
 			} else {
 				encoder = lowerEncoder
 			}
-			n, err := encoder.ReadFrom(strings.NewReader(tc.src))
+			n, err := encoder.ReadFrom(strings.NewReader(tc.srcStr))
 			if err != nil {
 				t.Fatal(err)
 			}
 			n = hex.EncodedLen64(n)
-			if string(buf[:n]) != tc.dst {
-				t.Errorf("got %q; want %q", buf[:n], tc.dst)
+			if string(buf[:n]) != tc.dstStr {
+				t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
 			}
 		})
 	}

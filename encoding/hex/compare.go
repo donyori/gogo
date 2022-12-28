@@ -18,42 +18,50 @@
 
 package hex
 
-// CanEncode reports whether src can be encoded to
-// the hexadecimal representation x (in type []byte).
+import "github.com/donyori/gogo/constraints"
+
+// CanEncodeTo reports whether src can be encoded to
+// the hexadecimal representation x.
 //
 // It performs better than the comparison after encoding.
-func CanEncode(src, x []byte) bool {
-	if EncodedLen(len(src)) != len(x) {
+func CanEncodeTo[Bytes1, Bytes2 constraints.ByteSequence](src Bytes1, x Bytes2) bool {
+	n := EncodedLen(len(src))
+	if n != len(x) {
 		return false
 	}
-	var k int
-	for _, b := range src {
-		if x[k] < '0' || x[k+1] < '0' ||
-			lowercaseHexTable[b>>4] != x[k]|letterCaseDiff ||
-			lowercaseHexTable[b&0x0f] != x[k+1]|letterCaseDiff {
+	for i := 0; i < n; i += 2 {
+		if x[i] < '0' || x[i+1] < '0' ||
+			lowercaseHexTable[src[i>>1]>>4] != x[i]|letterCaseDiff ||
+			lowercaseHexTable[src[i>>1]&0x0f] != x[i+1]|letterCaseDiff {
 			return false
 		}
-		k += 2
 	}
 	return true
 }
 
-// CanEncodeToString reports whether src can be encoded to
-// the hexadecimal representation x (in type string).
+// CanEncodeToPrefix reports whether src can be encoded to
+// the hexadecimal representation that has the specified prefix.
 //
 // It performs better than the comparison after encoding.
-func CanEncodeToString(src []byte, x string) bool {
-	if EncodedLen(len(src)) != len(x) {
+func CanEncodeToPrefix[Bytes1, Bytes2 constraints.ByteSequence](src Bytes1, prefix Bytes2) bool {
+	n := len(prefix)
+	if n > EncodedLen(len(src)) {
 		return false
 	}
-	var k int
-	for _, b := range src {
-		if x[k] < '0' || x[k+1] < '0' ||
-			lowercaseHexTable[b>>4] != x[k]|letterCaseDiff ||
-			lowercaseHexTable[b&0x0f] != x[k+1]|letterCaseDiff {
+	if n&1 > 0 { // i.e., n%2 == 1
+		n--
+	}
+	for i := 0; i < n; i += 2 {
+		if prefix[i] < '0' || prefix[i+1] < '0' ||
+			lowercaseHexTable[src[i>>1]>>4] != prefix[i]|letterCaseDiff ||
+			lowercaseHexTable[src[i>>1]&0x0f] != prefix[i+1]|letterCaseDiff {
 			return false
 		}
-		k += 2
+	}
+	if len(prefix)&1 > 0 { // i.e., len(prefix)%2 == 1
+		// Here, n == len(prefix) - 1
+		return prefix[n] >= '0' &&
+			lowercaseHexTable[src[n>>1]>>4] == prefix[n]|letterCaseDiff
 	}
 	return true
 }

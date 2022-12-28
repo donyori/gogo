@@ -319,7 +319,7 @@ func writeSignAndLeadingZerosTo(w io.Writer, x int64, digits int, buf *[int64Buf
 	for i := 1; i < int64BufferLen; i++ {
 		buf[i] = '0'
 	}
-	ctr := digits - 16 // Counter for the number of leading zeros remaining to be written.
+	ctr := digits - 16 // counter for the number of leading zeros remaining to be written
 	if x < 0 {
 		if ctr <= int64BufferLen-1 {
 			written, err = w.Write(buf[:ctr+1])
@@ -332,7 +332,7 @@ func writeSignAndLeadingZerosTo(w io.Writer, x int64, digits int, buf *[int64Buf
 		}
 		ctr -= written - 1
 	}
-	var n int // For the return value of w.Write.
+	var n int // for the return value of w.Write
 	for ctr > 0 {
 		if ctr > int64BufferLen {
 			n, err = w.Write(buf[:])
@@ -344,5 +344,5 @@ func writeSignAndLeadingZerosTo(w io.Writer, x int64, digits int, buf *[int64Buf
 			return written, errors.AutoWrap(err)
 		}
 	}
-	return // err must be nil, so don't need errors.AutoWrap(err).
+	return // err must be nil, so don't need errors.AutoWrap(err)
 }

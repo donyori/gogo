@@ -39,8 +39,8 @@ func TestAnyEqual(t *testing.T) {
 	}
 	for _, pair := range pairs {
 		t.Run(fmt.Sprintf("a=%v(%[1]T)&b=%v(%[2]T)", pair[0], pair[1]), func(t *testing.T) {
-			if r := compare.AnyEqual(pair[0], pair[1]); r != (pair[0] == pair[1]) {
-				t.Errorf("got %t", r)
+			if got := compare.AnyEqual(pair[0], pair[1]); got != (pair[0] == pair[1]) {
+				t.Errorf("got %t", got)
 			}
 		})
 	}
@@ -61,8 +61,8 @@ func TestEqualFunc_Not(t *testing.T) {
 	neq := compare.AnyEqual.Not()
 	for _, pair := range pairs {
 		t.Run(fmt.Sprintf("a=%v(%[1]T)&b=%v(%[2]T)", pair[0], pair[1]), func(t *testing.T) {
-			if r := neq(pair[0], pair[1]); r != !compare.AnyEqual(pair[0], pair[1]) {
-				t.Errorf("got %t", r)
+			if got := neq(pair[0], pair[1]); got != !compare.AnyEqual(pair[0], pair[1]) {
+				t.Errorf("got %t", got)
 			}
 		})
 	}

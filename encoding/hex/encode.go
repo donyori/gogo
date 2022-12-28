@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/donyori/gogo/constraints"
 	"github.com/donyori/gogo/errors"
 )
 
@@ -45,9 +46,9 @@ func EncodedLen64(n int64) int64 {
 // It returns the number of bytes written into dst,
 // exactly EncodedLen(len(src)).
 //
-// Encode(dst, src, false) is equivalent to Encode(dst, src)
+// Encode[[]byte](dst, src, false) is equivalent to Encode(dst, src)
 // in official package encoding/hex.
-func Encode(dst, src []byte, upper bool) int {
+func Encode[Bytes constraints.ByteSequence](dst []byte, src Bytes, upper bool) int {
 	if reqLen := EncodedLen(len(src)); reqLen > len(dst) {
 		panic(errors.AutoMsg(fmt.Sprintf("dst is too small, length: %d, required: %d", len(dst), reqLen)))
 	}
@@ -58,9 +59,9 @@ func Encode(dst, src []byte, upper bool) int {
 //
 // upper indicates to use uppercase in hexadecimal representation.
 //
-// EncodeToString(src, false) is equivalent to EncodeToString(src)
+// EncodeToString[[]byte](src, false) is equivalent to EncodeToString(src)
 // in official package encoding/hex.
-func EncodeToString(src []byte, upper bool) string {
+func EncodeToString[Bytes constraints.ByteSequence](src Bytes, upper bool) string {
 	dst := make([]byte, EncodedLen(len(src)))
 	encode(dst, src, upper)
 	return string(dst)
@@ -69,12 +70,13 @@ func EncodeToString(src []byte, upper bool) string {
 // Encoder is a device to write hexadecimal encoding of input data
 // to the destination writer.
 //
-// It combines io.Writer, io.ByteWriter, and io.ReaderFrom.
+// It combines io.Writer, io.ByteWriter, io.StringWriter, and io.ReaderFrom.
 // All the methods write hexadecimal encoding of input data to
 // the destination writer.
 type Encoder interface {
 	io.Writer
 	io.ByteWriter
+	io.StringWriter
 	io.ReaderFrom
 
 	// EncodeDst returns the destination writer of this encoder.
@@ -105,7 +107,7 @@ func NewEncoder(w io.Writer, upper bool) Encoder {
 // Write writes hexadecimal encoding of p to its destination writer.
 //
 // It conforms to interface io.Writer.
-func (e *encoder) Write(p []byte) (n int, err error) {
+func (enc *encoder) Write(p []byte) (n int, err error) {
 	buf := encodeBufferPool.Get().(*[sourceBufferLen * 2]byte)
 	defer encodeBufferPool.Put(buf)
 	size := sourceBufferLen
@@ -113,9 +115,9 @@ func (e *encoder) Write(p []byte) (n int, err error) {
 		if len(p) < size {
 			size = len(p)
 		}
-		encoded := encode(buf[:], p[:size], e.upper)
+		encoded := encode(buf[:], p[:size], enc.upper)
 		var written int
-		written, err = e.w.Write(buf[:encoded])
+		written, err = enc.w.Write(buf[:encoded])
 		n += DecodedLen(written)
 		p = p[size:]
 	}
@@ -125,20 +127,40 @@ func (e *encoder) Write(p []byte) (n int, err error) {
 // WriteByte writes hexadecimal encoding of c to its destination writer.
 //
 // It conforms to interface io.ByteWriter.
-func (e *encoder) WriteByte(c byte) error {
+func (enc *encoder) WriteByte(c byte) error {
 	buf := encodeBufferPool.Get().(*[sourceBufferLen * 2]byte)
 	defer encodeBufferPool.Put(buf)
 	buf[0] = c
-	encoded := encode(buf[1:], buf[:1], e.upper)
-	_, err := e.w.Write(buf[1 : 1+encoded])
+	encoded := encode(buf[1:], buf[:1], enc.upper)
+	_, err := enc.w.Write(buf[1 : 1+encoded])
 	return errors.AutoWrap(err)
+}
+
+// WriteString writes hexadecimal encoding of s to its destination writer.
+//
+// It conforms to interface io.StringWriter.
+func (enc *encoder) WriteString(s string) (n int, err error) {
+	buf := encodeBufferPool.Get().(*[sourceBufferLen * 2]byte)
+	defer encodeBufferPool.Put(buf)
+	size := sourceBufferLen
+	for len(s) > 0 && err == nil {
+		if len(s) < size {
+			size = len(s)
+		}
+		encoded := encode(buf[:], s[:size], enc.upper)
+		var written int
+		written, err = enc.w.Write(buf[:encoded])
+		n += DecodedLen(written)
+		s = s[size:]
+	}
+	return n, errors.AutoWrap(err)
 }
 
 // ReadFrom writes hexadecimal encoding of data read from r
 // to its destination writer.
 //
 // It conforms to interface io.ReaderFrom.
-func (e *encoder) ReadFrom(r io.Reader) (n int64, err error) {
+func (enc *encoder) ReadFrom(r io.Reader) (n int64, err error) {
 	buf := sourceBufferPool.Get().(*[sourceBufferLen]byte)
 	defer sourceBufferPool.Put(buf)
 	for {
@@ -146,7 +168,7 @@ func (e *encoder) ReadFrom(r io.Reader) (n int64, err error) {
 		var writeErr error
 		if readLen > 0 {
 			n += int64(readLen)
-			_, writeErr = e.Write(buf[:readLen])
+			_, writeErr = enc.Write(buf[:readLen])
 		}
 		err = readErr
 		if errors.Is(err, io.EOF) {
@@ -164,23 +186,24 @@ func (e *encoder) ReadFrom(r io.Reader) (n int64, err error) {
 }
 
 // EncodeDst returns the destination writer of this encoder.
-func (e *encoder) EncodeDst() io.Writer {
-	return e.w
+func (enc *encoder) EncodeDst() io.Writer {
+	return enc.w
 }
 
 // encode is an implementation of function Encode,
 // without checking the length of dst.
 //
 // Caller should guarantee that len(dst) >= EncodedLen(len(src)).
-func encode(dst, src []byte, upper bool) int {
+func encode[Bytes constraints.ByteSequence](dst []byte, src Bytes, upper bool) int {
 	ht := lowercaseHexTable
 	if upper {
 		ht = uppercaseHexTable
 	}
+	end := EncodedLen(len(src))
 	var n int
-	for _, b := range src {
-		dst[n] = ht[b>>4]
-		dst[n+1] = ht[b&0x0f]
+	for n < end {
+		dst[n] = ht[src[n>>1]>>4]
+		dst[n+1] = ht[src[n>>1]&0x0f]
 		n += 2
 	}
 	return n
