@@ -86,13 +86,13 @@ func init() {
 
 // stringName returns the name of s for subtests and sub-benchmarks.
 func stringName(s string) string {
-	if len(s) <= 80 {
-		return strconv.Quote(s)
+	if len(s) <= 40 {
+		return strconv.QuoteToASCII(s)
 	}
 	return fmt.Sprintf(
 		"<long string (%d) %s...%s>",
 		len(s),
-		strings.TrimSuffix(strconv.Quote(s[:4]), `"`),
-		strings.TrimPrefix(strconv.Quote(s[len(s)-4:]), `"`),
+		strings.TrimSuffix(strconv.QuoteToASCII(s[:4]), `"`),
+		strings.TrimPrefix(strconv.QuoteToASCII(s[len(s)-4:]), `"`),
 	)
 }

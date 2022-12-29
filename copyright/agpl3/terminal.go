@@ -33,7 +33,8 @@ import (
 // terminalNoticeLayout is a layout for formatting a terminal copyright notice.
 //
 // It takes 3 arguments, <program>, <year>, and <name of author>.
-const terminalNoticeLayout = "    %s  Copyright (C) %s  %s\n" +
+const terminalNoticeLayout = "" +
+	"    %s  Copyright (C) %s  %s\n" +
 	"    This program comes with ABSOLUTELY NO WARRANTY; for details use `%[1]s show w'.\n" +
 	"    This is free software, and you are welcome to redistribute it\n" +
 	"    under certain conditions; use `%[1]s show c' for details.\n"

@@ -26,6 +26,12 @@ type ControllerImpl[Message any] struct {
 	*controller[Message]
 }
 
+// WrapController wraps a framework.Controller returned by
+// github.com/donyori/gogo/concurrency/framework/spmd.New
+// to access its unexported fields for testing.
+//
+// It panics if ctrl is not the result of
+// github.com/donyori/gogo/concurrency/framework/spmd.New.
 func WrapController[Message any](ctrl framework.Controller) *ControllerImpl[Message] {
 	if ctrl == nil {
 		return nil

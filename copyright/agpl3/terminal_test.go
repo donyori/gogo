@@ -30,12 +30,14 @@ import (
 	"github.com/donyori/gogo/copyright/agpl3"
 )
 
-const CopyrightNoticePatternLayout = "^    %s  Copyright [(]C[)] %v  %s\n" +
+const CopyrightNoticePatternLayout = "" +
+	"^    %s  Copyright [(]C[)] %v  %s\n" +
 	"    This program comes with ABSOLUTELY NO WARRANTY; for details use `%[1]s show w'.\n" +
 	"    This is free software, and you are welcome to redistribute it\n" +
 	"    under certain conditions; use `%[1]s show c' for details.\n$"
 
-const CopyrightNoticeWithSourcePatternLayout = "^    %s  Copyright [(]C[)] %v  %s\n" +
+const CopyrightNoticeWithSourcePatternLayout = "" +
+	"^    %s  Copyright [(]C[)] %v  %s\n" +
 	"    This program comes with ABSOLUTELY NO WARRANTY; for details use `%[1]s show w'.\n" +
 	"    This is free software, and you are welcome to redistribute it\n" +
 	"    under certain conditions; use `%[1]s show c' for details.\n" +
@@ -142,6 +144,21 @@ func TestResponseShowWC(t *testing.T) {
 		{[]string{"  show   c\t", "", "   "}, TermsAndConditions},
 		{[]string{"show w c"}, ""},
 		{[]string{"show", "w", "c"}, ""},
+		{[]string{"w"}, ""},
+		{[]string{"c"}, ""},
+		{[]string{"w c"}, ""},
+		{[]string{"shows w"}, ""},
+		{[]string{"shows c"}, ""},
+		{[]string{"shows w c"}, ""},
+		{[]string{"showw"}, ""},
+		{[]string{"showc"}, ""},
+		{[]string{"showwc"}, ""},
+		{[]string{"Show W"}, DisclaimerOfWarranty},
+		{[]string{"Show C"}, TermsAndConditions},
+		{[]string{"Show W C"}, ""},
+		{[]string{"SHOW W"}, DisclaimerOfWarranty},
+		{[]string{"SHOW C"}, TermsAndConditions},
+		{[]string{"SHOW W C"}, ""},
 	}
 
 	for _, tc := range testCases {
@@ -174,7 +191,7 @@ func argsToName(args []string) string {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(strconv.Quote(arg))
+		b.WriteString(strconv.QuoteToASCII(arg))
 	}
 	b.WriteByte(']')
 	return b.String()

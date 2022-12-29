@@ -177,6 +177,7 @@ func TestCanEncodeToPrefix(t *testing.T) {
 					continue
 				}
 				prefixSet[prefix] = true
+				// srcCase.dstStr is in lower case as the upper case is skipped.
 				want := strings.HasPrefix(srcCase.dstStr, strings.ToLower(prefix))
 				t.Run(
 					fmt.Sprintf("src=%s&prefix=%s&upper=%t", srcCase.srcName, stringName(prefix), prefixCase.upper),

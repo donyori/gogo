@@ -38,7 +38,7 @@ func TestEncode_CompareWithOfficial(t *testing.T) {
 		if src == nil {
 			srcName = "<nil>"
 		} else {
-			srcName = strconv.Quote(string(src))
+			srcName = strconv.QuoteToASCII(string(src))
 		}
 		t.Run("src="+srcName, func(t *testing.T) {
 			n := hex.Encode(dst, src, false)
