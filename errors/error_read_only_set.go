@@ -187,6 +187,8 @@ func (erosi *errorReadOnlySetIs) Range(handler func(err error) (cont bool)) {
 //
 // An error is regarded as "belonging to" this set
 // if it has the same message as any item in this set.
+//
+// In particular, the message of nil error is considered "<nil>".
 type errorReadOnlySetSameMessage struct {
 	set map[string]map[error]bool
 }
@@ -195,6 +197,8 @@ type errorReadOnlySetSameMessage struct {
 //
 // The returned set regards that an error "belongs to" it
 // if the error has the same message as any item in this set.
+//
+// In particular, the message of nil error is considered "<nil>".
 func NewErrorReadOnlySetSameMessage(err ...error) ErrorReadOnlySet {
 	erossm := &errorReadOnlySetSameMessage{make(map[string]map[error]bool, len(err))}
 	for _, e := range err {
@@ -226,6 +230,8 @@ func (erossm *errorReadOnlySetSameMessage) Len() int {
 //
 // err is regarded as "belonging to" this set
 // if it has the same message as any item in this set.
+//
+// In particular, the message of nil error is considered "<nil>".
 func (erossm *errorReadOnlySetSameMessage) Contains(err error) bool {
 	if err == nil {
 		return erossm.set["<nil>"] != nil

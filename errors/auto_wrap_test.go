@@ -22,16 +22,40 @@ import (
 	stderrors "errors"
 	"fmt"
 	"io"
+	"strconv"
 	"testing"
 
 	"github.com/donyori/gogo/errors"
 )
 
+type testError struct {
+	err error
+}
+
+func (te *testError) Error() string {
+	return "testError wrapped on " + strconv.Quote(te.err.Error())
+}
+
+func (te *testError) Unwrap() error {
+	return te.err
+}
+
 func TestAutoWrap(t *testing.T) {
+	// ".func1" is the anonymous function passed to t.Run.
+	const fullFuncPrefix = "github.com/donyori/gogo/errors_test.TestAutoWrap.func1: "
+
 	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrapError(err0, "manually created: error 1 - "+err0.Error())
-	err2 := errors.NewAutoWrapError(err1, "manually created: error 2 - "+err1.Error())
-	wantMsg := "github.com/donyori/gogo/errors_test.TestAutoWrap.func1: " + err0.Error() // ".func1" is the anonymous function passed to t.Run.
+	err1 := errors.NewAutoWrappedError(err0, "manually created: error 1 - "+err0.Error())
+	err2 := errors.NewAutoWrappedError(err1, "manually created: error 2 - "+err1.Error())
+	wantMsgErr0To2 := fullFuncPrefix + err0.Error()
+
+	err3 := &testError{err: err2}
+	err4 := errors.NewAutoWrappedError(err3, "manually created: error 4 - "+err3.Error())
+	err5 := errors.NewAutoWrappedError(err4, "manually created: error 5 - "+err4.Error())
+	wantMsgErr3To5 := fullFuncPrefix + err3.Error()
+
+	err6 := stderrors.New("")
+	wantMsgErr6 := fullFuncPrefix + "<no error message>"
 
 	testCases := []struct {
 		err     error
@@ -40,10 +64,13 @@ func TestAutoWrap(t *testing.T) {
 	}{
 		{nil, true, ""},
 		{io.EOF, true, io.EOF.Error()},
-		{err0, false, wantMsg},
-		{err1, false, wantMsg},
-		{err2, false, wantMsg},
-		{stderrors.New(""), false, "github.com/donyori/gogo/errors_test.TestAutoWrap.func1: <no error message>"},
+		{err0, false, wantMsgErr0To2},
+		{err1, false, wantMsgErr0To2},
+		{err2, false, wantMsgErr0To2},
+		{err3, false, wantMsgErr3To5},
+		{err4, false, wantMsgErr3To5},
+		{err5, false, wantMsgErr3To5},
+		{err6, false, wantMsgErr6},
 	}
 
 	for i, tc := range testCases {
@@ -70,16 +97,26 @@ func TestAutoWrap(t *testing.T) {
 }
 
 func TestAutoWrapSkip(t *testing.T) {
-	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrapError(err0, "manually created: error 1 - "+err0.Error())
-	err2 := errors.NewAutoWrapError(err1, "manually created: error 2 - "+err1.Error())
-	wantMsg0To2Skip0 := "github.com/donyori/gogo/errors_test.TestAutoWrapSkip.func1.1: " + err0.Error()
-	wantMsg0To2Skip1 := "github.com/donyori/gogo/errors_test.TestAutoWrapSkip.func1: " + err0.Error()
-	err3 := stderrors.New("")
-	wantMsg3Skip0 := "github.com/donyori/gogo/errors_test.TestAutoWrapSkip.func1.1: <no error message>"
-	wantMsg3Skip1 := "github.com/donyori/gogo/errors_test.TestAutoWrapSkip.func1: <no error message>"
-	// In the above wantXxx, ".func1" is the anonymous function passed to t.Run;
 	// ".func1.1" is the anonymous inner function that calls function AutoWrapSkip.
+	const fullFuncSkip0Prefix = "github.com/donyori/gogo/errors_test.TestAutoWrapSkip.func1.1: "
+	// ".func1" is the anonymous function passed to t.Run.
+	const fullFuncSkip1Prefix = "github.com/donyori/gogo/errors_test.TestAutoWrapSkip.func1: "
+
+	err0 := stderrors.New("error 0")
+	err1 := errors.NewAutoWrappedError(err0, "manually created: error 1 - "+err0.Error())
+	err2 := errors.NewAutoWrappedError(err1, "manually created: error 2 - "+err1.Error())
+	wantMsgErr0To2Skip0 := fullFuncSkip0Prefix + err0.Error()
+	wantMsgErr0To2Skip1 := fullFuncSkip1Prefix + err0.Error()
+
+	err3 := &testError{err: err2}
+	err4 := errors.NewAutoWrappedError(err3, "manually created: error 4 - "+err3.Error())
+	err5 := errors.NewAutoWrappedError(err4, "manually created: error 5 - "+err4.Error())
+	wantMsgErr3To5Skip0 := fullFuncSkip0Prefix + err3.Error()
+	wantMsgErr3To5Skip1 := fullFuncSkip1Prefix + err3.Error()
+
+	err6 := stderrors.New("")
+	wantMsgErr6Skip0 := fullFuncSkip0Prefix + "<no error message>"
+	wantMsgErr6Skip1 := fullFuncSkip1Prefix + "<no error message>"
 
 	testCases := []struct {
 		err     error
@@ -91,14 +128,20 @@ func TestAutoWrapSkip(t *testing.T) {
 		{nil, 1, true, ""},
 		{io.EOF, 0, true, io.EOF.Error()},
 		{io.EOF, 1, true, io.EOF.Error()},
-		{err0, 0, false, wantMsg0To2Skip0},
-		{err0, 1, false, wantMsg0To2Skip1},
-		{err1, 0, false, wantMsg0To2Skip0},
-		{err1, 1, false, wantMsg0To2Skip1},
-		{err2, 0, false, wantMsg0To2Skip0},
-		{err2, 1, false, wantMsg0To2Skip1},
-		{err3, 0, false, wantMsg3Skip0},
-		{err3, 1, false, wantMsg3Skip1},
+		{err0, 0, false, wantMsgErr0To2Skip0},
+		{err0, 1, false, wantMsgErr0To2Skip1},
+		{err1, 0, false, wantMsgErr0To2Skip0},
+		{err1, 1, false, wantMsgErr0To2Skip1},
+		{err2, 0, false, wantMsgErr0To2Skip0},
+		{err2, 1, false, wantMsgErr0To2Skip1},
+		{err3, 0, false, wantMsgErr3To5Skip0},
+		{err3, 1, false, wantMsgErr3To5Skip1},
+		{err4, 0, false, wantMsgErr3To5Skip0},
+		{err4, 1, false, wantMsgErr3To5Skip1},
+		{err5, 0, false, wantMsgErr3To5Skip0},
+		{err5, 1, false, wantMsgErr3To5Skip1},
+		{err6, 0, false, wantMsgErr6Skip0},
+		{err6, 1, false, wantMsgErr6Skip1},
 	}
 
 	for i, tc := range testCases {
@@ -127,20 +170,26 @@ func TestAutoWrapSkip(t *testing.T) {
 }
 
 func TestAutoWrapCustom(t *testing.T) {
-	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrapError(err0, "manually created: error 1 - "+err0.Error())
-	err2 := errors.NewAutoWrapError(err1, "manually created: error 2 - "+err1.Error())
-	excl := errors.NewErrorReadOnlySetIs(io.EOF, err0)
-	wantMsgPrefixPrependFullFuncNameSkip0 := "github.com/donyori/gogo/errors_test.TestAutoWrapCustom.func1.1: "
-	wantMsgPrefixPrependFullFuncNameSkip1 := "github.com/donyori/gogo/errors_test.TestAutoWrapCustom.func1: "
-	wantMsgPrefixPrependFullPkgName := "github.com/donyori/gogo/errors_test: "
-	wantMsgPrefixPrependSimpleFuncNameSkip0 := "TestAutoWrapCustom.func1.1: "
-	wantMsgPrefixPrependSimpleFuncNameSkip1 := "TestAutoWrapCustom.func1: "
-	wantMsgPrefixPrependSimplePkgName := "errors_test: "
-	// In the above wantXxx, ".func1" is the anonymous function passed to t.Run;
+	// ".func1" is the anonymous function passed to t.Run.
 	// ".func1.1" is the anonymous inner function that calls function AutoWrapCustom.
+	const fullFuncSkip0Prefix = "github.com/donyori/gogo/errors_test.TestAutoWrapCustom.func1.1: "
+	const fullFuncSkip1Prefix = "github.com/donyori/gogo/errors_test.TestAutoWrapCustom.func1: "
+	const fullPkgPrefix = "github.com/donyori/gogo/errors_test: "
+	const simpleFuncSkip0Prefix = "TestAutoWrapCustom.func1.1: "
+	const simpleFuncSkip1Prefix = "TestAutoWrapCustom.func1: "
+	const simplePkgPrefix = "errors_test: "
 
-	errorList := []error{nil, io.EOF, err0, err1, err2, stderrors.New("")}
+	err0 := stderrors.New("error 0")
+	err1 := errors.NewAutoWrappedError(err0, "manually created: error 1 - "+err0.Error())
+	err2 := errors.NewAutoWrappedError(err1, "manually created: error 2 - "+err1.Error())
+	err3 := &testError{err: err2}
+	err4 := errors.NewAutoWrappedError(err3, "manually created: error 4 - "+err3.Error())
+	err5 := errors.NewAutoWrappedError(err4, "manually created: error 5 - "+err4.Error())
+	err6 := stderrors.New("")
+
+	excl := errors.NewErrorReadOnlySetIs(io.EOF, err0)
+
+	errorList := []error{nil, io.EOF, err0, err1, err2, err3, err4, err5, err6}
 	excls := []errors.ErrorReadOnlySet{nil, excl}
 	testCases := make([]struct {
 		err     error
@@ -165,26 +214,29 @@ func TestAutoWrapCustom(t *testing.T) {
 							case errors.OriginalMsg:
 								// The prefix is "". Do nothing here.
 							case errors.PrependFullPkgName:
-								wantMsg = wantMsgPrefixPrependFullPkgName
+								wantMsg = fullPkgPrefix
 							case errors.PrependSimpleFuncName:
 								if skip == 0 {
-									wantMsg = wantMsgPrefixPrependSimpleFuncNameSkip0
+									wantMsg = simpleFuncSkip0Prefix
 								} else {
-									wantMsg = wantMsgPrefixPrependSimpleFuncNameSkip1
+									wantMsg = simpleFuncSkip1Prefix
 								}
 							case errors.PrependSimplePkgName:
-								wantMsg = wantMsgPrefixPrependSimplePkgName
+								wantMsg = simplePkgPrefix
 							default:
 								if skip == 0 {
-									wantMsg = wantMsgPrefixPrependFullFuncNameSkip0
+									wantMsg = fullFuncSkip0Prefix
 								} else {
-									wantMsg = wantMsgPrefixPrependFullFuncNameSkip1
+									wantMsg = fullFuncSkip1Prefix
 								}
 							}
 							var errMsg string
-							if err == err1 || err == err2 {
+							switch err {
+							case err1, err2:
 								errMsg = err0.Error()
-							} else {
+							case err4, err5:
+								errMsg = err3.Error()
+							default:
 								errMsg = err.Error()
 							}
 							if errMsg != "" {
@@ -237,5 +289,102 @@ func TestAutoWrapCustom(t *testing.T) {
 				}()
 			},
 		)
+	}
+}
+
+func TestIsAutoWrappedError(t *testing.T) {
+	err0 := stderrors.New("error 0")
+	err1 := errors.NewAutoWrappedError(err0, "manually created: error 1 - "+err0.Error())
+	err2 := errors.NewAutoWrappedError(err1, "manually created: error 2 - "+err1.Error())
+	err3 := errors.NewAutoWrappedError(err2, "manually created: error 3 - "+err2.Error())
+	err4 := &testError{err: err2}
+	err5 := errors.NewAutoWrappedError(err4, "manually created: error 5 - "+err4.Error())
+	err6 := errors.NewAutoWrappedError(err5, "manually created: error 6 - "+err5.Error())
+
+	testCases := []struct {
+		err  error
+		want bool
+	}{
+		{err0, false},
+		{err1, true},
+		{err2, true},
+		{err3, true},
+		{err4, false},
+		{err5, true},
+		{err6, true},
+	}
+
+	for i, tc := range testCases {
+		t.Run(fmt.Sprintf("case %d?err=%q", i, tc.err), func(t *testing.T) {
+			if got := errors.IsAutoWrappedError(tc.err); got != tc.want {
+				t.Errorf("got %t; want %t", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestUnwrapAutoWrappedError(t *testing.T) {
+	err0 := stderrors.New("error 0")
+	err1 := errors.NewAutoWrappedError(err0, "manually created: error 1 - "+err0.Error())
+	err2 := errors.NewAutoWrappedError(err1, "manually created: error 2 - "+err1.Error())
+	err3 := errors.NewAutoWrappedError(err2, "manually created: error 3 - "+err2.Error())
+	err4 := &testError{err: err2}
+	err5 := errors.NewAutoWrappedError(err4, "manually created: error 5 - "+err4.Error())
+	err6 := errors.NewAutoWrappedError(err5, "manually created: error 6 - "+err5.Error())
+
+	testCases := []struct {
+		err     error
+		wantErr error
+	}{
+		{err0, err0},
+		{err1, err0},
+		{err2, err1},
+		{err3, err2},
+		{err4, err4},
+		{err5, err4},
+		{err6, err5},
+	}
+
+	for i, tc := range testCases {
+		wantBool := tc.err != tc.wantErr
+		t.Run(fmt.Sprintf("case %d?err=%q", i, tc.err), func(t *testing.T) {
+			gotErr, gotBool := errors.UnwrapAutoWrappedError(tc.err)
+			if gotErr != tc.wantErr || gotBool != wantBool {
+				t.Errorf("got (%q, %t); want (%q, %t)", gotErr, gotBool, tc.wantErr, wantBool)
+			}
+		})
+	}
+}
+
+func TestUnwrapAllAutoWrappedErrors(t *testing.T) {
+	err0 := stderrors.New("error 0")
+	err1 := errors.NewAutoWrappedError(err0, "manually created: error 1 - "+err0.Error())
+	err2 := errors.NewAutoWrappedError(err1, "manually created: error 2 - "+err1.Error())
+	err3 := errors.NewAutoWrappedError(err2, "manually created: error 3 - "+err2.Error())
+	err4 := &testError{err: err2}
+	err5 := errors.NewAutoWrappedError(err4, "manually created: error 5 - "+err4.Error())
+	err6 := errors.NewAutoWrappedError(err5, "manually created: error 6 - "+err5.Error())
+
+	testCases := []struct {
+		err     error
+		wantErr error
+	}{
+		{err0, err0},
+		{err1, err0},
+		{err2, err0},
+		{err3, err0},
+		{err4, err4},
+		{err5, err4},
+		{err6, err4},
+	}
+
+	for i, tc := range testCases {
+		wantBool := tc.err != tc.wantErr
+		t.Run(fmt.Sprintf("case %d?err=%q", i, tc.err), func(t *testing.T) {
+			gotErr, gotBool := errors.UnwrapAllAutoWrappedErrors(tc.err)
+			if gotErr != tc.wantErr || gotBool != wantBool {
+				t.Errorf("got (%q, %t); want (%q, %t)", gotErr, gotBool, tc.wantErr, wantBool)
+			}
+		})
 	}
 }
