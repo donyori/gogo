@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"math"
 	"strings"
 	"testing"
@@ -38,11 +39,11 @@ func TestRead_NotCloseFile(t *testing.T) {
 	if err != nil {
 		t.Fatal("open file -", err)
 	}
-	defer func() {
-		if err := file.Close(); err != nil {
+	defer func(f fs.File) {
+		if err := f.Close(); err != nil {
 			t.Error("close file -", err)
 		}
-	}()
+	}(file)
 	r, err := filesys.Read(file, &filesys.ReadOptions{Raw: true}, false)
 	if err != nil {
 		t.Fatal("create reader -", err)
@@ -83,11 +84,11 @@ func TestRead_NotCloseFile_ErrorOnCreate(t *testing.T) {
 	if err != nil {
 		t.Fatal("open file -", err)
 	}
-	defer func() {
-		if err := file.Close(); err != nil {
+	defer func(f fs.File) {
+		if err := f.Close(); err != nil {
 			t.Error("close file -", err)
 		}
-	}()
+	}(file)
 	r, err := filesys.Read(file, &filesys.ReadOptions{Offset: math.MaxInt64, Raw: true}, false)
 	if err == nil {
 		_ = r.Close()
@@ -113,11 +114,11 @@ func TestReadFromFS_Raw(t *testing.T) {
 			if err != nil {
 				t.Fatal("create -", err)
 			}
-			defer func() {
+			defer func(r filesys.Reader) {
 				if err := r.Close(); err != nil {
 					t.Error("close -", err)
 				}
-			}()
+			}(r)
 			err = iotest.TestReader(r, testFS[name].Data)
 			if err != nil {
 				t.Error("test read -", err)
@@ -133,11 +134,11 @@ func TestReadFromFS_Basic(t *testing.T) {
 			if err != nil {
 				t.Fatal("create -", err)
 			}
-			defer func() {
+			defer func(r filesys.Reader) {
 				if err := r.Close(); err != nil {
 					t.Error("close -", err)
 				}
-			}()
+			}(r)
 			err = iotest.TestReader(r, testFS[name].Data)
 			if err != nil {
 				t.Error("test read -", err)
@@ -153,15 +154,20 @@ func TestReadFromFS_Gz(t *testing.T) {
 			if err != nil {
 				t.Fatal("create -", err)
 			}
-			defer func() {
+			defer func(r filesys.Reader) {
 				if err := r.Close(); err != nil {
 					t.Error("close -", err)
 				}
-			}()
+			}(r)
 			gr, err := gzip.NewReader(bytes.NewReader(testFS[name].Data))
 			if err != nil {
 				t.Fatal("create gzip reader -", err)
 			}
+			defer func(gr *gzip.Reader) {
+				if err := gr.Close(); err != nil {
+					t.Error("close gzip reader -", err)
+				}
+			}(gr)
 			want, err := io.ReadAll(gr)
 			if err != nil {
 				t.Fatal("decompress gzip -", err)
@@ -174,18 +180,18 @@ func TestReadFromFS_Gz(t *testing.T) {
 	}
 }
 
-func TestReadFromFS_Tar_Tgz(t *testing.T) {
+func TestReadFromFS_TarTgz(t *testing.T) {
 	for _, name := range append(testFSTarFilenames, testFSTgzFilenames...) {
 		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
 			r, err := filesys.ReadFromFS(testFS, name, nil)
 			if err != nil {
 				t.Fatal("create -", err)
 			}
-			defer func() {
+			defer func(r filesys.Reader) {
 				if err := r.Close(); err != nil {
 					t.Error("close -", err)
 				}
-			}()
+			}(r)
 			for i := 0; ; i++ {
 				hdr, err := r.TarNext()
 				if err != nil {
@@ -193,7 +199,7 @@ func TestReadFromFS_Tar_Tgz(t *testing.T) {
 						if i != len(testFSTarFiles) {
 							t.Errorf("tar header number: %d != %d, but got EOF", i, len(testFSTarFiles))
 						}
-						break // end of archive
+						return // end of archive
 					}
 					t.Fatalf("read No.%d tar header - %v", i, err)
 				}
@@ -231,11 +237,11 @@ func TestReadFromFS_Offset(t *testing.T) {
 			if err != nil {
 				t.Fatal("create -", err)
 			}
-			defer func() {
+			defer func(r filesys.Reader) {
 				if err := r.Close(); err != nil {
 					t.Error("close -", err)
 				}
-			}()
+			}(r)
 			err = iotest.TestReader(r, fileData[pos:])
 			if err != nil {
 				t.Error("test read -", err)

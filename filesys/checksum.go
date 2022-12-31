@@ -19,22 +19,24 @@
 package filesys
 
 import (
-	"hash"
-	"io"
 	"io/fs"
 
-	"github.com/donyori/gogo/encoding/hex"
+	"github.com/donyori/gogo/errors"
+	"github.com/donyori/gogo/filesys/internal"
 )
 
 // HashChecksum is a combination of a hash function maker and
 // an expected checksum.
-type HashChecksum struct {
-	// A function that creates a new hash function (e.g., crypto/sha256.New).
-	NewHash func() hash.Hash
-
-	// Expected checksum, in hexadecimal representation.
-	ExpHex string
-}
+//
+// The checksum is described by a hexadecimal string and a boolean indicator,
+// where the indicator is used to report whether the string represents
+// a prefix of the checksum or the entire checksum.
+//
+// HashChecksum has three fields:
+//   - NewHash func() hash.Hash // A function that creates a new hash function (e.g., crypto/sha256.New).
+//   - WantHex string // Expected checksum, in hexadecimal representation.
+//   - IsPrefix bool // True if WantHex is a prefix of the checksum; false if WantHex is the entire checksum.
+type HashChecksum = internal.HashChecksum
 
 // VerifyChecksum verifies a file by checksum.
 //
@@ -48,66 +50,38 @@ type HashChecksum struct {
 // file will be closed by this function.
 //
 // It returns true if the file can be read and matches all checksums.
+// In particular, it returns true if len(hcs) is 0.
+// In this case, the file will not be read.
 //
-// Note that it returns false if file is nil,
-// or anyone of cs contains a nil NewHash or an empty ExpHex.
-// And it returns true if file is not nil and len(cs) is 0.
-func VerifyChecksum(file fs.File, closeFile bool, cs ...HashChecksum) bool {
+// It panics if file is nil,
+// anyone of hcs contains a nil NewHash or an empty WantHex,
+// or any NewHash returns nil.
+func VerifyChecksum(file fs.File, closeFile bool, hcs ...HashChecksum) bool {
 	if file == nil {
-		return false
+		panic(errors.AutoMsg("file is nil"))
 	}
-	if closeFile {
-		defer func(f fs.File) {
-			_ = f.Close() // ignore error
-		}(file)
-	}
-	if len(cs) == 0 {
-		return true
-	}
-	hs := make([]hash.Hash, len(cs))
-	ws := make([]io.Writer, len(cs))
-	for i := range cs {
-		if cs[i].NewHash == nil {
-			return false
-		}
-		if cs[i].ExpHex == "" {
-			return false
-		}
-		hs[i] = cs[i].NewHash()
-		ws[i] = hs[i]
-	}
-	w := ws[0]
-	if len(ws) > 1 {
-		w = io.MultiWriter(ws...)
-	}
-	_, err := io.Copy(w, file)
-	if err != nil {
-		return false
-	}
-	for i := range cs {
-		if !hex.CanEncodeTo(hs[i].Sum(nil), cs[i].ExpHex) {
-			return false
-		}
-	}
-	return true
+	return internal.VerifyChecksum(file, closeFile, hcs, internal.CheckHashChecksums(hcs))
 }
 
 // VerifyChecksumFromFS verifies a file by checksum,
 // where the file is opened from fsys by the specified name.
 //
-// It returns true if and only if the file can be read
-// and matches all checksums.
+// It returns true if the file can be read and matches all checksums.
+// In particular, it returns true if len(hcs) is 0 and
+// the file can be opened for reading.
+// In this case, the file will not be read.
 //
-// Note that it returns false if fsys is nil,
-// or anyone of cs contains a nil NewHash or an empty ExpHex.
-// And it returns true if len(cs) is 0 and the file can be opened for reading.
-func VerifyChecksumFromFS(fsys fs.FS, name string, cs ...HashChecksum) bool {
+// It panics if fsys is nil,
+// anyone of hcs contains a nil NewHash or an empty WantHex,
+// or any NewHash returns nil.
+func VerifyChecksumFromFS(fsys fs.FS, name string, hcs ...HashChecksum) bool {
 	if fsys == nil {
-		return false
+		panic(errors.AutoMsg("fsys is nil"))
 	}
+	hs := internal.CheckHashChecksums(hcs)
 	f, err := fsys.Open(name)
 	if err != nil {
 		return false
 	}
-	return VerifyChecksum(f, true, cs...)
+	return internal.VerifyChecksum(f, true, hcs, hs)
 }

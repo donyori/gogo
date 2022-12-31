@@ -91,7 +91,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	testFS["gzip.gz"] = &fstest.MapFile{
+	testFS["1MB.dat.gz"] = &fstest.MapFile{
 		Data:    copyBuffer(buf),
 		ModTime: time.Now(),
 	}
@@ -211,9 +211,9 @@ func init() {
 	testFSChecksumMap = make(map[string][]filesys.HashChecksum, len(testFS))
 	for name, file := range testFS {
 		r := bytes.NewReader(file.Data)
-		hSha256 := sha256.New()
-		hMd5 := md5.New()
-		w := io.MultiWriter(hSha256, hMd5)
+		hSHA256 := sha256.New()
+		hMD5 := md5.New()
+		w := io.MultiWriter(hSHA256, hMD5)
 		_, err = io.Copy(w, r)
 		if err != nil {
 			panic(err)
@@ -221,11 +221,11 @@ func init() {
 		testFSChecksumMap[name] = []filesys.HashChecksum{
 			{
 				NewHash: sha256.New,
-				ExpHex:  hex.EncodeToString(hSha256.Sum(nil)),
+				WantHex: hex.EncodeToString(hSHA256.Sum(nil)),
 			},
 			{
 				NewHash: md5.New,
-				ExpHex:  hex.EncodeToString(hMd5.Sum(nil)),
+				WantHex: hex.EncodeToString(hMD5.Sum(nil)),
 			},
 		}
 	}

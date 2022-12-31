@@ -22,9 +22,7 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -33,65 +31,101 @@ import (
 	"github.com/donyori/gogo/filesys/local"
 )
 
-type ChecksumInfo struct {
-	Filename string `json:"filename"`
-	Sha256   string `json:"sha256"`
-	Md5      string `json:"md5"`
-}
-
 func TestVerifyChecksum(t *testing.T) {
-	const dir = "testdata"
+	const (
+		wantReturnTrue int8 = iota
+		wantReturnFalse
+		wantPanic
+	)
+
 	wrongChecksum := filesys.HashChecksum{
 		NewHash: sha256.New,
-		ExpHex:  strings.Repeat("0", hex.EncodedLen(sha256.Size)),
+		WantHex: strings.Repeat("0", hex.EncodedLen(sha256.Size)),
 	}
+	nonExistFilename := filepath.Join(testDataDir, "nonexist")
 
 	t.Run(`file="nonexist"&cs=<nil>`, func(t *testing.T) {
-		if got := local.VerifyChecksum(filepath.Join(dir, "nonexist")); got {
+		if got := local.VerifyChecksum(nonExistFilename); got {
 			t.Error("got true; want false")
 		}
 	})
 
-	checksumJsonData, err := os.ReadFile(filepath.Join(dir, "checksum.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var checksums []*ChecksumInfo
-	err = json.Unmarshal(checksumJsonData, &checksums)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, checksum := range checksums {
-		filename := filepath.Join(dir, checksum.Filename)
-		correctChecksums := []filesys.HashChecksum{
-			{
-				NewHash: sha256.New,
-				ExpHex:  checksum.Sha256,
-			},
-			{
-				NewHash: md5.New,
-				ExpHex:  checksum.Md5,
-			},
-		}
+	t.Run(`file="nonexist"&cs=zero-value`, func(t *testing.T) {
+		defer func() {
+			if e := recover(); e != nil {
+				if s, ok := e.(string); ok {
+					if strings.HasPrefix(s, "github.com/donyori/gogo/filesys/local.VerifyChecksum: ") {
+						return
+					}
+				}
+				t.Error("panic:", e)
+			}
+		}()
+		got := local.VerifyChecksum(nonExistFilename, filesys.HashChecksum{})
+		t.Error("should panic but got", got)
+	})
+
+	for _, entry := range testFileEntries {
+		filename := entry.Name()
 		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
+			name := filepath.Join(testDataDir, filename)
+			checksums, err := lazyCalculateChecksums(name, sha256.New, md5.New)
+			if err != nil {
+				t.Fatal("calculate checksums -", err)
+			}
+			correctChecksums := []filesys.HashChecksum{
+				{NewHash: sha256.New, WantHex: checksums[0]},
+				{NewHash: md5.New, WantHex: checksums[1]},
+			}
+
 			testCases := []struct {
 				csName string
 				cs     []filesys.HashChecksum
-				want   bool
+				want   int8
 			}{
-				{"<nil>", nil, true},
-				{"correct", correctChecksums, true},
-				{"wrong", []filesys.HashChecksum{wrongChecksum}, false},
-				{"correct+wrong", []filesys.HashChecksum{correctChecksums[0], wrongChecksum}, false},
-				{"zero-value", []filesys.HashChecksum{{}}, false},
-				{"no-ExpHex", []filesys.HashChecksum{{NewHash: correctChecksums[0].NewHash}}, false},
-				{"no-NewHash", []filesys.HashChecksum{{ExpHex: correctChecksums[0].ExpHex}}, false},
-				{"correct+zero-value", []filesys.HashChecksum{correctChecksums[0], {}}, false},
+				{"<nil>", nil, wantReturnTrue},
+				{"correct", correctChecksums, wantReturnTrue},
+				{"wrong", []filesys.HashChecksum{wrongChecksum}, wantReturnFalse},
+				{"correct+wrong", []filesys.HashChecksum{correctChecksums[0], wrongChecksum}, wantReturnFalse},
+				{"zero-value", []filesys.HashChecksum{{}}, wantPanic},
+				{"no-WantHex", []filesys.HashChecksum{{NewHash: correctChecksums[0].NewHash}}, wantPanic},
+				{"no-NewHash", []filesys.HashChecksum{{WantHex: correctChecksums[0].WantHex}}, wantPanic},
+				{"correct+zero-value", []filesys.HashChecksum{correctChecksums[0], {}}, wantPanic},
 			}
+
 			for _, tc := range testCases {
 				t.Run("cs="+tc.csName, func(t *testing.T) {
-					if got := local.VerifyChecksum(filename, tc.cs...); got != tc.want {
-						t.Errorf("got %t; want %t", got, tc.want)
+					var want, shouldPanic bool
+					switch tc.want {
+					case wantReturnTrue:
+						want = true
+					case wantReturnFalse:
+						// Do nothing here.
+					case wantPanic:
+						shouldPanic = true
+					default:
+						// This should never happen, but will act as a safeguard for later,
+						// as a default value doesn't make sense here.
+						t.Fatal("unacceptable tc.want", tc.want)
+					}
+					defer func() {
+						if e := recover(); e != nil {
+							if shouldPanic {
+								if s, ok := e.(string); ok {
+									if strings.HasPrefix(s, "github.com/donyori/gogo/filesys/local.VerifyChecksum: ") {
+										return
+									}
+								}
+							}
+							t.Error("panic:", e)
+						}
+					}()
+					got := local.VerifyChecksum(name, tc.cs...)
+					if shouldPanic {
+						t.Fatal("should panic but got", got)
+					}
+					if got != want {
+						t.Errorf("got %t; want %t", got, want)
 					}
 				})
 			}

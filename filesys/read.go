@@ -226,8 +226,12 @@ func readSubRawClosersAndCreateBuffer(fr *reader, info fs.FileInfo, pClosers *[]
 					ext = ".tar"
 					continue
 				}
-			case ".bz2":
+			case ".bz2", ".tbz":
 				fr.ur = bzip2.NewReader(fr.ur)
+				if ext == ".tbz" {
+					ext = ".tar"
+					continue
+				}
 			case ".tar":
 				fr.tr = tar.NewReader(fr.ur)
 				fr.ur = fr.tr

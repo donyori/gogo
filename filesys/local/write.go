@@ -35,9 +35,6 @@ import (
 
 // WriteOptions are options for Write functions.
 type WriteOptions struct {
-	// True to make parent directories (if necessary) before opening the file.
-	MkDirs bool
-
 	// True if not to compress the file with gzip and not to archive the file
 	// with tar (i.e., tape archive) according to the file extension.
 	Raw bool
@@ -57,10 +54,7 @@ type WriteOptions struct {
 
 // defaultWriteOptions are default options for functions WriteTrunc,
 // WriteAppend, and WriteExcl.
-var defaultWriteOptions = &WriteOptions{
-	MkDirs: true,
-	GzipLv: gzip.DefaultCompression,
-}
+var defaultWriteOptions = &WriteOptions{GzipLv: gzip.DefaultCompression}
 
 // Writer is a device to write data to a local file.
 //
@@ -113,7 +107,6 @@ type writer struct {
 //
 // If opts are nil, the default options will be used.
 // The default options are as follows:
-//   - MkDirs: true,
 //   - Raw: false,
 //   - GzipLv: compress/gzip.DefaultCompression,
 //   - BufSize: 0,
@@ -219,11 +212,12 @@ func writeSubRawClosersAndCreateBuffer(fw *writer, pClosers *[]io.Closer) error 
 // writeOpenFile opens a file using os.OpenFile and creates a writer on it.
 //
 // The first three arguments are passed to function os.OpenFile.
-// The last is passed to function Write and
-// is used to determine whether to make directories.
+// The last is passed to function Write.
+// mkDirs specifies whether to make necessary directories
+// before opening the file.
 //
 // The file will be closed when the returned writer is closed.
-func writeOpenFile(name string, flag int, perm fs.FileMode, opts *WriteOptions) (w Writer, err error) {
+func writeOpenFile(name string, flag int, perm fs.FileMode, mkDirs bool, opts *WriteOptions) (w Writer, err error) {
 	if name == "" {
 		return nil, errors.AutoNew("name is empty")
 	}
@@ -231,7 +225,7 @@ func writeOpenFile(name string, flag int, perm fs.FileMode, opts *WriteOptions) 
 	if opts == nil {
 		opts = defaultWriteOptions
 	}
-	if opts.MkDirs {
+	if mkDirs {
 		err = os.MkdirAll(filepath.Dir(name), perm)
 		if err != nil {
 			return nil, errors.AutoWrap(err)
@@ -252,11 +246,14 @@ func writeOpenFile(name string, flag int, perm fs.FileMode, opts *WriteOptions) 
 // If the file does not exist, it will be created
 // with specified permission perm (before umask).
 //
+// mkDirs specifies whether to make necessary directories
+// before opening the file.
+//
 // opts are handled the same as in function Write.
 //
 // The file will be closed when the returned writer is closed.
-func WriteTrunc(name string, perm fs.FileMode, opts *WriteOptions) (w Writer, err error) {
-	w, err = writeOpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm, opts)
+func WriteTrunc(name string, perm fs.FileMode, mkDirs bool, opts *WriteOptions) (w Writer, err error) {
+	w, err = writeOpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm, mkDirs, opts)
 	return w, errors.AutoWrap(err)
 }
 
@@ -267,11 +264,14 @@ func WriteTrunc(name string, perm fs.FileMode, opts *WriteOptions) (w Writer, er
 // If the file does not exist, it will be created
 // with specified permission perm (before umask).
 //
+// mkDirs specifies whether to make necessary directories
+// before opening the file.
+//
 // opts are handled the same as in function Write.
 //
 // The file will be closed when the returned writer is closed.
-func WriteAppend(name string, perm fs.FileMode, opts *WriteOptions) (w Writer, err error) {
-	w, err = writeOpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_APPEND, perm, opts)
+func WriteAppend(name string, perm fs.FileMode, mkDirs bool, opts *WriteOptions) (w Writer, err error) {
+	w, err = writeOpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_APPEND, perm, mkDirs, opts)
 	return w, errors.AutoWrap(err)
 }
 
@@ -282,11 +282,14 @@ func WriteAppend(name string, perm fs.FileMode, opts *WriteOptions) (w Writer, e
 // If the file exists, it reports an error that satisfies
 // errors.Is(err, os.ErrExist) is true.
 //
+// mkDirs specifies whether to make necessary directories
+// before opening the file.
+//
 // opts are handled the same as in function Write.
 //
 // The file will be closed when the returned writer is closed.
-func WriteExcl(name string, perm fs.FileMode, opts *WriteOptions) (w Writer, err error) {
-	w, err = writeOpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm, opts)
+func WriteExcl(name string, perm fs.FileMode, mkDirs bool, opts *WriteOptions) (w Writer, err error) {
+	w, err = writeOpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm, mkDirs, opts)
 	return w, errors.AutoWrap(err)
 }
 

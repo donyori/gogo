@@ -40,7 +40,7 @@ func TestWriteTrunc(t *testing.T) {
 	data := []byte("test local.WriteTrunc\n")
 	for i := 0; i < 3; i++ {
 		func(t *testing.T, i int) {
-			w, err := local.WriteTrunc(name, 0600, nil)
+			w, err := local.WriteTrunc(name, 0600, true, nil)
 			if err != nil {
 				t.Errorf("i: %d, create - %v", i, err)
 				return
@@ -75,7 +75,7 @@ func TestWriteAppend(t *testing.T) {
 	data := []byte("test local.WriteAppend\n")
 	for i := 0; i < N; i++ {
 		func(t *testing.T, i int) {
-			w, err := local.WriteAppend(name, 0600, nil)
+			w, err := local.WriteAppend(name, 0600, true, nil)
 			if err != nil {
 				t.Errorf("i: %d, create - %v", i, err)
 				return
@@ -109,7 +109,7 @@ func TestWriteExcl(t *testing.T) {
 	name := filepath.Join(tmpRoot, "sub", "test.txt")
 	data := []byte("test local.WriteExcl\n")
 	func(t *testing.T) {
-		w, err := local.WriteExcl(name, 0600, nil)
+		w, err := local.WriteExcl(name, 0600, true, nil)
 		if err != nil {
 			t.Error("create -", err)
 			return
@@ -127,7 +127,7 @@ func TestWriteExcl(t *testing.T) {
 	if t.Failed() {
 		return
 	}
-	_, err := local.WriteExcl(name, 0600, nil)
+	_, err := local.WriteExcl(name, 0600, true, nil)
 	if !errors.Is(err, os.ErrExist) {
 		t.Fatal("errors.Is(err, os.ErrExist) is false on 2nd call to WriteExcl, err:", err)
 	}
@@ -140,7 +140,7 @@ func TestWriteExcl(t *testing.T) {
 	}
 }
 
-func TestWriteTrunc_Tar_Tgz(t *testing.T) {
+func TestWriteTrunc_TarTgz(t *testing.T) {
 	big := make([]byte, 1_048_576)
 	rand.New(rand.NewSource(10)).Read(big)
 	tarFiles := []struct {
@@ -177,7 +177,7 @@ func writeTarFiles(t *testing.T, name string, tarFiles []struct {
 	name string
 	body []byte
 }) {
-	w, err := local.WriteTrunc(name, 0600, nil)
+	w, err := local.WriteTrunc(name, 0600, true, nil)
 	if err != nil {
 		t.Error("create -", err)
 		return
@@ -245,7 +245,7 @@ func testTarTgzFile(t *testing.T, name string, wantTarFiles []struct {
 				if i != len(wantTarFiles) {
 					t.Errorf("tar header number: %d != %d, but got EOF", i, len(wantTarFiles))
 				}
-				break // end of archive
+				return // end of archive
 			}
 			t.Errorf("read No.%d tar header - %v", i, err)
 			return

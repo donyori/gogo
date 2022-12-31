@@ -22,20 +22,23 @@ import (
 	"os"
 
 	"github.com/donyori/gogo/filesys"
+	"github.com/donyori/gogo/filesys/internal"
 )
 
 // VerifyChecksum verifies a local file by checksum.
 //
-// It returns true if and only if the file can be read
-// and matches all checksums.
+// It returns true if the file can be read and matches all checksums.
+// In particular, it returns true if len(hcs) is 0 and
+// the file can be opened for reading.
+// In this case, the file will not be read.
 //
-// Note that it returns false if anyone of cs contains a nil NewHash
-// or an empty ExpHex.
-// And it returns true if len(cs) is 0 and the file can be opened for reading.
-func VerifyChecksum(filename string, cs ...filesys.HashChecksum) bool {
+// It panics if anyone of hcs contains a nil NewHash or an empty WantHex,
+// or any NewHash returns nil.
+func VerifyChecksum(filename string, hcs ...filesys.HashChecksum) bool {
+	hs := internal.CheckHashChecksums(hcs)
 	f, err := os.Open(filename)
 	if err != nil {
 		return false
 	}
-	return filesys.VerifyChecksum(f, true, cs...)
+	return internal.VerifyChecksum(f, true, hcs, hs)
 }
