@@ -27,7 +27,7 @@ import stderrors "errors"
 //
 // If msg is empty, it will use "<no error message>" instead.
 func AutoNew(msg string) error {
-	return AutoWrapCustom(stderrors.New(msg), PrependFullFuncName, 1, nil)
+	return AutoWrapCustom(stderrors.New(msg), -1, 1, nil)
 }
 
 // AutoNewCustom creates a new error with specified error message msg,

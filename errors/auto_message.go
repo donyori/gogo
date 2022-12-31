@@ -19,6 +19,7 @@
 package errors
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/donyori/gogo/runtime"
@@ -29,7 +30,7 @@ import (
 //
 // If msg is empty, it will use "<no error message>" instead.
 func AutoMsg(msg string) string {
-	return AutoMsgCustom(msg, PrependFullFuncName, 1)
+	return AutoMsgCustom(msg, -1, 1)
 }
 
 // AutoMsgCustom generates an error message using msg.
@@ -80,7 +81,11 @@ func AutoMsgCustom(msg string, ms ErrorMessageStrategy, skip int) string {
 	default:
 		// This should never happen, but will act as a safeguard for later,
 		// as a default value doesn't make sense here.
-		panic("github.com/donyori/gogo/errors.AutoMsgCustom: error message strategy is invalid, which should never happen")
+		panic(fmt.Sprintf(
+			"github.com/donyori/gogo/errors.AutoMsgCustom: "+
+				"error message strategy is invalid (%v), which should never happen",
+			ms,
+		))
 	}
 	if prefix == "" {
 		return msg

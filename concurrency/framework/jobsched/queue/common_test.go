@@ -165,7 +165,7 @@ func gotWrong(got []int, want [][]int) bool {
 		}
 		switch len(group) {
 		case 0:
-			// Do nothing.
+			// Do nothing here.
 		case 1:
 			if got[gotIdx] != group[0] {
 				return true
