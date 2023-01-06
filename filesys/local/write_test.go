@@ -25,18 +25,20 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/donyori/gogo/filesys"
 	"github.com/donyori/gogo/filesys/local"
 )
 
 func TestWriteTrunc(t *testing.T) {
 	tmpRoot := t.TempDir()
-	name := filepath.Join(tmpRoot, "sub", "test.txt")
+	name := filepath.Join(tmpRoot, "test.txt")
 	data := []byte("test local.WriteTrunc\n")
 	for i := 0; i < 3; i++ {
 		func(t *testing.T, i int) {
@@ -45,14 +47,14 @@ func TestWriteTrunc(t *testing.T) {
 				t.Errorf("i: %d, create - %v", i, err)
 				return
 			}
-			defer func() {
+			defer func(w filesys.Writer) {
 				if err := w.Close(); err != nil {
 					t.Errorf("i: %d, close - %v", i, err)
 				}
-			}()
-			_, err = w.Write(data)
-			if err != nil {
-				t.Errorf("i: %d, write - %v", i, err)
+			}(w)
+			n, err := w.Write(data)
+			if n != len(data) || err != nil {
+				t.Errorf("i: %d, write - got (%d, %v); want (%d, nil)", i, n, err, len(data))
 			}
 		}(t, i)
 		if t.Failed() {
@@ -61,83 +63,15 @@ func TestWriteTrunc(t *testing.T) {
 	}
 	got, err := os.ReadFile(name)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal("read output -", err)
 	}
 	if !bytes.Equal(got, data) {
 		t.Errorf("got %q; want %q", got, data)
 	}
 }
 
-func TestWriteAppend(t *testing.T) {
-	const N = 3
-	tmpRoot := t.TempDir()
-	name := filepath.Join(tmpRoot, "sub", "test.txt")
-	data := []byte("test local.WriteAppend\n")
-	for i := 0; i < N; i++ {
-		func(t *testing.T, i int) {
-			w, err := local.WriteAppend(name, 0600, true, nil)
-			if err != nil {
-				t.Errorf("i: %d, create - %v", i, err)
-				return
-			}
-			defer func() {
-				if err := w.Close(); err != nil {
-					t.Errorf("i: %d, close - %v", i, err)
-				}
-			}()
-			_, err = w.Write(data)
-			if err != nil {
-				t.Errorf("i: %d, write - %v", i, err)
-			}
-		}(t, i)
-		if t.Failed() {
-			return
-		}
-	}
-	got, err := os.ReadFile(name)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := bytes.Repeat(data, N)
-	if !bytes.Equal(got, want) {
-		t.Errorf("got %q; want %q", got, want)
-	}
-}
-
-func TestWriteExcl(t *testing.T) {
-	tmpRoot := t.TempDir()
-	name := filepath.Join(tmpRoot, "sub", "test.txt")
-	data := []byte("test local.WriteExcl\n")
-	func(t *testing.T) {
-		w, err := local.WriteExcl(name, 0600, true, nil)
-		if err != nil {
-			t.Error("create -", err)
-			return
-		}
-		defer func() {
-			if err := w.Close(); err != nil {
-				t.Error("close -", err)
-			}
-		}()
-		_, err = w.Write(data)
-		if err != nil {
-			t.Error("write -", err)
-		}
-	}(t)
-	if t.Failed() {
-		return
-	}
-	_, err := local.WriteExcl(name, 0600, true, nil)
-	if !errors.Is(err, os.ErrExist) {
-		t.Fatal("errors.Is(err, os.ErrExist) is false on 2nd call to WriteExcl, err:", err)
-	}
-	got, err := os.ReadFile(name)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(got, data) {
-		t.Errorf("got %q; want %q", got, data)
-	}
+func TestWriteTrunc_MkDirs(t *testing.T) {
+	testWriteFuncMkDirs(t, local.WriteTrunc)
 }
 
 func TestWriteTrunc_TarTgz(t *testing.T) {
@@ -156,14 +90,146 @@ func TestWriteTrunc_TarTgz(t *testing.T) {
 	tmpRoot := t.TempDir()
 	for _, filename := range filenames {
 		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
-			name := filepath.Join(tmpRoot, "sub", filename)
+			name := filepath.Join(tmpRoot, filename)
 			writeTarFiles(t, name, tarFiles)
-			if t.Failed() {
-				return
+			if !t.Failed() {
+				testTarTgzFile(t, name, tarFiles)
 			}
-			testTarTgzFile(t, name, tarFiles)
 		})
 	}
+}
+
+func TestWriteAppend(t *testing.T) {
+	const N = 3
+	tmpRoot := t.TempDir()
+	name := filepath.Join(tmpRoot, "test.txt")
+	data := []byte("test local.WriteAppend\n")
+	for i := 0; i < N; i++ {
+		func(t *testing.T, i int) {
+			w, err := local.WriteAppend(name, 0600, true, nil)
+			if err != nil {
+				t.Errorf("i: %d, create - %v", i, err)
+				return
+			}
+			defer func(w filesys.Writer) {
+				if err := w.Close(); err != nil {
+					t.Errorf("i: %d, close - %v", i, err)
+				}
+			}(w)
+			n, err := w.Write(data)
+			if n != len(data) || err != nil {
+				t.Errorf("i: %d, write - got (%d, %v); want (%d, nil)", i, n, err, len(data))
+			}
+		}(t, i)
+		if t.Failed() {
+			return
+		}
+	}
+	got, err := os.ReadFile(name)
+	if err != nil {
+		t.Fatal("read output -", err)
+	}
+	want := bytes.Repeat(data, N)
+	if !bytes.Equal(got, want) {
+		t.Errorf("got %q; want %q", got, want)
+	}
+}
+
+func TestWriteAppend_MkDirs(t *testing.T) {
+	testWriteFuncMkDirs(t, local.WriteAppend)
+}
+
+func TestWriteExcl(t *testing.T) {
+	tmpRoot := t.TempDir()
+	name := filepath.Join(tmpRoot, "test.txt")
+	data := []byte("test local.WriteExcl\n")
+	func(t *testing.T) {
+		w, err := local.WriteExcl(name, 0600, true, nil)
+		if err != nil {
+			t.Error("create -", err)
+			return
+		}
+		defer func(w filesys.Writer) {
+			if err := w.Close(); err != nil {
+				t.Error("close -", err)
+			}
+		}(w)
+		n, err := w.Write(data)
+		if n != len(data) || err != nil {
+			t.Errorf("write - got (%d, %v); want (%d, nil)", n, err, len(data))
+		}
+	}(t)
+	if t.Failed() {
+		return
+	}
+	_, err := local.WriteExcl(name, 0600, true, nil)
+	if !errors.Is(err, fs.ErrExist) {
+		t.Fatal("errors.Is(err, fs.ErrExist) is false on 2nd call to WriteExcl, err:", err)
+	}
+	got, err := os.ReadFile(name)
+	if err != nil {
+		t.Fatal("read output -", err)
+	}
+	if !bytes.Equal(got, data) {
+		t.Errorf("got %q; want %q", got, data)
+	}
+}
+
+func TestWriteExcl_MkDirs(t *testing.T) {
+	testWriteFuncMkDirs(t, local.WriteExcl)
+}
+
+// testWriteFuncMkDirs tests parameter mkDirs of
+// functions WriteTrunc, WriteAppend, and WriteExcl.
+//
+// writeFn should be one of WriteTrunc, WriteAppend, and WriteExcl.
+func testWriteFuncMkDirs(t *testing.T,
+	writeFn func(name string, perm fs.FileMode, mkDirs bool, opts *filesys.WriteOptions) (w filesys.Writer, err error)) {
+	tmpRoot := t.TempDir()
+	data := []byte("test local.WriteTrunc - mkDirs\n")
+
+	t.Run("mkDirs=true", func(t *testing.T) {
+		name := filepath.Join(tmpRoot, "true", "test.txt")
+		func(t *testing.T) {
+			w, err := writeFn(name, 0600, true, nil)
+			if err != nil {
+				t.Error("create -", err)
+				return
+			}
+			defer func(w filesys.Writer) {
+				if err := w.Close(); err != nil {
+					t.Error("close -", err)
+				}
+			}(w)
+			n, err := w.Write(data)
+			if n != len(data) || err != nil {
+				t.Errorf("write - got (%d, %v); want (%d, nil)", n, err, len(data))
+			}
+		}(t)
+		if t.Failed() {
+			return
+		}
+		got, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatal("read output -", err)
+		}
+		if !bytes.Equal(got, data) {
+			t.Errorf("got %q; want %q", got, data)
+		}
+	})
+
+	t.Run("mkDirs=false", func(t *testing.T) {
+		name := filepath.Join(tmpRoot, "false", "test.txt")
+		w, err := writeFn(name, 0600, false, nil)
+		if err == nil {
+			if err := w.Close(); err != nil {
+				t.Error("close -", err)
+			}
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			t.Error("errors.Is(err, fs.ErrNotExist) is false, err:", err)
+		}
+	})
 }
 
 // writeTarFiles uses WriteTrunc to write a tar or tgz file.
@@ -182,11 +248,11 @@ func writeTarFiles(t *testing.T, name string, tarFiles []struct {
 		t.Error("create -", err)
 		return
 	}
-	defer func() {
+	defer func(w filesys.Writer) {
 		if err := w.Close(); err != nil {
 			t.Error("close -", err)
 		}
-	}()
+	}(w)
 	for i := range tarFiles {
 		err = w.TarWriteHeader(&tar.Header{
 			Name:    tarFiles[i].name,
@@ -198,9 +264,10 @@ func writeTarFiles(t *testing.T, name string, tarFiles []struct {
 			t.Errorf("write No.%d tar header - %v", i, err)
 			return
 		}
-		_, err = w.Write(tarFiles[i].body)
-		if err != nil {
-			t.Errorf("write No.%d tar file body - %v", i, err)
+		var n int
+		n, err = w.Write(tarFiles[i].body)
+		if n != len(tarFiles[i].body) || err != nil {
+			t.Errorf("write No.%d tar file body - got (%d, %v); want (%d, nil)", i, n, err, len(tarFiles[i].body))
 			return
 		}
 	}
@@ -223,21 +290,22 @@ func testTarTgzFile(t *testing.T, name string, wantTarFiles []struct {
 			t.Error("close file -", err)
 		}
 	}(f)
-	var rc io.ReadCloser = f
+	var r io.Reader = f
 	ext := filepath.Ext(name)
 	if ext == ".gz" || ext == ".tgz" {
-		rc, err = gzip.NewReader(rc)
+		gr, err := gzip.NewReader(r)
 		if err != nil {
 			t.Error("create gzip reader -", err)
 			return
 		}
-		defer func(c io.Closer) {
-			if err := c.Close(); err != nil {
+		defer func(gr *gzip.Reader) {
+			if err := gr.Close(); err != nil {
 				t.Error("close gzip reader -", err)
 			}
-		}(rc)
+		}(gr)
+		r = gr
 	}
-	tr := tar.NewReader(rc)
+	tr := tar.NewReader(r)
 	for i := 0; ; i++ {
 		hdr, err := tr.Next()
 		if err != nil {
@@ -263,7 +331,14 @@ func testTarTgzFile(t *testing.T, name string, wantTarFiles []struct {
 			return
 		}
 		if !bytes.Equal(body, wantTarFiles[i].body) {
-			t.Errorf("got No.%d tar file body\n%s\nwant\n%s", i, body, wantTarFiles[i].body)
+			t.Errorf(
+				"got No.%d tar file body (len: %d)\n%s\nwant (len: %d)\n%s",
+				i,
+				len(body),
+				body,
+				len(wantTarFiles[i].body),
+				wantTarFiles[i].body,
+			)
 		}
 	}
 }

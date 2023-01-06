@@ -20,7 +20,6 @@ package filesys_test
 
 import (
 	"bytes"
-	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
@@ -110,19 +109,7 @@ func TestRead_NotCloseFile_ErrorOnCreate(t *testing.T) {
 func TestReadFromFS_Raw(t *testing.T) {
 	for _, name := range testFSFilenames {
 		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
-			r, err := filesys.ReadFromFS(testFS, name, &filesys.ReadOptions{Raw: true})
-			if err != nil {
-				t.Fatal("create -", err)
-			}
-			defer func(r filesys.Reader) {
-				if err := r.Close(); err != nil {
-					t.Error("close -", err)
-				}
-			}(r)
-			err = iotest.TestReader(r, testFS[name].Data)
-			if err != nil {
-				t.Error("test read -", err)
-			}
+			testReadFromTestFS(t, name, testFS[name].Data, &filesys.ReadOptions{Raw: true})
 		})
 	}
 }
@@ -130,19 +117,7 @@ func TestReadFromFS_Raw(t *testing.T) {
 func TestReadFromFS_Basic(t *testing.T) {
 	for _, name := range testFSBasicFilenames {
 		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
-			r, err := filesys.ReadFromFS(testFS, name, nil)
-			if err != nil {
-				t.Fatal("create -", err)
-			}
-			defer func(r filesys.Reader) {
-				if err := r.Close(); err != nil {
-					t.Error("close -", err)
-				}
-			}(r)
-			err = iotest.TestReader(r, testFS[name].Data)
-			if err != nil {
-				t.Error("test read -", err)
-			}
+			testReadFromTestFS(t, name, testFS[name].Data, nil)
 		})
 	}
 }
@@ -150,32 +125,12 @@ func TestReadFromFS_Basic(t *testing.T) {
 func TestReadFromFS_Gz(t *testing.T) {
 	for _, name := range testFSGzFilenames {
 		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
-			r, err := filesys.ReadFromFS(testFS, name, nil)
-			if err != nil {
-				t.Fatal("create -", err)
+			dataFilename := name[:len(name)-3]
+			mapFile := testFS[dataFilename]
+			if mapFile == nil {
+				t.Fatalf("file %q does not exist", dataFilename)
 			}
-			defer func(r filesys.Reader) {
-				if err := r.Close(); err != nil {
-					t.Error("close -", err)
-				}
-			}(r)
-			gr, err := gzip.NewReader(bytes.NewReader(testFS[name].Data))
-			if err != nil {
-				t.Fatal("create gzip reader -", err)
-			}
-			defer func(gr *gzip.Reader) {
-				if err := gr.Close(); err != nil {
-					t.Error("close gzip reader -", err)
-				}
-			}(gr)
-			want, err := io.ReadAll(gr)
-			if err != nil {
-				t.Fatal("decompress gzip -", err)
-			}
-			err = iotest.TestReader(r, want)
-			if err != nil {
-				t.Error("test read -", err)
-			}
+			testReadFromTestFS(t, name, mapFile.Data, nil)
 		})
 	}
 }
@@ -233,19 +188,7 @@ func TestReadFromFS_Offset(t *testing.T) {
 			continue
 		}
 		t.Run(fmt.Sprintf("offset=%d", offset), func(t *testing.T) {
-			r, err := filesys.ReadFromFS(testFS, name, &filesys.ReadOptions{Offset: offset, Raw: true})
-			if err != nil {
-				t.Fatal("create -", err)
-			}
-			defer func(r filesys.Reader) {
-				if err := r.Close(); err != nil {
-					t.Error("close -", err)
-				}
-			}(r)
-			err = iotest.TestReader(r, fileData[pos:])
-			if err != nil {
-				t.Error("test read -", err)
-			}
+			testReadFromTestFS(t, name, fileData[pos:], &filesys.ReadOptions{Offset: offset, Raw: true})
 		})
 	}
 
@@ -260,5 +203,42 @@ func TestReadFromFS_Offset(t *testing.T) {
 				t.Error("create -", err)
 			}
 		})
+	}
+}
+
+func TestReadFromFS_AfterClose(t *testing.T) {
+	const name = "file1.txt"
+	r, err := filesys.ReadFromFS(testFS, name, nil)
+	if err != nil {
+		t.Fatal("create -", err)
+	}
+	err = r.Close()
+	if err != nil {
+		t.Fatal("close -", err)
+	}
+	_, err = r.Read([]byte{})
+	if !errors.Is(err, filesys.ErrFileReaderClosed) {
+		t.Error("errors.Is(err, filesys.ErrFileReaderClosed) is false, err:", err)
+	}
+}
+
+// testReadFromTestFS reads the file with specified name from testFS
+// using ReadFromFS and tests the reader using iotest.TestReader.
+//
+// want is the expected data read from the file.
+func testReadFromTestFS(t *testing.T, name string, want []byte, opts *filesys.ReadOptions) {
+	r, err := filesys.ReadFromFS(testFS, name, opts)
+	if err != nil {
+		t.Error("create -", err)
+		return
+	}
+	defer func(r filesys.Reader) {
+		if err := r.Close(); err != nil {
+			t.Error("close -", err)
+		}
+	}(r)
+	err = iotest.TestReader(r, want)
+	if err != nil {
+		t.Error("test read -", err)
 	}
 }

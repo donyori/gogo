@@ -30,8 +30,14 @@ import (
 
 // ErrContainsPathSeparator is an error indicating that
 // the prefix or the suffix contains a path separator.
-var ErrContainsPathSeparator = errors.AutoNewCustom("prefix/suffix contains path separator",
-	errors.PrependFullPkgName, 0)
+//
+// The client should use errors.Is to test whether
+// an error is ErrContainsPathSeparator.
+var ErrContainsPathSeparator = errors.AutoNewCustom(
+	"prefix/suffix contains path separator",
+	errors.PrependFullPkgName,
+	0,
+)
 
 // Tmp creates and opens a new temporary file in the directory dir,
 // with specified permission perm (before umask),
@@ -64,7 +70,7 @@ func Tmp(dir, prefix, suffix string, perm fs.FileMode) (f *os.File, err error) {
 	for try := 0; try < 100; try++ {
 		f, err = os.OpenFile(prefix+strconv.FormatUint(uint64(r), 36)+suffix,
 			os.O_RDWR|os.O_CREATE|os.O_EXCL, perm)
-		if err == nil || !errors.Is(err, os.ErrExist) {
+		if err == nil || !errors.Is(err, fs.ErrExist) {
 			return f, errors.AutoWrap(err)
 		}
 		r = r*1664525 + 1013904223 // constants from Numerical Recipes, for a linear congruential generator
@@ -105,13 +111,13 @@ func TmpDir(dir, prefix, suffix string, perm fs.FileMode) (name string, err erro
 		if err == nil {
 			return name, errors.AutoWrap(err)
 		}
-		if errors.Is(err, os.ErrNotExist) {
+		if errors.Is(err, fs.ErrNotExist) {
 			// It may because dir doesn't exist. Try to report dir doesn't exist.
-			if _, err := os.Lstat(dir); errors.Is(err, os.ErrNotExist) {
+			if _, err := os.Lstat(dir); errors.Is(err, fs.ErrNotExist) {
 				return "", errors.AutoWrap(err)
 			}
 		}
-		if !errors.Is(err, os.ErrExist) {
+		if !errors.Is(err, fs.ErrExist) {
 			return "", errors.AutoWrap(err)
 		}
 		r = r*1664525 + 1013904223 // constants from Numerical Recipes, for a linear congruential generator
