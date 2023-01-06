@@ -20,6 +20,7 @@ package inout
 
 import (
 	"io"
+	"strings"
 
 	"github.com/donyori/gogo/errors"
 )
@@ -128,6 +129,7 @@ func WrapErrorCloser(closer io.Closer, deviceName string, parentErr error) Close
 	if closer == nil {
 		panic(errors.AutoMsg("closer is nil"))
 	}
+	deviceName = strings.TrimSpace(deviceName)
 	if deviceName == "" {
 		deviceName = "closer"
 	}

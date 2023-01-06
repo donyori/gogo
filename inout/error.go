@@ -30,10 +30,7 @@ import (
 // The parent error here is used to classify ClosedError instances,
 // not the error that caused the current ClosedError.
 //
-// The client should use function NewClosedError to create a ClosedError
-// rather than directly using a variable declaration statement
-// (e.g., var err ClosedError) or the built-in function new
-// (e.g., err := new(ClosedError)).
+// The client should use function NewClosedError to create a ClosedError.
 //
 // ErrClosed is a (direct or indirect) parent error of
 // all ClosedError instances except itself.
@@ -54,6 +51,7 @@ type ClosedError struct {
 // If deviceName is empty, it will use "closer" instead.
 // If parentErr is nil, it will use ErrClosed instead.
 func NewClosedError(deviceName string, parentErr error) *ClosedError {
+	deviceName = strings.TrimSpace(deviceName)
 	if deviceName == "" {
 		deviceName = "closer"
 	}
@@ -63,7 +61,7 @@ func NewClosedError(deviceName string, parentErr error) *ClosedError {
 		panic(errors.AutoMsg("parentErr is neither nil nor an ErrClosed (errors.Is(parentErr, ErrClosed) returns false)"))
 	}
 	return &ClosedError{
-		device: strings.TrimSpace(deviceName),
+		device: deviceName,
 		parent: parentErr,
 	}
 }
@@ -85,6 +83,13 @@ func (ce *ClosedError) Error() string {
 	if ce == nil {
 		return "<nil>"
 	}
+	if ce.device == "" {
+		if ce.parent != nil {
+			// This should never happen, but will act as a safeguard for later.
+			panic(errors.AutoMsg("ClosedError has an empty device but a non-nil parent"))
+		}
+		return "closer is already closed (zero-value ClosedError)"
+	}
 	return ce.device + " is already closed"
 }
 
@@ -99,16 +104,34 @@ func (ce *ClosedError) Unwrap() error {
 }
 
 // ErrClosed is an error indicating that the closer is already closed.
-var ErrClosed = errors.AutoWrapCustom(&ClosedError{device: "closer"},
-	errors.PrependFullPkgName, 0, nil)
+//
+// The client should use errors.Is to test whether an error is ErrClosed.
+var ErrClosed = errors.AutoWrapCustom(
+	&ClosedError{device: "closer"},
+	errors.PrependFullPkgName,
+	0,
+	nil,
+)
 
 // ErrReaderClosed is an error indicating that the reader is already closed.
-var ErrReaderClosed = errors.AutoWrapCustom(&ClosedError{device: "reader", parent: ErrClosed},
-	errors.PrependFullPkgName, 0, nil)
+//
+// The client should use errors.Is to test whether an error is ErrReaderClosed.
+var ErrReaderClosed = errors.AutoWrapCustom(
+	NewClosedError("reader", nil),
+	errors.PrependFullPkgName,
+	0,
+	nil,
+)
 
 // ErrWriterClosed is an error indicating that the writer is already closed.
-var ErrWriterClosed = errors.AutoWrapCustom(&ClosedError{device: "writer", parent: ErrClosed},
-	errors.PrependFullPkgName, 0, nil)
+//
+// The client should use errors.Is to test whether an error is ErrWriterClosed.
+var ErrWriterClosed = errors.AutoWrapCustom(
+	NewClosedError("writer", nil),
+	errors.PrependFullPkgName,
+	0,
+	nil,
+)
 
 // WritePanic is the error passed to the call of panic
 // in MustWrite methods and MustPrint methods.

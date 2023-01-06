@@ -23,24 +23,28 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-var (
-	// ErrSrcIncomplete is an error indicating that the source bytes src
-	// is incomplete to be decoded with the variable-length quantity (VLQ)
-	// style encoding.
-	//
-	// The client should use errors.Is to test whether
-	// an error is ErrSrcIncomplete.
-	ErrSrcIncomplete = errors.AutoNewCustom("src is incomplete",
-		errors.PrependFullPkgName, 0)
+// ErrSrcIncomplete is an error indicating that the source bytes src
+// is incomplete to be decoded with the variable-length quantity (VLQ)
+// style encoding.
+//
+// The client should use errors.Is to test whether
+// an error is ErrSrcIncomplete.
+var ErrSrcIncomplete = errors.AutoNewCustom(
+	"src is incomplete",
+	errors.PrependFullPkgName,
+	0,
+)
 
-	// ErrSrcTooLarge is an error indicating that the source bytes src is
-	// too large to be decoded into a 64-bit number with the
-	// variable-length quantity (VLQ) style encoding.
-	//
-	// The client should use errors.Is to test whether
-	// an error is ErrSrcTooLarge.
-	ErrSrcTooLarge = errors.AutoNewCustom("src is too large to be decoded into a 64-bit number",
-		errors.PrependFullPkgName, 0)
+// ErrSrcTooLarge is an error indicating that the source bytes src is
+// too large to be decoded into a 64-bit number with the
+// variable-length quantity (VLQ) style encoding.
+//
+// The client should use errors.Is to test whether
+// an error is ErrSrcTooLarge.
+var ErrSrcTooLarge = errors.AutoNewCustom(
+	"src is too large to be decoded into a 64-bit number",
+	errors.PrependFullPkgName,
+	0,
 )
 
 // DecodeUint64 decodes src into a 64-bit unsigned integer

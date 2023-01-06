@@ -172,7 +172,13 @@ func TestResponseShowWC(t *testing.T) {
 				t.Fatal(err)
 			}
 			if got := w.String(); got != tc.wantOutput {
-				t.Errorf("got:\n%s\nwant:\n%s", got, tc.wantOutput)
+				t.Errorf(
+					"got (len: %d)\n%s\nwant (len: %d)\n%s",
+					len(got),
+					got,
+					len(tc.wantOutput),
+					tc.wantOutput,
+				)
 			}
 			if n != w.Len() || n != len(tc.wantOutput) {
 				t.Errorf("n, got %d; w.Len() is %d; want %d", n, w.Len(), len(tc.wantOutput))

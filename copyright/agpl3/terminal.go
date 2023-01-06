@@ -47,8 +47,13 @@ const terminalNoticeWithSourceLayout = terminalNoticeLayout +
 	"    Program source: <%[4]s>.\n"
 
 // ErrAuthorMissing is an error for that the author is missing.
-var ErrAuthorMissing = errors.AutoNewCustom("author is missing",
-	errors.PrependFullPkgName, 0)
+//
+// The client should use errors.Is to test whether an error is ErrAuthorMissing.
+var ErrAuthorMissing = errors.AutoNewCustom(
+	"author is missing",
+	errors.PrependFullPkgName,
+	0,
+)
 
 // PrintCopyrightNotice prints a short copyright notice to w,
 // typically for terminal interaction.
