@@ -30,22 +30,16 @@ func TestDecodedLen(t *testing.T) {
 			continue
 		}
 		t.Run("dst="+tc.dstName, func(t *testing.T) {
-			if n := hex.DecodedLen(len(tc.dstStr)); n != len(tc.srcStr) {
-				t.Errorf("got %d; want %d", n, len(tc.srcStr))
-			}
-		})
-	}
-}
-
-func TestDecodedLen64(t *testing.T) {
-	for _, tc := range testEncodeCases {
-		if tc.upper { // only use the lower cases to avoid redundant sources
-			continue
-		}
-		t.Run("dst="+tc.dstName, func(t *testing.T) {
-			if n := hex.DecodedLen64(int64(len(tc.dstStr))); n != int64(len(tc.srcStr)) {
-				t.Errorf("got %d; want %d", n, len(tc.srcStr))
-			}
+			t.Run("type=int", func(t *testing.T) {
+				if n := hex.DecodedLen(len(tc.dstStr)); n != len(tc.srcStr) {
+					t.Errorf("got %d; want %d", n, len(tc.srcStr))
+				}
+			})
+			t.Run("type=int64", func(t *testing.T) {
+				if n := hex.DecodedLen(int64(len(tc.dstStr))); n != int64(len(tc.srcStr)) {
+					t.Errorf("got %d; want %d", n, len(tc.srcStr))
+				}
+			})
 		})
 	}
 }

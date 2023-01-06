@@ -27,12 +27,7 @@ import (
 )
 
 // EncodedLen returns the length of encoding of n source bytes, exactly n * 2.
-func EncodedLen(n int) int {
-	return n * 2
-}
-
-// EncodedLen64 returns the length of encoding of n source bytes, exactly n * 2.
-func EncodedLen64(n int64) int64 {
+func EncodedLen[Int constraints.Integer](n Int) Int {
 	return n * 2
 }
 

@@ -58,22 +58,16 @@ func TestEncodedLen(t *testing.T) {
 			continue
 		}
 		t.Run("src="+tc.srcName, func(t *testing.T) {
-			if n := hex.EncodedLen(len(tc.srcStr)); n != len(tc.dstStr) {
-				t.Errorf("got %d; want %d", n, len(tc.dstStr))
-			}
-		})
-	}
-}
-
-func TestEncodedLen64(t *testing.T) {
-	for _, tc := range testEncodeCases {
-		if tc.upper { // only use the lower cases to avoid redundant sources
-			continue
-		}
-		t.Run("src="+tc.srcName, func(t *testing.T) {
-			if n := hex.EncodedLen64(int64(len(tc.srcStr))); n != int64(len(tc.dstStr)) {
-				t.Errorf("got %d; want %d", n, len(tc.dstStr))
-			}
+			t.Run("type=int", func(t *testing.T) {
+				if n := hex.EncodedLen(len(tc.srcStr)); n != len(tc.dstStr) {
+					t.Errorf("got %d; want %d", n, len(tc.dstStr))
+				}
+			})
+			t.Run("type=int64", func(t *testing.T) {
+				if n := hex.EncodedLen(int64(len(tc.srcStr))); n != int64(len(tc.dstStr)) {
+					t.Errorf("got %d; want %d", n, len(tc.dstStr))
+				}
+			})
 		})
 	}
 }
@@ -217,7 +211,7 @@ func TestEncoder_ReadFrom(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			n = hex.EncodedLen64(n)
+			n = hex.EncodedLen(n)
 			if string(buf[:n]) != tc.dstStr {
 				t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
 			}

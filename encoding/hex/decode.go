@@ -18,12 +18,9 @@
 
 package hex
 
-// DecodedLen returns the length of decoding of x source bytes, exactly x / 2.
-func DecodedLen(x int) int {
-	return x / 2
-}
+import "github.com/donyori/gogo/constraints"
 
-// DecodedLen64 returns the length of decoding of x source bytes, exactly x / 2.
-func DecodedLen64(x int64) int64 {
+// DecodedLen returns the length of decoding of x source bytes, exactly x / 2.
+func DecodedLen[Int constraints.Integer](x Int) Int {
 	return x / 2
 }
