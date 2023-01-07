@@ -57,7 +57,9 @@ type ReadOptions struct {
 // Its method Close closes all closable objects opened by this reader
 // (may include the file).
 // After successfully closing this reader,
-// its method Close will do nothing and return nil.
+// its method Close will do nothing and return nil,
+// and its read methods will report ErrFileReaderClosed.
+// (To test whether the error is ErrFileReaderClosed, use function errors.Is.)
 type Reader interface {
 	inout.Closer
 	inout.BufferedReader
@@ -275,6 +277,11 @@ func ReadFromFS(fsys fs.FS, name string, opts *ReadOptions) (r Reader, err error
 }
 
 // Close closes all closers used by this reader.
+//
+// After successfully closing this reader,
+// Close will do nothing and return nil,
+// and the read methods will report ErrFileReaderClosed.
+// (To test whether the error is ErrFileReaderClosed, use function errors.Is.)
 func (fr *reader) Close() error {
 	if fr.c.Closed() {
 		return nil

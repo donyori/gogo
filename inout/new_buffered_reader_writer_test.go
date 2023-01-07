@@ -63,7 +63,7 @@ func TestNewBufferedReaderSize(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			b := inout.NewBufferedReaderSize(tc.r, tc.argSize)
-			switch true {
+			switch {
 			case tc.wantSize != 0:
 				if n := b.Size(); n != tc.wantSize {
 					t.Errorf("got size %d; want %d", n, tc.wantSize)
@@ -118,7 +118,7 @@ func TestNewBufferedWriterSize(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			b := inout.NewBufferedWriterSize(tc.w, tc.argSize)
-			switch true {
+			switch {
 			case tc.wantSize != 0:
 				if n := b.Size(); n != tc.wantSize {
 					t.Errorf("got size %d; want %d", n, tc.wantSize)

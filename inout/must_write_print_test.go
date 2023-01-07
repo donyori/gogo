@@ -88,9 +88,8 @@ func TestMustFunctionsWritePanic(t *testing.T) {
 				err := recover()
 				wp, ok := err.(*inout.WritePanic)
 				if !ok {
-					t.Fatalf("recover type %T; want *inout.WritePanic", err)
-				}
-				if !errors.Is(wp, errErrorWriter) {
+					t.Errorf("recover type %T; want *inout.WritePanic", err)
+				} else if !errors.Is(wp, errErrorWriter) {
 					t.Error("errors.Is(wp, errErrorWriter) is false")
 				}
 			}()

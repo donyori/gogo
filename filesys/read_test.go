@@ -207,19 +207,157 @@ func TestReadFromFS_Offset(t *testing.T) {
 }
 
 func TestReadFromFS_AfterClose(t *testing.T) {
-	const name = "file1.txt"
-	r, err := filesys.ReadFromFS(testFS, name, nil)
-	if err != nil {
-		t.Fatal("create -", err)
+	testCases := []struct {
+		methodName string
+		f          func(t *testing.T, r filesys.Reader) error
+		wantErr    error
+	}{
+		{
+			"Close",
+			func(t *testing.T, r filesys.Reader) error {
+				return r.Close()
+			},
+			nil,
+		},
+		{
+			"Closed",
+			func(t *testing.T, r filesys.Reader) error {
+				if !r.Closed() {
+					t.Error("r.Closed - got false; want true")
+				}
+				return nil
+			},
+			nil,
+		},
+		{
+			"Read",
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.Read([]byte{})
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"ReadByte",
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.ReadByte()
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"UnreadByte",
+			func(t *testing.T, r filesys.Reader) error {
+				return r.UnreadByte()
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"ReadRune",
+			func(t *testing.T, r filesys.Reader) error {
+				_, _, err := r.ReadRune()
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"UnreadRune",
+			func(t *testing.T, r filesys.Reader) error {
+				return r.UnreadRune()
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"WriteTo",
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.WriteTo(io.Discard)
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"ReadLine",
+			func(t *testing.T, r filesys.Reader) error {
+				_, _, err := r.ReadLine()
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"ReadEntireLine",
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.ReadEntireLine()
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"WriteLineTo",
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.WriteLineTo(io.Discard)
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"Peek",
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.Peek(0)
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"Discard",
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.Discard(0)
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"TarNext-notTar",
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.TarNext()
+				return err
+			},
+			filesys.ErrNotTar,
+		},
 	}
-	err = r.Close()
-	if err != nil {
-		t.Fatal("close -", err)
+
+	for _, tc := range testCases {
+		t.Run("method="+tc.methodName, func(t *testing.T) {
+			const name = "file1.txt"
+			r, err := filesys.ReadFromFS(testFS, name, nil)
+			if err != nil {
+				t.Fatal("create -", err)
+			}
+			err = r.Close()
+			if err != nil {
+				t.Fatal("close -", err)
+			}
+			err = tc.f(t, r)
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("got error %v; want %v", err, tc.wantErr)
+			}
+		})
 	}
-	_, err = r.Read([]byte{})
-	if !errors.Is(err, filesys.ErrFileReaderClosed) {
-		t.Error("errors.Is(err, filesys.ErrFileReaderClosed) is false, err:", err)
-	}
+
+	t.Run("method=TarNext-isTar", func(t *testing.T) {
+		const name = "tar file.tar"
+		r, err := filesys.ReadFromFS(testFS, name, nil)
+		if err != nil {
+			t.Fatal("create -", err)
+		}
+		err = r.Close()
+		if err != nil {
+			t.Fatal("close -", err)
+		}
+		_, err = r.TarNext()
+		if !errors.Is(err, filesys.ErrFileReaderClosed) {
+			t.Errorf("got error %v; want %v", err, filesys.ErrFileReaderClosed)
+		}
+	})
 }
 
 // testReadFromTestFS reads the file with specified name from testFS

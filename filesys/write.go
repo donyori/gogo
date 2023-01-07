@@ -69,7 +69,9 @@ var defaultWriteOptions = &WriteOptions{GzipLv: gzip.DefaultCompression}
 // Its method Close closes all closable objects opened by this writer
 // (may include the file).
 // After successfully closing this writer,
-// its method Close will do nothing and return nil.
+// its method Close will do nothing and return nil,
+// and its write methods will report ErrFileWriterClosed.
+// (To test whether the error is ErrFileWriterClosed, use function errors.Is.)
 type Writer interface {
 	inout.Closer
 	inout.BufferedWriter
@@ -222,6 +224,11 @@ func writeSubRawClosersAndCreateBuffer(fw *writer, info fs.FileInfo, pClosers *[
 }
 
 // Close closes all closers used by this writer.
+//
+// After successfully closing this writer,
+// Close will do nothing and return nil,
+// and the write methods will report ErrFileWriterClosed.
+// (To test whether the error is ErrFileWriterClosed, use function errors.Is.)
 func (fw *writer) Close() error {
 	if fw.c.Closed() {
 		return nil
@@ -421,6 +428,8 @@ func (fw *writer) MustPrintln(args ...any) (n int) {
 func (fw *writer) Flush() error {
 	if fw.c.Closed() {
 		if fw.bw.Buffered() > 0 {
+			// This should never happen, but will act as a safeguard for later,
+			// as Flush is implicitly called in Close.
 			return errors.AutoWrap(ErrFileWriterClosed)
 		}
 		return nil

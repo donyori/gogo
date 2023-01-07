@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/donyori/gogo/filesys"
+	"github.com/donyori/gogo/inout"
 )
 
 func TestWrite_Raw(t *testing.T) {
@@ -112,24 +113,255 @@ func TestWrite_TarTgz(t *testing.T) {
 }
 
 func TestWrite_AfterClose(t *testing.T) {
-	file := &WritableFileImpl{Name: "test-write-after-close.txt"}
-	w, err := filesys.Write(file, nil, true)
-	if err != nil {
-		t.Fatal("create -", err)
+	testCases := []struct {
+		methodName string
+		f          func(t *testing.T, w filesys.Writer) error
+		wantErr    error
+		writePanic bool
+	}{
+		{
+			"Close",
+			func(t *testing.T, w filesys.Writer) error {
+				return w.Close()
+			},
+			nil,
+			false,
+		},
+		{
+			"Closed",
+			func(t *testing.T, w filesys.Writer) error {
+				if !w.Closed() {
+					t.Error("w.Closed - got false; want true")
+				}
+				return nil
+			},
+			nil,
+			false,
+		},
+		{
+			"Write",
+			func(t *testing.T, w filesys.Writer) error {
+				_, err := w.Write([]byte{})
+				return err
+			},
+			filesys.ErrFileWriterClosed,
+			false,
+		},
+		{
+			"MustWrite",
+			func(t *testing.T, w filesys.Writer) error {
+				w.MustWrite([]byte{})
+				return nil
+			},
+			filesys.ErrFileWriterClosed,
+			true,
+		},
+		{
+			"WriteByte",
+			func(t *testing.T, w filesys.Writer) error {
+				return w.WriteByte('0')
+			},
+			filesys.ErrFileWriterClosed,
+			false,
+		},
+		{
+			"MustWriteByte",
+			func(t *testing.T, w filesys.Writer) error {
+				w.MustWriteByte('0')
+				return nil
+			},
+			filesys.ErrFileWriterClosed,
+			true,
+		},
+		{
+			"WriteRune",
+			func(t *testing.T, w filesys.Writer) error {
+				_, err := w.WriteRune('汉')
+				return err
+			},
+			filesys.ErrFileWriterClosed,
+			false,
+		},
+		{
+			"MustWriteRune",
+			func(t *testing.T, w filesys.Writer) error {
+				w.MustWriteRune('汉')
+				return nil
+			},
+			filesys.ErrFileWriterClosed,
+			true,
+		},
+		{
+			"WriteString",
+			func(t *testing.T, w filesys.Writer) error {
+				_, err := w.WriteString("")
+				return err
+			},
+			filesys.ErrFileWriterClosed,
+			false,
+		},
+		{
+			"MustWriteString",
+			func(t *testing.T, w filesys.Writer) error {
+				w.MustWriteString("")
+				return nil
+			},
+			filesys.ErrFileWriterClosed,
+			true,
+		},
+		{
+			"ReadFrom",
+			func(t *testing.T, w filesys.Writer) error {
+				_, err := w.ReadFrom(bytes.NewReader([]byte{}))
+				return err
+			},
+			filesys.ErrFileWriterClosed,
+			false,
+		},
+		{
+			"Printf",
+			func(t *testing.T, w filesys.Writer) error {
+				_, err := w.Printf("")
+				return err
+			},
+			filesys.ErrFileWriterClosed,
+			false,
+		},
+		{
+			"MustPrintf",
+			func(t *testing.T, w filesys.Writer) error {
+				w.MustPrintf("")
+				return nil
+			},
+			filesys.ErrFileWriterClosed,
+			true,
+		},
+		{
+			"Print",
+			func(t *testing.T, w filesys.Writer) error {
+				_, err := w.Print()
+				return err
+			},
+			filesys.ErrFileWriterClosed,
+			false,
+		},
+		{
+			"MustPrint",
+			func(t *testing.T, w filesys.Writer) error {
+				w.MustPrint()
+				return nil
+			},
+			filesys.ErrFileWriterClosed,
+			true,
+		},
+		{
+			"Println",
+			func(t *testing.T, w filesys.Writer) error {
+				_, err := w.Println()
+				return err
+			},
+			filesys.ErrFileWriterClosed,
+			false,
+		},
+		{
+			"MustPrintln",
+			func(t *testing.T, w filesys.Writer) error {
+				w.MustPrintln()
+				return nil
+			},
+			filesys.ErrFileWriterClosed,
+			true,
+		},
+		{
+			"Flush-noBufferedData",
+			func(t *testing.T, w filesys.Writer) error {
+				return w.Flush()
+			},
+			nil,
+			false,
+		},
+		{
+			"TarWriteHeader-notTar",
+			func(t *testing.T, w filesys.Writer) error {
+				return w.TarWriteHeader(new(tar.Header))
+			},
+			filesys.ErrNotTar,
+			false,
+		},
 	}
-	err = w.Close()
-	if err != nil {
-		t.Fatal("close -", err)
+
+	for _, tc := range testCases {
+		t.Run("method="+tc.methodName, func(t *testing.T) {
+			file := &WritableFileImpl{Name: "test-write-after-close.txt"}
+			w, err := filesys.Write(file, nil, true)
+			if err != nil {
+				t.Fatal("create -", err)
+			}
+			err = w.Close()
+			if err != nil {
+				t.Fatal("close -", err)
+			}
+			defer func() {
+				e := recover()
+				if tc.writePanic {
+					if wp, ok := e.(*inout.WritePanic); ok {
+						if !errors.Is(wp, tc.wantErr) {
+							t.Errorf("got panic %v; want %v", e, tc.wantErr)
+						}
+					} else {
+						t.Errorf("got panic %v (type: %[1]T); want *inout.WritePanic", e)
+					}
+				} else if e != nil {
+					t.Error("panic -", e)
+				}
+			}()
+			err = tc.f(t, w)
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("got error %v; want %v", err, tc.wantErr)
+			}
+		})
 	}
-	_, err = w.WriteString("it should fail")
-	if !errors.Is(err, filesys.ErrFileWriterClosed) {
-		t.Errorf(
-			"errors.Is(err, filesys.ErrFileWriterClosed) is false, err: %v; file content (len: %d): %s",
-			err,
-			len(file.Data),
-			file.Data,
-		)
-	}
+
+	t.Run("method=Flush-hasBufferedData", func(t *testing.T) {
+		file := &WritableFileImpl{Name: "test-write-after-close.txt"}
+		const input = "Flush should return nil"
+		w, err := filesys.Write(file, &filesys.WriteOptions{BufSize: len(input) + 10}, true)
+		if err != nil {
+			t.Fatal("create -", err)
+		}
+		_, err = w.WriteString(input)
+		if err != nil {
+			t.Fatal("write string -", err)
+		}
+		if n := w.Buffered(); n != len(input) {
+			t.Fatalf("got w.Buffered %d; want %d", n, len(input))
+		}
+		err = w.Close()
+		if err != nil {
+			t.Fatal("close -", err)
+		}
+		err = w.Flush()
+		// The buffered data should be flushed in Close, so err should be nil.
+		if err != nil {
+			t.Errorf("got error %v; want nil", err)
+		}
+	})
+
+	t.Run("method=TarWriteHeader-isTar", func(t *testing.T) {
+		file := &WritableFileImpl{Name: "test-write-after-close.tar"}
+		w, err := filesys.Write(file, nil, true)
+		if err != nil {
+			t.Fatal("create -", err)
+		}
+		err = w.Close()
+		if err != nil {
+			t.Fatal("close -", err)
+		}
+		err = w.TarWriteHeader(new(tar.Header))
+		if !errors.Is(err, filesys.ErrFileWriterClosed) {
+			t.Errorf("got error %v; want %v", err, filesys.ErrFileWriterClosed)
+		}
+	})
 }
 
 // writeFile writes data to file using Write.
