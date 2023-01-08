@@ -822,10 +822,10 @@ func TestSliceDynamicArray_Shrink(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("s=%s(cap=%d)", sliceToName(tc.data), cap(tc.data)), func(t *testing.T) {
 			sda := copySda(tc.data)
-			var aPtr, aPtrOriginal *[0]int
-			aPtrOriginal = (*[0]int)([]int(sda))
+			var ptrBefore, ptrAfter *[0]int
+			ptrBefore = (*[0]int)(sda)
 			sda.Shrink()
-			aPtr = (*[0]int)([]int(sda))
+			ptrAfter = (*[0]int)(sda)
 			if c := cap(sda); c != tc.wantCap {
 				t.Errorf("got capacity %d; want %d", c, tc.wantCap)
 			}
@@ -833,10 +833,10 @@ func TestSliceDynamicArray_Shrink(t *testing.T) {
 				t.Errorf("data changed; got %v; want %v", sda, tc.data)
 			}
 			if tc.isNewArray {
-				if aPtr == aPtrOriginal {
+				if ptrAfter == ptrBefore {
 					t.Error("should allocate a new array")
 				}
-			} else if aPtr != aPtrOriginal {
+			} else if ptrAfter != ptrBefore {
 				t.Error("should keep using the old array")
 			}
 		})
@@ -895,14 +895,14 @@ func TestSliceDynamicArray_Filter(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("s=%s&filterIdx=%d", sliceToName(tc.data), tc.filterIdx), func(t *testing.T) {
 			sda := copySda(tc.data)
-			var aPtr, aPtrOriginal *[0]int
-			aPtrOriginal = (*[0]int)([]int(sda))
+			var ptrBefore, ptrAfter *[0]int
+			ptrBefore = (*[0]int)(sda)
 			sda.Filter(filterList[tc.filterIdx])
-			aPtr = (*[0]int)([]int(sda))
+			ptrAfter = (*[0]int)(sda)
 			if sliceUnequal(sda, tc.want) {
 				t.Errorf("got %v; want %v", sda, tc.want)
 			}
-			if aPtr != aPtrOriginal {
+			if ptrAfter != ptrBefore {
 				t.Error("allocated new array, not in-place")
 			}
 		})

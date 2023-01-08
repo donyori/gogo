@@ -22,6 +22,8 @@ import (
 	"testing"
 
 	"github.com/donyori/gogo/runtime"
+	"github.com/donyori/gogo/runtime/internal/testing/dotpkg.v1"
+	"github.com/donyori/gogo/runtime/internal/testing/dotpkg.v1/subpkg"
 )
 
 type ExportedStruct struct{}
@@ -61,40 +63,111 @@ func init() {
 }
 
 type callerPkgFuncRecord struct {
-	expFn string
-	pkg   string
-	fn    string
+	wantPkg string
+	wantFn  string
+	pkg     string
+	fn      string
 }
 
 func TestCallerPkgFunc(t *testing.T) {
+	const wantPkg = "github.com/donyori/gogo/runtime_test"
+
 	var records []callerPkgFuncRecord
 	for _, elem := range globalTagPkgFuncs {
-		records = append(records, callerPkgFuncRecord{elem[0], elem[1], elem[2]})
+		records = append(records, callerPkgFuncRecord{
+			wantPkg: wantPkg,
+			wantFn:  elem[0],
+			pkg:     elem[1],
+			fn:      elem[2],
+		})
 	}
 	pkg, fn, _ := runtime.CallerPkgFunc(0)
-	records = append(records, callerPkgFuncRecord{"TestCallerPkgFunc", pkg, fn})
+	records = append(records, callerPkgFuncRecord{
+		wantPkg: wantPkg,
+		wantFn:  "TestCallerPkgFunc",
+		pkg:     pkg,
+		fn:      fn,
+	})
 	func() {
 		defer func() {
 			pkg, fn, _ := runtime.CallerPkgFunc(0)
-			records = append(records, callerPkgFuncRecord{"TestCallerPkgFunc.func1.1", pkg, fn})
+			records = append(records, callerPkgFuncRecord{
+				wantPkg: wantPkg,
+				wantFn:  "TestCallerPkgFunc.func1.1",
+				pkg:     pkg,
+				fn:      fn,
+			})
 		}()
 		pkg, fn, _ := runtime.CallerPkgFunc(0)
-		records = append(records, callerPkgFuncRecord{"TestCallerPkgFunc.func1", pkg, fn})
+		records = append(records, callerPkgFuncRecord{
+			wantPkg: wantPkg,
+			wantFn:  "TestCallerPkgFunc.func1",
+			pkg:     pkg,
+			fn:      fn,
+		})
 	}()
 	tes := new(ExportedStruct)
 	pkg, fn = tes.Foo()
-	records = append(records, callerPkgFuncRecord{"(*ExportedStruct).Foo", pkg, fn})
+	records = append(records, callerPkgFuncRecord{
+		wantPkg: wantPkg,
+		wantFn:  "(*ExportedStruct).Foo",
+		pkg:     pkg,
+		fn:      fn,
+	})
 	pkg, fn = tes.foo()
-	records = append(records, callerPkgFuncRecord{"(*ExportedStruct).foo", pkg, fn})
+	records = append(records, callerPkgFuncRecord{
+		wantPkg: wantPkg,
+		wantFn:  "(*ExportedStruct).foo",
+		pkg:     pkg,
+		fn:      fn,
+	})
 	tls := new(localStruct)
 	pkg, fn = tls.Foo()
-	records = append(records, callerPkgFuncRecord{"(*localStruct).Foo", pkg, fn})
+	records = append(records, callerPkgFuncRecord{
+		wantPkg: wantPkg,
+		wantFn:  "(*localStruct).Foo",
+		pkg:     pkg,
+		fn:      fn,
+	})
 	pkg, fn = tls.foo()
-	records = append(records, callerPkgFuncRecord{"(*localStruct).foo", pkg, fn})
+	records = append(records, callerPkgFuncRecord{
+		wantPkg: wantPkg,
+		wantFn:  "(*localStruct).foo",
+		pkg:     pkg,
+		fn:      fn,
+	})
 
 	for _, rec := range records {
-		if rec.pkg != "github.com/donyori/gogo/runtime_test" || rec.fn != rec.expFn {
-			t.Errorf("got pkg: %s, fn: %s\nwant pkg: github.com/donyori/gogo/runtime_test, fn: %s", rec.pkg, rec.fn, rec.expFn)
+		if rec.pkg != rec.wantPkg || rec.fn != rec.wantFn {
+			t.Errorf("got pkg: %s, fn: %s; want pkg: %s, fn: %s", rec.pkg, rec.fn, rec.wantPkg, rec.wantFn)
+		}
+	}
+}
+
+func TestCallerPkgFunc_DotPkg(t *testing.T) {
+	var records []callerPkgFuncRecord
+	dotpkg.Do(func() {
+		pkg, fn, _ := runtime.CallerPkgFunc(1)
+		records = append(records, callerPkgFuncRecord{
+			wantPkg: "github.com/donyori/gogo/runtime/internal/testing/dotpkg%2ev1",
+			wantFn:  "Do",
+			pkg:     pkg,
+			fn:      fn,
+		})
+	})
+	subpkg.Do(func() {
+		pkg, fn, _ := runtime.CallerPkgFunc(1)
+		records = append(records, callerPkgFuncRecord{
+			wantPkg: "github.com/donyori/gogo/runtime/internal/testing/dotpkg.v1/subpkg",
+			wantFn:  "Do",
+			pkg:     pkg,
+			fn:      fn,
+		})
+	})
+
+	for _, rec := range records {
+		if rec.pkg != rec.wantPkg || rec.fn != rec.wantFn {
+			t.Errorf("got pkg: %s, fn: %s; want pkg: %s, fn: %s", rec.pkg, rec.fn, rec.wantPkg, rec.wantFn)
 		}
 	}
 }
