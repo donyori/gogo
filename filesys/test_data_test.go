@@ -22,8 +22,9 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
-	"crypto/md5"
-	"crypto/sha256"
+	"crypto"
+	_ "crypto/md5"    // to register crypto.MD5
+	_ "crypto/sha256" // to register crypto.SHA256
 	"encoding/hex"
 	"io"
 	"math/rand"
@@ -31,8 +32,6 @@ import (
 	"sort"
 	"testing/fstest"
 	"time"
-
-	"github.com/donyori/gogo/filesys"
 )
 
 var (
@@ -46,7 +45,10 @@ var (
 	testFSTarFilenames   []string
 	testFSTgzFilenames   []string
 
-	testFSChecksumMap map[string][]filesys.HashChecksum
+	testFSChecksumMap map[string][]struct {
+		hash     crypto.Hash
+		checksum string
+	}
 )
 
 func init() {
@@ -208,24 +210,30 @@ func init() {
 		}
 	}
 
-	testFSChecksumMap = make(map[string][]filesys.HashChecksum, len(testFS))
+	testFSChecksumMap = make(map[string][]struct {
+		hash     crypto.Hash
+		checksum string
+	}, len(testFS))
 	for name, file := range testFS {
 		r := bytes.NewReader(file.Data)
-		hSHA256 := sha256.New()
-		hMD5 := md5.New()
-		w := io.MultiWriter(hSHA256, hMD5)
+		sha256Hash := crypto.SHA256.New()
+		md5Hash := crypto.MD5.New()
+		w := io.MultiWriter(sha256Hash, md5Hash)
 		_, err = io.Copy(w, r)
 		if err != nil {
 			panic(err)
 		}
-		testFSChecksumMap[name] = []filesys.HashChecksum{
+		testFSChecksumMap[name] = []struct {
+			hash     crypto.Hash
+			checksum string
+		}{
 			{
-				NewHash: sha256.New,
-				WantHex: hex.EncodeToString(hSHA256.Sum(nil)),
+				hash:     crypto.SHA256,
+				checksum: hex.EncodeToString(sha256Hash.Sum(nil)),
 			},
 			{
-				NewHash: md5.New,
-				WantHex: hex.EncodeToString(hMD5.Sum(nil)),
+				hash:     crypto.MD5,
+				checksum: hex.EncodeToString(md5Hash.Sum(nil)),
 			},
 		}
 	}

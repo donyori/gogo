@@ -22,6 +22,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"hash"
 	"io/fs"
 	"strings"
 	"testing"
@@ -29,62 +30,127 @@ import (
 	"github.com/donyori/gogo/filesys"
 )
 
-func TestVerifyChecksum(t *testing.T) {
-	const (
-		wantReturnTrue int8 = iota
-		wantReturnFalse
-		wantPanic
-	)
-
-	wrongChecksum := filesys.HashChecksum{
-		NewHash: sha256.New,
-		WantHex: strings.Repeat("0", hex.EncodedLen(sha256.Size)),
+func TestNewHashVerifier(t *testing.T) {
+	const panicPrefix = "github.com/donyori/gogo/filesys.NewHashVerifier: "
+	const toBeFilledIn = "-"
+	testCases := []struct {
+		newHashName string
+		newHash     func() hash.Hash
+		prefixHex   string
+		panicMsg    string
+	}{
+		{
+			"<nil>",
+			nil,
+			"",
+			panicPrefix + "newHash is nil",
+		},
+		{
+			"return-nil",
+			func() hash.Hash { return nil },
+			"",
+			panicPrefix + "newHash returns nil",
+		},
+		{
+			"sha256.New",
+			sha256.New,
+			"",
+			"",
+		},
+		{
+			"sha256.New",
+			sha256.New,
+			"0123456789ABCDEFabcdef",
+			"",
+		},
+		{
+			"sha256.New",
+			sha256.New,
+			strings.Repeat("0", hex.EncodedLen(sha256.Size)),
+			"",
+		},
+		{
+			"sha256.New",
+			sha256.New,
+			strings.Repeat("0", hex.EncodedLen(sha256.Size)+2),
+			"",
+		},
+		{
+			"sha256.New",
+			sha256.New,
+			"12ab" + string('0'-1),
+			toBeFilledIn,
+		},
+		{
+			"sha256.New",
+			sha256.New,
+			string('A'-1) + "ABC",
+			toBeFilledIn,
+		},
+		{
+			"sha256.New",
+			sha256.New,
+			"0123456789ABCDEFGabcdef",
+			toBeFilledIn,
+		},
+		{
+			"sha256.New",
+			sha256.New,
+			"g",
+			toBeFilledIn,
+		},
 	}
+	for i := range testCases {
+		if testCases[i].panicMsg == toBeFilledIn {
+			testCases[i].panicMsg = panicPrefix + fmt.Sprintf(
+				"prefixHex (%q) is not hexadecimal",
+				testCases[i].prefixHex,
+			)
+		}
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf(
+			"newHash=%s&prefixHex=%q(len=%d)",
+			tc.newHashName,
+			tc.prefixHex,
+			len(tc.prefixHex),
+		), func(t *testing.T) {
+			defer func() {
+				e := recover()
+				if tc.panicMsg != "" {
+					if s, ok := e.(string); !ok || s != tc.panicMsg {
+						t.Errorf("got panic %v (type: %[1]T); want %s", e, tc.panicMsg)
+					}
+				} else if e != nil {
+					t.Error("panic -", e)
+				}
+			}()
+			got := filesys.NewHashVerifier(tc.newHash, tc.prefixHex)
+			if tc.panicMsg != "" {
+				t.Error("function returned but want panic")
+			} else if got == nil {
+				t.Error("got nil")
+			}
+		})
+	}
+}
+
+func TestVerifyChecksum(t *testing.T) {
+	t.Run("file=<nil>", func(t *testing.T) {
+		for _, tc := range verifyChecksumTestCases("") {
+			t.Run("hvs="+tc.hvsName, func(t *testing.T) {
+				if got := filesys.VerifyChecksum(nil, true, tc.hvs...); got {
+					t.Error("got true; want false")
+				}
+			})
+		}
+	})
 
 	for _, filename := range testFSFilenames {
 		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
-			testCases := []struct {
-				csName string
-				cs     []filesys.HashChecksum
-				want   int8
-			}{
-				{"<nil>", nil, wantReturnTrue},
-				{"correct", testFSChecksumMap[filename], wantReturnTrue},
-				{"wrong", []filesys.HashChecksum{wrongChecksum}, wantReturnFalse},
-				{"correct+wrong", []filesys.HashChecksum{testFSChecksumMap[filename][0], wrongChecksum}, wantReturnFalse},
-				{"zero-value", []filesys.HashChecksum{{}}, wantPanic},
-				{"no-WantHex", []filesys.HashChecksum{{NewHash: testFSChecksumMap[filename][0].NewHash}}, wantPanic},
-				{"no-NewHash", []filesys.HashChecksum{{WantHex: testFSChecksumMap[filename][0].WantHex}}, wantPanic},
-				{"correct+zero-value", []filesys.HashChecksum{testFSChecksumMap[filename][0], {}}, wantPanic},
-			}
-
-			for _, tc := range testCases {
-				t.Run("cs="+tc.csName, func(t *testing.T) {
-					var want, shouldPanic bool
-					switch tc.want {
-					case wantReturnTrue:
-						want = true
-					case wantReturnFalse:
-						// Do nothing here.
-					case wantPanic:
-						shouldPanic = true
-					default:
-						// This should never happen, but will act as a safeguard for later,
-						// as a default value doesn't make sense here.
-						t.Fatal("unacceptable tc.want", tc.want)
-					}
-					defer func() {
-						if e := recover(); e != nil {
-							if shouldPanic {
-								if s, ok := e.(string); ok {
-									if strings.HasPrefix(s, "github.com/donyori/gogo/filesys.VerifyChecksum: ") {
-										return
-									}
-								}
-							}
-							t.Error("panic:", e)
-						}
-					}()
+			for _, tc := range verifyChecksumTestCases(filename) {
+				t.Run("hvs="+tc.hvsName, func(t *testing.T) {
 					file, err := testFS.Open(filename)
 					if err != nil {
 						t.Fatal("open file -", err)
@@ -94,12 +160,9 @@ func TestVerifyChecksum(t *testing.T) {
 							t.Error("close file -", err)
 						}
 					}(file)
-					got := filesys.VerifyChecksum(file, false, tc.cs...)
-					if shouldPanic {
-						t.Fatal("should panic but got", got)
-					}
-					if got != want {
-						t.Errorf("got %t; want %t", got, want)
+					got := filesys.VerifyChecksum(file, false, tc.hvs...)
+					if got != tc.want {
+						t.Errorf("got %t; want %t", got, tc.want)
 					}
 				})
 			}
@@ -108,106 +171,191 @@ func TestVerifyChecksum(t *testing.T) {
 }
 
 func TestVerifyChecksumFromFS(t *testing.T) {
-	const (
-		wantReturnTrue int8 = iota
-		wantReturnFalse
-		wantPanic
-	)
+	nilAndNonExistTestCases := verifyChecksumTestCases("")
 
-	wrongChecksum := filesys.HashChecksum{
-		NewHash: sha256.New,
-		WantHex: strings.Repeat("0", hex.EncodedLen(sha256.Size)),
-	}
-
-	t.Run("fsys=nil", func(t *testing.T) {
-		defer func() {
-			if e := recover(); e != nil {
-				if s, ok := e.(string); ok {
-					if s == "github.com/donyori/gogo/filesys.VerifyChecksumFromFS: fsys is nil" {
-						return
-					}
+	t.Run(`fsys=<nil>&file=""`, func(t *testing.T) {
+		for _, tc := range nilAndNonExistTestCases {
+			t.Run("hvs="+tc.hvsName, func(t *testing.T) {
+				if got := filesys.VerifyChecksumFromFS(nil, "", tc.hvs...); got {
+					t.Error("got true; want false")
 				}
-				t.Error("panic:", e)
-			}
-		}()
-		got := filesys.VerifyChecksumFromFS(nil, "")
-		t.Error("should panic but got", got)
-	})
-
-	t.Run(`file="nonexist"&cs=<nil>`, func(t *testing.T) {
-		if got := filesys.VerifyChecksumFromFS(testFS, "nonexist"); got {
-			t.Error("got true; want false")
+			})
 		}
 	})
 
-	t.Run(`file="nonexist"&cs=zero-value`, func(t *testing.T) {
-		defer func() {
-			if e := recover(); e != nil {
-				if s, ok := e.(string); ok {
-					if strings.HasPrefix(s, "github.com/donyori/gogo/filesys.VerifyChecksumFromFS: ") {
-						return
-					}
+	t.Run(`file="nonexist"`, func(t *testing.T) {
+		for _, tc := range nilAndNonExistTestCases {
+			t.Run("hvs="+tc.hvsName, func(t *testing.T) {
+				if got := filesys.VerifyChecksumFromFS(testFS, "nonexist", tc.hvs...); got {
+					t.Error("got true; want false")
 				}
-				t.Error("panic:", e)
-			}
-		}()
-		got := filesys.VerifyChecksumFromFS(testFS, "nonexist", filesys.HashChecksum{})
-		t.Error("should panic but got", got)
+			})
+		}
 	})
 
 	for _, filename := range testFSFilenames {
 		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
-			testCases := []struct {
-				csName string
-				cs     []filesys.HashChecksum
-				want   int8
-			}{
-				{"<nil>", nil, wantReturnTrue},
-				{"correct", testFSChecksumMap[filename], wantReturnTrue},
-				{"wrong", []filesys.HashChecksum{wrongChecksum}, wantReturnFalse},
-				{"correct+wrong", []filesys.HashChecksum{testFSChecksumMap[filename][0], wrongChecksum}, wantReturnFalse},
-				{"zero-value", []filesys.HashChecksum{{}}, wantPanic},
-				{"no-WantHex", []filesys.HashChecksum{{NewHash: testFSChecksumMap[filename][0].NewHash}}, wantPanic},
-				{"no-NewHash", []filesys.HashChecksum{{WantHex: testFSChecksumMap[filename][0].WantHex}}, wantPanic},
-				{"correct+zero-value", []filesys.HashChecksum{testFSChecksumMap[filename][0], {}}, wantPanic},
-			}
-
-			for _, tc := range testCases {
-				t.Run("cs="+tc.csName, func(t *testing.T) {
-					var want, shouldPanic bool
-					switch tc.want {
-					case wantReturnTrue:
-						want = true
-					case wantReturnFalse:
-						// Do nothing here.
-					case wantPanic:
-						shouldPanic = true
-					default:
-						// This should never happen, but will act as a safeguard for later,
-						// as a default value doesn't make sense here.
-						t.Fatal("unacceptable tc.want", tc.want)
-					}
-					defer func() {
-						if e := recover(); e != nil {
-							if shouldPanic {
-								if s, ok := e.(string); ok {
-									if strings.HasPrefix(s, "github.com/donyori/gogo/filesys.VerifyChecksumFromFS: ") {
-										return
-									}
-								}
-							}
-							t.Error("panic:", e)
-						}
-					}()
-					got := filesys.VerifyChecksumFromFS(testFS, filename, tc.cs...)
-					if shouldPanic {
-						t.Fatal("should panic but got", got)
-					}
-					if got != want {
-						t.Errorf("got %t; want %t", got, want)
+			for _, tc := range verifyChecksumTestCases(filename) {
+				t.Run("hvs="+tc.hvsName, func(t *testing.T) {
+					got := filesys.VerifyChecksumFromFS(testFS, filename, tc.hvs...)
+					if got != tc.want {
+						t.Errorf("got %t; want %t", got, tc.want)
 					}
 				})
 			}
 		})
+	}
+}
+
+// verifyChecksumTestCases returns test cases for
+// TestVerifyChecksum and TestVerifyChecksumFromFS.
+func verifyChecksumTestCases(filename string) []struct {
+	hvsName string
+	hvs     []filesys.HashVerifier
+	want    bool
+} {
+	checksums, ok := testFSChecksumMap[filename]
+	if !ok {
+		return []struct {
+			hvsName string
+			hvs     []filesys.HashVerifier
+			want    bool
+		}{
+			{
+				"<nil>",
+				nil,
+				false,
+			},
+			{
+				"nil-HashVerifier",
+				[]filesys.HashVerifier{nil},
+				false,
+			},
+			{
+				"all-0-prefix",
+				[]filesys.HashVerifier{filesys.NewHashVerifier(
+					sha256.New,
+					strings.Repeat("0", hex.EncodedLen(sha256.Size)),
+				)},
+				false,
+			},
+			{
+				"empty-prefix",
+				[]filesys.HashVerifier{filesys.NewHashVerifier(
+					sha256.New,
+					"",
+				)},
+				false,
+			},
+		}
+	}
+
+	newHash := checksums[0].hash.New
+	checksum := checksums[0].checksum
+	wrongChecksum := strings.Repeat("0", len(checksum))
+	if wrongChecksum == checksum {
+		wrongChecksum = wrongChecksum[:len(wrongChecksum)-1] + "1"
+	}
+	prefixVerifiers := make([]filesys.HashVerifier, len(checksum)+1)
+	for i := range prefixVerifiers {
+		prefixVerifiers[i] = filesys.NewHashVerifier(newHash, checksum[:i])
+	}
+	duplicateVerifier1 := filesys.NewHashVerifier(newHash, checksum)
+	duplicateVerifier2 := filesys.NewHashVerifier(newHash, checksum)
+
+	return []struct {
+		hvsName string
+		hvs     []filesys.HashVerifier
+		want    bool
+	}{
+		{
+			"<nil>",
+			nil,
+			true,
+		},
+		{
+			"correct",
+			[]filesys.HashVerifier{
+				filesys.NewHashVerifier(newHash, checksum),
+			},
+			true,
+		},
+		{
+			"wrong",
+			[]filesys.HashVerifier{
+				filesys.NewHashVerifier(newHash, wrongChecksum),
+			},
+			false,
+		},
+		{
+			"correct+wrong",
+			[]filesys.HashVerifier{
+				filesys.NewHashVerifier(newHash, checksum),
+				filesys.NewHashVerifier(newHash, wrongChecksum),
+			},
+			false,
+		},
+		{
+			"nil-HashVerifier",
+			[]filesys.HashVerifier{nil},
+			true,
+		},
+		{
+			"nil+correct",
+			[]filesys.HashVerifier{
+				nil,
+				filesys.NewHashVerifier(newHash, checksum),
+			},
+			true,
+		},
+		{
+			"nil+wrong",
+			[]filesys.HashVerifier{
+				nil,
+				filesys.NewHashVerifier(newHash, wrongChecksum),
+			},
+			false,
+		},
+		{
+			"correct+nil+nil+wrong+nil",
+			[]filesys.HashVerifier{
+				filesys.NewHashVerifier(newHash, checksum),
+				nil,
+				nil,
+				filesys.NewHashVerifier(newHash, wrongChecksum),
+				nil,
+			},
+			false,
+		},
+		{
+			"all-prefixes",
+			prefixVerifiers,
+			true,
+		},
+		{
+			"too-long-prefix",
+			[]filesys.HashVerifier{
+				filesys.NewHashVerifier(newHash, checksum+"00"),
+			},
+			false,
+		},
+		{
+			"duplicate-correct",
+			[]filesys.HashVerifier{
+				duplicateVerifier1,
+				duplicateVerifier1,
+			},
+			true,
+		},
+		{
+			"duplicate-correct+nil",
+			[]filesys.HashVerifier{
+				duplicateVerifier2,
+				duplicateVerifier2,
+				duplicateVerifier2,
+				nil,
+			},
+			true,
+		},
 	}
 }

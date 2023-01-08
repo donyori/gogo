@@ -138,12 +138,13 @@ func loadTarFile(name string) (files []struct {
 // lazyCalculateChecksums loads a file with specified name
 // through lazyLoadTestData and then calculates its checksums.
 //
-// newHashes are hash function makers (e.g., crypto/sha256.New).
+// newHashes are hash function makers
+// (e.g., crypto/sha256.New, crypto.SHA256.New).
 //
 // The returned checksums correspond to newHashes.
 // They are in hexadecimal representation, lowercase.
 //
-// lazyCalculateChecksums panics if anyone of newHashes is nil or returns nil.
+// lazyCalculateChecksums panics if anyone in newHashes is nil or returns nil.
 func lazyCalculateChecksums(name string, newHashes ...func() hash.Hash) (checksums []string, err error) {
 	data, err := lazyLoadTestData(name)
 	if err != nil || len(newHashes) == 0 {

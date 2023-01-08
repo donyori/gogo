@@ -22,23 +22,26 @@ import (
 	"os"
 
 	"github.com/donyori/gogo/filesys"
-	"github.com/donyori/gogo/filesys/internal"
 )
 
-// VerifyChecksum verifies a local file by checksum.
+// VerifyChecksum verifies a local file by hash checksum.
 //
-// It returns true if the file can be read and matches all checksums.
-// In particular, it returns true if len(hcs) is 0 and
-// the file can be opened for reading.
+// It returns true if the file can be read and matches all
+// filesys.HashVerifier in hvs
+// (nil and duplicate filesys.HashVerifier will be ignored).
+// In particular, it returns true if hvs has no non-nil
+// filesys.HashVerifier and the file can be opened for reading.
 // In this case, the file will not be read.
 //
-// It panics if anyone of hcs contains a nil NewHash or an empty WantHex,
-// or any NewHash returns nil.
-func VerifyChecksum(filename string, hcs ...filesys.HashChecksum) bool {
-	hs := internal.CheckHashChecksums(hcs)
+// Note that VerifyChecksum will not reset the hash state of anyone in hvs.
+// The client should use new filesys.HashVerifier
+// returned by filesys.NewHashVerifier or
+// call the Reset method of filesys.HashVerifier
+// before calling this function if needed.
+func VerifyChecksum(filename string, hvs ...filesys.HashVerifier) bool {
 	f, err := os.Open(filename)
 	if err != nil {
 		return false
 	}
-	return internal.VerifyChecksum(f, true, hcs, hs)
+	return filesys.VerifyChecksum(f, true, hvs...)
 }

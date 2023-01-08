@@ -19,10 +19,11 @@
 package local_test
 
 import (
-	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -32,103 +33,194 @@ import (
 )
 
 func TestVerifyChecksum(t *testing.T) {
-	const (
-		wantReturnTrue int8 = iota
-		wantReturnFalse
-		wantPanic
-	)
-
-	wrongChecksum := filesys.HashChecksum{
-		NewHash: sha256.New,
-		WantHex: strings.Repeat("0", hex.EncodedLen(sha256.Size)),
-	}
 	nonExistFilename := filepath.Join(testDataDir, "nonexist")
 
-	t.Run(`file="nonexist"&cs=<nil>`, func(t *testing.T) {
-		if got := local.VerifyChecksum(nonExistFilename); got {
-			t.Error("got true; want false")
+	t.Run(`file="nonexist"`, func(t *testing.T) {
+		testCases := verifyChecksumTestCases(t, nonExistFilename)
+		if t.Failed() {
+			return
 		}
-	})
-
-	t.Run(`file="nonexist"&cs=zero-value`, func(t *testing.T) {
-		defer func() {
-			if e := recover(); e != nil {
-				if s, ok := e.(string); ok {
-					if strings.HasPrefix(s, "github.com/donyori/gogo/filesys/local.VerifyChecksum: ") {
-						return
-					}
+		for _, tc := range testCases {
+			t.Run("hvs="+tc.hvsName, func(t *testing.T) {
+				if got := local.VerifyChecksum(nonExistFilename, tc.hvs...); got {
+					t.Error("got true; want false")
 				}
-				t.Error("panic:", e)
-			}
-		}()
-		got := local.VerifyChecksum(nonExistFilename, filesys.HashChecksum{})
-		t.Error("should panic but got", got)
+			})
+		}
 	})
 
 	for _, entry := range testFileEntries {
 		filename := entry.Name()
 		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
 			name := filepath.Join(testDataDir, filename)
-			checksums, err := lazyCalculateChecksums(name, sha256.New, md5.New)
-			if err != nil {
-				t.Fatal("calculate checksums -", err)
+			testCases := verifyChecksumTestCases(t, name)
+			if t.Failed() {
+				return
 			}
-			correctChecksums := []filesys.HashChecksum{
-				{NewHash: sha256.New, WantHex: checksums[0]},
-				{NewHash: md5.New, WantHex: checksums[1]},
-			}
-
-			testCases := []struct {
-				csName string
-				cs     []filesys.HashChecksum
-				want   int8
-			}{
-				{"<nil>", nil, wantReturnTrue},
-				{"correct", correctChecksums, wantReturnTrue},
-				{"wrong", []filesys.HashChecksum{wrongChecksum}, wantReturnFalse},
-				{"correct+wrong", []filesys.HashChecksum{correctChecksums[0], wrongChecksum}, wantReturnFalse},
-				{"zero-value", []filesys.HashChecksum{{}}, wantPanic},
-				{"no-WantHex", []filesys.HashChecksum{{NewHash: correctChecksums[0].NewHash}}, wantPanic},
-				{"no-NewHash", []filesys.HashChecksum{{WantHex: correctChecksums[0].WantHex}}, wantPanic},
-				{"correct+zero-value", []filesys.HashChecksum{correctChecksums[0], {}}, wantPanic},
-			}
-
 			for _, tc := range testCases {
-				t.Run("cs="+tc.csName, func(t *testing.T) {
-					var want, shouldPanic bool
-					switch tc.want {
-					case wantReturnTrue:
-						want = true
-					case wantReturnFalse:
-						// Do nothing here.
-					case wantPanic:
-						shouldPanic = true
-					default:
-						// This should never happen, but will act as a safeguard for later,
-						// as a default value doesn't make sense here.
-						t.Fatal("unacceptable tc.want", tc.want)
-					}
-					defer func() {
-						if e := recover(); e != nil {
-							if shouldPanic {
-								if s, ok := e.(string); ok {
-									if strings.HasPrefix(s, "github.com/donyori/gogo/filesys/local.VerifyChecksum: ") {
-										return
-									}
-								}
-							}
-							t.Error("panic:", e)
-						}
-					}()
-					got := local.VerifyChecksum(name, tc.cs...)
-					if shouldPanic {
-						t.Fatal("should panic but got", got)
-					}
-					if got != want {
-						t.Errorf("got %t; want %t", got, want)
+				t.Run("hvs="+tc.hvsName, func(t *testing.T) {
+					got := local.VerifyChecksum(name, tc.hvs...)
+					if got != tc.want {
+						t.Errorf("got %t; want %t", got, tc.want)
 					}
 				})
 			}
 		})
+	}
+}
+
+// verifyChecksumTestCases returns test cases for TestVerifyChecksum.
+func verifyChecksumTestCases(t *testing.T, name string) []struct {
+	hvsName string
+	hvs     []filesys.HashVerifier
+	want    bool
+} {
+	newHash := sha256.New
+	checksums, err := lazyCalculateChecksums(name, newHash)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return []struct {
+				hvsName string
+				hvs     []filesys.HashVerifier
+				want    bool
+			}{
+				{
+					"<nil>",
+					nil,
+					false,
+				},
+				{
+					"nil-HashVerifier",
+					[]filesys.HashVerifier{nil},
+					false,
+				},
+				{
+					"all-0-prefix",
+					[]filesys.HashVerifier{filesys.NewHashVerifier(
+						newHash,
+						strings.Repeat("0", hex.EncodedLen(sha256.Size)),
+					)},
+					false,
+				},
+				{
+					"empty-prefix",
+					[]filesys.HashVerifier{filesys.NewHashVerifier(
+						newHash,
+						"",
+					)},
+					false,
+				},
+			}
+		}
+		t.Error("calculate checksums -", err)
+		return nil
+	}
+
+	checksum := checksums[0]
+	wrongChecksum := strings.Repeat("0", len(checksum))
+	if wrongChecksum == checksum {
+		wrongChecksum = wrongChecksum[:len(wrongChecksum)-1] + "1"
+	}
+	prefixVerifiers := make([]filesys.HashVerifier, len(checksum)+1)
+	for i := range prefixVerifiers {
+		prefixVerifiers[i] = filesys.NewHashVerifier(newHash, checksum[:i])
+	}
+	duplicateVerifier1 := filesys.NewHashVerifier(newHash, checksum)
+	duplicateVerifier2 := filesys.NewHashVerifier(newHash, checksum)
+
+	return []struct {
+		hvsName string
+		hvs     []filesys.HashVerifier
+		want    bool
+	}{
+		{
+			"<nil>",
+			nil,
+			true,
+		},
+		{
+			"correct",
+			[]filesys.HashVerifier{
+				filesys.NewHashVerifier(newHash, checksum),
+			},
+			true,
+		},
+		{
+			"wrong",
+			[]filesys.HashVerifier{
+				filesys.NewHashVerifier(newHash, wrongChecksum),
+			},
+			false,
+		},
+		{
+			"correct+wrong",
+			[]filesys.HashVerifier{
+				filesys.NewHashVerifier(newHash, checksum),
+				filesys.NewHashVerifier(newHash, wrongChecksum),
+			},
+			false,
+		},
+		{
+			"nil-HashVerifier",
+			[]filesys.HashVerifier{nil},
+			true,
+		},
+		{
+			"nil+correct",
+			[]filesys.HashVerifier{
+				nil,
+				filesys.NewHashVerifier(newHash, checksum),
+			},
+			true,
+		},
+		{
+			"nil+wrong",
+			[]filesys.HashVerifier{
+				nil,
+				filesys.NewHashVerifier(newHash, wrongChecksum),
+			},
+			false,
+		},
+		{
+			"correct+nil+nil+wrong+nil",
+			[]filesys.HashVerifier{
+				filesys.NewHashVerifier(newHash, checksum),
+				nil,
+				nil,
+				filesys.NewHashVerifier(newHash, wrongChecksum),
+				nil,
+			},
+			false,
+		},
+		{
+			"all-prefixes",
+			prefixVerifiers,
+			true,
+		},
+		{
+			"too-long-prefix",
+			[]filesys.HashVerifier{
+				filesys.NewHashVerifier(newHash, checksum+"00"),
+			},
+			false,
+		},
+		{
+			"duplicate-correct",
+			[]filesys.HashVerifier{
+				duplicateVerifier1,
+				duplicateVerifier1,
+			},
+			true,
+		},
+		{
+			"duplicate-correct+nil",
+			[]filesys.HashVerifier{
+				duplicateVerifier2,
+				duplicateVerifier2,
+				duplicateVerifier2,
+				nil,
+			},
+			true,
+		},
 	}
 }
