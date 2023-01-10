@@ -33,10 +33,9 @@ import (
 // the encoding length of a specified input.
 //
 // They satisfy:
-//
-//	If u < minUint64s[0], then Uint64EncodedLen(u) = 1;
-//	If minUint64s[i] <= u < minUint64s[i+1] (i=0,1,...,7), then Uint64EncodedLen(u) = i+2;
-//	If u >= minUint64s[8], then Uint64EncodedLen(u) = 10.
+//   - If u < minUint64s[0], then Uint64EncodedLen(u) = 1;
+//   - If minUint64s[i] <= u < minUint64s[i+1] (i=0,1,...,7), then Uint64EncodedLen(u) = i+2;
+//   - If u >= minUint64s[8], then Uint64EncodedLen(u) = 10.
 var minUint64s = [...]uint64{
 	0x80, 0x4080, 0x204080, 0x10204080, 0x810204080,
 	0x40810204080, 0x2040810204080, 0x102040810204080, 0x8102040810204080,

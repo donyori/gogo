@@ -30,7 +30,7 @@ import (
 
 func TestDecodeUint64(t *testing.T) {
 	for i, src := range encodedUint64s {
-		t.Run(fmt.Sprintf("src=%X", src), func(t *testing.T) {
+		t.Run(fmt.Sprintf("src=%#X", src), func(t *testing.T) {
 			u, err := vlq.DecodeUint64(src)
 			if err != nil {
 				t.Fatal(err)
@@ -49,7 +49,7 @@ func TestDecodeUint64(t *testing.T) {
 				name = "src=[](Incomplete)"
 			}
 		} else {
-			name = fmt.Sprintf("src=%X(Incomplete)", src)
+			name = fmt.Sprintf("src=%#X(Incomplete)", src)
 		}
 		t.Run(name, func(t *testing.T) {
 			u, err := vlq.DecodeUint64(src)
@@ -59,7 +59,7 @@ func TestDecodeUint64(t *testing.T) {
 		})
 	}
 	for _, src := range tooLargeSrcs {
-		t.Run(fmt.Sprintf("src=%X(TooLarge)", src), func(t *testing.T) {
+		t.Run(fmt.Sprintf("src=%#X(TooLarge)", src), func(t *testing.T) {
 			u, err := vlq.DecodeUint64(src)
 			if !errors.Is(err, vlq.ErrSrcTooLarge) {
 				t.Errorf("got %#X, %v", u, err)
@@ -70,7 +70,7 @@ func TestDecodeUint64(t *testing.T) {
 
 func TestDecodeInt64(t *testing.T) {
 	for i, src := range encodedUint64s {
-		t.Run(fmt.Sprintf("src=%X", src), func(t *testing.T) {
+		t.Run(fmt.Sprintf("src=%#X", src), func(t *testing.T) {
 			x, err := vlq.DecodeInt64(src)
 			if err != nil {
 				t.Fatal(err)
@@ -84,7 +84,7 @@ func TestDecodeInt64(t *testing.T) {
 
 func TestDecodeFloat64(t *testing.T) {
 	for i, src := range encodedUint64s {
-		t.Run(fmt.Sprintf("src=%X", src), func(t *testing.T) {
+		t.Run(fmt.Sprintf("src=%#X", src), func(t *testing.T) {
 			f, err := vlq.DecodeFloat64(src)
 			if err != nil {
 				t.Fatal(err)
@@ -92,10 +92,16 @@ func TestDecodeFloat64(t *testing.T) {
 			want := uintconv.ToFloat64ByteReversal(uint64s[i])
 			if math.IsNaN(want) {
 				if !math.IsNaN(f) {
-					t.Errorf("got %f; want NaN", f)
+					t.Errorf("got %v (bits: %#016X); want NaN", f, math.Float64bits(f))
 				}
 			} else if f != want {
-				t.Errorf("got %f; want %f", f, want)
+				t.Errorf(
+					"got %v (bits: %#016X); want %v (bits: %#016X)",
+					f,
+					math.Float64bits(f),
+					want,
+					math.Float64bits(want),
+				)
 			}
 		})
 	}

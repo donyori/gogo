@@ -18,7 +18,10 @@
 
 package uintconv
 
-import "math"
+import (
+	"math"
+	"math/bits"
+)
 
 // FromFloat64ByteReversal maps a 64-bit floating-point number
 // to a 64-bit unsigned integer.
@@ -26,9 +29,11 @@ import "math"
 // It converts the specified float64 to uint64 using math.Float64bits
 // and then returns the byte-reversal of that uint64.
 //
-// FromFloat64ByteReversal(ToFloat64ByteReversal(x)) == x.
+// It satisfies:
+//
+//	FromFloat64ByteReversal(ToFloat64ByteReversal(x)) == x.
 func FromFloat64ByteReversal(f float64) uint64 {
-	return uint64ByteReverse(math.Float64bits(f))
+	return bits.ReverseBytes64(math.Float64bits(f))
 }
 
 // ToFloat64ByteReversal maps a 64-bit unsigned integer back to
@@ -37,22 +42,9 @@ func FromFloat64ByteReversal(f float64) uint64 {
 // It converts the byte-reversal of the specified uint64 to float64
 // using math.Float64frombits.
 //
-// ToFloat64ByteReversal(FromFloat64ByteReversal(x)) == x.
+// It satisfies:
+//
+//	ToFloat64ByteReversal(FromFloat64ByteReversal(x)) == x.
 func ToFloat64ByteReversal(u uint64) float64 {
-	return math.Float64frombits(uint64ByteReverse(u))
-}
-
-// uint64ByteReverse returns the byte-reversal of u.
-func uint64ByteReverse(u uint64) uint64 {
-	var x uint64
-	for i := 0; i < 64; i += 8 {
-		b := 0xFF << i & u
-		offset := (28 - i) << 1
-		if offset > 0 {
-			x |= b << offset
-		} else {
-			x |= b >> -offset
-		}
-	}
-	return x
+	return math.Float64frombits(bits.ReverseBytes64(u))
 }
