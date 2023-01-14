@@ -79,8 +79,8 @@ func (t *treeImpl) AccessPath(path []int) (found, cont bool) {
 	return t.AccessNode(path[len(path)-1], len(path)-1)
 }
 
-// numTreeNode is the number of nodes in treeData.
-const numTreeNode int = 12
+// NumTreeNode is the number of nodes in treeData.
+const NumTreeNode int = 12
 
 // treeData represents a tree as follows:
 //
@@ -299,7 +299,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 	}
 
 	tt := &treeImpl{Data: treeData}
-	for goal := 0; goal < numTreeNode; goal++ {
+	for goal := 0; goal < NumTreeNode; goal++ {
 		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
 			var i int
 			for i < len(ordering) && ordering[i] != goal {
@@ -409,7 +409,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 	}
 
 	tt := &treeImpl{Data: treeData}
-	for goal := 0; goal < numTreeNode; goal++ {
+	for goal := 0; goal < NumTreeNode; goal++ {
 		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
 			path := f(t, tt, goal)
 			checkPath(t, name, goal, path)

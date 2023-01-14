@@ -18,7 +18,7 @@
 
 package graphv
 
-import "github.com/donyori/gogo/algorithm/search/internal"
+import "github.com/donyori/gogo/algorithm/search/internal/pathlist"
 
 // Common is the interface common to AccessNode and AccessPath.
 // It represents a graph used in the graph search algorithm,
@@ -177,7 +177,7 @@ func DFSPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 	// It is similar to function DFS,
 	// except that the item of the stack contains the list of Path
 	// instead of the adjacency list.
-	stack, idx := [][]*internal.Path[Vertex]{{{E: itf.Root()}}}, 0
+	stack, idx := [][]*pathlist.Path[Vertex]{{{E: itf.Root()}}}, 0
 	for idx >= 0 {
 		pl, i := stack[idx], 0
 		for i < len(pl) && itf.Discovered(pl[i].E) {
@@ -202,9 +202,9 @@ func DFSPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 			stack, idx = stack[:idx], idx-1
 		}
 		if vAdj := itf.Adjacency(p.E); len(vAdj) > 0 {
-			vAdjPathList := make([]*internal.Path[Vertex], len(vAdj))
+			vAdjPathList := make([]*pathlist.Path[Vertex], len(vAdj))
 			for i := range vAdj {
-				vAdjPathList[i] = &internal.Path[Vertex]{vAdj[i], p}
+				vAdjPathList[i] = &pathlist.Path[Vertex]{E: vAdj[i], P: p}
 			}
 			stack, idx = append(stack, vAdjPathList), idx+1
 		}
@@ -256,7 +256,7 @@ func BFSPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 	// It is similar to function BFS,
 	// except that the item of the queue contains the list of the Path
 	// instead of the adjacency list.
-	queue := [][]*internal.Path[Vertex]{{{E: itf.Root()}}}
+	queue := [][]*pathlist.Path[Vertex]{{{E: itf.Root()}}}
 	for len(queue) > 0 {
 		head := queue[0]
 		queue = queue[1:]
@@ -271,9 +271,9 @@ func BFSPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 					return nil
 				}
 				if vAdj := itf.Adjacency(p.E); len(vAdj) > 0 {
-					vAdjPathList := make([]*internal.Path[Vertex], len(vAdj))
+					vAdjPathList := make([]*pathlist.Path[Vertex], len(vAdj))
 					for i := range vAdj {
-						vAdjPathList[i] = &internal.Path[Vertex]{vAdj[i], p}
+						vAdjPathList[i] = &pathlist.Path[Vertex]{E: vAdj[i], P: p}
 					}
 					queue = append(queue, vAdjPathList)
 				}
@@ -402,7 +402,7 @@ func dlsPath[Vertex any](itf AccessPath[Vertex], root Vertex, limit int) (pathFo
 	// It is similar to function dls,
 	// except that the item of the stack contains the list of Path
 	// instead of the adjacency list.
-	stack, idx := [][]*internal.Path[Vertex]{{{E: root}}}, 0
+	stack, idx := [][]*pathlist.Path[Vertex]{{{E: root}}}, 0
 	for idx >= 0 {
 		pl, i := stack[idx], 0
 		for i < len(pl) && itf.Discovered(pl[i].E) {
@@ -430,9 +430,9 @@ func dlsPath[Vertex any](itf AccessPath[Vertex], root Vertex, limit int) (pathFo
 		}
 		if vAdj := itf.Adjacency(p.E); len(vAdj) > 0 {
 			if len(pathList) <= limit {
-				vAdjPathList := make([]*internal.Path[Vertex], len(vAdj))
+				vAdjPathList := make([]*pathlist.Path[Vertex], len(vAdj))
 				for i := range vAdj {
-					vAdjPathList[i] = &internal.Path[Vertex]{vAdj[i], p}
+					vAdjPathList[i] = &pathlist.Path[Vertex]{E: vAdj[i], P: p}
 				}
 				stack, idx = append(stack, vAdjPathList), idx+1
 			} else if !more {

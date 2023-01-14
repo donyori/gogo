@@ -39,7 +39,7 @@ func (o *one) Load() int32 {
 func TestOnceIndicator_Do_Once(t *testing.T) {
 	o := new(one)
 	oi := concurrency.NewOnceIndicator()
-	const N = 10
+	const N int = 10
 	rs := make([]bool, N)
 	var wg sync.WaitGroup
 	wg.Add(N)

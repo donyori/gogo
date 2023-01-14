@@ -96,9 +96,9 @@ func (g *graphImpl) ResetSearchState() {
 	g.head = len(g.AccessHistory)
 }
 
-// numUndirectedGraphVertex is the number of vertices
+// NumUndirectedGraphVertex is the number of vertices
 // in undirectedGraphData.
-const numUndirectedGraphVertex int = 7
+const NumUndirectedGraphVertex int = 7
 
 // undirectedGraphData represents an undirected graph as follows:
 //
@@ -346,7 +346,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 	}
 
 	tg := &graphImpl{Data: undirectedGraphData}
-	for goal := 0; goal < numUndirectedGraphVertex; goal++ {
+	for goal := 0; goal < NumUndirectedGraphVertex; goal++ {
 		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
 			var i int
 			for i < len(ordering) && ordering[i] != goal {
@@ -454,7 +454,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 	}
 
 	tg := &graphImpl{Data: undirectedGraphData}
-	for goal := 0; goal < numUndirectedGraphVertex; goal++ {
+	for goal := 0; goal < NumUndirectedGraphVertex; goal++ {
 		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
 			path := f(t, tg, goal)
 			checkPath(t, name, goal, path)

@@ -20,12 +20,11 @@ package permutation_test
 
 import (
 	"sort"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/donyori/gogo/algorithm/permutation"
 	"github.com/donyori/gogo/function/compare"
+	"github.com/donyori/gogo/internal/testaux"
 )
 
 var dataList = [][][]int{
@@ -162,15 +161,13 @@ var dataList = [][][]int{
 // MaxItem is the maximum of items in dataList.
 const MaxItem int = 3
 
-var alphabet = [MaxItem + 1]string{"0", "1", "2", "3"}
-
 func init() {
-	// Check that MaxItem and alphabet are valid.
+	// Check whether MaxItem is valid.
 	var max int
 	for _, ps := range dataList {
 		for _, data := range ps {
 			for _, x := range data {
-				if x > max {
+				if max < x {
 					max = x
 				}
 			}
@@ -178,11 +175,6 @@ func init() {
 	}
 	if max != MaxItem {
 		panic("MaxItem needs to be updated")
-	}
-	for i := range alphabet {
-		if s := strconv.Itoa(i); alphabet[i] != s {
-			panic("alphabet[" + s + "] needs to be updated")
-		}
 	}
 }
 
@@ -226,20 +218,7 @@ func TestNextPermutation(t *testing.T) {
 }
 
 func dataToName(data []int) string {
-	if data == nil {
-		return "<nil>"
-	}
-	var b strings.Builder
-	b.Grow(len(data)*2 + 2)
-	b.WriteByte('[')
-	for i := range data {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteString(alphabet[data[i]])
-	}
-	b.WriteByte(']')
-	return b.String()
+	return testaux.SliceToName(data, ",", "%d", false)
 }
 
 func dataUnequal(a, b []int) bool {

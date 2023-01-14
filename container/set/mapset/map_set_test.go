@@ -28,6 +28,7 @@ import (
 	"github.com/donyori/gogo/container/sequence/array"
 	"github.com/donyori/gogo/container/set"
 	"github.com/donyori/gogo/container/set/mapset"
+	"github.com/donyori/gogo/internal/testaux"
 )
 
 var dataList = [][]int{
@@ -504,22 +505,7 @@ func TestMapSet_Clear(t *testing.T) {
 }
 
 func sliceToName[T any](s []T) string {
-	typeStr := fmt.Sprintf("(%T)", s)
-	if s == nil {
-		return typeStr + "<nil>"
-	}
-	var b strings.Builder
-	b.Grow(len(typeStr) + len(s)*3 + 2)
-	b.WriteString(typeStr)
-	b.WriteByte('[')
-	for i, x := range s {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		_, _ = fmt.Fprintf(&b, "%v", x) // ignore error as error is always nil
-	}
-	b.WriteByte(']')
-	return b.String()
+	return testaux.SliceToName(s, ",", "%v", true)
 }
 
 func setWrong(s set.Set[int], want map[int]bool) bool {

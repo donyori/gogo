@@ -38,8 +38,8 @@ import (
 func TestRead_Raw(t *testing.T) {
 	for _, entry := range testFileEntries {
 		filename := entry.Name()
-		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
-			name := filepath.Join(testDataDir, filename)
+		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			name := filepath.Join(TestDataDir, filename)
 			r, err := local.Read(name, &filesys.ReadOptions{Raw: true})
 			if err != nil {
 				t.Fatal("create -", err)
@@ -68,8 +68,8 @@ func TestRead_Basic(t *testing.T) {
 			ext == ".tar" || ext == ".tgz" || ext == ".tbz" {
 			continue
 		}
-		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
-			name := filepath.Join(testDataDir, filename)
+		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			name := filepath.Join(TestDataDir, filename)
 			r, err := local.Read(name, nil)
 			if err != nil {
 				t.Fatal("create -", err)
@@ -97,8 +97,8 @@ func TestRead_Gz(t *testing.T) {
 		if filepath.Ext(filename) != ".gz" || filepath.Ext(filename[:len(filename)-3]) == ".tar" {
 			continue
 		}
-		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
-			name := filepath.Join(testDataDir, filename)
+		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			name := filepath.Join(TestDataDir, filename)
 			r, err := local.Read(name, nil)
 			if err != nil {
 				t.Fatal("create -", err)
@@ -139,8 +139,8 @@ func TestRead_Bz2(t *testing.T) {
 		if filepath.Ext(filename) != ".bz2" || filepath.Ext(filename[:len(filename)-4]) == ".tar" {
 			continue
 		}
-		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
-			name := filepath.Join(testDataDir, filename)
+		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			name := filepath.Join(TestDataDir, filename)
 			r, err := local.Read(name, nil)
 			if err != nil {
 				t.Fatal("create -", err)
@@ -176,8 +176,8 @@ func TestRead_TarTgzTbz(t *testing.T) {
 		if ext != ".tar" && ext != ".tgz" && ext != ".tbz" {
 			continue
 		}
-		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
-			name := filepath.Join(testDataDir, filename)
+		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			name := filepath.Join(TestDataDir, filename)
 			r, err := local.Read(name, nil)
 			if err != nil {
 				t.Fatal("create -", err)
@@ -218,7 +218,7 @@ func TestRead_TarTgzTbz(t *testing.T) {
 }
 
 func TestRead_Offset(t *testing.T) {
-	name := filepath.Join(testDataDir, "file1.txt")
+	name := filepath.Join(TestDataDir, "file1.txt")
 	data, err := lazyLoadTestData(name)
 	if err != nil {
 		t.Fatal("read file -", err)

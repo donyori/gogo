@@ -37,7 +37,7 @@ func TestAutoNew(t *testing.T) {
 	// In the above testCases.wantMsg, ".func1" is the anonymous function passed to t.Run.
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("msg=%q", tc.msg), func(t *testing.T) {
+		t.Run(fmt.Sprintf("msg=%+q", tc.msg), func(t *testing.T) {
 			got := errors.AutoNew(tc.msg)
 			if gotMsg := got.Error(); gotMsg != tc.wantMsg {
 				t.Errorf("got msg %q; want %q", gotMsg, tc.wantMsg)
@@ -93,7 +93,7 @@ func TestAutoNewCustom(t *testing.T) {
 	// ".func1.1" is the anonymous inner function that calls function AutoNewCustom.
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?msg=%q&ms=%s(%[3]d)&skip=%d", i, tc.msg, tc.ms, tc.skip), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?msg=%+q&ms=%s(%[3]d)&skip=%d", i, tc.msg, tc.ms, tc.skip), func(t *testing.T) {
 			func() { // Use an inner function to test the "skip".
 				got := errors.AutoNewCustom(tc.msg, tc.ms, tc.skip)
 				if gotMsg := got.Error(); gotMsg != tc.wantMsg {

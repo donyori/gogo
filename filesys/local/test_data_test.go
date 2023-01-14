@@ -35,12 +35,12 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-const testDataDir = "testdata"
+const TestDataDir = "testdata"
 
 var testFileEntries []fs.DirEntry
 
 func init() {
-	entries, err := os.ReadDir(testDataDir)
+	entries, err := os.ReadDir(TestDataDir)
 	if err != nil {
 		panic(err)
 	}

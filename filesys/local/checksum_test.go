@@ -33,7 +33,7 @@ import (
 )
 
 func TestVerifyChecksum(t *testing.T) {
-	nonExistFilename := filepath.Join(testDataDir, "nonexist")
+	nonExistFilename := filepath.Join(TestDataDir, "nonexist")
 
 	t.Run(`file="nonexist"`, func(t *testing.T) {
 		testCases := verifyChecksumTestCases(t, nonExistFilename)
@@ -51,8 +51,8 @@ func TestVerifyChecksum(t *testing.T) {
 
 	for _, entry := range testFileEntries {
 		filename := entry.Name()
-		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
-			name := filepath.Join(testDataDir, filename)
+		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			name := filepath.Join(TestDataDir, filename)
 			testCases := verifyChecksumTestCases(t, name)
 			if t.Failed() {
 				return

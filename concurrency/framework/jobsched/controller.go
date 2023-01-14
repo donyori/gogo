@@ -26,7 +26,7 @@ import (
 
 	"github.com/donyori/gogo/concurrency"
 	"github.com/donyori/gogo/concurrency/framework"
-	"github.com/donyori/gogo/concurrency/framework/internal"
+	"github.com/donyori/gogo/concurrency/framework/internal/quitdevice"
 	"github.com/donyori/gogo/errors"
 )
 
@@ -115,7 +115,7 @@ func New[Job, Properties any](n int, handler JobHandler[Job, Properties],
 	return &controller[Job, Properties]{
 		n:    n,
 		h:    handler,
-		qd:   internal.NewQuitDevice(),
+		qd:   quitdevice.NewQuitDevice(),
 		jq:   jq,
 		ic:   make(chan []*MetaJob[Job, Properties]),
 		eqc:  make(chan []*MetaJob[Job, Properties]),

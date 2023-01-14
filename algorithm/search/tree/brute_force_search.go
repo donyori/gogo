@@ -18,7 +18,7 @@
 
 package tree
 
-import "github.com/donyori/gogo/algorithm/search/internal"
+import "github.com/donyori/gogo/algorithm/search/internal/pathlist"
 
 // Common is the interface common to AccessNode and AccessPath.
 // It represents a tree used in the tree search algorithm.
@@ -145,7 +145,7 @@ func DFSPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 	itf.Init(initArgs...)
 	// It is similar to function DFS,
 	// except that the item of the stack contains the Path instead of the node.
-	stack, idx := []*internal.Path[Node]{{E: itf.Root()}}, 0
+	stack, idx := []*pathlist.Path[Node]{{E: itf.Root()}}, 0
 	for idx >= 0 {
 		top := stack[idx]
 		pathList := top.ToList()
@@ -160,13 +160,13 @@ func DFSPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 		if ok {
 			// Just update stack[idx] to a new Path.
 			// Do not modify stack[idx]! Create a new Path.
-			stack[idx] = &internal.Path[Node]{ns, top.P}
+			stack[idx] = &pathlist.Path[Node]{E: ns, P: top.P}
 		} else {
 			stack, idx = stack[:idx], idx-1
 		}
 		fc, ok := itf.FirstChild(top.E)
 		if ok {
-			stack, idx = append(stack, &internal.Path[Node]{fc, top}), idx+1
+			stack, idx = append(stack, &pathlist.Path[Node]{E: fc, P: top}), idx+1
 		}
 	}
 	return nil
@@ -209,13 +209,13 @@ func BFSPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 	itf.Init(initArgs...)
 	// It is similar to function BFS,
 	// except that the item of the queue contains the Path instead of the node.
-	queue := []*internal.Path[Node]{{E: itf.Root()}}
+	queue := []*pathlist.Path[Node]{{E: itf.Root()}}
 	for len(queue) > 0 {
 		head := queue[0]
 		queue = queue[1:]
 		for node, ok := head.E, true; ok; node, ok = itf.NextSibling(node) {
 			// The path to head (in the first loop) or one of its siblings (in other loops).
-			path := &internal.Path[Node]{node, head.P}
+			path := &pathlist.Path[Node]{E: node, P: head.P}
 			pathList := path.ToList()
 			r, cont := itf.AccessPath(pathList)
 			if r {
@@ -225,7 +225,7 @@ func BFSPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 				return nil
 			}
 			if fc, ok := itf.FirstChild(node); ok {
-				queue = append(queue, &internal.Path[Node]{fc, path})
+				queue = append(queue, &pathlist.Path[Node]{E: fc, P: path})
 			}
 		}
 	}
@@ -335,7 +335,7 @@ func dlsPath[Node any](itf AccessPath[Node], root Node, limit int) (pathFound []
 	}
 	// It is similar to function dls,
 	// except that the item of the stack contains the Path instead of the node.
-	stack, idx := []*internal.Path[Node]{{E: root}}, 0
+	stack, idx := []*pathlist.Path[Node]{{E: root}}, 0
 	for idx >= 0 {
 		top := stack[idx]
 		pathList := top.ToList()
@@ -352,14 +352,14 @@ func dlsPath[Node any](itf AccessPath[Node], root Node, limit int) (pathFound []
 		if ok {
 			// Just update stack[idx] to a new Path.
 			// Do not modify stack[idx]! Create a new Path.
-			stack[idx] = &internal.Path[Node]{ns, top.P}
+			stack[idx] = &pathlist.Path[Node]{E: ns, P: top.P}
 		} else {
 			stack, idx = stack[:idx], idx-1
 		}
 		fc, ok := itf.FirstChild(top.E)
 		if ok {
 			if len(pathList) <= limit {
-				stack, idx = append(stack, &internal.Path[Node]{fc, top}), idx+1
+				stack, idx = append(stack, &pathlist.Path[Node]{E: fc, P: top}), idx+1
 			} else {
 				more = true
 			}

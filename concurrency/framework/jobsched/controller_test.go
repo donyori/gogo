@@ -30,7 +30,7 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	const panicMsg string = "test panic"
+	const PanicMsg = "test panic"
 	var x int32
 	var wg sync.WaitGroup
 	wg.Add(3)
@@ -39,7 +39,7 @@ func TestRun(t *testing.T) {
 		atomic.AddInt32(&x, 1)
 		wg.Done()
 		wg.Wait()
-		panic(panicMsg)
+		panic(PanicMsg)
 	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty](), nil, nil, nil)
 	if got := atomic.LoadInt32(&x); got != 3 {
 		t.Errorf("got %d; want 3", got)
@@ -52,7 +52,7 @@ func TestRun(t *testing.T) {
 			t.Error(pr)
 		} else {
 			msg, ok := pr.Content.(string)
-			if !ok || msg != panicMsg {
+			if !ok || msg != PanicMsg {
 				t.Error(pr)
 			}
 		}

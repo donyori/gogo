@@ -171,14 +171,14 @@ type Addable interface {
 	Numeric | ~string
 }
 
-// PredeclaredByteSequence is a constraint that matches the predeclared
-// byte sequence types: []byte and string.
-type PredeclaredByteSequence interface {
+// PredeclaredByteString is a constraint that matches the predeclared
+// byte string types: []byte and string.
+type PredeclaredByteString interface {
 	[]byte | string
 }
 
-// ByteSequence is a constraint for byte sequences.
+// ByteString is a constraint for byte strings.
 // It matches any type whose underlying type is []byte or string.
-type ByteSequence interface {
+type ByteString interface {
 	~[]byte | ~string
 }

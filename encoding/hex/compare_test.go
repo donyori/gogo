@@ -125,13 +125,13 @@ func TestCanEncodeTo(t *testing.T) {
 }
 
 func TestCanEncodeToPrefix(t *testing.T) {
-	const maxI int = 8
+	const MaxI int = 8
 	for _, srcCase := range testEncodeCases {
 		if srcCase.upper { // only use the lower cases to avoid redundant sources
 			continue
 		}
-		prefixSet := make(map[string]bool, len(testEncodeCases)*maxI)
-		for i := 0; i < maxI; i++ {
+		prefixSet := make(map[string]bool, len(testEncodeCases)*MaxI)
+		for i := 0; i < MaxI; i++ {
 			for _, prefixCase := range testEncodeCases {
 				var prefix string
 				var prefixBytes []byte
@@ -238,7 +238,8 @@ func BenchmarkCanEncodeTo(b *testing.B) {
 	if sameLen == "" {
 		b.Fatal("cannot build sameLen")
 	}
-	data := []struct {
+
+	testCases := []struct {
 		name string
 		x    string
 		want bool
@@ -247,27 +248,29 @@ func BenchmarkCanEncodeTo(b *testing.B) {
 		{"FailSameLen", sameLen, false},
 		{"FailDiffLen", dst[:len(dst)/2], false},
 	}
+
 	fns := []struct {
 		name string
-		fn   func(src []byte, x string) bool
+		f    func(src []byte, x string) bool
 	}{
 		{"MyFunc", hex.CanEncodeTo[[]byte, string]},
 		{"Another1", canEncodeToBytesString1},
 		{"Another2", canEncodeToBytesString2},
 	}
+
 	benchmarks := make([]struct {
 		name string
-		fn   func(src []byte, x string) bool
+		f    func(src []byte, x string) bool
 		x    string
 		want bool
-	}, len(fns)*len(data))
+	}, len(fns)*len(testCases))
 	var idx int
-	for i := range data {
-		for k := range fns {
-			benchmarks[idx].name = fns[k].name + "_" + data[i].name
-			benchmarks[idx].fn = fns[k].fn
-			benchmarks[idx].x = data[i].x
-			benchmarks[idx].want = data[i].want
+	for _, tc := range testCases {
+		for _, fn := range fns {
+			benchmarks[idx].name = fn.name + "_" + tc.name
+			benchmarks[idx].f = fn.f
+			benchmarks[idx].x = tc.x
+			benchmarks[idx].want = tc.want
 			idx++
 		}
 	}
@@ -275,7 +278,7 @@ func BenchmarkCanEncodeTo(b *testing.B) {
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if got := bm.fn(src, bm.x); got != bm.want {
+				if got := bm.f(src, bm.x); got != bm.want {
 					b.Errorf("got %t; want %t", got, bm.want)
 				}
 			}
@@ -308,7 +311,8 @@ func BenchmarkCanEncodeToPrefix(b *testing.B) {
 	if sameLen == "" {
 		b.Fatal("cannot build sameLen")
 	}
-	data := []struct {
+
+	testCases := []struct {
 		name   string
 		prefix string
 		want   bool
@@ -317,26 +321,28 @@ func BenchmarkCanEncodeToPrefix(b *testing.B) {
 		{"Fail", sameLen, false},
 		{"FailTooLong", testEncodeLongSrcCases[0].dstStr + "00", false},
 	}
+
 	fns := []struct {
 		name string
-		fn   func(src []byte, prefix string) bool
+		f    func(src []byte, prefix string) bool
 	}{
 		{"MyFunc", hex.CanEncodeToPrefix[[]byte, string]},
 		{"Another", canEncodeToPrefixBytesString},
 	}
+
 	benchmarks := make([]struct {
 		name   string
-		fn     func(src []byte, prefix string) bool
+		f      func(src []byte, prefix string) bool
 		prefix string
 		want   bool
-	}, len(fns)*len(data))
+	}, len(fns)*len(testCases))
 	var idx int
-	for i := range data {
-		for k := range fns {
-			benchmarks[idx].name = fns[k].name + "_" + data[i].name
-			benchmarks[idx].fn = fns[k].fn
-			benchmarks[idx].prefix = data[i].prefix
-			benchmarks[idx].want = data[i].want
+	for _, tc := range testCases {
+		for _, fn := range fns {
+			benchmarks[idx].name = fn.name + "_" + tc.name
+			benchmarks[idx].f = fn.f
+			benchmarks[idx].prefix = tc.prefix
+			benchmarks[idx].want = tc.want
 			idx++
 		}
 	}
@@ -344,7 +350,7 @@ func BenchmarkCanEncodeToPrefix(b *testing.B) {
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if got := bm.fn(src, bm.prefix); got != bm.want {
+				if got := bm.f(src, bm.prefix); got != bm.want {
 					b.Errorf("got %t; want %t", got, bm.want)
 				}
 			}

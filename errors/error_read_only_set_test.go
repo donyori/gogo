@@ -95,7 +95,7 @@ func TestErrorReadOnlySetEqual_Contains(t *testing.T) {
 	testCases = append(testCases, errorReadOnlySetContainsCase{}) // {nil, false}
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?target=%q", i, tc.target), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?target=%+q", i, tc.target), func(t *testing.T) {
 			set := errors.NewErrorReadOnlySetEqual(setErrs...)
 			if set.Contains(tc.target) != tc.want {
 				t.Errorf("got %t; want %t", !tc.want, tc.want)
@@ -118,7 +118,7 @@ func TestErrorReadOnlySetEqual_Contains_Nil(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?target=%q", i, tc.target), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?target=%+q", i, tc.target), func(t *testing.T) {
 			set := errors.NewErrorReadOnlySetEqual(setErrs...)
 			if set.Contains(tc.target) != tc.want {
 				t.Errorf("got %t; want %t", !tc.want, tc.want)
@@ -176,7 +176,7 @@ func TestErrorReadOnlySetIs_Contains(t *testing.T) {
 	)
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?target=%q", i, tc.target), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?target=%+q", i, tc.target), func(t *testing.T) {
 			set := errors.NewErrorReadOnlySetIs(setErrs...)
 			if set.Contains(tc.target) != tc.want {
 				t.Errorf("got %t; want %t", !tc.want, tc.want)
@@ -199,7 +199,7 @@ func TestErrorReadOnlySetIs_Contains_Nil(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?target=%q", i, tc.target), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?target=%+q", i, tc.target), func(t *testing.T) {
 			set := errors.NewErrorReadOnlySetIs(setErrs...)
 			if set.Contains(tc.target) != tc.want {
 				t.Errorf("got %t; want %t", !tc.want, tc.want)
@@ -254,7 +254,7 @@ func TestErrorReadOnlySetSameMessage_Contains(t *testing.T) {
 	testCases = append(testCases, errorReadOnlySetContainsCase{}) // {nil, false}
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?target=%q", i, tc.target), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?target=%+q", i, tc.target), func(t *testing.T) {
 			set := errors.NewErrorReadOnlySetSameMessage(setErrs...)
 			if set.Contains(tc.target) != tc.want {
 				t.Errorf("got %t; want %t", !tc.want, tc.want)
@@ -277,7 +277,7 @@ func TestErrorReadOnlySetSameMessage_Contains_Nil(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?target=%q", i, tc.target), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?target=%+q", i, tc.target), func(t *testing.T) {
 			set := errors.NewErrorReadOnlySetSameMessage(setErrs...)
 			if set.Contains(tc.target) != tc.want {
 				t.Errorf("got %t; want %t", !tc.want, tc.want)

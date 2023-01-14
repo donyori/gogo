@@ -27,7 +27,7 @@ const uppercaseHexTable = "0123456789ABCDEF"
 const lowercaseHexTable = "0123456789abcdef"
 
 // sourceBufferLen is the length of a chunk of source data.
-const sourceBufferLen = 512
+const sourceBufferLen int = 512
 
 // letterCaseDiff is the result of 'A' xor 'a'.
 // It indicates the different bit of the uppercase and lowercase letters.
@@ -68,7 +68,7 @@ var encodeBufferPool = sync.Pool{
 
 // int64BufferLen is the length of a buffer that holds
 // a hexadecimal representation of a 64-bit integer.
-const int64BufferLen = 17
+const int64BufferLen int = 17
 
 // int64BufferPool is a set of temporary buffers to hold
 // the hexadecimal representation of a 64-bit integer.

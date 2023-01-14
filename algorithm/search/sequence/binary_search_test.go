@@ -27,6 +27,7 @@ import (
 
 	"github.com/donyori/gogo/algorithm/search/sequence"
 	"github.com/donyori/gogo/container/sequence/array"
+	"github.com/donyori/gogo/internal/testaux"
 )
 
 type idValue struct {
@@ -267,18 +268,5 @@ func acceptSetString(acceptSet map[int]bool) string {
 }
 
 func dataToName(data []*idValue) string {
-	if data == nil {
-		return "<nil>"
-	}
-	var b strings.Builder
-	b.Grow(len(data)*5 + 2)
-	b.WriteByte('[')
-	for i, x := range data {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteString(x.String())
-	}
-	b.WriteByte(']')
-	return b.String()
+	return testaux.SliceToName(data, ",", "%v", false)
 }

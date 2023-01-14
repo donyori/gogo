@@ -31,8 +31,8 @@ import (
 )
 
 func TestNewHashVerifier(t *testing.T) {
-	const panicPrefix = "github.com/donyori/gogo/filesys.NewHashVerifier: "
-	const toBeFilledIn = "-"
+	const PanicPrefix = "github.com/donyori/gogo/filesys.NewHashVerifier: "
+	const ToBeFilledIn = "-"
 	testCases := []struct {
 		newHashName string
 		newHash     func() hash.Hash
@@ -43,13 +43,13 @@ func TestNewHashVerifier(t *testing.T) {
 			"<nil>",
 			nil,
 			"",
-			panicPrefix + "newHash is nil",
+			PanicPrefix + "newHash is nil",
 		},
 		{
 			"return-nil",
 			func() hash.Hash { return nil },
 			"",
-			panicPrefix + "newHash returns nil",
+			PanicPrefix + "newHash returns nil",
 		},
 		{
 			"sha256.New",
@@ -79,30 +79,30 @@ func TestNewHashVerifier(t *testing.T) {
 			"sha256.New",
 			sha256.New,
 			"12ab" + string('0'-1),
-			toBeFilledIn,
+			ToBeFilledIn,
 		},
 		{
 			"sha256.New",
 			sha256.New,
 			string('A'-1) + "ABC",
-			toBeFilledIn,
+			ToBeFilledIn,
 		},
 		{
 			"sha256.New",
 			sha256.New,
 			"0123456789ABCDEFGabcdef",
-			toBeFilledIn,
+			ToBeFilledIn,
 		},
 		{
 			"sha256.New",
 			sha256.New,
 			"g",
-			toBeFilledIn,
+			ToBeFilledIn,
 		},
 	}
 	for i := range testCases {
-		if testCases[i].panicMsg == toBeFilledIn {
-			testCases[i].panicMsg = panicPrefix + fmt.Sprintf(
+		if testCases[i].panicMsg == ToBeFilledIn {
+			testCases[i].panicMsg = PanicPrefix + fmt.Sprintf(
 				"prefixHex (%q) is not hexadecimal",
 				testCases[i].prefixHex,
 			)
@@ -148,7 +148,7 @@ func TestVerifyChecksum(t *testing.T) {
 	})
 
 	for _, filename := range testFSFilenames {
-		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
+		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
 			for _, tc := range verifyChecksumTestCases(filename) {
 				t.Run("hvs="+tc.hvsName, func(t *testing.T) {
 					file, err := testFS.Open(filename)
@@ -194,7 +194,7 @@ func TestVerifyChecksumFromFS(t *testing.T) {
 	})
 
 	for _, filename := range testFSFilenames {
-		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
+		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
 			for _, tc := range verifyChecksumTestCases(filename) {
 				t.Run("hvs="+tc.hvsName, func(t *testing.T) {
 					got := filesys.VerifyChecksumFromFS(testFS, filename, tc.hvs...)

@@ -43,8 +43,8 @@ func BenchmarkUint64EncodedLen(b *testing.B) {
 		name string
 		f    func(u uint64) int
 	}{
-		{"package func", vlq.Uint64EncodedLen},
-		{"binary func", func(u uint64) int {
+		{"package-func", vlq.Uint64EncodedLen},
+		{"binary-func", func(u uint64) int {
 			// Binary search.
 			// Define: minUint64s[-1] < u,
 			//         minUint64s[len(minUint64s)] > u

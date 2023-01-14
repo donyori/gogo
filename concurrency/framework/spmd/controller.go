@@ -27,7 +27,7 @@ import (
 
 	"github.com/donyori/gogo/concurrency"
 	"github.com/donyori/gogo/concurrency/framework"
-	"github.com/donyori/gogo/concurrency/framework/internal"
+	"github.com/donyori/gogo/concurrency/framework/internal/quitdevice"
 	"github.com/donyori/gogo/container/sequence/array"
 	"github.com/donyori/gogo/errors"
 )
@@ -77,7 +77,7 @@ func New[Message any](n int, biz BusinessFunc[Message], groupMap map[string][]in
 		n = runtime.NumCPU()
 	}
 	ctrl := &controller[Message]{
-		qd:           internal.NewQuitDevice(),
+		qd:           quitdevice.NewQuitDevice(),
 		cd:           newChanDispr[Message](),
 		biz:          biz,
 		lnchOi:       concurrency.NewOnceIndicator(),

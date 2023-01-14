@@ -30,8 +30,8 @@ import (
 )
 
 func TestBroadcaster_Broadcast(t *testing.T) {
-	const NumMessage = 10
-	const NumGoroutine = 32
+	const NumMessage int = 10
+	const NumGoroutine int = 32
 	var data [NumMessage]int
 	for i := range data {
 		data[i] = i + 1
@@ -105,7 +105,7 @@ func TestBroadcaster_Broadcast(t *testing.T) {
 }
 
 func TestBroadcaster_Unsubscribe(t *testing.T) {
-	const NumMessage = 40
+	const NumMessage int = 40
 	var data [NumMessage]int
 	for i := range data {
 		data[i] = i

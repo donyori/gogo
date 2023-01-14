@@ -25,6 +25,7 @@ import (
 	"io/fs"
 	"strings"
 
+	"github.com/donyori/gogo/algorithm/mathalgo"
 	"github.com/donyori/gogo/encoding/hex"
 	"github.com/donyori/gogo/errors"
 )
@@ -115,7 +116,7 @@ func (hv *hashVerifier) Match() bool {
 // It returns true if the file is not nil and can be read,
 // and matches all HashVerifier in hvs
 // (nil and duplicate HashVerifier will be ignored).
-// In particular, it returns true if hvs has no non-nil HashVerifier.
+// In particular, it returns true if there is no non-nil HashVerifier in hvs.
 // In this case, the file will not be read.
 //
 // Note that VerifyChecksum will not reset the hash state of anyone in hvs.
@@ -135,14 +136,20 @@ func VerifyChecksum(file fs.File, closeFile bool, hvs ...HashVerifier) bool {
 		return true
 	}
 	ws := make([]io.Writer, len(hvs))
+	bs := make([]int, len(hvs))
 	for i := range hvs {
 		ws[i] = hvs[i]
+		bs[i] = hvs[i].BlockSize()
 	}
 	w := ws[0]
 	if len(ws) > 1 {
 		w = io.MultiWriter(ws...)
 	}
-	_, err := io.Copy(w, file)
+	bufSize := mathalgo.LCM(bs...)
+	for bufSize < 4096 {
+		bufSize <<= 1
+	}
+	_, err := io.CopyBuffer(w, file, make([]byte, bufSize))
 	if err != nil {
 		return false
 	}
@@ -160,8 +167,8 @@ func VerifyChecksum(file fs.File, closeFile bool, hvs ...HashVerifier) bool {
 // It returns true if fsys is not nil,
 // and the file can be read and matches all HashVerifier in hvs
 // (nil and duplicate HashVerifier will be ignored).
-// In particular, it returns true if hvs has no non-nil HashVerifier and
-// the file can be opened for reading.
+// In particular, it returns true if there is no non-nil HashVerifier
+// in hvs and the file can be opened for reading.
 // In this case, the file will not be read.
 //
 // Note that VerifyChecksumFromFS will not reset
@@ -182,12 +189,12 @@ func VerifyChecksumFromFS(fsys fs.FS, name string, hvs ...HashVerifier) bool {
 // nonNilDeduplicatedHashVerifiers returns all
 // non-nil deduplicated HashVerifier in hvs.
 //
-// If hvs has no nil or duplicate HashVerifier, it returns hvs itself.
+// If there is no nil or duplicate HashVerifier in hvs, it returns hvs itself.
 // Otherwise, it copies all non-nil deduplicated HashVerifier from hvs to
 // a new slice and returns that slice.
 // The content of hvs will not be modified in both cases.
 //
-// If hvs has no non-nil HashVerifier, it returns nil.
+// If there is no non-nil HashVerifier in hvs, it returns nil.
 func nonNilDeduplicatedHashVerifiers(hvs []HashVerifier) []HashVerifier {
 	result := hvs
 	set := make(map[HashVerifier]bool, len(hvs))

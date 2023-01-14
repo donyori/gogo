@@ -33,8 +33,8 @@ import (
 )
 
 func TestRead_NotCloseFile(t *testing.T) {
-	const name = "file1.txt"
-	file, err := testFS.Open(name)
+	const Name = "file1.txt"
+	file, err := testFS.Open(Name)
 	if err != nil {
 		t.Fatal("open file -", err)
 	}
@@ -47,9 +47,9 @@ func TestRead_NotCloseFile(t *testing.T) {
 	if err != nil {
 		t.Fatal("create reader -", err)
 	}
-	halfSize := int64(len(testFS[name].Data) / 2)
+	halfSize := int64(len(testFS[Name].Data) / 2)
 	hr := io.LimitReader(r, halfSize)
-	err = iotest.TestReader(hr, testFS[name].Data[:halfSize])
+	err = iotest.TestReader(hr, testFS[Name].Data[:halfSize])
 	if err != nil {
 		t.Error("test read a half -", err)
 	}
@@ -71,15 +71,15 @@ func TestRead_NotCloseFile(t *testing.T) {
 		t.Fatal("read all from rest part -", err)
 	}
 	data = append(buffered, data...)
-	want := testFS[name].Data[halfSize:]
+	want := testFS[Name].Data[halfSize:]
 	if !bytes.Equal(data, want) {
 		t.Errorf("read all from rest part - got %s; want %s", data, want)
 	}
 }
 
 func TestRead_NotCloseFile_ErrorOnCreate(t *testing.T) {
-	const name = "file1.txt"
-	file, err := testFS.Open(name)
+	const Name = "file1.txt"
+	file, err := testFS.Open(Name)
 	if err != nil {
 		t.Fatal("open file -", err)
 	}
@@ -93,14 +93,14 @@ func TestRead_NotCloseFile_ErrorOnCreate(t *testing.T) {
 		_ = r.Close()
 		t.Fatal("create reader - no error but offset is out of range")
 	}
-	if !strings.HasSuffix(err.Error(), fmt.Sprintf("option Offset is out of range, file size: %d, Offset: %d", len(testFS[name].Data), math.MaxInt64)) {
+	if !strings.HasSuffix(err.Error(), fmt.Sprintf("option Offset is out of range, file size: %d, Offset: %d", len(testFS[Name].Data), math.MaxInt64)) {
 		t.Fatal("create reader -", err)
 	}
 	data, err := io.ReadAll(file)
 	if err != nil {
 		t.Fatal("read all from file -", err)
 	}
-	want := testFS[name].Data
+	want := testFS[Name].Data
 	if !bytes.Equal(data, want) {
 		t.Errorf("read all from file - got %s; want %s", data, want)
 	}
@@ -108,7 +108,7 @@ func TestRead_NotCloseFile_ErrorOnCreate(t *testing.T) {
 
 func TestReadFromFS_Raw(t *testing.T) {
 	for _, name := range testFSFilenames {
-		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
+		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
 			testReadFromTestFS(t, name, testFS[name].Data, &filesys.ReadOptions{Raw: true})
 		})
 	}
@@ -116,7 +116,7 @@ func TestReadFromFS_Raw(t *testing.T) {
 
 func TestReadFromFS_Basic(t *testing.T) {
 	for _, name := range testFSBasicFilenames {
-		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
+		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
 			testReadFromTestFS(t, name, testFS[name].Data, nil)
 		})
 	}
@@ -124,7 +124,7 @@ func TestReadFromFS_Basic(t *testing.T) {
 
 func TestReadFromFS_Gz(t *testing.T) {
 	for _, name := range testFSGzFilenames {
-		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
+		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
 			dataFilename := name[:len(name)-3]
 			mapFile := testFS[dataFilename]
 			if mapFile == nil {
@@ -137,7 +137,7 @@ func TestReadFromFS_Gz(t *testing.T) {
 
 func TestReadFromFS_TarTgz(t *testing.T) {
 	for _, name := range append(testFSTarFilenames, testFSTgzFilenames...) {
-		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
+		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
 			r, err := filesys.ReadFromFS(testFS, name, nil)
 			if err != nil {
 				t.Fatal("create -", err)
@@ -174,8 +174,8 @@ func TestReadFromFS_TarTgz(t *testing.T) {
 }
 
 func TestReadFromFS_Offset(t *testing.T) {
-	const name = "file1.txt"
-	fileData := testFS[name].Data
+	const Name = "file1.txt"
+	fileData := testFS[Name].Data
 	size := int64(len(fileData))
 
 	for offset := -size; offset <= size; offset++ {
@@ -188,13 +188,13 @@ func TestReadFromFS_Offset(t *testing.T) {
 			continue
 		}
 		t.Run(fmt.Sprintf("offset=%d", offset), func(t *testing.T) {
-			testReadFromTestFS(t, name, fileData[pos:], &filesys.ReadOptions{Offset: offset, Raw: true})
+			testReadFromTestFS(t, Name, fileData[pos:], &filesys.ReadOptions{Offset: offset, Raw: true})
 		})
 	}
 
 	for _, offset := range []int64{math.MinInt64, -size - 1, size + 1, math.MaxInt64} {
 		t.Run(fmt.Sprintf("offset=%d", offset), func(t *testing.T) {
-			r, err := filesys.ReadFromFS(testFS, name, &filesys.ReadOptions{Offset: offset, Raw: true})
+			r, err := filesys.ReadFromFS(testFS, Name, &filesys.ReadOptions{Offset: offset, Raw: true})
 			if err == nil {
 				_ = r.Close() // ignore error
 				t.Fatal("create - no error but offset is out of range")
@@ -327,8 +327,8 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("method="+tc.methodName, func(t *testing.T) {
-			const name = "file1.txt"
-			r, err := filesys.ReadFromFS(testFS, name, nil)
+			const Name = "file1.txt"
+			r, err := filesys.ReadFromFS(testFS, Name, nil)
 			if err != nil {
 				t.Fatal("create -", err)
 			}
@@ -344,8 +344,8 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 	}
 
 	t.Run("method=TarNext-isTar", func(t *testing.T) {
-		const name = "tar file.tar"
-		r, err := filesys.ReadFromFS(testFS, name, nil)
+		const Name = "tar file.tar"
+		r, err := filesys.ReadFromFS(testFS, Name, nil)
 		if err != nil {
 			t.Fatal("create -", err)
 		}

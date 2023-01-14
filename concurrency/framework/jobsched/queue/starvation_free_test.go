@@ -50,9 +50,9 @@ func TestExponentialJobQueue_StarvationFree(t *testing.T) {
 		Job: target,
 	})
 
-	const numDequeue uint = 1500
+	const NumDequeue uint = 1500
 	nextJob := target + 1
-	for i := uint(0); i < numDequeue; i++ {
+	for i := uint(0); i < NumDequeue; i++ {
 		p := 3 + i
 		ct := baseTime.Add(time.Duration(i) * time.Millisecond)
 		for j := 0; j < N; j++ {
@@ -70,5 +70,5 @@ func TestExponentialJobQueue_StarvationFree(t *testing.T) {
 			return
 		}
 	}
-	t.Errorf("target job cannot be dequeued in %d calls to Dequeue", numDequeue)
+	t.Errorf("target job cannot be dequeued in %d calls to Dequeue", NumDequeue)
 }

@@ -35,7 +35,7 @@ import (
 
 func TestWrite_Raw(t *testing.T) {
 	for _, name := range testFSFilenames {
-		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
+		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
 			file := &WritableFileImpl{Name: name}
 			data := testFS[name].Data
 			writeFile(t, file, data, &filesys.WriteOptions{Raw: true})
@@ -54,7 +54,7 @@ func TestWrite_Raw(t *testing.T) {
 
 func TestWrite_Basic(t *testing.T) {
 	for _, name := range testFSBasicFilenames {
-		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
+		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
 			file := &WritableFileImpl{Name: name}
 			data := testFS[name].Data
 			writeFile(t, file, data, nil)
@@ -73,7 +73,7 @@ func TestWrite_Basic(t *testing.T) {
 
 func TestWrite_Gz(t *testing.T) {
 	for _, name := range testFSGzFilenames {
-		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
+		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
 			file := &WritableFileImpl{Name: name}
 			data := writeGzFile(t, file)
 			if t.Failed() {
@@ -102,7 +102,7 @@ func TestWrite_Gz(t *testing.T) {
 
 func TestWrite_TarTgz(t *testing.T) {
 	for _, name := range append(testFSTarFilenames, testFSTgzFilenames...) {
-		t.Run(fmt.Sprintf("file=%q", name), func(t *testing.T) {
+		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
 			file := &WritableFileImpl{Name: name}
 			writeTarFiles(t, file)
 			if !t.Failed() {
@@ -326,17 +326,17 @@ func TestWrite_AfterClose(t *testing.T) {
 
 	t.Run("method=Flush-hasBufferedData", func(t *testing.T) {
 		file := &WritableFileImpl{Name: "test-write-after-close.txt"}
-		const input = "Flush should return nil"
-		w, err := filesys.Write(file, &filesys.WriteOptions{BufSize: len(input) + 10}, true)
+		const Input = "Flush should return nil"
+		w, err := filesys.Write(file, &filesys.WriteOptions{BufSize: len(Input) + 10}, true)
 		if err != nil {
 			t.Fatal("create -", err)
 		}
-		_, err = w.WriteString(input)
+		_, err = w.WriteString(Input)
 		if err != nil {
 			t.Fatal("write string -", err)
 		}
-		if n := w.Buffered(); n != len(input) {
-			t.Fatalf("got w.Buffered %d; want %d", n, len(input))
+		if n := w.Buffered(); n != len(Input) {
+			t.Fatalf("got w.Buffered %d; want %d", n, len(Input))
 		}
 		err = w.Close()
 		if err != nil {

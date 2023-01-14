@@ -29,8 +29,8 @@ import (
 // It returns true if the file can be read and matches all
 // filesys.HashVerifier in hvs
 // (nil and duplicate filesys.HashVerifier will be ignored).
-// In particular, it returns true if hvs has no non-nil
-// filesys.HashVerifier and the file can be opened for reading.
+// In particular, it returns true if there is no non-nil filesys.HashVerifier
+// in hvs and the file can be opened for reading.
 // In this case, the file will not be read.
 //
 // Note that VerifyChecksum will not reset the hash state of anyone in hvs.

@@ -123,7 +123,7 @@ func EncodeFloat64(dst []byte, f float64) int {
 }
 
 // bufferLen is the length of the buffer in bufferPool.
-const bufferLen = 10
+const bufferLen int = 10
 
 // bufferPool is a set of temporary buffers used during encoding.
 //

@@ -22,12 +22,12 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/donyori/gogo/copyright/agpl3"
+	"github.com/donyori/gogo/internal/testaux"
 )
 
 const CopyrightNoticePatternLayout = "" +
@@ -45,9 +45,9 @@ const CopyrightNoticeWithSourcePatternLayout = "" +
 
 func TestPrintCopyrightNotice(t *testing.T) {
 	const (
-		program = "testgogo"
-		author  = "donyori"
-		source  = "https://github.com/donyori/gogo"
+		Program = "testgogo"
+		Author  = "donyori"
+		Source  = "https://github.com/donyori/gogo"
 	)
 	nowYear := time.Now().Year()
 	year := fmt.Sprintf("2019-%d", nowYear)
@@ -61,37 +61,37 @@ func TestPrintCopyrightNotice(t *testing.T) {
 			wantErr: agpl3.ErrAuthorMissing,
 		},
 		{
-			program: program,
+			program: Program,
 			year:    year,
-			source:  source,
+			source:  Source,
 			wantErr: agpl3.ErrAuthorMissing,
 		},
 		{
-			author:            author,
-			wantNoticePattern: fmt.Sprintf(CopyrightNoticePatternLayout, "(.)+", nowYear, author),
+			author:            Author,
+			wantNoticePattern: fmt.Sprintf(CopyrightNoticePatternLayout, "(.)+", nowYear, Author),
 		},
 		{
-			author:            author,
-			source:            source,
-			wantNoticePattern: fmt.Sprintf(CopyrightNoticeWithSourcePatternLayout, "(.)+", nowYear, author, source),
+			author:            Author,
+			source:            Source,
+			wantNoticePattern: fmt.Sprintf(CopyrightNoticeWithSourcePatternLayout, "(.)+", nowYear, Author, Source),
 		},
 		{
-			program:           program,
+			program:           Program,
 			year:              year,
-			author:            author,
-			wantNoticePattern: fmt.Sprintf(CopyrightNoticePatternLayout, program, year, author),
+			author:            Author,
+			wantNoticePattern: fmt.Sprintf(CopyrightNoticePatternLayout, Program, year, Author),
 		},
 		{
-			program:           program,
+			program:           Program,
 			year:              year,
-			author:            author,
-			source:            source,
-			wantNoticePattern: fmt.Sprintf(CopyrightNoticeWithSourcePatternLayout, program, year, author, source),
+			author:            Author,
+			source:            Source,
+			wantNoticePattern: fmt.Sprintf(CopyrightNoticeWithSourcePatternLayout, Program, year, Author, Source),
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("program=%q&year=%q&author=%q&source=%q",
+		t.Run(fmt.Sprintf("program=%+q&year=%+q&author=%+q&source=%+q",
 			tc.program, tc.year, tc.author, tc.source), func(t *testing.T) {
 			p, err := regexp.Compile(tc.wantNoticePattern)
 			if err != nil {
@@ -188,17 +188,5 @@ func TestResponseShowWC(t *testing.T) {
 }
 
 func argsToName(args []string) string {
-	if args == nil {
-		return "<nil>"
-	}
-	var b strings.Builder
-	b.WriteByte('[')
-	for i, arg := range args {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteString(strconv.QuoteToASCII(arg))
-	}
-	b.WriteByte(']')
-	return b.String()
+	return testaux.SliceToName(args, ",", "%+q", false)
 }

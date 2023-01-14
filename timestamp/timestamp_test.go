@@ -151,7 +151,7 @@ var testNanoTimestampCases = []struct {
 
 func TestTimestamp_String(t *testing.T) {
 	for i, tc := range testTimestampCases {
-		t.Run(fmt.Sprintf("case %d?forFormat=%q", i, tc.forFormat), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?forFormat=%+q", i, tc.forFormat), func(t *testing.T) {
 			if s := tc.timestamp.String(); s != tc.forFormat {
 				t.Errorf("got %s; want %s", s, tc.forFormat)
 			}
@@ -161,7 +161,7 @@ func TestTimestamp_String(t *testing.T) {
 
 func TestTimestamp_MarshalJSON(t *testing.T) {
 	for i, tc := range testTimestampCases {
-		t.Run(fmt.Sprintf("case %d?forFormat=%q", i, tc.forFormat), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?forFormat=%+q", i, tc.forFormat), func(t *testing.T) {
 			b, err := json.Marshal(tc.timestamp)
 			if err != nil {
 				t.Error(err)
@@ -174,7 +174,7 @@ func TestTimestamp_MarshalJSON(t *testing.T) {
 
 func TestTimestamp_UnmarshalJSON(t *testing.T) {
 	for i, tc := range testTimestampCases {
-		t.Run(fmt.Sprintf("case %d?forParse=%q", i, tc.forParse), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?forParse=%+q", i, tc.forParse), func(t *testing.T) {
 			var ts timestamp.Timestamp
 			err := json.Unmarshal(tc.forParse, &ts)
 			if err != nil {
@@ -247,7 +247,7 @@ func testString[Ts timestampConstraint](t *testing.T, cases []struct {
 	bytes     []byte
 }) {
 	for i, tc := range cases {
-		t.Run(fmt.Sprintf("case %d?bytes=%q", i, tc.bytes), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?bytes=%+q", i, tc.bytes), func(t *testing.T) {
 			if s := any(tc.timestamp).(fmt.Stringer).String(); s != string(tc.bytes) {
 				t.Errorf("got %s; want %s", s, tc.bytes)
 			}
@@ -260,7 +260,7 @@ func testMarshalJson[Ts timestampConstraint](t *testing.T, cases []struct {
 	bytes     []byte
 }) {
 	for i, tc := range cases {
-		t.Run(fmt.Sprintf("case %d?bytes=%q", i, tc.bytes), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?bytes=%+q", i, tc.bytes), func(t *testing.T) {
 			b, err := json.Marshal(tc.timestamp)
 			if err != nil {
 				t.Error(err)
@@ -276,7 +276,7 @@ func testUnmarshalJson[Ts timestampConstraint](t *testing.T, cases []struct {
 	bytes     []byte
 }) {
 	for i, tc := range cases {
-		t.Run(fmt.Sprintf("case %d?bytes=%q", i, tc.bytes), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?bytes=%+q", i, tc.bytes), func(t *testing.T) {
 			var ts Ts
 			err := json.Unmarshal(tc.bytes, &ts)
 			if err != nil {

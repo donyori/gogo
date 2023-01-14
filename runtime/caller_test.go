@@ -70,12 +70,12 @@ type callerPkgFuncRecord struct {
 }
 
 func TestCallerPkgFunc(t *testing.T) {
-	const wantPkg = "github.com/donyori/gogo/runtime_test"
+	const WantPkg = "github.com/donyori/gogo/runtime_test"
 
 	var records []callerPkgFuncRecord
 	for _, elem := range globalTagPkgFuncs {
 		records = append(records, callerPkgFuncRecord{
-			wantPkg: wantPkg,
+			wantPkg: WantPkg,
 			wantFn:  elem[0],
 			pkg:     elem[1],
 			fn:      elem[2],
@@ -83,7 +83,7 @@ func TestCallerPkgFunc(t *testing.T) {
 	}
 	pkg, fn, _ := runtime.CallerPkgFunc(0)
 	records = append(records, callerPkgFuncRecord{
-		wantPkg: wantPkg,
+		wantPkg: WantPkg,
 		wantFn:  "TestCallerPkgFunc",
 		pkg:     pkg,
 		fn:      fn,
@@ -92,7 +92,7 @@ func TestCallerPkgFunc(t *testing.T) {
 		defer func() {
 			pkg, fn, _ := runtime.CallerPkgFunc(0)
 			records = append(records, callerPkgFuncRecord{
-				wantPkg: wantPkg,
+				wantPkg: WantPkg,
 				wantFn:  "TestCallerPkgFunc.func1.1",
 				pkg:     pkg,
 				fn:      fn,
@@ -100,7 +100,7 @@ func TestCallerPkgFunc(t *testing.T) {
 		}()
 		pkg, fn, _ := runtime.CallerPkgFunc(0)
 		records = append(records, callerPkgFuncRecord{
-			wantPkg: wantPkg,
+			wantPkg: WantPkg,
 			wantFn:  "TestCallerPkgFunc.func1",
 			pkg:     pkg,
 			fn:      fn,
@@ -109,14 +109,14 @@ func TestCallerPkgFunc(t *testing.T) {
 	tes := new(ExportedStruct)
 	pkg, fn = tes.Foo()
 	records = append(records, callerPkgFuncRecord{
-		wantPkg: wantPkg,
+		wantPkg: WantPkg,
 		wantFn:  "(*ExportedStruct).Foo",
 		pkg:     pkg,
 		fn:      fn,
 	})
 	pkg, fn = tes.foo()
 	records = append(records, callerPkgFuncRecord{
-		wantPkg: wantPkg,
+		wantPkg: WantPkg,
 		wantFn:  "(*ExportedStruct).foo",
 		pkg:     pkg,
 		fn:      fn,
@@ -124,14 +124,14 @@ func TestCallerPkgFunc(t *testing.T) {
 	tls := new(localStruct)
 	pkg, fn = tls.Foo()
 	records = append(records, callerPkgFuncRecord{
-		wantPkg: wantPkg,
+		wantPkg: WantPkg,
 		wantFn:  "(*localStruct).Foo",
 		pkg:     pkg,
 		fn:      fn,
 	})
 	pkg, fn = tls.foo()
 	records = append(records, callerPkgFuncRecord{
-		wantPkg: wantPkg,
+		wantPkg: WantPkg,
 		wantFn:  "(*localStruct).foo",
 		pkg:     pkg,
 		fn:      fn,

@@ -89,7 +89,7 @@ func TestWriteTrunc_TarTgz(t *testing.T) {
 	filenames := []string{"test.tar", "test.tar.gz", "test.tgz"}
 	tmpRoot := t.TempDir()
 	for _, filename := range filenames {
-		t.Run(fmt.Sprintf("file=%q", filename), func(t *testing.T) {
+		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
 			name := filepath.Join(tmpRoot, filename)
 			writeTarFiles(t, name, tarFiles)
 			if !t.Failed() {
@@ -100,7 +100,7 @@ func TestWriteTrunc_TarTgz(t *testing.T) {
 }
 
 func TestWriteAppend(t *testing.T) {
-	const N = 3
+	const N int = 3
 	tmpRoot := t.TempDir()
 	name := filepath.Join(tmpRoot, "test.txt")
 	data := []byte("test local.WriteAppend\n")

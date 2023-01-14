@@ -251,7 +251,7 @@ func sum[T constraints.Addable](s []T) T {
 	return r
 }
 
-func TestCompileByteSequence(t *testing.T) {
+func TestCompileByteString(t *testing.T) {
 	var str string
 	var bs []byte
 	var myS myString
@@ -263,7 +263,7 @@ func TestCompileByteSequence(t *testing.T) {
 	concatBytes(myB, str)
 }
 
-func concatBytes[T1, T2 constraints.ByteSequence](s1 T1, s2 T2) []byte {
+func concatBytes[T1, T2 constraints.ByteString](s1 T1, s2 T2) []byte {
 	s := make([]byte, len(s1)+len(s2))
 	n := copy(s, s1)
 	copy(s[n:], s2)
