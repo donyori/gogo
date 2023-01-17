@@ -75,7 +75,7 @@ func TestWriteTrunc_MkDirs(t *testing.T) {
 }
 
 func TestWriteTrunc_TarTgz(t *testing.T) {
-	big := make([]byte, 1_048_576)
+	big := make([]byte, 1<<20)
 	rand.New(rand.NewSource(10)).Read(big)
 	tarFiles := []struct {
 		name string

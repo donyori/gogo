@@ -16,16 +16,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package mathalgo
-
-import "github.com/donyori/gogo/constraints"
+package filesys
 
 // Export for testing only.
 
-// AbsIntToUint64 takes the absolute value of the integer x
-// and converts it to uint64.
-func AbsIntToUint64[Int constraints.Integer](x Int) uint64 {
-	return absIntToUint64(x)
-}
-
-var GCD2Uint64Stein = gcd2Uint64Stein
+var NonNilDeduplicatedHashVerifiers = nonNilDeduplicatedHashVerifiers

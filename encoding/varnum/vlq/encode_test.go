@@ -28,48 +28,45 @@ import (
 	"github.com/donyori/gogo/encoding/varnum/vlq"
 )
 
-func TestUint64EncodedLen(t *testing.T) {
-	for i, u := range uint64s {
-		t.Run(fmt.Sprintf("u=%#X", u), func(t *testing.T) {
-			if n := vlq.Uint64EncodedLen(u); n != len(encodedUint64s[i]) {
-				t.Errorf("got %d; want %d", n, len(encodedUint64s[i]))
+func TestUint64EncodedLenFunctions(t *testing.T) {
+	fns := []struct {
+		name string
+		f    func(u uint64) int
+	}{
+		{"PackageFunc", vlq.Uint64EncodedLen},
+		{"BinaryFunc", uint64EncodedLenBinarySearch},
+	}
+
+	for _, fn := range fns {
+		t.Run(fn.name, func(t *testing.T) {
+			for i, u := range uint64s {
+				t.Run(fmt.Sprintf("u=%#X", u), func(t *testing.T) {
+					if n := vlq.Uint64EncodedLen(u); n != len(encodedUint64s[i]) {
+						t.Errorf("got %d; want %d", n, len(encodedUint64s[i]))
+					}
+				})
 			}
 		})
 	}
 }
 
-func BenchmarkUint64EncodedLen(b *testing.B) {
-	benchmarks := []struct {
+func BenchmarkUint64EncodedLenFunctions(b *testing.B) {
+	fns := []struct {
 		name string
 		f    func(u uint64) int
 	}{
-		{"package-func", vlq.Uint64EncodedLen},
-		{"binary-func", func(u uint64) int {
-			// Binary search.
-			// Define: minUint64s[-1] < u,
-			//         minUint64s[len(minUint64s)] > u
-			// Invariant: minUint64s[low-1] < u,
-			//            minUint64s[high] > u
-			low, high := 0, len(vlq.MinUint64s)
-			for low < high {
-				mid := (low + high) / 2
-				if vlq.MinUint64s[mid] < u {
-					low = mid + 1 // Preserve: minUint64s[low-1] < u
-				} else if vlq.MinUint64s[mid] > u {
-					high = mid // Preserve: minUint64s[high] > u
-				} else {
-					return mid + 2
-				}
-			}
-			return high + 1
-		}},
+		{"PackageFunc", vlq.Uint64EncodedLen},
+		{"BinaryFunc", uint64EncodedLenBinarySearch},
 	}
-	for _, bm := range benchmarks {
-		b.Run(bm.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				for _, u := range uint64s {
-					bm.f(u)
-				}
+
+	for _, u := range uint64s {
+		b.Run(fmt.Sprintf("u=%#X", u), func(b *testing.B) {
+			for _, fn := range fns {
+				b.Run(fn.name, func(b *testing.B) {
+					for i := 0; i < b.N; i++ {
+						fn.f(u)
+					}
+				})
 			}
 		})
 	}
@@ -133,4 +130,26 @@ func TestEncodeFloat64(t *testing.T) {
 			}
 		})
 	}
+}
+
+// uint64EncodedLenBinarySearch is another implementation of
+// function Uint64EncodedLen, based on the binary search.
+func uint64EncodedLenBinarySearch(u uint64) int {
+	// Binary search.
+	// Define: minUint64s[-1] < u,
+	//         minUint64s[len(minUint64s)] > u
+	// Invariant: minUint64s[low-1] < u,
+	//            minUint64s[high] > u
+	low, high := 0, len(vlq.MinUint64s)
+	for low < high {
+		mid := (low + high) / 2
+		if vlq.MinUint64s[mid] < u {
+			low = mid + 1 // Preserve: minUint64s[low-1] < u
+		} else if vlq.MinUint64s[mid] > u {
+			high = mid // Preserve: minUint64s[high] > u
+		} else {
+			return mid + 2
+		}
+	}
+	return high + 1
 }

@@ -288,26 +288,26 @@ func lcmBruteForce[Int constraints.Integer](xs ...Int) Int {
 	}
 
 	var limit uint64
-	switch any(xs[0]).(type) {
-	case int:
+	switch any(xs).(type) {
+	case []int:
 		limit = math.MaxInt
-	case int8:
+	case []int8:
 		limit = math.MaxInt8
-	case int16:
+	case []int16:
 		limit = math.MaxInt16
-	case int32:
+	case []int32:
 		limit = math.MaxInt32
-	case int64:
+	case []int64:
 		limit = math.MaxInt64
-	case uint:
+	case []uint:
 		limit = math.MaxUint
-	case uint8:
+	case []uint8:
 		limit = math.MaxUint8
-	case uint16:
+	case []uint16:
 		limit = math.MaxUint16
-	case uint32:
+	case []uint32:
 		limit = math.MaxUint32
-	case uint64, uintptr:
+	case []uint64, []uintptr:
 		limit = math.MaxUint64
 	default:
 		// This should never happen, but will act as a safeguard for later.
@@ -320,9 +320,14 @@ func lcmBruteForce[Int constraints.Integer](xs ...Int) Int {
 			i++
 		}
 		if i >= len(xs) {
-			break
+			return Int(m)
 		}
 		m++
+	}
+	for _, x := range xs {
+		if m%mathalgo.AbsIntToUint64(x) != 0 {
+			panic("lcm overflows")
+		}
 	}
 	return Int(m)
 }

@@ -48,7 +48,7 @@ func CanEncodeToPrefix[Bytes1, Bytes2 constraints.ByteString](src Bytes1, prefix
 	if n > EncodedLen(len(src)) {
 		return false
 	}
-	if n&1 > 0 { // i.e., n%2 == 1
+	if n&1 > 0 { // n is odd
 		n--
 	}
 	for i := 0; i < n; i += 2 {
@@ -58,7 +58,7 @@ func CanEncodeToPrefix[Bytes1, Bytes2 constraints.ByteString](src Bytes1, prefix
 			return false
 		}
 	}
-	if len(prefix)&1 > 0 { // i.e., len(prefix)%2 == 1
+	if len(prefix)&1 > 0 { // len(prefix) is odd
 		// Here, n == len(prefix) - 1
 		return prefix[n] >= '0' &&
 			lowercaseHexTable[src[n>>1]>>4] == prefix[n]|letterCaseDiff

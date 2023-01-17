@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/donyori/gogo/filesys"
+	"github.com/donyori/gogo/function/compare"
 )
 
 func TestNewHashVerifier(t *testing.T) {
@@ -207,6 +208,145 @@ func TestVerifyChecksumFromFS(t *testing.T) {
 	}
 }
 
+func TestNonNilDeduplicatedHashVerifiers(t *testing.T) {
+	hvs := make([]filesys.HashVerifier, 3)
+	for i := range hvs {
+		hvs[i] = filesys.NewHashVerifier(sha256.New, "")
+	}
+
+	testCases := []struct {
+		hvsName         string
+		hvs             []filesys.HashVerifier
+		want            []filesys.HashVerifier
+		equalUnderlying bool
+	}{
+		{
+			"<nil>",
+			nil,
+			nil,
+			false,
+		},
+		{
+			"empty",
+			[]filesys.HashVerifier{},
+			nil,
+			false,
+		},
+		{
+			"0",
+			[]filesys.HashVerifier{hvs[0]},
+			[]filesys.HashVerifier{hvs[0]},
+			true,
+		},
+		{
+			"0+1",
+			[]filesys.HashVerifier{hvs[0], hvs[1]},
+			[]filesys.HashVerifier{hvs[0], hvs[1]},
+			true,
+		},
+		{
+			"0+1+2",
+			[]filesys.HashVerifier{hvs[0], hvs[1], hvs[2]},
+			[]filesys.HashVerifier{hvs[0], hvs[1], hvs[2]},
+			true,
+		},
+		{
+			"nil",
+			[]filesys.HashVerifier{nil},
+			nil,
+			false,
+		},
+		{
+			"nil+nil",
+			[]filesys.HashVerifier{nil, nil},
+			nil,
+			false,
+		},
+		{
+			"nil+0",
+			[]filesys.HashVerifier{nil, hvs[0]},
+			[]filesys.HashVerifier{hvs[0]},
+			false,
+		},
+		{
+			"0+nil",
+			[]filesys.HashVerifier{hvs[0], nil},
+			[]filesys.HashVerifier{hvs[0]},
+			false,
+		},
+		{
+			"0+nil+1",
+			[]filesys.HashVerifier{hvs[0], nil, hvs[1]},
+			[]filesys.HashVerifier{hvs[0], hvs[1]},
+			false,
+		},
+		{
+			"0+nil+nil+1+2+nil",
+			[]filesys.HashVerifier{hvs[0], nil, nil, hvs[1], hvs[2], nil},
+			[]filesys.HashVerifier{hvs[0], hvs[1], hvs[2]},
+			false,
+		},
+		{
+			"0+0",
+			[]filesys.HashVerifier{hvs[0], hvs[0]},
+			[]filesys.HashVerifier{hvs[0]},
+			false,
+		},
+		{
+			"0+0+1",
+			[]filesys.HashVerifier{hvs[0], hvs[0], hvs[1]},
+			[]filesys.HashVerifier{hvs[0], hvs[1]},
+			false,
+		},
+		{
+			"0+1+1",
+			[]filesys.HashVerifier{hvs[0], hvs[1], hvs[1]},
+			[]filesys.HashVerifier{hvs[0], hvs[1]},
+			false,
+		},
+		{
+			"0+1+1+1+2+0",
+			[]filesys.HashVerifier{hvs[0], hvs[1], hvs[1], hvs[1], hvs[2], hvs[0]},
+			[]filesys.HashVerifier{hvs[0], hvs[1], hvs[2]},
+			false,
+		},
+		{
+			"nil+0+1+nil+1+1+nil+2+2+0",
+			[]filesys.HashVerifier{nil, hvs[0], hvs[1], nil, hvs[1], hvs[1], nil, hvs[2], hvs[2], hvs[0]},
+			[]filesys.HashVerifier{hvs[0], hvs[1], hvs[2]},
+			false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run("hvs="+tc.hvsName, func(t *testing.T) {
+			var input []filesys.HashVerifier
+			if tc.hvs != nil {
+				input = make([]filesys.HashVerifier, len(tc.hvs))
+				copy(input, tc.hvs)
+			}
+			got := filesys.NonNilDeduplicatedHashVerifiers(input)
+			if tc.want != nil {
+				if !compare.AnySliceEqual(got, tc.want) {
+					t.Errorf("got (len: %d) %v; want (len: %d) %v", len(got), got, len(tc.want), tc.want)
+				}
+			} else if got != nil {
+				t.Errorf("got (len: %d) %v; want <nil>", len(got), got)
+			}
+			if underlyingArrayEqual(input, got) != tc.equalUnderlying {
+				if tc.equalUnderlying {
+					t.Error("return value and input have different underlying arrays, but want the same one")
+				} else {
+					t.Error("return value and input have the same underlying array, but want different")
+				}
+			}
+			if !compare.AnySliceEqual(input, tc.hvs) || cap(input) != cap(tc.hvs) {
+				t.Error("input has been modified")
+			}
+		})
+	}
+}
+
 // verifyChecksumTestCases returns test cases for
 // TestVerifyChecksum and TestVerifyChecksumFromFS.
 func verifyChecksumTestCases(filename string) []struct {
@@ -358,4 +498,15 @@ func verifyChecksumTestCases(filename string) []struct {
 			true,
 		},
 	}
+}
+
+// underlyingArrayEqual reports whether the underlying array of a
+// is the same as that of b.
+//
+// In particular, if a or b is nil, it returns false.
+func underlyingArrayEqual(a, b []filesys.HashVerifier) bool {
+	return a != nil && b != nil &&
+		(*[0]filesys.HashVerifier)(a) == (*[0]filesys.HashVerifier)(b)
+	// Before Go 1.17, can use:
+	//  (*reflect.SliceHeader)(unsafe.Pointer(&a)).Data == (*reflect.SliceHeader)(unsafe.Pointer(&b)).Data
 }

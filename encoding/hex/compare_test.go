@@ -40,7 +40,12 @@ func TestCanEncodeTo(t *testing.T) {
 			xSet[xCase.dstStr] = true
 			want := srcCase.srcStr == xCase.srcStr
 			t.Run(
-				fmt.Sprintf("src=%s&x=%s&upper=%t", srcCase.srcName, xCase.dstName, xCase.upper),
+				fmt.Sprintf(
+					"src=%s&x=%s&upper=%t",
+					srcCase.srcName,
+					xCase.dstName,
+					xCase.upper,
+				),
 				func(t *testing.T) {
 					t.Run("srcType=[]byte&xType=[]byte", func(t *testing.T) {
 						got := hex.CanEncodeTo(srcCase.srcBytes, xCase.dstBytes)
@@ -93,7 +98,13 @@ func TestCanEncodeTo(t *testing.T) {
 		}
 		xSet[xStr] = true
 		t.Run(
-			fmt.Sprintf("src=%s&x=%s&upper=%t&numeric-xor-%#x", tc.srcName, stringName(xStr), tc.upper, hex.LetterCaseDiff),
+			fmt.Sprintf(
+				"src=%s&x=%s&upper=%t&numeric-xor-%#x",
+				tc.srcName,
+				stringName(xStr),
+				tc.upper,
+				hex.LetterCaseDiff,
+			),
 			func(t *testing.T) {
 				t.Run("srcType=[]byte&xType=[]byte", func(t *testing.T) {
 					if hex.CanEncodeTo(tc.srcBytes, x) {
@@ -180,7 +191,12 @@ func TestCanEncodeToPrefix(t *testing.T) {
 				// srcCase.dstStr is in lowercase as the uppercase is skipped.
 				want := strings.HasPrefix(srcCase.dstStr, strings.ToLower(prefix))
 				t.Run(
-					fmt.Sprintf("src=%s&prefix=%s&upper=%t", srcCase.srcName, stringName(prefix), prefixCase.upper),
+					fmt.Sprintf(
+						"src=%s&prefix=%s&upper=%t",
+						srcCase.srcName,
+						stringName(prefix),
+						prefixCase.upper,
+					),
 					func(t *testing.T) {
 						t.Run("srcType=[]byte&prefixType=[]byte", func(t *testing.T) {
 							got := hex.CanEncodeToPrefix(srcCase.srcBytes, prefixBytes)
@@ -213,40 +229,11 @@ func TestCanEncodeToPrefix(t *testing.T) {
 	}
 }
 
-func BenchmarkCanEncodeTo(b *testing.B) {
-	src := testEncodeLongSrcCases[0].srcBytes
-	dst := testEncodeLongSrcCases[0].dstStr
-	var sameLen string
-	if strings.ContainsRune(dst, '0') {
-		sameLen = strings.Replace(dst, "0", "1", 2)
-	} else {
-		for r := '1'; r <= '9'; r++ {
-			if strings.ContainsRune(dst, r) {
-				sameLen = strings.Replace(dst, string(r), "0", 2)
-				break
-			}
-		}
-		if sameLen == "" {
-			for r := 'a'; r <= 'f'; r++ {
-				if strings.ContainsRune(dst, r) {
-					sameLen = strings.Replace(dst, string(r), "0", 2)
-					break
-				}
-			}
-		}
-	}
-	if sameLen == "" {
-		b.Fatal("cannot build sameLen")
-	}
-
-	testCases := []struct {
-		name string
-		x    string
-		want bool
-	}{
-		{"Success", dst, true},
-		{"FailSameLen", sameLen, false},
-		{"FailDiffLen", dst[:len(dst)/2], false},
+func TestCanEncodeToBytesStringFunctions(t *testing.T) {
+	src, dst, _, sameLen :=
+		makeCanEncodeToPrefixBytesStringFunctionsTestData(t, -1)
+	if t.Failed() {
+		return
 	}
 
 	fns := []struct {
@@ -258,58 +245,82 @@ func BenchmarkCanEncodeTo(b *testing.B) {
 		{"Another2", canEncodeToBytesString2},
 	}
 
-	benchmarks := make([]struct {
+	testCases := []struct {
 		name string
-		f    func(src []byte, x string) bool
 		x    string
 		want bool
-	}, len(fns)*len(testCases))
-	var idx int
-	for _, tc := range testCases {
-		for _, fn := range fns {
-			benchmarks[idx].name = fn.name + "_" + tc.name
-			benchmarks[idx].f = fn.f
-			benchmarks[idx].x = tc.x
-			benchmarks[idx].want = tc.want
-			idx++
-		}
+	}{
+		{"Match", dst, true},
+		{"FailSameLen", sameLen, false},
+		{"FailDiffLen", dst[:len(dst)/2], false},
 	}
 
-	for _, bm := range benchmarks {
-		b.Run(bm.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				if got := bm.f(src, bm.x); got != bm.want {
-					b.Errorf("got %t; want %t", got, bm.want)
-				}
+	for _, fn := range fns {
+		t.Run(fn.name, func(t *testing.T) {
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					got := fn.f(src, tc.x)
+					if got != tc.want {
+						t.Errorf("got %t; want %t", got, tc.want)
+					}
+				})
 			}
 		})
 	}
 }
 
-func BenchmarkCanEncodeToPrefix(b *testing.B) {
-	src := testEncodeLongSrcCases[0].srcBytes
-	prefix := testEncodeLongSrcCases[0].dstStr[:12]
-	var sameLen string
-	if strings.ContainsRune(prefix, '0') {
-		sameLen = strings.Replace(prefix, "0", "1", 2)
-	} else {
-		for r := '1'; r <= '9'; r++ {
-			if strings.ContainsRune(prefix, r) {
-				sameLen = strings.Replace(prefix, string(r), "0", 2)
-				break
-			}
-		}
-		if sameLen == "" {
-			for r := 'a'; r <= 'f'; r++ {
-				if strings.ContainsRune(prefix, r) {
-					sameLen = strings.Replace(prefix, string(r), "0", 2)
-					break
-				}
-			}
-		}
+func BenchmarkCanEncodeToBytesStringFunctions(b *testing.B) {
+	src, dst, _, sameLen :=
+		makeCanEncodeToPrefixBytesStringFunctionsTestData(b, -1)
+	if b.Failed() {
+		return
 	}
-	if sameLen == "" {
-		b.Fatal("cannot build sameLen")
+
+	dataList := []struct {
+		name, x string
+	}{
+		{"Match", dst},
+		{"FailSameLen", sameLen},
+		{"FailDiffLen", dst[:len(dst)/2]},
+	}
+
+	fns := []struct {
+		name string
+		f    func(src []byte, x string) bool
+	}{
+		{"MyFunc", hex.CanEncodeTo[[]byte, string]},
+		{"Another1", canEncodeToBytesString1},
+		{"Another2", canEncodeToBytesString2},
+	}
+
+	for _, data := range dataList {
+		b.Run(data.name, func(b *testing.B) {
+			for _, fn := range fns {
+				b.Run(fn.name, func(b *testing.B) {
+					for i := 0; i < b.N; i++ {
+						fn.f(src, data.x)
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestCanEncodeToPrefixBytesStringFunctions(t *testing.T) {
+	src, dst, prefixEven, sameLenEven :=
+		makeCanEncodeToPrefixBytesStringFunctionsTestData(t, 12)
+	if t.Failed() {
+		return
+	}
+	prefixOdd := prefixEven[:len(prefixEven)-1]
+	sameLenOdd := sameLenEven[:len(sameLenEven)-1]
+
+	fns := []struct {
+		name string
+		f    func(src []byte, prefix string) bool
+	}{
+		{"MyFunc", hex.CanEncodeToPrefix[[]byte, string]},
+		{"Another", canEncodeToPrefixBytesString},
 	}
 
 	testCases := []struct {
@@ -317,9 +328,46 @@ func BenchmarkCanEncodeToPrefix(b *testing.B) {
 		prefix string
 		want   bool
 	}{
-		{"Success", prefix, true},
-		{"Fail", sameLen, false},
-		{"FailTooLong", testEncodeLongSrcCases[0].dstStr + "00", false},
+		{"MatchEven", prefixEven, true},
+		{"MatchOdd", prefixOdd, true},
+		{"FailEven", sameLenEven, false},
+		{"FailOdd", sameLenOdd, false},
+		{"FailTooLongEven", dst + "00", false},
+		{"FailTooLongOdd", dst + "0", false},
+	}
+
+	for _, fn := range fns {
+		t.Run(fn.name, func(t *testing.T) {
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					got := fn.f(src, tc.prefix)
+					if got != tc.want {
+						t.Errorf("got %t; want %t", got, tc.want)
+					}
+				})
+			}
+		})
+	}
+}
+
+func BenchmarkCanEncodeToPrefixBytesStringFunctions(b *testing.B) {
+	src, dst, prefixEven, sameLenEven :=
+		makeCanEncodeToPrefixBytesStringFunctionsTestData(b, 12)
+	if b.Failed() {
+		return
+	}
+	prefixOdd := prefixEven[:len(prefixEven)-1]
+	sameLenOdd := sameLenEven[:len(sameLenEven)-1]
+
+	dataList := []struct {
+		name, prefix string
+	}{
+		{"MatchEven", prefixEven},
+		{"MatchOdd", prefixOdd},
+		{"FailEven", sameLenEven},
+		{"FailOdd", sameLenOdd},
+		{"FailTooLongEven", dst + "00"},
+		{"FailTooLongOdd", dst + "0"},
 	}
 
 	fns := []struct {
@@ -330,29 +378,14 @@ func BenchmarkCanEncodeToPrefix(b *testing.B) {
 		{"Another", canEncodeToPrefixBytesString},
 	}
 
-	benchmarks := make([]struct {
-		name   string
-		f      func(src []byte, prefix string) bool
-		prefix string
-		want   bool
-	}, len(fns)*len(testCases))
-	var idx int
-	for _, tc := range testCases {
-		for _, fn := range fns {
-			benchmarks[idx].name = fn.name + "_" + tc.name
-			benchmarks[idx].f = fn.f
-			benchmarks[idx].prefix = tc.prefix
-			benchmarks[idx].want = tc.want
-			idx++
-		}
-	}
-
-	for _, bm := range benchmarks {
-		b.Run(bm.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				if got := bm.f(src, bm.prefix); got != bm.want {
-					b.Errorf("got %t; want %t", got, bm.want)
-				}
+	for _, data := range dataList {
+		b.Run(data.name, func(b *testing.B) {
+			for _, fn := range fns {
+				b.Run(fn.name, func(b *testing.B) {
+					for i := 0; i < b.N; i++ {
+						fn.f(src, data.prefix)
+					}
+				})
 			}
 		})
 	}
@@ -378,4 +411,48 @@ func canEncodeToBytesString2(src []byte, x string) bool {
 // strings.HasPrefix, and strings.ToLower.
 func canEncodeToPrefixBytesString(src []byte, prefix string) bool {
 	return strings.HasPrefix(stdhex.EncodeToString(src), strings.ToLower(prefix))
+}
+
+// makeCanEncodeToPrefixBytesStringFunctionsTestData generates data for testing
+// CanEncodeTo[[]byte, string] and CanEncodeToPrefix[[]byte, string],
+// and their alternative implementations.
+//
+// If prefixLen is not positive, prefix will be the same as dst.
+// If prefixLen is greater than len(dst),
+// makeCanEncodeToPrefixBytesStringFunctionsTestData logs an error and
+// returns zero-value src, dst, prefix, and sameLen.
+func makeCanEncodeToPrefixBytesStringFunctionsTestData(tb testing.TB, prefixLen int) (
+	src []byte, dst, prefix, sameLen string) {
+	dst = testEncodeLongSrcCases[0].dstStr
+	if prefixLen <= 0 {
+		prefixLen = len(dst)
+	} else if prefixLen > len(dst) {
+		tb.Errorf(
+			"prefixLen (%d) is out of range (should be up to %d)",
+			prefixLen,
+			len(dst),
+		)
+		dst = ""
+		return
+	}
+	prefix = dst[:prefixLen]
+
+	var b strings.Builder
+	b.Grow(prefixLen)
+	half := prefixLen / 2
+	if half > 0 {
+		b.WriteString(prefix[:half])
+	}
+	if prefix[half] != '0' {
+		b.WriteByte('0')
+	} else {
+		b.WriteByte('1')
+	}
+	if half+1 < prefixLen {
+		b.WriteString(prefix[half+1:])
+	}
+	sameLen = b.String()
+
+	src = testEncodeLongSrcCases[0].srcBytes
+	return
 }

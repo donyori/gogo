@@ -305,6 +305,95 @@ func TestGCD_Type(t *testing.T) {
 	}
 }
 
+func TestGCD2Uint64Functions(t *testing.T) {
+	fns := []struct {
+		name string
+		f    func(a, b uint64) uint64
+	}{
+		{"Stein", mathalgo.GCD2Uint64Stein},
+		{"SteinAnother", gcd2Uint64SteinAnother},
+		{"BruteForce", gcd2Uint64BruteForce},
+		{"Euclidean", gcd2Uint64Euclidean},
+	}
+
+	testCases := make([]struct {
+		a, b, want uint64
+	}, 6+len(testIntegers)*len(testIntegers))
+	// The following 6 cases are used in the benchmark.
+	testCases[0] = struct{ a, b, want uint64 }{a: 1, b: 7, want: 1}
+	testCases[1] = struct{ a, b, want uint64 }{a: 3 * 7, b: 7, want: 7}
+	testCases[2] = struct{ a, b, want uint64 }{a: 2 * 6, b: 3 * 6, want: 6}
+	testCases[3] = struct{ a, b, want uint64 }{a: 2 * 2048, b: 3 * 2048, want: 2048}
+	testCases[4] = struct{ a, b, want uint64 }{a: 13 * 405_751, b: 13 * 13, want: 13}
+	testCases[5] = struct{ a, b, want uint64 }{a: 13 * 405_751, b: 11 * 405_751, want: 405_751}
+	idx := 6
+	for _, a := range testIntegers {
+		for _, b := range testIntegers {
+			fsA, fsB := testIntegersFactorMap[a], testIntegersFactorMap[b]
+			var want uint64 = 1
+			for i := 0; i < NumTestIntegerPrimeFactors; i++ {
+				if fsA[i] <= fsB[i] {
+					want *= uint64(fsA[i])
+				} else {
+					want *= uint64(fsB[i])
+				}
+			}
+			testCases[idx].a = uint64(a)
+			testCases[idx].b = uint64(b)
+			testCases[idx].want = want
+			idx++
+		}
+	}
+
+	for _, fn := range fns {
+		t.Run(fn.name, func(t *testing.T) {
+			for _, tc := range testCases {
+				t.Run(fmt.Sprintf("a=%d&b=%d", tc.a, tc.b), func(t *testing.T) {
+					got := fn.f(tc.a, tc.b)
+					if got != tc.want {
+						t.Errorf("got %d; want %d", got, tc.want)
+					}
+				})
+			}
+		})
+	}
+}
+
+func BenchmarkGCD2Uint64Functions(b *testing.B) {
+	dataList := []struct {
+		a, b uint64
+	}{
+		{1, 7},
+		{3 * 7, 7},
+		{2 * 6, 3 * 6},
+		{2 * 2048, 3 * 2048},
+		{13 * 405_751, 13 * 13},
+		{13 * 405_751, 11 * 405_751},
+	}
+
+	fns := []struct {
+		name string
+		f    func(a, b uint64) uint64
+	}{
+		{"Stein", mathalgo.GCD2Uint64Stein},
+		{"SteinAnother", gcd2Uint64SteinAnother},
+		{"BruteForce", gcd2Uint64BruteForce},
+		{"Euclidean", gcd2Uint64Euclidean},
+	}
+
+	for _, data := range dataList {
+		b.Run(fmt.Sprintf("a=%d&b=%d", data.a, data.b), func(b *testing.B) {
+			for _, fn := range fns {
+				b.Run(fn.name, func(b *testing.B) {
+					for i := 0; i < b.N; i++ {
+						fn.f(data.a, data.b)
+					}
+				})
+			}
+		})
+	}
+}
+
 func xsToName[Int constraints.Integer](xs []Int) string {
 	return testaux.SliceToName(xs, ",", "%d", false)
 }
@@ -338,4 +427,67 @@ func gcdBruteForce[Int constraints.Integer](xs ...Int) Int {
 		d--
 	}
 	return Int(d)
+}
+
+// gcd2Uint64SteinAnother is another implementation of
+// function gcd2Uint64Stein.
+// It uses for loop instead of math/bits.TrailingZeros64
+// to remove trailing zeros.
+//
+// Caller should guarantee that both a and b are not zero.
+// If a or b is zero, gcd2Uint64SteinAnother will fall into an infinite loop.
+func gcd2Uint64SteinAnother(a, b uint64) uint64 {
+	var m, n int
+	for a&1 == 0 {
+		a, m = a>>1, m+1
+	}
+	for b&1 == 0 {
+		b, n = b>>1, n+1
+	}
+	if m > n {
+		m = n
+	}
+	for {
+		if a < b {
+			a, b = b, a
+		}
+		a -= b
+		if a == 0 {
+			return b << m
+		}
+		for a&1 == 0 {
+			a >>= 1
+		}
+	}
+}
+
+// gcd2Uint64BruteForce finds the greatest common divisor of
+// two non-zero 64-bit unsigned integers a and b by testing
+// the value from min(a, b) to zero, one by one.
+//
+// Caller should guarantee that both a and b are not zero.
+func gcd2Uint64BruteForce(a, b uint64) uint64 {
+	d := a
+	if d > b {
+		d = b
+	}
+	for d > 0 && (a%d != 0 || b%d != 0) {
+		d--
+	}
+	return d
+}
+
+// gcd2Uint64Euclidean calculates the greatest common divisor of
+// two non-zero 64-bit unsigned integers a and b with the Euclidean algorithm
+// (also known as Euclid's algorithm).
+//
+// Caller should guarantee that both a and b are not zero.
+func gcd2Uint64Euclidean(a, b uint64) uint64 {
+	if a < b {
+		a, b = b, a
+	}
+	for b != 0 {
+		a, b = b, a%b
+	}
+	return a
 }

@@ -48,8 +48,8 @@ var minUint64s = [...]uint64{
 func Uint64EncodedLen(u uint64) int {
 	// It is more efficient to simply test items one by one
 	// since the size of minUint64s is very small.
-	for i, mx := range minUint64s {
-		if u < mx {
+	for i := range minUint64s {
+		if u < minUint64s[i] {
 			return i + 1
 		}
 	}
