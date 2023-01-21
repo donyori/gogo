@@ -8,20 +8,22 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[OriginalMsg-0]
-	_ = x[PrependFullFuncName-1]
-	_ = x[PrependFullPkgName-2]
-	_ = x[PrependSimpleFuncName-3]
-	_ = x[PrependSimplePkgName-4]
+	_ = x[OriginalMsg-1]
+	_ = x[PrependFullFuncName-2]
+	_ = x[PrependFullPkgName-3]
+	_ = x[PrependSimpleFuncName-4]
+	_ = x[PrependSimplePkgName-5]
+	_ = x[maxErrorMessageStrategy-6]
 }
 
-const _ErrorMessageStrategy_name = "OriginalMessagePrependFullFunctionNamePrependFullPackageNamePrependSimpleFunctionNamePrependSimplePackageName"
+const _ErrorMessageStrategy_name = "OriginalMessagePrependFullFunctionNamePrependFullPackageNamePrependSimpleFunctionNamePrependSimplePackageNameErrorMessageStrategy(6)"
 
-var _ErrorMessageStrategy_index = [...]uint8{0, 15, 38, 60, 85, 109}
+var _ErrorMessageStrategy_index = [...]uint8{0, 15, 38, 60, 85, 109, 132}
 
 func (i ErrorMessageStrategy) String() string {
+	i -= 1
 	if i < 0 || i >= ErrorMessageStrategy(len(_ErrorMessageStrategy_index)-1) {
-		return "ErrorMessageStrategy(" + strconv.FormatInt(int64(i), 10) + ")"
+		return "ErrorMessageStrategy(" + strconv.FormatInt(int64(i+1), 10) + ")"
 	}
 	return _ErrorMessageStrategy_name[_ErrorMessageStrategy_index[i]:_ErrorMessageStrategy_index[i+1]]
 }

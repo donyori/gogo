@@ -25,13 +25,17 @@ type ErrorMessageStrategy int8
 
 // Enumeration of supported error message strategies.
 const (
-	OriginalMsg           ErrorMessageStrategy = iota // OriginalMessage
-	PrependFullFuncName                               // PrependFullFunctionName
-	PrependFullPkgName                                // PrependFullPackageName
-	PrependSimpleFuncName                             // PrependSimpleFunctionName
-	PrependSimplePkgName                              // PrependSimplePackageName
+	OriginalMsg             ErrorMessageStrategy = 1 + iota // OriginalMessage
+	PrependFullFuncName                                     // PrependFullFunctionName
+	PrependFullPkgName                                      // PrependFullPackageName
+	PrependSimpleFuncName                                   // PrependSimpleFunctionName
+	PrependSimplePkgName                                    // PrependSimplePackageName
+	maxErrorMessageStrategy                                 // ErrorMessageStrategy(6)
 )
 
+// Before running the following command, please make sure the numeric value
+// in the line comment of maxErrorMessageStrategy is correct.
+//
 //go:generate stringer -type=ErrorMessageStrategy -output=error_message_strategy_string.go -linecomment
 
 // Valid returns true if the error message strategy is known.
@@ -43,7 +47,7 @@ const (
 //   - PrependSimpleFuncName: add the simple function name before the error message
 //   - PrependSimplePkgName: add the simple package name before the error message
 func (i ErrorMessageStrategy) Valid() bool {
-	return i >= OriginalMsg && i <= PrependSimplePkgName
+	return i > 0 && i < maxErrorMessageStrategy
 }
 
 // MustValid panics if i is invalid.
