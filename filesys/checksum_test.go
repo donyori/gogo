@@ -31,6 +31,79 @@ import (
 	"github.com/donyori/gogo/function/compare"
 )
 
+func TestChecksum(t *testing.T) {
+	for _, filename := range testFSFilenames {
+		checksums := testFSChecksumMap[filename]
+		newHashes := make([]func() hash.Hash, len(checksums)+2)
+		wantLower := make([]string, len(newHashes))
+		wantUpper := make([]string, len(newHashes))
+		for i := range checksums {
+			newHashes[i] = checksums[i].hash.New
+			wantLower[i] = strings.ToLower(checksums[i].checksum)
+			wantUpper[i] = strings.ToUpper(checksums[i].checksum)
+		}
+		newHashes[len(newHashes)-1] = newNilHash
+
+		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			for _, upper := range []bool{false, true} {
+				want := wantLower
+				if upper {
+					want = wantUpper
+				}
+				t.Run(fmt.Sprintf("upper=%t", upper), func(t *testing.T) {
+					file, err := testFS.Open(filename)
+					if err != nil {
+						t.Fatal("open file -", err)
+					}
+					defer func(f fs.File) {
+						if err := f.Close(); err != nil {
+							t.Error("close file -", err)
+						}
+					}(file)
+					got, err := filesys.Checksum(file, false, upper, newHashes...)
+					if err != nil {
+						t.Error("checksum -", err)
+					} else if !compare.ComparableSliceEqual(got, want) {
+						t.Errorf("got %v\nwant %v", got, want)
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestChecksumFromFS(t *testing.T) {
+	for _, filename := range testFSFilenames {
+		checksums := testFSChecksumMap[filename]
+		newHashes := make([]func() hash.Hash, len(checksums)+2)
+		wantLower := make([]string, len(newHashes))
+		wantUpper := make([]string, len(newHashes))
+		for i := range checksums {
+			newHashes[i] = checksums[i].hash.New
+			wantLower[i] = strings.ToLower(checksums[i].checksum)
+			wantUpper[i] = strings.ToUpper(checksums[i].checksum)
+		}
+		newHashes[len(newHashes)-1] = newNilHash
+
+		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			for _, upper := range []bool{false, true} {
+				want := wantLower
+				if upper {
+					want = wantUpper
+				}
+				t.Run(fmt.Sprintf("upper=%t", upper), func(t *testing.T) {
+					got, err := filesys.ChecksumFromFS(testFS, filename, upper, newHashes...)
+					if err != nil {
+						t.Error("checksum -", err)
+					} else if !compare.ComparableSliceEqual(got, want) {
+						t.Errorf("got %v\nwant %v", got, want)
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestNewHashVerifier(t *testing.T) {
 	const PanicPrefix = "github.com/donyori/gogo/filesys.NewHashVerifier: "
 	const ToBeFilledIn = "-"
@@ -345,6 +418,11 @@ func TestNonNilDeduplicatedHashVerifiers(t *testing.T) {
 			}
 		})
 	}
+}
+
+// newNilHash always returns a nil hash.Hash.
+func newNilHash() hash.Hash {
+	return nil
 }
 
 // verifyChecksumTestCases returns test cases for

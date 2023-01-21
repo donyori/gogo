@@ -44,7 +44,7 @@ func EncodeInt64DstLen(digits int) int {
 
 // EncodeInt64 encodes x in hexadecimal representation to dst.
 //
-// upper indicates to use uppercase in hexadecimal representation.
+// upper indicates whether to use uppercase in hexadecimal representation.
 // digits specify the minimum length of the output content
 // (excluding the negative sign "-").
 // It pads with leading zeros after the sign (if any)
@@ -117,7 +117,7 @@ func EncodeInt64(dst []byte, x int64, upper bool, digits int) int {
 
 // EncodeInt64ToString returns hexadecimal representation of integer x.
 //
-// upper indicates to use uppercase in hexadecimal representation.
+// upper indicates whether to use uppercase in hexadecimal representation.
 // digits specify the minimum length of the return string
 // (excluding the negative sign "-").
 // It pads with leading zeros after the sign (if any)
@@ -165,7 +165,7 @@ func EncodeInt64ToString(x int64, upper bool, digits int) string {
 
 // EncodeInt64To encodes x in hexadecimal representation to w.
 //
-// upper indicates to use uppercase in hexadecimal representation.
+// upper indicates whether to use uppercase in hexadecimal representation.
 // digits specify the minimum length of the output content
 // (excluding the negative sign "-").
 // It pads with leading zeros after the sign (if any)
@@ -244,7 +244,7 @@ func EncodeInt64To(w io.Writer, x int64, upper bool, digits int) (written int, e
 // with specified parameters.
 //
 // buf is the buffer obtained from int64BufferPool.
-// upper indicates to use uppercase in hexadecimal representation.
+// upper indicates whether to use uppercase in hexadecimal representation.
 // digits specify the minimum length of the output content
 // (excluding the negative sign "-").
 // It pads with leading zeros after the sign (if any)

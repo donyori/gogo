@@ -93,7 +93,11 @@ func TestRead_NotCloseFile_ErrorOnCreate(t *testing.T) {
 		_ = r.Close()
 		t.Fatal("create reader - no error but offset is out of range")
 	}
-	if !strings.HasSuffix(err.Error(), fmt.Sprintf("option Offset is out of range, file size: %d, Offset: %d", len(testFS[Name].Data), math.MaxInt64)) {
+	if !strings.HasSuffix(err.Error(), fmt.Sprintf(
+		"option Offset (%d) is out of range, file size: %d",
+		math.MaxInt64,
+		len(testFS[Name].Data),
+	)) {
 		t.Fatal("create reader -", err)
 	}
 	data, err := io.ReadAll(file)
@@ -199,7 +203,11 @@ func TestReadFromFS_Offset(t *testing.T) {
 				_ = r.Close() // ignore error
 				t.Fatal("create - no error but offset is out of range")
 			}
-			if !strings.HasSuffix(err.Error(), fmt.Sprintf("option Offset is out of range, file size: %d, Offset: %d", size, offset)) {
+			if !strings.HasSuffix(err.Error(), fmt.Sprintf(
+				"option Offset (%d) is out of range, file size: %d",
+				offset,
+				size,
+			)) {
 				t.Error("create -", err)
 			}
 		})

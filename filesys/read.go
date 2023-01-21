@@ -134,7 +134,11 @@ func Read(file fs.File, opts *ReadOptions, closeFile bool) (r Reader, err error)
 	}
 	if opts.Offset != 0 {
 		if size := info.Size(); size < opts.Offset || size+opts.Offset < 0 {
-			return nil, errors.AutoNew(fmt.Sprintf("option Offset is out of range, file size: %d, Offset: %d", size, opts.Offset))
+			return nil, errors.AutoWrap(fmt.Errorf(
+				"option Offset (%d) is out of range, file size: %d",
+				opts.Offset,
+				size,
+			))
 		}
 	}
 

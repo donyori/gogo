@@ -36,7 +36,7 @@ func EncodedLen[Int constraints.Integer](n Int) Int {
 // It panics if dst doesn't have enough space to hold the encoding result.
 // The client should guarantee that len(dst) >= EncodedLen(len(src)).
 //
-// upper indicates to use uppercase in hexadecimal representation.
+// upper indicates whether to use uppercase in hexadecimal representation.
 //
 // It returns the number of bytes written into dst,
 // exactly EncodedLen(len(src)).
@@ -52,7 +52,7 @@ func Encode[Bytes constraints.ByteString](dst []byte, src Bytes, upper bool) int
 
 // EncodeToString returns hexadecimal encoding of src.
 //
-// upper indicates to use uppercase in hexadecimal representation.
+// upper indicates whether to use uppercase in hexadecimal representation.
 //
 // EncodeToString[[]byte](src, false) is equivalent to EncodeToString(src)
 // in official package encoding/hex.
@@ -86,7 +86,7 @@ type encoder struct {
 
 // NewEncoder creates an encoder to write hexadecimal characters to w.
 //
-// upper indicates to use uppercase in hexadecimal representation.
+// upper indicates whether to use uppercase in hexadecimal representation.
 //
 // It panics if w is nil.
 func NewEncoder(w io.Writer, upper bool) Encoder {

@@ -19,10 +19,35 @@
 package local
 
 import (
+	"hash"
 	"os"
 
+	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/filesys"
 )
+
+// Checksum calculates hash checksums of a local file,
+// and returns the result in hexadecimal representation and
+// any error encountered during opening and reading the file.
+//
+// upper indicates whether to use uppercase in hexadecimal representation.
+//
+// newHashes are functions that create new hash functions
+// (e.g., crypto/sha256.New, crypto.SHA256.New).
+//
+// The length of the returned checksums is the same as that of newHashes.
+// The hash result of newHashes[i] is checksums[i], encoded in hexadecimal.
+// In particular, if newHashes[i] is nil or returns nil,
+// checksums[i] will be an empty string.
+// If len(newHashes) is 0, checksums will be nil.
+func Checksum(filename string, upper bool, newHashes ...func() hash.Hash) (
+	checksums []string, err error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, errors.AutoWrap(err)
+	}
+	return filesys.Checksum(f, true, upper, newHashes...)
+}
 
 // VerifyChecksum verifies a local file by hash checksum.
 //

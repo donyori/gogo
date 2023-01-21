@@ -23,12 +23,117 @@ import (
 	"hash"
 	"io"
 	"io/fs"
+	"math/bits"
 	"strings"
 
 	"github.com/donyori/gogo/algorithm/mathalgo"
 	"github.com/donyori/gogo/encoding/hex"
 	"github.com/donyori/gogo/errors"
 )
+
+// Checksum calculates hash checksums of the specified file,
+// and returns the result in hexadecimal representation and
+// any read error encountered.
+//
+// To ensure that this function can work as expected,
+// the input file must be ready to be read from the beginning and
+// must not be operated by anyone else during the call to this function.
+//
+// closeFile indicates whether this function should close the file.
+// If closeFile is false, the client is responsible for closing file after use.
+// If closeFile is true, file will be closed by this function.
+//
+// upper indicates whether to use uppercase in hexadecimal representation.
+//
+// newHashes are functions that create new hash functions
+// (e.g., crypto/sha256.New, crypto.SHA256.New).
+//
+// The length of the returned checksums is the same as that of newHashes.
+// The hash result of newHashes[i] is checksums[i], encoded in hexadecimal.
+// In particular, if newHashes[i] is nil or returns nil,
+// checksums[i] will be an empty string.
+// If len(newHashes) is 0, checksums will be nil.
+//
+// This function panics if file is nil.
+func Checksum(file fs.File, closeFile, upper bool, newHashes ...func() hash.Hash) (
+	checksums []string, err error) {
+	if file == nil {
+		panic(errors.AutoMsg("file is nil"))
+	}
+	if closeFile {
+		defer func(f fs.File) {
+			_ = f.Close() // ignore error
+		}(file)
+	}
+	if len(newHashes) == 0 {
+		return
+	}
+
+	checksums = make([]string, len(newHashes))
+	hs := make([]hash.Hash, len(newHashes))
+	ws := make([]io.Writer, 0, len(newHashes))
+	bs := make([]uint, 0, len(newHashes))
+	for i := range newHashes {
+		if newHashes[i] != nil {
+			hs[i] = newHashes[i]()
+			if hs[i] != nil {
+				ws = append(ws, hs[i])
+				bs = append(bs, uint(hs[i].BlockSize()))
+			}
+		}
+	}
+	if len(ws) == 0 {
+		return
+	}
+	w := ws[0]
+	bufSize := bs[0]
+	if len(ws) > 1 {
+		w = io.MultiWriter(ws...)
+		bufSize = mathalgo.LCM(bs...) // make bufSize a multiple of the block sizes
+	}
+	if shift := 13 - bits.Len(bufSize); shift > 0 {
+		bufSize <<= shift // make bufSize at least 4096
+	}
+
+	_, err = io.CopyBuffer(w, file, make([]byte, bufSize))
+	if err != nil {
+		return nil, errors.AutoWrap(err)
+	}
+	for i := range hs {
+		if hs[i] != nil {
+			checksums[i] = hex.EncodeToString(hs[i].Sum(nil), upper)
+		}
+	}
+	return
+}
+
+// ChecksumFromFS calculates hash checksums of the file opened from fsys
+// by the specified name, and returns the result in hexadecimal representation
+// and any error encountered during opening and reading the file.
+//
+// upper indicates whether to use uppercase in hexadecimal representation.
+//
+// newHashes are functions that create new hash functions
+// (e.g., crypto/sha256.New, crypto.SHA256.New).
+//
+// The length of the returned checksums is the same as that of newHashes.
+// The hash result of newHashes[i] is checksums[i], encoded in hexadecimal.
+// In particular, if newHashes[i] is nil or returns nil,
+// checksums[i] will be an empty string.
+// If len(newHashes) is 0, checksums will be nil.
+//
+// This function panics if fsys is nil.
+func ChecksumFromFS(fsys fs.FS, name string, upper bool, newHashes ...func() hash.Hash) (
+	checksums []string, err error) {
+	if fsys == nil {
+		panic(errors.AutoMsg("fsys is nil"))
+	}
+	f, err := fsys.Open(name)
+	if err != nil {
+		return nil, errors.AutoWrap(err)
+	}
+	return Checksum(f, true, upper, newHashes...)
+}
 
 // HashVerifier extends hash.Hash by adding a Match method to report
 // whether the hash result matches a pre-specified prefix.
@@ -135,20 +240,23 @@ func VerifyChecksum(file fs.File, closeFile bool, hvs ...HashVerifier) bool {
 	if len(hvs) == 0 {
 		return true
 	}
+
 	ws := make([]io.Writer, len(hvs))
-	bs := make([]int, len(hvs))
+	bs := make([]uint, len(hvs))
 	for i := range hvs {
 		ws[i] = hvs[i]
-		bs[i] = hvs[i].BlockSize()
+		bs[i] = uint(hvs[i].BlockSize())
 	}
 	w := ws[0]
+	bufSize := bs[0]
 	if len(ws) > 1 {
 		w = io.MultiWriter(ws...)
+		bufSize = mathalgo.LCM(bs...) // make bufSize a multiple of the block sizes
 	}
-	bufSize := mathalgo.LCM(bs...)
-	for bufSize < 4096 {
-		bufSize <<= 1
+	if shift := 13 - bits.Len(bufSize); shift > 0 {
+		bufSize <<= shift // make bufSize at least 4096
 	}
+
 	_, err := io.CopyBuffer(w, file, make([]byte, bufSize))
 	if err != nil {
 		return false

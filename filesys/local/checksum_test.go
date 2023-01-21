@@ -19,10 +19,12 @@
 package local_test
 
 import (
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"hash"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -30,7 +32,43 @@ import (
 
 	"github.com/donyori/gogo/filesys"
 	"github.com/donyori/gogo/filesys/local"
+	"github.com/donyori/gogo/function/compare"
 )
+
+func TestChecksum(t *testing.T) {
+	newHashes := []func() hash.Hash{sha256.New, md5.New, nil, newNilHash}
+	for _, entry := range testFileEntries {
+		filename := entry.Name()
+		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			name := filepath.Join(TestDataDir, filename)
+			checksums, err := lazyCalculateChecksums(name, newHashes[:len(newHashes)-2]...)
+			if err != nil {
+				t.Fatal("calculate checksums -", err)
+			}
+			wantLower := make([]string, len(newHashes))
+			wantUpper := make([]string, len(newHashes))
+			for i := range checksums {
+				wantLower[i] = strings.ToLower(checksums[i])
+				wantUpper[i] = strings.ToUpper(checksums[i])
+			}
+
+			for _, upper := range []bool{false, true} {
+				want := wantLower
+				if upper {
+					want = wantUpper
+				}
+				t.Run(fmt.Sprintf("upper=%t", upper), func(t *testing.T) {
+					got, err := local.Checksum(name, upper, newHashes...)
+					if err != nil {
+						t.Error("checksum -", err)
+					} else if !compare.ComparableSliceEqual(got, want) {
+						t.Errorf("got %v\nwant %v", got, want)
+					}
+				})
+			}
+		})
+	}
+}
 
 func TestVerifyChecksum(t *testing.T) {
 	nonExistFilename := filepath.Join(TestDataDir, "nonexist")
@@ -67,6 +105,11 @@ func TestVerifyChecksum(t *testing.T) {
 			}
 		})
 	}
+}
+
+// newNilHash always returns a nil hash.Hash.
+func newNilHash() hash.Hash {
+	return nil
 }
 
 // verifyChecksumTestCases returns test cases for TestVerifyChecksum.

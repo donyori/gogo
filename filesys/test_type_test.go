@@ -99,7 +99,7 @@ func (wfi *writableFileInfo) ModTime() time.Time {
 }
 
 func (wfi *writableFileInfo) IsDir() bool {
-	return wfi.f.Mode&fs.ModeDir != 0
+	return wfi.f.Mode.IsDir()
 }
 
 func (wfi *writableFileInfo) Sys() any {
