@@ -109,7 +109,7 @@ func TmpDir(dir, prefix, suffix string, perm fs.FileMode) (name string, err erro
 		name = prefix + strconv.FormatUint(uint64(r), 36) + suffix
 		err = os.Mkdir(name, perm)
 		if err == nil {
-			return name, errors.AutoWrap(err)
+			return
 		}
 		if errors.Is(err, fs.ErrNotExist) {
 			// It may because dir doesn't exist. Try to report dir doesn't exist.

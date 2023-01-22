@@ -35,6 +35,10 @@ import (
 // and returns the result in hexadecimal representation and
 // any read error encountered.
 //
+// If the file is a directory, Checksum reports ErrIsDir
+// and returns nil checksums.
+// (To test whether err is ErrIsDir, use function errors.Is.)
+//
 // To ensure that this function can work as expected,
 // the input file must be ready to be read from the beginning and
 // must not be operated by anyone else during the call to this function.
@@ -64,6 +68,12 @@ func Checksum(file fs.File, closeFile, upper bool, newHashes ...func() hash.Hash
 		defer func(f fs.File) {
 			_ = f.Close() // ignore error
 		}(file)
+	}
+	info, err := file.Stat()
+	if err != nil {
+		return nil, errors.AutoWrap(err)
+	} else if info.IsDir() {
+		return nil, errors.AutoWrap(ErrIsDir)
 	}
 	if len(newHashes) == 0 {
 		return
@@ -110,6 +120,10 @@ func Checksum(file fs.File, closeFile, upper bool, newHashes ...func() hash.Hash
 // ChecksumFromFS calculates hash checksums of the file opened from fsys
 // by the specified name, and returns the result in hexadecimal representation
 // and any error encountered during opening and reading the file.
+//
+// If the file is a directory, ChecksumFromFS reports ErrIsDir
+// and returns nil checksums.
+// (To test whether err is ErrIsDir, use function errors.Is.)
 //
 // upper indicates whether to use uppercase in hexadecimal representation.
 //
@@ -236,6 +250,10 @@ func VerifyChecksum(file fs.File, closeFile bool, hvs ...HashVerifier) bool {
 			_ = f.Close() // ignore error
 		}(file)
 	}
+	info, err := file.Stat()
+	if err != nil || info.IsDir() {
+		return false
+	}
 	hvs = nonNilDeduplicatedHashVerifiers(hvs)
 	if len(hvs) == 0 {
 		return true
@@ -257,7 +275,7 @@ func VerifyChecksum(file fs.File, closeFile bool, hvs ...HashVerifier) bool {
 		bufSize <<= shift // make bufSize at least 4096
 	}
 
-	_, err := io.CopyBuffer(w, file, make([]byte, bufSize))
+	_, err = io.CopyBuffer(w, file, make([]byte, bufSize))
 	if err != nil {
 		return false
 	}

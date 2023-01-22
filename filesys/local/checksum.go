@@ -30,6 +30,10 @@ import (
 // and returns the result in hexadecimal representation and
 // any error encountered during opening and reading the file.
 //
+// If the file is a directory, Checksum reports filesys.ErrIsDir
+// and returns nil checksums.
+// (To test whether err is filesys.ErrIsDir, use function errors.Is.)
+//
 // upper indicates whether to use uppercase in hexadecimal representation.
 //
 // newHashes are functions that create new hash functions

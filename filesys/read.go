@@ -102,6 +102,9 @@ type reader struct {
 
 // Read creates a reader on the specified file with options opts.
 //
+// If the file is a directory, Read reports ErrIsDir and returns a nil Reader.
+// (To test whether err is ErrIsDir, use function errors.Is.)
+//
 // If opts are nil, a zero-value ReadOptions will be used.
 //
 // To ensure that this function and the returned reader can work as expected,
@@ -127,6 +130,8 @@ func Read(file fs.File, opts *ReadOptions, closeFile bool) (r Reader, err error)
 	info, err := file.Stat()
 	if err != nil {
 		return nil, errors.AutoWrap(err)
+	} else if info.IsDir() {
+		return nil, errors.AutoWrap(ErrIsDir)
 	}
 
 	if opts == nil {
@@ -262,6 +267,10 @@ func readSubRawClosersAndCreateBuffer(fr *reader, info fs.FileInfo, pClosers *[]
 
 // ReadFromFS opens a file from fsys with specified name and
 // options opts for reading.
+//
+// If the file is a directory, ReadFromFS reports ErrIsDir
+// and returns a nil Reader.
+// (To test whether err is ErrIsDir, use function errors.Is.)
 //
 // If opts are nil, a zero-value ReadOptions will be used.
 //

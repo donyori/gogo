@@ -23,6 +23,15 @@ import (
 	"github.com/donyori/gogo/inout"
 )
 
+// ErrIsDir is an error indicating that the file is a directory.
+//
+// The client should use errors.Is to test whether an error is ErrIsDir.
+var ErrIsDir = errors.AutoNewCustom(
+	"file is a directory",
+	errors.PrependFullPkgName,
+	0,
+)
+
 // ErrNotTar is an error indicating that the file is not archived by tar,
 // or is opened in raw mode.
 //

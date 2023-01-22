@@ -114,6 +114,9 @@ type writer struct {
 
 // Write creates a writer on the specified file with options opts.
 //
+// If the file is a directory, Write reports ErrIsDir and returns a nil Writer.
+// (To test whether err is ErrIsDir, use function errors.Is.)
+//
 // If opts are nil, the default options will be used.
 // The default options are as follows:
 //   - Raw: false,
@@ -141,6 +144,8 @@ func Write(file WritableFile, opts *WriteOptions, closeFile bool) (w Writer, err
 	info, err := file.Stat()
 	if err != nil {
 		return nil, errors.AutoWrap(err)
+	} else if info.IsDir() {
+		return nil, errors.AutoWrap(ErrIsDir)
 	}
 
 	if opts == nil {

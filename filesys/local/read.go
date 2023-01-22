@@ -28,6 +28,10 @@ import (
 
 // Read opens a file with specified name and options opts for reading.
 //
+// If the file is a directory, Read reports filesys.ErrIsDir
+// and returns a nil Reader.
+// (To test whether err is filesys.ErrIsDir, use function errors.Is.)
+//
 // If opts are nil, a zero-value filesys.ReadOptions will be used.
 //
 // The file will be closed when the returned reader is closed.
