@@ -94,7 +94,7 @@ func TestRead_NotCloseFile_ErrorOnCreate(t *testing.T) {
 		t.Fatal("create reader - no error but offset is out of range")
 	}
 	if !strings.HasSuffix(err.Error(), fmt.Sprintf(
-		"option Offset (%d) is out of range, file size: %d",
+		"option Offset (%d) is out of range; file size: %d",
 		math.MaxInt64,
 		len(testFS[Name].Data),
 	)) {
@@ -151,6 +151,7 @@ func TestReadFromFS_TarTgz(t *testing.T) {
 					t.Error("close -", err)
 				}
 			}(r)
+
 			for i := 0; ; i++ {
 				hdr, err := r.TarNext()
 				if err != nil {
@@ -168,12 +169,135 @@ func TestReadFromFS_TarTgz(t *testing.T) {
 				if hdr.Name != testFSTarFiles[i].name {
 					t.Errorf("No.%d tar header name unequal - got %s; want %s", i, hdr.Name, testFSTarFiles[i].name)
 				}
-				err = iotest.TestReader(r, []byte(testFSTarFiles[i].body))
-				if err != nil {
-					t.Errorf("No.%d tar test read - %v", i, err)
+				if filesys.TarHeaderIsDir(hdr) {
+					_, err = r.Read([]byte{})
+					if !errors.Is(err, filesys.ErrIsDir) {
+						t.Errorf("No.%d tar read file body - got %v; want %v", i, err, filesys.ErrIsDir)
+					}
+				} else {
+					err = iotest.TestReader(r, []byte(testFSTarFiles[i].body))
+					if err != nil {
+						t.Errorf("No.%d tar test read - %v", i, err)
+					}
 				}
 			}
 		})
+	}
+}
+
+func TestReadFromFS_Zip_Open(t *testing.T) {
+	for _, name := range testFSZipFilenames {
+		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
+			r, err := filesys.ReadFromFS(testFS, name, nil)
+			if err != nil {
+				t.Fatal("create -", err)
+			}
+			defer func(r filesys.Reader) {
+				if err := r.Close(); err != nil {
+					t.Error("close -", err)
+				}
+			}(r)
+			testZipOpen(t, r)
+		})
+	}
+}
+
+func TestReadFromFS_Zip_Files(t *testing.T) {
+	for _, name := range testFSZipFilenames {
+		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
+			r, err := filesys.ReadFromFS(testFS, name, nil)
+			if err != nil {
+				t.Fatal("create -", err)
+			}
+			defer func(r filesys.Reader) {
+				if err := r.Close(); err != nil {
+					t.Error("close -", err)
+				}
+			}(r)
+			testZipFiles(t, r)
+		})
+	}
+}
+
+func TestReadFromFS_Zip_Comment(t *testing.T) {
+	for _, name := range testFSZipFilenames {
+		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
+			r, err := filesys.ReadFromFS(testFS, name, nil)
+			if err != nil {
+				t.Fatal("create -", err)
+			}
+			defer func(r filesys.Reader) {
+				if err := r.Close(); err != nil {
+					t.Error("close -", err)
+				}
+			}(r)
+
+			comment, err := r.ZipComment()
+			if err != nil {
+				t.Fatal("zip comment -", err)
+			}
+			if comment != testFSZipComment {
+				t.Errorf("got %q; want %q", comment, testFSZipComment)
+			}
+		})
+	}
+}
+
+func TestReadFromFS_Zip_Offset_Open(t *testing.T) {
+	r, err := filesys.ReadFromFS(
+		testFS,
+		testFSZipOffsetName,
+		&filesys.ReadOptions{Offset: testFSZipOffset},
+	)
+	if err != nil {
+		t.Fatal("create -", err)
+	}
+	defer func(r filesys.Reader) {
+		if err := r.Close(); err != nil {
+			t.Error("close -", err)
+		}
+	}(r)
+	testZipOpen(t, r)
+}
+
+func TestReadFromFS_Zip_Offset_Files(t *testing.T) {
+	r, err := filesys.ReadFromFS(
+		testFS,
+		testFSZipOffsetName,
+		&filesys.ReadOptions{Offset: testFSZipOffset},
+	)
+	if err != nil {
+		t.Fatal("create -", err)
+	}
+	defer func(r filesys.Reader) {
+		if err := r.Close(); err != nil {
+			t.Error("close -", err)
+		}
+	}(r)
+	testZipFiles(t, r)
+}
+
+func TestReadFromFS_Zip_Offset_Comment(t *testing.T) {
+	r, err := filesys.ReadFromFS(
+		testFS,
+		testFSZipOffsetName,
+		&filesys.ReadOptions{Offset: testFSZipOffset},
+	)
+	if err != nil {
+		t.Fatal("create -", err)
+	}
+	defer func(r filesys.Reader) {
+		if err := r.Close(); err != nil {
+			t.Error("close -", err)
+		}
+	}(r)
+
+	comment, err := r.ZipComment()
+	if err != nil {
+		t.Fatal("zip comment -", err)
+	}
+	if comment != testFSZipComment {
+		t.Errorf("got %q; want %q", comment, testFSZipComment)
 	}
 }
 
@@ -204,7 +328,7 @@ func TestReadFromFS_Offset(t *testing.T) {
 				t.Fatal("create - no error but offset is out of range")
 			}
 			if !strings.HasSuffix(err.Error(), fmt.Sprintf(
-				"option Offset (%d) is out of range, file size: %d",
+				"option Offset (%d) is out of range; file size: %d",
 				offset,
 				size,
 			)) {
@@ -215,13 +339,18 @@ func TestReadFromFS_Offset(t *testing.T) {
 }
 
 func TestReadFromFS_AfterClose(t *testing.T) {
+	const RegFile = "file1.txt"
+	const TarFile = "tar file.tar"
+	const ZipFile = "zip basic.zip"
 	testCases := []struct {
 		methodName string
+		filename   string
 		f          func(t *testing.T, r filesys.Reader) error
 		wantErr    error
 	}{
 		{
 			"Close",
+			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
 				return r.Close()
 			},
@@ -229,6 +358,7 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 		},
 		{
 			"Closed",
+			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
 				if !r.Closed() {
 					t.Error("r.Closed - got false; want true")
@@ -239,14 +369,16 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 		},
 		{
 			"Read",
+			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
-				_, err := r.Read([]byte{})
+				_, err := r.Read(nil)
 				return err
 			},
 			filesys.ErrFileReaderClosed,
 		},
 		{
 			"ReadByte",
+			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
 				_, err := r.ReadByte()
 				return err
@@ -255,6 +387,7 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 		},
 		{
 			"UnreadByte",
+			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
 				return r.UnreadByte()
 			},
@@ -262,6 +395,7 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 		},
 		{
 			"ReadRune",
+			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
 				_, _, err := r.ReadRune()
 				return err
@@ -270,6 +404,7 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 		},
 		{
 			"UnreadRune",
+			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
 				return r.UnreadRune()
 			},
@@ -277,14 +412,16 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 		},
 		{
 			"WriteTo",
+			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
-				_, err := r.WriteTo(io.Discard)
+				_, err := r.WriteTo(nil)
 				return err
 			},
 			filesys.ErrFileReaderClosed,
 		},
 		{
 			"ReadLine",
+			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
 				_, _, err := r.ReadLine()
 				return err
@@ -293,6 +430,7 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 		},
 		{
 			"ReadEntireLine",
+			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
 				_, err := r.ReadEntireLine()
 				return err
@@ -301,14 +439,16 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 		},
 		{
 			"WriteLineTo",
+			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
-				_, err := r.WriteLineTo(io.Discard)
+				_, err := r.WriteLineTo(nil)
 				return err
 			},
 			filesys.ErrFileReaderClosed,
 		},
 		{
 			"Peek",
+			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
 				_, err := r.Peek(0)
 				return err
@@ -317,6 +457,7 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 		},
 		{
 			"Discard",
+			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
 				_, err := r.Discard(0)
 				return err
@@ -325,18 +466,81 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 		},
 		{
 			"TarNext-notTar",
+			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
 				_, err := r.TarNext()
 				return err
 			},
 			filesys.ErrNotTar,
 		},
+		{
+			"TarNext-isTar",
+			TarFile,
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.TarNext()
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"ZipOpen-notZip",
+			RegFile,
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.ZipOpen("")
+				return err
+			},
+			filesys.ErrNotZip,
+		},
+		{
+			"ZipOpen-isZip",
+			ZipFile,
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.ZipOpen("")
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"ZipFiles-notZip",
+			RegFile,
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.ZipFiles()
+				return err
+			},
+			filesys.ErrNotZip,
+		},
+		{
+			"ZipFiles-isZip",
+			ZipFile,
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.ZipFiles()
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"ZipComment-notZip",
+			RegFile,
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.ZipComment()
+				return err
+			},
+			filesys.ErrNotZip,
+		},
+		{
+			"ZipComment-isZip",
+			ZipFile,
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.ZipComment()
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run("method="+tc.methodName, func(t *testing.T) {
-			const Name = "file1.txt"
-			r, err := filesys.ReadFromFS(testFS, Name, nil)
+			r, err := filesys.ReadFromFS(testFS, tc.filename, nil)
 			if err != nil {
 				t.Fatal("create -", err)
 			}
@@ -350,22 +554,6 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 			}
 		})
 	}
-
-	t.Run("method=TarNext-isTar", func(t *testing.T) {
-		const Name = "tar file.tar"
-		r, err := filesys.ReadFromFS(testFS, Name, nil)
-		if err != nil {
-			t.Fatal("create -", err)
-		}
-		err = r.Close()
-		if err != nil {
-			t.Fatal("close -", err)
-		}
-		_, err = r.TarNext()
-		if !errors.Is(err, filesys.ErrFileReaderClosed) {
-			t.Errorf("got error %v; want %v", err, filesys.ErrFileReaderClosed)
-		}
-	})
 }
 
 // testReadFromTestFS reads the file with specified name from testFS
@@ -386,5 +574,130 @@ func testReadFromTestFS(t *testing.T, name string, want []byte, opts *filesys.Re
 	err = iotest.TestReader(r, want)
 	if err != nil {
 		t.Error("test read -", err)
+	}
+}
+
+// testZipOpen tests filesys.Reader.ZipOpen.
+func testZipOpen(t *testing.T, r filesys.Reader) {
+	dirSet := make(map[string]bool, len(testFSZipFileNameBodyMap))
+	for zipFilename, body := range testFSZipFileNameBodyMap {
+		for i := 1; i < len(zipFilename)-1; i++ {
+			if zipFilename[i-1] != '/' && zipFilename[i] == '/' {
+				dirSet[zipFilename[:i]] = true
+			}
+		}
+		if len(zipFilename) > 1 &&
+			zipFilename[len(zipFilename)-2] != '/' &&
+			zipFilename[len(zipFilename)-1] == '/' {
+			dirSet[zipFilename[:len(zipFilename)-1]] = true
+			continue
+		}
+		t.Run(fmt.Sprintf("zipFile=%+q", zipFilename), func(t *testing.T) {
+			file, err := r.ZipOpen(zipFilename)
+			if err != nil {
+				t.Fatal("open -", err)
+			}
+			defer func(f fs.File) {
+				if err := f.Close(); err != nil {
+					t.Error("close -", err)
+				}
+			}(file)
+			info, err := file.Stat()
+			if err != nil {
+				t.Fatal("stat -", err)
+			}
+			if d := info.IsDir(); d {
+				t.Errorf("got IsDir %t; want false", d)
+			}
+			data, err := io.ReadAll(file)
+			if err != nil {
+				t.Fatal("read -", err)
+			}
+			if string(data) != body {
+				t.Errorf(
+					"file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
+					len(data),
+					data,
+					len(body),
+					body,
+				)
+			}
+		})
+	}
+
+	for dir := range dirSet {
+		t.Run(fmt.Sprintf("zipFile=%+q", dir), func(t *testing.T) {
+			file, err := r.ZipOpen(dir)
+			if err != nil {
+				t.Fatal("open -", err)
+			}
+			defer func(f fs.File) {
+				if err := f.Close(); err != nil {
+					t.Error("close -", err)
+				}
+			}(file)
+			info, err := file.Stat()
+			if err != nil {
+				t.Fatal("stat -", err)
+			}
+			if d := info.IsDir(); !d {
+				t.Errorf("got IsDir %t; want true", d)
+			}
+		})
+	}
+}
+
+// testZipFiles tests filesys.Reader.ZipFiles.
+func testZipFiles(t *testing.T, r filesys.Reader) {
+	files, err := r.ZipFiles()
+	if err != nil {
+		t.Error("ZipFiles -", err)
+		return
+	}
+	if len(files) != len(testFSZipFileNameBodyMap) {
+		t.Errorf("got %d zip files; want %d",
+			len(files), len(testFSZipFileNameBodyMap))
+	}
+
+	for i, file := range files {
+		if file == nil {
+			t.Errorf("No.%d zip file is nil", i)
+			continue
+		}
+		t.Run(fmt.Sprintf("zipFile=%+q", file.Name), func(t *testing.T) {
+			body, ok := testFSZipFileNameBodyMap[file.Name]
+			if !ok {
+				t.Fatalf("unknown zip file %q", file.Name)
+			}
+			isDir := len(file.Name) > 0 && file.Name[len(file.Name)-1] == '/'
+			if d := file.FileInfo().IsDir(); d != isDir {
+				t.Errorf("got IsDir %t; want %t", d, isDir)
+			}
+			if isDir {
+				return
+			}
+			rc, err := file.Open()
+			if err != nil {
+				t.Fatal("open -", err)
+			}
+			defer func(rc io.ReadCloser) {
+				if err := rc.Close(); err != nil {
+					t.Error("close -", err)
+				}
+			}(rc)
+			data, err := io.ReadAll(rc)
+			if err != nil {
+				t.Fatal("read -", err)
+			}
+			if string(data) != body {
+				t.Errorf(
+					"file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
+					len(data),
+					data,
+					len(body),
+					body,
+				)
+			}
+		})
 	}
 }

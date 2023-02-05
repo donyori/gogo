@@ -20,6 +20,7 @@ package local_test
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/bzip2"
 	"compress/gzip"
@@ -59,8 +60,8 @@ var (
 
 // lazyLoadTestData loads a file with specified name.
 //
-// It stores the file content in the memory the first time reading that file.
-// Subsequent reads will get the file content from the memory instead of
+// It stores the file contents in the memory the first time reading that file.
+// Subsequent reads will get the file contents from the memory instead of
 // reading the file again.
 // Therefore, all modifications to the file after the first read cannot
 // take effect on this function.
@@ -84,15 +85,15 @@ func lazyLoadTestData(name string) (data []byte, err error) {
 	return
 }
 
-// loadTarFile loads a ".tar", ".tgz", ".tar.gz", ".tbz", or ".tar.bz2" file
-// with specified name through lazyLoadTestData.
+// lazyLoadTarFile loads a ".tar", ".tgz", ".tar.gz", ".tbz", or ".tar.bz2"
+// file with specified name through lazyLoadTestData.
 //
 // It returns a list of (filename, file body) pairs.
 // It also returns any error encountered.
 //
 // Caller should guarantee that the file name has
-// a suffix ".tar", ".tgz", ".tar.gz", ".tbz", or ".tar.bz2".
-func loadTarFile(name string) (files []struct {
+// the suffix ".tar", ".tgz", ".tar.gz", ".tbz", or ".tar.bz2".
+func lazyLoadTarFile(name string) (files []struct {
 	name string
 	body []byte
 }, err error) {
@@ -133,6 +134,47 @@ func loadTarFile(name string) (files []struct {
 			body []byte
 		}{hdr.Name, data})
 	}
+}
+
+// lazyLoadZipFile loads a ".zip" file with specified name
+// through lazyLoadTestData.
+//
+// It returns a map from filenames to (zip header, file body) pairs.
+// It also returns any error encountered.
+//
+// Caller should guarantee that the file name has the suffix ".zip".
+func lazyLoadZipFile(name string) (fileMap map[string]*struct {
+	header *zip.FileHeader
+	body   []byte
+}, err error) {
+	data, err := lazyLoadTestData(name)
+	if err != nil {
+		return nil, errors.AutoWrap(err)
+	}
+	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		return nil, errors.AutoWrap(err)
+	}
+	fileMap = make(map[string]*struct {
+		header *zip.FileHeader
+		body   []byte
+	}, len(zr.File))
+	for _, file := range zr.File {
+		rc, err := file.Open()
+		if err != nil {
+			return nil, errors.AutoWrap(err)
+		}
+		body, err := io.ReadAll(rc)
+		if err != nil {
+			return nil, errors.AutoWrap(err)
+		}
+		_ = rc.Close() // ignore error
+		fileMap[file.Name] = &struct {
+			header *zip.FileHeader
+			body   []byte
+		}{header: &file.FileHeader, body: body}
+	}
+	return
 }
 
 // lazyCalculateChecksums loads a file with specified name

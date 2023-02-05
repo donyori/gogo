@@ -20,4 +20,7 @@ package filesys
 
 // Export for testing only.
 
-var NonNilDeduplicatedHashVerifiers = nonNilDeduplicatedHashVerifiers
+var (
+	NonNilDeduplicatedHashVerifiers = nonNilDeduplicatedHashVerifiers
+	TarHeaderIsDir                  = tarHeaderIsDir
+)

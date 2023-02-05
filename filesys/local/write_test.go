@@ -20,6 +20,7 @@ package local_test
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"errors"
@@ -81,8 +82,9 @@ func TestWriteTrunc_TarTgz(t *testing.T) {
 		name string
 		body []byte
 	}{
-		{"tar file1.txt", []byte("This is tar file 1.")},
-		{"tar file2.txt", []byte("Here is tar file 2!")},
+		{"tardir/tar file1.txt", []byte("This is tar file 1.")},
+		{"tardir/tar file2.txt", []byte("Here is tar file 2!")},
+		{"emptydir/", nil},
 		{"roses are red.txt", []byte("Roses are red.\n  Violets are blue.\nSugar is sweet.\n  And so are you.\n")},
 		{"1MB.dat", big},
 	}
@@ -96,6 +98,23 @@ func TestWriteTrunc_TarTgz(t *testing.T) {
 				testTarTgzFile(t, name, tarFiles)
 			}
 		})
+	}
+}
+
+func TestWriteTrunc_Zip(t *testing.T) {
+	big := make([]byte, 1<<20)
+	rand.New(rand.NewSource(10)).Read(big)
+	zipNameBodyMap := map[string][]byte{
+		"zipdir/zip file1.txt": []byte("This is ZIP file 1."),
+		"zipdir/zip file2.txt": []byte("Here is ZIP file 2!"),
+		"emptydir/":            nil,
+		"roses are red.txt":    []byte("Roses are red.\n  Violets are blue.\nSugar is sweet.\n  And so are you.\n"),
+		"1MB.dat":              big,
+	}
+	name := filepath.Join(t.TempDir(), "test.zip")
+	writeZipFiles(t, name, zipNameBodyMap)
+	if !t.Failed() {
+		testZipFile(t, name, zipNameBodyMap)
 	}
 }
 
@@ -254,20 +273,28 @@ func writeTarFiles(t *testing.T, name string, tarFiles []struct {
 		}
 	}(w)
 	for i := range tarFiles {
-		err = w.TarWriteHeader(&tar.Header{
+		hdr := &tar.Header{
 			Name:    tarFiles[i].name,
 			Size:    int64(len(tarFiles[i].body)),
 			Mode:    0600,
 			ModTime: time.Now(),
-		})
+		}
+		err = w.TarWriteHeader(hdr)
 		if err != nil {
 			t.Errorf("write No.%d tar header - %v", i, err)
 			return
 		}
 		var n int
 		n, err = w.Write(tarFiles[i].body)
-		if n != len(tarFiles[i].body) || err != nil {
-			t.Errorf("write No.%d tar file body - got (%d, %v); want (%d, nil)", i, n, err, len(tarFiles[i].body))
+		if TarHeaderIsDir(hdr) {
+			if n != 0 || !errors.Is(err, filesys.ErrIsDir) {
+				t.Errorf("write No.%d tar file body - got (%d, %v); want (0, %v)",
+					i, n, err, filesys.ErrIsDir)
+				return
+			}
+		} else if n != len(tarFiles[i].body) || err != nil {
+			t.Errorf("write No.%d tar file body - got (%d, %v); want (%d, nil)",
+				i, n, err, len(tarFiles[i].body))
 			return
 		}
 	}
@@ -311,7 +338,8 @@ func testTarTgzFile(t *testing.T, name string, wantTarFiles []struct {
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				if i != len(wantTarFiles) {
-					t.Errorf("tar header number: %d != %d, but got EOF", i, len(wantTarFiles))
+					t.Errorf("tar header number: %d != %d, but got EOF",
+						i, len(wantTarFiles))
 				}
 				return // end of archive
 			}
@@ -323,7 +351,11 @@ func testTarTgzFile(t *testing.T, name string, wantTarFiles []struct {
 			return
 		}
 		if hdr.Name != wantTarFiles[i].name {
-			t.Errorf("No.%d tar header name unequal - got %s; want %s", i, hdr.Name, wantTarFiles[i].name)
+			t.Errorf("No.%d tar header name unequal - got %s; want %s",
+				i, hdr.Name, wantTarFiles[i].name)
+		}
+		if hdr.FileInfo().IsDir() {
+			continue
 		}
 		body, err := io.ReadAll(tr)
 		if err != nil {
@@ -338,6 +370,102 @@ func testTarTgzFile(t *testing.T, name string, wantTarFiles []struct {
 				body,
 				len(wantTarFiles[i].body),
 				wantTarFiles[i].body,
+			)
+		}
+	}
+}
+
+// writeZipFiles uses WriteTrunc to write a ZIP archive.
+//
+// name is the local file name.
+//
+// zipNameBodyMap is a filename-body map of files archived in the ZIP.
+//
+// Caller should guarantee that name has extension ".zip".
+func writeZipFiles(t *testing.T, name string, zipNameBodyMap map[string][]byte) {
+	w, err := local.WriteTrunc(name, 0600, true, nil)
+	if err != nil {
+		t.Error("create -", err)
+		return
+	}
+	defer func(w filesys.Writer) {
+		if err := w.Close(); err != nil {
+			t.Error("close -", err)
+		}
+	}(w)
+	for zipName, zipBody := range zipNameBodyMap {
+		err = w.ZipCreate(zipName)
+		if err != nil {
+			t.Errorf("create %q - %v", zipName, err)
+			return
+		}
+		var n int
+		n, err = w.Write(zipBody)
+		if len(zipName) > 0 && zipName[len(zipName)-1] == '/' {
+			if n != 0 || !errors.Is(err, filesys.ErrIsDir) {
+				t.Errorf("write %q file body - got (%d, %v); want (0, %v)",
+					zipName, n, err, filesys.ErrIsDir)
+				return
+			}
+		} else if n != len(zipBody) || err != nil {
+			t.Errorf("write %q file body - got (%d, %v); want (%d, nil)",
+				zipName, n, err, len(zipBody))
+			return
+		}
+	}
+}
+
+// testZipFile checks a ZIP archive written by function writeZipFiles.
+//
+// Caller should guarantee that name has extension ".zip".
+func testZipFile(t *testing.T, name string, wantZipNameBodyMap map[string][]byte) {
+	zrc, err := zip.OpenReader(name)
+	if err != nil {
+		t.Error("open zip reader -", err)
+		return
+	}
+	defer func(rc *zip.ReadCloser) {
+		if err := rc.Close(); err != nil {
+			t.Error("close zip reader -", err)
+		}
+	}(zrc)
+
+	if len(zrc.File) != len(wantZipNameBodyMap) {
+		t.Errorf("got %d zip files; want %d",
+			len(zrc.File), len(wantZipNameBodyMap))
+	}
+	for _, file := range zrc.File {
+		body, ok := wantZipNameBodyMap[file.Name]
+		if !ok {
+			t.Errorf("unknown zip file %q", file.Name)
+			continue
+		}
+		isDir := len(file.Name) > 0 && file.Name[len(file.Name)-1] == '/'
+		if d := file.FileInfo().IsDir(); d != isDir {
+			t.Errorf("got IsDir %t; want %t", d, isDir)
+		}
+		if isDir {
+			continue
+		}
+		rc, err := file.Open()
+		if err != nil {
+			t.Errorf("open %q - %v", file.Name, err)
+			return
+		}
+		data, err := io.ReadAll(rc)
+		_ = rc.Close() // ignore error
+		if err != nil {
+			t.Errorf("read %q - %v", file.Name, err)
+			return
+		}
+		if !bytes.Equal(data, body) {
+			t.Errorf(
+				"%q file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
+				file.Name,
+				len(data),
+				data,
+				len(body),
+				body,
 			)
 		}
 	}

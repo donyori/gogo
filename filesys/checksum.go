@@ -118,7 +118,7 @@ func Checksum(file fs.File, closeFile, upper bool, newHashes ...func() hash.Hash
 }
 
 // ChecksumFromFS calculates hash checksums of the file opened from fsys
-// by the specified name, and returns the result in hexadecimal representation
+// by specified name, and returns the result in hexadecimal representation
 // and any error encountered during opening and reading the file.
 //
 // If the file is a directory, ChecksumFromFS reports ErrIsDir
@@ -214,8 +214,6 @@ func (hv *hashVerifier) BlockSize() int {
 	return hv.h.BlockSize()
 }
 
-// Match reports whether the current hash (as returned by Sum(nil))
-// matches the pre-specified prefix.
 func (hv *hashVerifier) Match() bool {
 	return len(hv.prefixHex) <= hex.EncodedLen(hv.h.Size()) &&
 		hex.CanEncodeToPrefix(hv.h.Sum(nil), hv.prefixHex)
@@ -288,7 +286,7 @@ func VerifyChecksum(file fs.File, closeFile bool, hvs ...HashVerifier) bool {
 }
 
 // VerifyChecksumFromFS verifies a file by hash checksum,
-// where the file is opened from fsys by the specified name.
+// where the file is opened from fsys by specified name.
 //
 // It returns true if fsys is not nil,
 // and the file can be read and matches all HashVerifier in hvs

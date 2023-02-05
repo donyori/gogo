@@ -20,16 +20,20 @@ package filesys
 
 import (
 	"archive/tar"
+	"archive/zip"
+	"compress/flate"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"io/fs"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/inout"
 )
+
+const maxUint16 int = 1<<16 - 1
 
 // WritableFile represents a single file that can be written to.
 //
@@ -43,26 +47,52 @@ type WritableFile interface {
 
 // WriteOptions are options for Write functions.
 type WriteOptions struct {
+	// Size of the buffer for writing the file at least.
+	// Non-positive values for using default value.
+	BufSize int
+
 	// True if not to compress the file with gzip and not to archive the file
 	// with tar (i.e., tape archive) according to the file extension.
 	Raw bool
 
-	// The compression level for gzip.
-	// Only take effect when Raw is false and the file extension
-	// is either ".gz" or ".tgz".
+	// The compression level of DEFLATE.
+	// It should be in the range [-2, 9].
 	// The zero value (0) stands for no compression
 	// other than the default value.
-	// To use the default value, set it to compress/gzip.DefaultCompression.
-	GzipLv int
+	// To use the default value, set it to compress/flate.DefaultCompression.
+	// For more details, see the documentation of compress/flate.NewWriter.
+	//
+	// This option only takes effect when DEFLATE compression is applied.
+	// That is, when Raw is false, and the file extension is ".gz" or ".tgz",
+	// or ".zip" and the ZIP archive uses DEFLATE compression.
+	DeflateLv int
 
-	// Size of the buffer for writing the file at least.
-	// Non-positive values for using default value.
-	BufSize int
+	// The offset of the beginning of the ZIP data within the underlying writer.
+	// It should be used when the ZIP data is appended to an existing file,
+	// such as a binary executable.
+	//
+	// Non-positive values will be ignored.
+	ZipOffset int64
+
+	// The end-of-central-directory comment field of the ZIP archive.
+	// It should be 65535 bytes at most.
+	// If the comment is too long, an error will be reported.
+	ZipComment string
+
+	// A method-compressor map for writing the ZIP archive.
+	// These compressors will be registered to the archive/zip.Writer.
+	// (Nil compressors will be ignored.)
+	//
+	// Package archive/zip has two built-in compressors for the common methods
+	// archive/zip.Store (0) and archive/zip.Deflate (8).
+	//
+	// For more details, see the documentation of the method RegisterCompressor
+	// of archive/zip.Writer and the function archive/zip.RegisterCompressor.
+	ZipComp map[uint16]zip.Compressor
 }
 
-// defaultWriteOptions are default options for functions WriteTrunc,
-// WriteAppend, and WriteExcl.
-var defaultWriteOptions = &WriteOptions{GzipLv: gzip.DefaultCompression}
+// defaultWriteOptions are default options for Write functions.
+var defaultWriteOptions = &WriteOptions{DeflateLv: flate.BestCompression}
 
 // Writer is a device to write data to a local file.
 //
@@ -88,10 +118,62 @@ type Writer interface {
 	// If the current file is not fully written, it will return an error.
 	// It implicitly flushes any padding necessary before writing the header.
 	//
-	// If the file is not archived by tar, or the file is opened in raw mode,
+	// If the file is not archived by tar or is opened in raw mode,
 	// it does nothing and reports ErrNotTar.
 	// (To test whether the error is ErrNotTar, use function errors.Is.)
 	TarWriteHeader(hdr *tar.Header) error
+
+	// ZipEnabled returns true if the file is archived by ZIP
+	// and is not opened in raw mode.
+	ZipEnabled() bool
+
+	// ZipCreate adds a file with specified name to the ZIP archive and
+	// switches the writer to that file.
+	//
+	// The file contents will be compressed with DEFLATE.
+	//
+	// The name must be a relative path: it must not start with a drive letter
+	// (e.g., "C:") or leading slash. Only forward slashes are allowed;
+	// "../" elements are not allowed.
+	// To create a directory instead of a file, add a trailing slash
+	// to the name (e.g., "dir/").
+	//
+	// The file's contents must be written to the writer before the next call
+	// to ZipCreate, ZipCreateHeader, ZipCreateRaw, ZipCopy, or Close.
+	//
+	// If the writer's file is not archived by ZIP or is opened in raw mode,
+	// it does nothing and reports ErrNotZip.
+	// (To test whether the error is ErrNotZip, use function errors.Is.)
+	ZipCreate(name string) error
+
+	// ZipCreateHeader adds a file to the ZIP archive using the specified
+	// file header for the file metadata and switches the writer to that file.
+	//
+	// The writer takes ownership of fh and may mutate its fields.
+	// The client must not modify fh after calling ZipCreateHeader.
+	//
+	// The file's contents must be written to the writer before the next call
+	// to ZipCreate, ZipCreateHeader, ZipCreateRaw, ZipCopy, or Close.
+	//
+	// If the writer's file is not archived by ZIP or is opened in raw mode,
+	// it does nothing and reports ErrNotZip.
+	// (To test whether the error is ErrNotZip, use function errors.Is.)
+	ZipCreateHeader(fh *zip.FileHeader) error
+
+	// ZipCreateRaw is like ZipCreateHeader,
+	// but the bytes passed to the writer will not be compressed.
+	ZipCreateRaw(fh *zip.FileHeader) error
+
+	// ZipCopy copies the file f (obtained from an archive/zip.Reader)
+	// into the writer.
+	//
+	// It copies the raw form directly bypassing
+	// decompression, compression, and validation.
+	//
+	// If the writer's file is not archived by ZIP or is opened in raw mode,
+	// it does nothing and reports ErrNotZip.
+	// (To test whether the error is ErrNotZip, use function errors.Is.)
+	ZipCopy(f *zip.File) error
 
 	// Options returns a copy of options used by this writer.
 	Options() *WriteOptions
@@ -104,12 +186,14 @@ type Writer interface {
 //
 // Use it with Write functions.
 type writer struct {
-	c    inout.Closer
+	err  error // should be one of nil, ErrIsDir, ErrZipWriteBeforeCreate, and ErrFileWriterClosed
 	bw   inout.ResettableBufferedWriter
 	uw   io.Writer // unbuffered writer
+	c    inout.Closer
 	opts WriteOptions
 	f    WritableFile
 	tw   *tar.Writer
+	zw   *zip.Writer
 }
 
 // Write creates a writer on the specified file with options opts.
@@ -119,9 +203,12 @@ type writer struct {
 //
 // If opts are nil, the default options will be used.
 // The default options are as follows:
-//   - Raw: false,
-//   - GzipLv: compress/gzip.DefaultCompression,
-//   - BufSize: 0,
+//   - BufSize: 0
+//   - Raw: false
+//   - DeflateLv: compress/flate.BestCompression
+//   - ZipOffset: 0
+//   - ZipComment: ""
+//   - ZipComp: nil
 //
 // To ensure that this function and the returned writer can work as expected,
 // the specified file must not be operated by anyone else
@@ -151,6 +238,19 @@ func Write(file WritableFile, opts *WriteOptions, closeFile bool) (w Writer, err
 	if opts == nil {
 		opts = defaultWriteOptions
 	}
+	if opts.DeflateLv < -2 || opts.DeflateLv > 9 {
+		return nil, errors.AutoWrap(fmt.Errorf(
+			"option DeflateLv (%d) is out of range [-2, 9]",
+			opts.DeflateLv,
+		))
+	}
+	if len(opts.ZipComment) > maxUint16 {
+		return nil, errors.AutoWrap(fmt.Errorf(
+			"option ZipComment (len: %d) exceeds %d bytes",
+			len(opts.ZipComment),
+			maxUint16,
+		))
+	}
 
 	el := errors.NewErrorList(true)
 	defer func() {
@@ -172,100 +272,148 @@ func Write(file WritableFile, opts *WriteOptions, closeFile bool) (w Writer, err
 	}()
 
 	fw := &writer{
-		uw:   file,
-		opts: *opts,
-		f:    file,
+		uw: file,
+		opts: WriteOptions{
+			BufSize:    opts.BufSize,
+			Raw:        opts.Raw,
+			DeflateLv:  opts.DeflateLv,
+			ZipOffset:  opts.ZipOffset,
+			ZipComment: opts.ZipComment,
+		},
+		f: file,
+	}
+	for method, comp := range opts.ZipComp {
+		if comp != nil {
+			if fw.opts.ZipComp == nil {
+				fw.opts.ZipComp = make(map[uint16]zip.Compressor, len(opts.ZipComp))
+			}
+			fw.opts.ZipComp[method] = comp
+		}
 	}
 	w = fw
-	el.Append(writeSubRawClosersAndCreateBuffer(fw, info, &closers))
+	el.Append(fw.init(info, &closers))
 	return
 }
 
-// writeSubRawClosersAndCreateBuffer is a sub-process of function Write
-// to deal with the options Raw, set fw.c, update closers, and create a buffer.
-func writeSubRawClosersAndCreateBuffer(fw *writer, info fs.FileInfo, pClosers *[]io.Closer) error {
-	if !fw.opts.Raw {
-		name := strings.ToLower(path.Clean(filepath.ToSlash(info.Name())))
-		ext := path.Ext(name)
-		for {
-			var endLoop bool
-			switch ext {
-			case ".gz", ".tgz":
-				gw, err := gzip.NewWriterLevel(fw.uw, fw.opts.GzipLv)
-				if err != nil {
-					return err
-				}
-				*pClosers = append(*pClosers, gw)
-				fw.uw = gw
-				if ext == ".tgz" {
-					ext = ".tar"
-					continue
-				}
-			case ".tar":
-				fw.tw = tar.NewWriter(fw.uw)
-				*pClosers = append(*pClosers, fw.tw)
-				fw.uw = fw.tw
-				endLoop = true
-			default:
-				endLoop = true
-			}
-			if endLoop {
-				break
-			}
-			name = name[:len(name)-len(ext)]
-			ext = path.Ext(name)
-		}
+// init initializes the writer according to the options.
+//
+// It may update closers.
+func (fw *writer) init(info fs.FileInfo, pClosers *[]io.Closer) error {
+	err := fw.initRaw(info, pClosers)
+	if err != nil {
+		return err
 	}
-	switch len(*pClosers) {
-	case 1:
-		fw.c = inout.WrapNoErrorCloser((*pClosers)[0])
-	case 0:
-		fw.c = inout.NewNoOpCloser()
-	default:
-		fw.c = inout.NewMultiCloser(true, true, *pClosers...)
-	}
-	fw.bw = inout.NewBufferedWriterSize(fw.uw, fw.opts.BufSize)
+	fw.initCloserAndBuffer(*pClosers)
 	return nil
 }
 
-// Close closes all closers used by this writer.
+// initRaw deals with the option Raw.
 //
-// After successfully closing this writer,
-// Close will do nothing and return nil,
-// and the write methods will report ErrFileWriterClosed.
-// (To test whether the error is ErrFileWriterClosed, use function errors.Is.)
+// It may update closers.
+func (fw *writer) initRaw(info fs.FileInfo, pClosers *[]io.Closer) error {
+	if fw.opts.Raw {
+		return nil
+	}
+	name := strings.ToLower(info.Name())
+	ext := path.Ext(name)
+	for {
+		var endLoop bool
+		switch ext {
+		case ".gz", ".tgz":
+			gw, err := gzip.NewWriterLevel(fw.uw, fw.opts.DeflateLv)
+			if err != nil {
+				return err
+			}
+			*pClosers = append(*pClosers, gw)
+			fw.uw = gw
+			if ext == ".tgz" {
+				ext = ".tar"
+				continue
+			}
+		case ".tar":
+			fw.tw = tar.NewWriter(fw.uw)
+			*pClosers = append(*pClosers, fw.tw)
+			fw.uw = fw.tw
+			endLoop = true
+		case ".zip":
+			fw.zw = zip.NewWriter(fw.uw)
+			*pClosers = append(*pClosers, fw.zw)
+			if fw.opts.ZipOffset > 0 {
+				fw.zw.SetOffset(fw.opts.ZipOffset)
+			}
+			if fw.opts.ZipComment != "" {
+				err := fw.zw.SetComment(fw.opts.ZipComment)
+				if err != nil {
+					return err
+				}
+			}
+			noDeflate := true
+			for method, comp := range fw.opts.ZipComp {
+				if method == zip.Deflate {
+					noDeflate = false
+				}
+				fw.zw.RegisterCompressor(method, comp)
+			}
+			if noDeflate {
+				fw.zw.RegisterCompressor(
+					zip.Deflate,
+					func(w io.Writer) (io.WriteCloser, error) {
+						return flate.NewWriter(w, fw.opts.DeflateLv)
+					},
+				)
+			}
+			fw.uw, fw.err = zipWriteBeforeCreateErrorWriter, ErrZipWriteBeforeCreate
+			endLoop = true
+		default:
+			endLoop = true
+		}
+		if endLoop {
+			break
+		}
+		name = name[:len(name)-len(ext)]
+		ext = path.Ext(name)
+	}
+	return nil
+}
+
+// initCloserAndBuffer sets fw.c and creates a buffer.
+func (fw *writer) initCloserAndBuffer(closers []io.Closer) {
+	switch len(closers) {
+	case 1:
+		fw.c = inout.WrapNoErrorCloser(closers[0])
+	case 0:
+		fw.c = inout.NewNoOpCloser()
+	default:
+		fw.c = inout.NewMultiCloser(true, true, closers...)
+	}
+	fw.bw = inout.NewBufferedWriterSize(fw.uw, fw.opts.BufSize)
+}
+
 func (fw *writer) Close() error {
 	if fw.c.Closed() {
 		return nil
 	}
 	flushErr := fw.bw.Flush()
 	closeErr := fw.c.Close()
+	if fw.c.Closed() {
+		fw.uw, fw.err = closedErrorWriter, ErrFileWriterClosed
+		fw.bw.Reset(fw.uw)
+	}
 	return errors.AutoWrap(errors.Combine(flushErr, closeErr))
 }
 
-// Closed reports whether this writer is closed successfully.
 func (fw *writer) Closed() bool {
 	return fw.c.Closed()
 }
 
-// Write writes the content of p into the file.
-//
-// It returns the number of bytes written and any write error encountered.
-// If n < len(p), it also returns an error explaining why the write is short.
-//
-// It conforms to interface io.Writer.
 func (fw *writer) Write(p []byte) (n int, err error) {
-	if fw.c.Closed() {
-		return 0, errors.AutoWrap(ErrFileWriterClosed)
+	if fw.err != nil {
+		return 0, errors.AutoWrap(fw.err)
 	}
 	n, err = fw.bw.Write(p)
 	return n, errors.AutoWrap(err)
 }
 
-// MustWrite is like Write but panics when encountering an error.
-//
-// If it panics, the error value passed to the call of panic
-// must be exactly of type *github.com/donyori/gogo/inout.WritePanic.
 func (fw *writer) MustWrite(p []byte) (n int) {
 	n, err := fw.Write(p)
 	if err != nil {
@@ -274,22 +422,13 @@ func (fw *writer) MustWrite(p []byte) (n int) {
 	return
 }
 
-// WriteByte writes a single byte.
-//
-// It returns any write error encountered.
-//
-// It conforms to interface io.ByteWriter.
 func (fw *writer) WriteByte(c byte) error {
-	if fw.c.Closed() {
-		return errors.AutoWrap(ErrFileWriterClosed)
+	if fw.err != nil {
+		return errors.AutoWrap(fw.err)
 	}
 	return errors.AutoWrap(fw.bw.WriteByte(c))
 }
 
-// MustWriteByte is like WriteByte but panics when encountering an error.
-//
-// If it panics, the error value passed to the call of panic
-// must be exactly of type *github.com/donyori/gogo/inout.WritePanic.
 func (fw *writer) MustWriteByte(c byte) {
 	err := fw.WriteByte(c)
 	if err != nil {
@@ -297,21 +436,14 @@ func (fw *writer) MustWriteByte(c byte) {
 	}
 }
 
-// WriteRune writes a single Unicode code point.
-//
-// It returns the number of bytes written and any write error encountered.
 func (fw *writer) WriteRune(r rune) (size int, err error) {
-	if fw.c.Closed() {
-		return 0, errors.AutoWrap(ErrFileWriterClosed)
+	if fw.err != nil {
+		return 0, errors.AutoWrap(fw.err)
 	}
 	size, err = fw.bw.WriteRune(r)
 	return size, errors.AutoWrap(err)
 }
 
-// MustWriteRune is like WriteRune but panics when encountering an error.
-//
-// If it panics, the error value passed to the call of panic
-// must be exactly of type *github.com/donyori/gogo/inout.WritePanic.
 func (fw *writer) MustWriteRune(r rune) (size int) {
 	size, err := fw.WriteRune(r)
 	if err != nil {
@@ -320,25 +452,14 @@ func (fw *writer) MustWriteRune(r rune) (size int) {
 	return
 }
 
-// WriteString writes a string.
-//
-// It returns the number of bytes written and any write error encountered.
-// If n is less than len(s),
-// it also returns an error explaining why the write is short.
-//
-// It conforms to interface io.StringWriter.
 func (fw *writer) WriteString(s string) (n int, err error) {
-	if fw.c.Closed() {
-		return 0, errors.AutoWrap(ErrFileWriterClosed)
+	if fw.err != nil {
+		return 0, errors.AutoWrap(fw.err)
 	}
 	n, err = fw.bw.WriteString(s)
 	return n, errors.AutoWrap(err)
 }
 
-// MustWriteString is like WriteString but panics when encountering an error.
-//
-// If it panics, the error value passed to the call of panic
-// must be exactly of type *github.com/donyori/gogo/inout.WritePanic.
 func (fw *writer) MustWriteString(s string) (n int) {
 	n, err := fw.WriteString(s)
 	if err != nil {
@@ -347,34 +468,22 @@ func (fw *writer) MustWriteString(s string) (n int) {
 	return
 }
 
-// ReadFrom reads data from r until EOF or error.
-//
-// The return value n is the number of bytes read.
-// Any error except EOF encountered during the read is also returned.
-//
-// It conforms to interface io.ReaderFrom.
 func (fw *writer) ReadFrom(r io.Reader) (n int64, err error) {
-	if fw.c.Closed() {
-		return 0, errors.AutoWrap(ErrFileWriterClosed)
+	if fw.err != nil {
+		return 0, errors.AutoWrap(fw.err)
 	}
 	n, err = fw.bw.ReadFrom(r)
 	return n, errors.AutoWrap(err)
 }
 
-// Printf formats arguments and writes to the file.
-// Arguments are handled in the manner of fmt.Printf.
 func (fw *writer) Printf(format string, args ...any) (n int, err error) {
-	if fw.c.Closed() {
-		return 0, errors.AutoWrap(ErrFileWriterClosed)
+	if fw.err != nil {
+		return 0, errors.AutoWrap(fw.err)
 	}
 	n, err = fw.bw.Printf(format, args...)
 	return n, errors.AutoWrap(err)
 }
 
-// MustPrintf is like Printf but panics when encountering an error.
-//
-// If it panics, the error value passed to the call of panic
-// must be exactly of type *github.com/donyori/gogo/inout.WritePanic.
 func (fw *writer) MustPrintf(format string, args ...any) (n int) {
 	n, err := fw.Printf(format, args...)
 	if err != nil {
@@ -383,20 +492,14 @@ func (fw *writer) MustPrintf(format string, args ...any) (n int) {
 	return
 }
 
-// Print formats arguments and writes to the file.
-// Arguments are handled in the manner of fmt.Print.
 func (fw *writer) Print(args ...any) (n int, err error) {
-	if fw.c.Closed() {
-		return 0, errors.AutoWrap(ErrFileWriterClosed)
+	if fw.err != nil {
+		return 0, errors.AutoWrap(fw.err)
 	}
 	n, err = fw.bw.Print(args...)
 	return n, errors.AutoWrap(err)
 }
 
-// MustPrint is like Print but panics when encountering an error.
-//
-// If it panics, the error value passed to the call of panic
-// must be exactly of type *github.com/donyori/gogo/inout.WritePanic.
 func (fw *writer) MustPrint(args ...any) (n int) {
 	n, err := fw.Print(args...)
 	if err != nil {
@@ -405,20 +508,14 @@ func (fw *writer) MustPrint(args ...any) (n int) {
 	return
 }
 
-// Println formats arguments and writes to the file.
-// Arguments are handled in the manner of fmt.Println.
 func (fw *writer) Println(args ...any) (n int, err error) {
-	if fw.c.Closed() {
-		return 0, errors.AutoWrap(ErrFileWriterClosed)
+	if fw.err != nil {
+		return 0, errors.AutoWrap(fw.err)
 	}
 	n, err = fw.bw.Println(args...)
 	return n, errors.AutoWrap(err)
 }
 
-// MustPrintln is like Println but panics when encountering an error.
-//
-// If it panics, the error value passed to the call of panic
-// must be exactly of type *github.com/donyori/gogo/inout.WritePanic.
 func (fw *writer) MustPrintln(args ...any) (n int) {
 	n, err := fw.Println(args...)
 	if err != nil {
@@ -427,80 +524,171 @@ func (fw *writer) MustPrintln(args ...any) (n int) {
 	return
 }
 
-// Flush writes any buffered data to the file.
-//
-// It returns any write error encountered.
 func (fw *writer) Flush() error {
-	if fw.c.Closed() {
-		if fw.bw.Buffered() > 0 {
-			// This should never happen, but will act as a safeguard for later,
-			// as Flush is implicitly called in Close.
-			return errors.AutoWrap(ErrFileWriterClosed)
-		}
+	if fw.bw.Buffered() == 0 {
+		// If there is no buffered data, do nothing and return nil,
+		// even if fw.err is not nil.
 		return nil
+	} else if fw.err != nil {
+		return errors.AutoWrap(fw.err)
 	}
 	return errors.AutoWrap(fw.bw.Flush())
 }
 
-// Size returns the size of the underlying buffer in bytes.
 func (fw *writer) Size() int {
 	return fw.bw.Size()
 }
 
-// Buffered returns the number of bytes that
-// have been written into the current buffer.
 func (fw *writer) Buffered() int {
 	return fw.bw.Buffered()
 }
 
-// Available returns the number of bytes unused in the current buffer.
 func (fw *writer) Available() int {
 	return fw.bw.Available()
 }
 
-// TarEnabled returns true if the file is archived by tar
-// (i.e., tape archive) and is not opened in raw mode.
 func (fw *writer) TarEnabled() bool {
 	return fw.tw != nil
 }
 
-// TarWriteHeader writes hdr and prepares to accept the content of
-// the next file.
-//
-// The tar.Header.Size determines how many bytes can be written for
-// the next file.
-// If the current file is not fully written, it will return an error.
-// It implicitly flushes any padding necessary before writing the header.
-//
-// If the file is not archived by tar, or the file is opened in raw mode,
-// it does nothing and reports ErrNotTar.
-// (To test whether the error is ErrNotTar, use function errors.Is.)
 func (fw *writer) TarWriteHeader(hdr *tar.Header) error {
-	if !fw.TarEnabled() {
+	if fw.tw == nil {
 		return errors.AutoWrap(ErrNotTar)
-	}
-	if fw.c.Closed() {
+	} else if fw.c.Closed() {
 		return errors.AutoWrap(ErrFileWriterClosed)
 	}
 	err := fw.bw.Flush()
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
-	err = errors.AutoWrap(fw.tw.WriteHeader(hdr))
-	if err == nil {
-		fw.bw.Reset(fw.uw) // reset the state of buffer
+	err = fw.tw.WriteHeader(hdr)
+	if err != nil {
+		return errors.AutoWrap(err)
 	}
-	return err
+	if tarHeaderIsDir(hdr) {
+		fw.uw, fw.err = isDirErrorWriter, ErrIsDir
+	} else {
+		fw.uw, fw.err = fw.tw, nil
+	}
+	fw.bw.Reset(fw.uw)
+	return nil
 }
 
-// Options returns a copy of options used by this writer.
+func (fw *writer) ZipEnabled() bool {
+	return fw.zw != nil
+}
+
+func (fw *writer) ZipCreate(name string) error {
+	return errors.AutoWrap(fw.zipCreateFunc(nil, name, func() (io.Writer, error) {
+		return fw.zw.Create(name)
+	}))
+}
+
+func (fw *writer) ZipCreateHeader(fh *zip.FileHeader) error {
+	return errors.AutoWrap(fw.zipCreateFunc(fh, "", func() (io.Writer, error) {
+		return fw.zw.CreateHeader(fh)
+	}))
+}
+
+func (fw *writer) ZipCreateRaw(fh *zip.FileHeader) error {
+	return errors.AutoWrap(fw.zipCreateFunc(fh, "", func() (io.Writer, error) {
+		return fw.zw.CreateRaw(fh)
+	}))
+}
+
+func (fw *writer) ZipCopy(f *zip.File) error {
+	err := fw.zipCheckAndFlush()
+	if err != nil {
+		return errors.AutoWrap(err)
+	}
+	fw.uw, fw.err = zipWriteBeforeCreateErrorWriter, ErrZipWriteBeforeCreate
+	fw.bw.Reset(fw.uw)
+	return errors.AutoWrap(fw.zw.Copy(f))
+}
+
 func (fw *writer) Options() *WriteOptions {
-	opts := new(WriteOptions)
-	*opts = fw.opts
+	opts := &WriteOptions{
+		BufSize:    fw.opts.BufSize,
+		Raw:        fw.opts.Raw,
+		DeflateLv:  fw.opts.DeflateLv,
+		ZipOffset:  fw.opts.ZipOffset,
+		ZipComment: fw.opts.ZipComment,
+	}
+	if len(fw.opts.ZipComp) > 0 {
+		opts.ZipComp = make(map[uint16]zip.Compressor, len(fw.opts.ZipComp))
+		for method, comp := range fw.opts.ZipComp {
+			opts.ZipComp[method] = comp
+		}
+	}
 	return opts
 }
 
-// FileStat returns the io/fs.FileInfo structure describing file.
 func (fw *writer) FileStat() (info fs.FileInfo, err error) {
 	return fw.f.Stat()
 }
+
+// zipCheckAndFlush checks whether the writer is in ZIP mode and not closed.
+// If so, it flushes the buffer and returns any error encountered.
+// If not, it reports the corresponding error.
+func (fw *writer) zipCheckAndFlush() error {
+	if fw.zw == nil {
+		return errors.AutoWrap(ErrNotZip)
+	} else if fw.c.Closed() {
+		return errors.AutoWrap(ErrFileWriterClosed)
+	}
+	return errors.AutoWrap(fw.bw.Flush())
+}
+
+// zipCreateFunc is a framework for ZipCreate, ZipCreateHeader,
+// and ZipCreateRaw.
+//
+// It may mutate fw.err, fw.uw, and fw.bw.
+//
+// fh is the argument of ZipCreateHeader and ZipCreateRaw or nil for ZipCreate.
+//
+// name is the argument of ZipCreate or
+// empty for ZipCreateHeader and ZipCreateRaw.
+//
+// f is a function that calls Create, CreateHeader, or CreateRaw of fw.zw.
+func (fw *writer) zipCreateFunc(fh *zip.FileHeader, name string, f func() (io.Writer, error)) error {
+	err := fw.zipCheckAndFlush()
+	if err != nil {
+		return errors.AutoWrap(err)
+	}
+	w, err := f()
+	if fh != nil {
+		name = fh.Name
+	}
+	if err == nil {
+		if len(name) == 0 || name[len(name)-1] != '/' {
+			fw.uw, fw.err = w, nil
+		} else {
+			fw.uw, fw.err = isDirErrorWriter, ErrIsDir
+		}
+	} else {
+		fw.uw, fw.err = zipWriteBeforeCreateErrorWriter, ErrZipWriteBeforeCreate
+	}
+	fw.bw.Reset(fw.uw)
+	return errors.AutoWrap(err)
+}
+
+// errorWriter implements io.Writer and io.ReaderFrom.
+// Its methods always return 0 and report the specified error.
+type errorWriter struct {
+	// Error reported by methods Write and ReadFrom.
+	err error
+}
+
+func (ew *errorWriter) Write([]byte) (n int, err error) {
+	return 0, errors.AutoWrap(ew.err)
+}
+
+func (ew *errorWriter) ReadFrom(io.Reader) (n int64, err error) {
+	return 0, errors.AutoWrap(ew.err)
+}
+
+var (
+	isDirErrorWriter                = &errorWriter{err: ErrIsDir}
+	zipWriteBeforeCreateErrorWriter = &errorWriter{err: ErrZipWriteBeforeCreate}
+	closedErrorWriter               = &errorWriter{err: ErrFileWriterClosed}
+)

@@ -31,7 +31,7 @@ import (
 // WritableFileImpl is an implementation of interface WritableFile, for testing.
 type WritableFileImpl struct {
 	Name    string      // Filename.
-	Data    []byte      // File content.
+	Data    []byte      // File contents.
 	Mode    fs.FileMode // FileInfo.Mode.
 	ModTime time.Time   // FileInfo.ModTime.
 	Sys     any         // FileInfo.Sys.

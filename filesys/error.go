@@ -37,7 +37,38 @@ var ErrIsDir = errors.AutoNewCustom(
 //
 // The client should use errors.Is to test whether an error is ErrNotTar.
 var ErrNotTar = errors.AutoNewCustom(
-	"file is not archived by tar, or is opened in raw mode",
+	"file is not archived by tar or is opened in raw mode",
+	errors.PrependFullPkgName,
+	0,
+)
+
+// ErrNotZip is an error indicating that the file is not archived by ZIP,
+// or is opened in raw mode.
+//
+// The client should use errors.Is to test whether an error is ErrNotZip.
+var ErrNotZip = errors.AutoNewCustom(
+	"file is not archived by ZIP or is opened in raw mode",
+	errors.PrependFullPkgName,
+	0,
+)
+
+// ErrReadZip is an error indicating that
+// a read method of Reader is called on a ZIP archive.
+//
+// The client should use errors.Is to test whether an error is ErrReadZip.
+var ErrReadZip = errors.AutoNewCustom(
+	"read a ZIP archive",
+	errors.PrependFullPkgName,
+	0,
+)
+
+// ErrZipWriteBeforeCreate is an error indicating that for a ZIP archive,
+// a write method of Writer is called before creating a new ZIP file.
+//
+// The client should use errors.Is to test whether
+// an error is ErrZipWriteBeforeCreate.
+var ErrZipWriteBeforeCreate = errors.AutoNewCustom(
+	"call a write method before creating a new ZIP file",
 	errors.PrependFullPkgName,
 	0,
 )

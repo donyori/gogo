@@ -20,7 +20,9 @@ package filesys_test
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
+	"compress/flate"
 	"compress/gzip"
 	"crypto"
 	_ "crypto/md5"    // to register crypto.MD5
@@ -37,13 +39,17 @@ import (
 var (
 	testFS fstest.MapFS
 
-	testFSTarFiles []struct{ name, body string }
+	testFSTarFiles           []struct{ name, body string }
+	testFSZipFileNameBodyMap map[string]string
+
+	testFSZipOffset int64
 
 	testFSFilenames      []string
 	testFSBasicFilenames []string
 	testFSGzFilenames    []string
 	testFSTarFilenames   []string
 	testFSTgzFilenames   []string
+	testFSZipFilenames   []string
 
 	testFSChecksumMap map[string][]struct {
 		hash     crypto.Hash
@@ -51,35 +57,56 @@ var (
 	}
 )
 
+const testFSZipOffsetName = "zip offset.zip"
+
+const testFSZipComment = "The end-of-central-directory comment 你好"
+
 func init() {
+	now := time.Now()
 	testFS = fstest.MapFS{
 		"file1.txt": {
 			Data:    []byte("This is File 1."),
-			ModTime: time.Now(),
+			Mode:    0755,
+			ModTime: now,
 		},
 		"file2.txt": {
 			Data:    []byte("Here is File 2!"),
-			ModTime: time.Now(),
+			Mode:    0755,
+			ModTime: now,
 		},
 		"roses are red.txt": {
 			Data:    []byte("Roses are red.\n  Violets are blue.\nSugar is sweet.\n  And so are you.\n"),
-			ModTime: time.Now(),
+			Mode:    0755,
+			ModTime: now,
 		},
 	}
 
 	big := make([]byte, 1<<20)
-	rand.New(rand.NewSource(10)).Read(big)
+	random := rand.New(rand.NewSource(10))
+	random.Read(big)
 	testFS["1MB.dat"] = &fstest.MapFile{
 		Data:    big,
-		ModTime: time.Now(),
-	}
-	testFSTarFiles = []struct{ name, body string }{
-		{"tar file1.txt", "This is tar file 1."},
-		{"tar file2.txt", "Here is tar file 2!"},
-		{"roses are red.txt", "Roses are red.\n  Violets are blue.\nSugar is sweet.\n  And so are you.\n"},
-		{"1MB.dat", string(big)},
+		Mode:    0755,
+		ModTime: now,
 	}
 
+	bigStr := string(big)
+	testFSTarFiles = []struct{ name, body string }{
+		{"tardir/tar file1.txt", "This is tar file 1."},
+		{"tardir/tar file2.txt", "Here is tar file 2!"},
+		{"emptydir/", ""},
+		{"roses are red.txt", "Roses are red.\n  Violets are blue.\nSugar is sweet.\n  And so are you.\n"},
+		{"1MB.dat", bigStr},
+	}
+	testFSZipFileNameBodyMap = map[string]string{
+		"zipdir/zip file1.txt": "This is ZIP file 1.",
+		"zipdir/zip file2.txt": "Here is ZIP file 2!",
+		"emptydir/":            "",
+		"roses are red.txt":    "Roses are red.\n  Violets are blue.\nSugar is sweet.\n  And so are you.\n",
+		"1MB.dat":              bigStr,
+	}
+
+	// ------ .gz ------
 	buf := new(bytes.Buffer)
 	gzw, err := gzip.NewWriterLevel(buf, gzip.BestCompression)
 	if err != nil {
@@ -95,24 +122,34 @@ func init() {
 	}
 	testFS["1MB.dat.gz"] = &fstest.MapFile{
 		Data:    copyBuffer(buf),
-		ModTime: time.Now(),
+		Mode:    0755,
+		ModTime: now,
 	}
 
+	// ------ .tar ------
 	buf.Reset()
 	tw := tar.NewWriter(buf)
 	for i := range testFSTarFiles {
-		err = tw.WriteHeader(&tar.Header{
+		hdr := &tar.Header{
 			Name:    testFSTarFiles[i].name,
 			Size:    int64(len(testFSTarFiles[i].body)),
 			Mode:    0600,
-			ModTime: time.Now(),
-		})
+			ModTime: now,
+		}
+		if len(hdr.Name) == 0 || hdr.Name[len(hdr.Name)-1] != '/' {
+			hdr.Typeflag = tar.TypeReg
+		} else {
+			hdr.Typeflag = tar.TypeDir
+		}
+		err = tw.WriteHeader(hdr)
 		if err != nil {
 			panic(err)
 		}
-		_, err = tw.Write([]byte(testFSTarFiles[i].body))
-		if err != nil {
-			panic(err)
+		if len(testFSTarFiles[i].body) > 0 {
+			_, err = tw.Write([]byte(testFSTarFiles[i].body))
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 	err = tw.Close()
@@ -121,9 +158,11 @@ func init() {
 	}
 	testFS["tar file.tar"] = &fstest.MapFile{
 		Data:    copyBuffer(buf),
-		ModTime: time.Now(),
+		Mode:    0755,
+		ModTime: now,
 	}
 
+	// ------ .tgz & .tar.gz ------
 	buf.Reset()
 	gzw, err = gzip.NewWriterLevel(buf, gzip.BestCompression)
 	if err != nil {
@@ -131,18 +170,26 @@ func init() {
 	}
 	tw = tar.NewWriter(gzw)
 	for i := range testFSTarFiles {
-		err = tw.WriteHeader(&tar.Header{
+		hdr := &tar.Header{
 			Name:    testFSTarFiles[i].name,
 			Size:    int64(len(testFSTarFiles[i].body)),
 			Mode:    0600,
-			ModTime: time.Now(),
-		})
+			ModTime: now,
+		}
+		if len(hdr.Name) == 0 || hdr.Name[len(hdr.Name)-1] != '/' {
+			hdr.Typeflag = tar.TypeReg
+		} else {
+			hdr.Typeflag = tar.TypeDir
+		}
+		err = tw.WriteHeader(hdr)
 		if err != nil {
 			panic(err)
 		}
-		_, err = tw.Write([]byte(testFSTarFiles[i].body))
-		if err != nil {
-			panic(err)
+		if len(testFSTarFiles[i].body) > 0 {
+			_, err = tw.Write([]byte(testFSTarFiles[i].body))
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 	err = tw.Close()
@@ -155,15 +202,91 @@ func init() {
 	}
 	testFS["tar gzip.tgz"] = &fstest.MapFile{
 		Data:    copyBuffer(buf),
-		ModTime: time.Now(),
+		Mode:    0755,
+		ModTime: now,
 	}
 	testFS["tar gzip.tar.gz"] = &fstest.MapFile{
 		Data:    copyBuffer(buf),
-		ModTime: time.Now(),
+		Mode:    0755,
+		ModTime: now,
 	}
 
+	// ------ .zip (basic) ------
+	deflateBestComp := func(w io.Writer) (io.WriteCloser, error) {
+		return flate.NewWriter(w, flate.BestCompression)
+	}
+	buf.Reset()
+	zw := zip.NewWriter(buf)
+	err = zw.SetComment(testFSZipComment)
+	if err != nil {
+		panic(err)
+	}
+	zw.RegisterCompressor(zip.Deflate, deflateBestComp)
+	for name, body := range testFSZipFileNameBodyMap {
+		var w io.Writer
+		w, err = zw.Create(name)
+		if err != nil {
+			panic(err)
+		}
+		if len(name) > 0 && name[len(name)-1] == '/' {
+			continue
+		}
+		_, err = w.Write([]byte(body))
+		if err != nil {
+			panic(err)
+		}
+	}
+	err = zw.Close()
+	if err != nil {
+		panic(err)
+	}
+	testFS["zip basic.zip"] = &fstest.MapFile{
+		Data:    copyBuffer(buf),
+		Mode:    0755,
+		ModTime: now,
+	}
+
+	// ------ .zip (offset) ------
+	buf.Reset()
+	_, err = buf.ReadFrom(io.LimitReader(random, 5<<10))
+	if err != nil {
+		panic(err)
+	}
+	testFSZipOffset = int64(buf.Len())
+	zw = zip.NewWriter(buf)
+	zw.SetOffset(int64(buf.Len()))
+	err = zw.SetComment(testFSZipComment)
+	if err != nil {
+		panic(err)
+	}
+	zw.RegisterCompressor(zip.Deflate, deflateBestComp)
+	for name, body := range testFSZipFileNameBodyMap {
+		var w io.Writer
+		w, err = zw.Create(name)
+		if err != nil {
+			panic(err)
+		}
+		if len(name) > 0 && name[len(name)-1] == '/' {
+			continue
+		}
+		_, err = w.Write([]byte(body))
+		if err != nil {
+			panic(err)
+		}
+	}
+	err = zw.Close()
+	if err != nil {
+		panic(err)
+	}
+	testFS[testFSZipOffsetName] = &fstest.MapFile{
+		Data:    copyBuffer(buf),
+		Mode:    0755,
+		ModTime: now,
+	}
+
+	// ------ record filenames ------
 	testFSFilenames = make([]string, len(testFS))
-	var idx, gzIdx, tarIdx, tgzIdx int
+	var idx, gzIdx, tarIdx, tgzIdx, zipIdx int
 	for name := range testFS {
 		testFSFilenames[idx] = name
 		idx++
@@ -179,14 +302,17 @@ func init() {
 			tarIdx++
 		case ".tgz":
 			tgzIdx++
+		case ".zip":
+			zipIdx++
 		}
 	}
 	sort.Strings(testFSFilenames)
-	testFSBasicFilenames = make([]string, idx-gzIdx-tarIdx-tgzIdx)
+	testFSBasicFilenames = make([]string, idx-gzIdx-tarIdx-tgzIdx-zipIdx)
 	testFSGzFilenames = make([]string, gzIdx)
 	testFSTarFilenames = make([]string, tarIdx)
 	testFSTgzFilenames = make([]string, tgzIdx)
-	idx, gzIdx, tarIdx, tgzIdx = 0, 0, 0, 0
+	testFSZipFilenames = make([]string, zipIdx)
+	idx, gzIdx, tarIdx, tgzIdx, zipIdx = 0, 0, 0, 0, 0
 	for _, name := range testFSFilenames {
 		cname := path.Clean(name)
 		switch path.Ext(cname) {
@@ -204,21 +330,27 @@ func init() {
 		case ".tgz":
 			testFSTgzFilenames[tgzIdx] = name
 			tgzIdx++
+		case ".zip":
+			testFSZipFilenames[zipIdx] = name
+			zipIdx++
 		default:
 			testFSBasicFilenames[idx] = name
 			idx++
 		}
 	}
 
+	// ------ checksum ------
 	testFSChecksumMap = make(map[string][]struct {
 		hash     crypto.Hash
 		checksum string
 	}, len(testFS))
+	sha256Hash := crypto.SHA256.New()
+	md5Hash := crypto.MD5.New()
+	w := io.MultiWriter(sha256Hash, md5Hash)
 	for name, file := range testFS {
 		r := bytes.NewReader(file.Data)
-		sha256Hash := crypto.SHA256.New()
-		md5Hash := crypto.MD5.New()
-		w := io.MultiWriter(sha256Hash, md5Hash)
+		sha256Hash.Reset()
+		md5Hash.Reset()
 		_, err = io.Copy(w, r)
 		if err != nil {
 			panic(err)

@@ -20,13 +20,14 @@ package filesys
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"compress/bzip2"
 	"compress/gzip"
 	"fmt"
 	"io"
 	"io/fs"
 	"path"
-	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/donyori/gogo/errors"
@@ -35,21 +36,42 @@ import (
 
 // ReadOptions are options for Read functions.
 type ReadOptions struct {
+	// Size of the buffer for reading the file at least.
+	// Non-positive values for using default value.
+	BufSize int
+
 	// Offset of the file to read, in bytes,
 	// relative to the origin of the file for positive values,
 	// and relative to the end of the file for negative values.
 	Offset int64
 
-	// Limit of the file to read, in bytes. Non-positive values for no limit.
+	// Limit of the file to read, in bytes.
+	// Non-positive values for no limit.
 	Limit int64
 
 	// True if not to decompress when the file is compressed by gzip or bzip2,
 	// and not to restore when the file is archived by tar (i.e., tape archive).
 	Raw bool
 
-	// Size of the buffer for reading the file at least.
-	// Non-positive values for using default value.
-	BufSize int
+	// A method-decompressor map for reading the ZIP archive.
+	// These decompressors will be registered to the archive/zip.Reader.
+	// (Nil decompressors will be ignored.)
+	//
+	// Package archive/zip has two built-in decompressors for the common methods
+	// archive/zip.Store (0) and archive/zip.Deflate (8).
+	//
+	// For more details, see the documentation of the method
+	// RegisterDecompressor of archive/zip.Reader and
+	// the function archive/zip.RegisterDecompressor.
+	ZipDcomp map[uint16]zip.Decompressor
+
+	// A function that wraps the reader to io.ReaderAt
+	// to create an archive/zip.Reader.
+	//
+	// It also returns the size that can be read, and any error encountered.
+	//
+	// It will only be called when the reader does not implement io.ReaderAt.
+	ZipReaderAtFunc func(r io.Reader) (ra io.ReaderAt, size int64, err error)
 }
 
 // Reader is a device to read data from a file.
@@ -76,10 +98,40 @@ type Reader interface {
 	//
 	// io.EOF is returned at the end of the input.
 	//
-	// If the file is not archived by tar, or the file is opened in raw mode,
+	// If the file is not archived by tar or is opened in raw mode,
 	// it does nothing and reports ErrNotTar.
 	// (To test whether err is ErrNotTar, use function errors.Is.)
-	TarNext() (header *tar.Header, err error)
+	TarNext() (hdr *tar.Header, err error)
+
+	// ZipEnabled returns true if the file is archived by ZIP
+	// and is not opened in raw mode.
+	ZipEnabled() bool
+
+	// ZipOpen opens the file with specified name in the ZIP archive.
+	//
+	// The name must be a relative path: it must not start with a drive letter
+	// (e.g., "C:") or leading slash. Only forward slashes are allowed;
+	// "../" elements and trailing slashes (e.g., "a/") are not allowed.
+	//
+	// If the reader's file is not archived by ZIP or is opened in raw mode,
+	// it does nothing and reports ErrNotZip.
+	// (To test whether the error is ErrNotZip, use function errors.Is.)
+	ZipOpen(name string) (file fs.File, err error)
+
+	// ZipFiles returns the files in the ZIP archive, sorted by filename.
+	//
+	// If the reader's file is not archived by ZIP or is opened in raw mode,
+	// it does nothing and reports ErrNotZip.
+	// (To test whether the error is ErrNotZip, use function errors.Is.)
+	ZipFiles() (files []*zip.File, err error)
+
+	// ZipComment returns the end-of-central-directory comment field
+	// of the ZIP archive.
+	//
+	// If the reader's file is not archived by ZIP or is opened in raw mode,
+	// it does nothing and reports ErrNotZip.
+	// (To test whether the error is ErrNotZip, use function errors.Is.)
+	ZipComment() (comment string, err error)
 
 	// Options returns a copy of options used by this reader.
 	Options() *ReadOptions
@@ -92,12 +144,14 @@ type Reader interface {
 //
 // Use it with Read functions.
 type reader struct {
-	c    inout.Closer
+	err  error // should be one of nil, ErrIsDir, ErrReadZip, and ErrFileReaderClosed.
 	br   inout.ResettableBufferedReader
 	ur   io.Reader // unbuffered reader
+	c    inout.Closer
 	opts ReadOptions
 	f    fs.File
 	tr   *tar.Reader
+	zr   *zip.Reader
 }
 
 // Read creates a reader on the specified file with options opts.
@@ -137,14 +191,14 @@ func Read(file fs.File, opts *ReadOptions, closeFile bool) (r Reader, err error)
 	if opts == nil {
 		opts = new(ReadOptions)
 	}
-	if opts.Offset != 0 {
-		if size := info.Size(); size < opts.Offset || size+opts.Offset < 0 {
-			return nil, errors.AutoWrap(fmt.Errorf(
-				"option Offset (%d) is out of range, file size: %d",
-				opts.Offset,
-				size,
-			))
-		}
+	size := info.Size()
+	if opts.Offset != 0 &&
+		(size < opts.Offset || opts.Offset < 0 && size+opts.Offset < 0) { // check whether opts.Offset < 0 to avoid overflow
+		return nil, errors.AutoWrap(fmt.Errorf(
+			"option Offset (%d) is out of range; file size: %d",
+			opts.Offset,
+			size,
+		))
 	}
 
 	el := errors.NewErrorList(true)
@@ -167,102 +221,27 @@ func Read(file fs.File, opts *ReadOptions, closeFile bool) (r Reader, err error)
 	}()
 
 	fr := &reader{
-		ur:   file,
-		opts: *opts,
-		f:    file,
+		ur: file,
+		opts: ReadOptions{
+			BufSize:         opts.BufSize,
+			Offset:          opts.Offset,
+			Limit:           opts.Limit,
+			Raw:             opts.Raw,
+			ZipReaderAtFunc: opts.ZipReaderAtFunc,
+		},
+		f: file,
+	}
+	for method, dcomp := range opts.ZipDcomp {
+		if dcomp != nil {
+			if fr.opts.ZipDcomp == nil {
+				fr.opts.ZipDcomp = make(map[uint16]zip.Decompressor, len(opts.ZipDcomp))
+			}
+			fr.opts.ZipDcomp[method] = dcomp
+		}
 	}
 	r = fr
-	err = readSubOffsetAndLimit(fr, info)
-	if err != nil {
-		el.Append(err)
-		return
-	}
-	el.Append(readSubRawClosersAndCreateBuffer(fr, info, &closers))
+	el.Append(fr.init(info, size, &closers))
 	return
-}
-
-// readSubOffsetAndLimit is a sub-process of function Read
-// to deal with the options Offset and Limit.
-func readSubOffsetAndLimit(fr *reader, info fs.FileInfo) error {
-	var err error
-	if fr.opts.Offset > 0 {
-		if seeker, ok := fr.f.(io.Seeker); ok {
-			_, err = seeker.Seek(fr.opts.Offset, io.SeekStart)
-		} else {
-			// Discard fr.opts.Offset bytes.
-			_, err = io.CopyN(io.Discard, fr.f, fr.opts.Offset)
-		}
-	} else if fr.opts.Offset < 0 {
-		if seeker, ok := fr.f.(io.Seeker); ok {
-			_, err = seeker.Seek(fr.opts.Offset, io.SeekEnd)
-		} else {
-			// Discard (size + fr.opts.Offset) bytes.
-			_, err = io.CopyN(io.Discard, fr.f, info.Size()+fr.opts.Offset)
-		}
-	}
-	if err != nil {
-		return err
-	}
-	if fr.opts.Limit > 0 {
-		fr.ur = io.LimitReader(fr.ur, fr.opts.Limit)
-	}
-	return nil
-}
-
-// readSubRawClosersAndCreateBuffer is a sub-process of function Read
-// to deal with the options Raw, set fr.c, update closers, and create a buffer.
-func readSubRawClosersAndCreateBuffer(fr *reader, info fs.FileInfo, pClosers *[]io.Closer) error {
-	if !fr.opts.Raw {
-		name := strings.ToLower(path.Clean(filepath.ToSlash(info.Name())))
-		ext := path.Ext(name)
-		for {
-			var endLoop bool
-			switch ext {
-			case ".gz", ".tgz":
-				gr, err := gzip.NewReader(fr.ur)
-				if err != nil {
-					return err
-				}
-				*pClosers = append(*pClosers, gr)
-				fr.ur = gr
-				if ext == ".tgz" {
-					ext = ".tar"
-					continue
-				}
-			case ".bz2", ".tbz":
-				fr.ur = bzip2.NewReader(fr.ur)
-				if ext == ".tbz" {
-					ext = ".tar"
-					continue
-				}
-			case ".tar":
-				fr.tr = tar.NewReader(fr.ur)
-				fr.ur = fr.tr
-				endLoop = true
-			default:
-				endLoop = true
-			}
-			if endLoop {
-				break
-			}
-			name = name[:len(name)-len(ext)]
-			ext = path.Ext(name)
-		}
-	}
-	switch len(*pClosers) {
-	case 1:
-		fr.c = inout.WrapNoErrorCloser((*pClosers)[0])
-	case 0:
-		fr.c = inout.NewNoOpCloser()
-	default:
-		fr.c = inout.NewMultiCloser(true, true, *pClosers...)
-	}
-	if fr.opts.BufSize <= 0 {
-		fr.br = inout.NewBufferedReader(fr.ur)
-	} else {
-		fr.br = inout.NewBufferedReaderSize(fr.ur, fr.opts.BufSize)
-	}
-	return nil
 }
 
 // ReadFromFS opens a file from fsys with specified name and
@@ -289,254 +268,372 @@ func ReadFromFS(fsys fs.FS, name string, opts *ReadOptions) (r Reader, err error
 	return r, errors.AutoWrap(err)
 }
 
-// Close closes all closers used by this reader.
+// init initializes the reader according to the options.
 //
-// After successfully closing this reader,
-// Close will do nothing and return nil,
-// and the read methods will report ErrFileReaderClosed.
-// (To test whether the error is ErrFileReaderClosed, use function errors.Is.)
+// It may update closers.
+func (fr *reader) init(info fs.FileInfo, size int64, pClosers *[]io.Closer) error {
+	n, err := fr.initOffsetAndLimit(size)
+	if err != nil {
+		return err
+	}
+	err = fr.initRaw(info, n, pClosers)
+	if err != nil {
+		return err
+	}
+	fr.initCloserAndBuffer(*pClosers)
+	return nil
+}
+
+// initOffsetAndLimit deals with the options Offset and Limit.
+//
+// It returns the size that can be read, and any error encountered.
+func (fr *reader) initOffsetAndLimit(size int64) (n int64, err error) {
+	if fr.opts.Offset == 0 && fr.opts.Limit <= 0 {
+		return size, nil
+	}
+	offset := fr.opts.Offset
+	if offset < 0 {
+		offset += size
+	}
+	n = size - offset
+	if r, ok := fr.ur.(io.ReaderAt); ok {
+		// If fr.ur is an io.ReaderAt, use io.SectionReader
+		// so that fr.ur is still an io.ReaderAt.
+		if fr.opts.Limit > 0 && fr.opts.Limit < n {
+			n = fr.opts.Limit
+		}
+		fr.ur = io.NewSectionReader(r, offset, n)
+		return
+	}
+	if fr.opts.Offset > 0 {
+		if seeker, ok := fr.ur.(io.Seeker); ok {
+			_, err = seeker.Seek(fr.opts.Offset, io.SeekStart)
+		} else {
+			// Discard fr.opts.Offset bytes.
+			_, err = io.CopyN(io.Discard, fr.ur, fr.opts.Offset)
+		}
+	} else if fr.opts.Offset < 0 {
+		if seeker, ok := fr.ur.(io.Seeker); ok {
+			_, err = seeker.Seek(fr.opts.Offset, io.SeekEnd)
+		} else {
+			// Discard (size + fr.opts.Offset) bytes.
+			_, err = io.CopyN(io.Discard, fr.ur, offset)
+		}
+	}
+	if err != nil {
+		return 0, err
+	}
+	if fr.opts.Limit > 0 && fr.opts.Limit < n {
+		n = fr.opts.Limit
+		fr.ur = io.LimitReader(fr.ur, n)
+	}
+	return
+}
+
+// initRaw deals with the option Raw.
+//
+// size is obtained from initOffsetAndLimit, not the file size.
+//
+// It may update closers.
+func (fr *reader) initRaw(info fs.FileInfo, size int64, pClosers *[]io.Closer) error {
+	if fr.opts.Raw {
+		return nil
+	}
+	name := strings.ToLower(info.Name())
+	ext := path.Ext(name)
+	for {
+		var endLoop bool
+		switch ext {
+		case ".gz", ".tgz":
+			gr, err := gzip.NewReader(fr.ur)
+			if err != nil {
+				return err
+			}
+			*pClosers = append(*pClosers, gr)
+			fr.ur = gr
+			if ext == ".tgz" {
+				ext = ".tar"
+				continue
+			}
+		case ".bz2", ".tbz":
+			fr.ur = bzip2.NewReader(fr.ur)
+			if ext == ".tbz" {
+				ext = ".tar"
+				continue
+			}
+		case ".tar":
+			fr.tr = tar.NewReader(fr.ur)
+			fr.ur = fr.tr
+			endLoop = true
+		case ".zip":
+			r, ok := fr.ur.(io.ReaderAt)
+			var err error
+			if !ok {
+				if fr.opts.ZipReaderAtFunc != nil {
+					r, size, err = fr.opts.ZipReaderAtFunc(fr.ur)
+					if err != nil {
+						return err
+					}
+				} else {
+					return errors.New("cannot wrap to io.ReaderAt")
+				}
+			}
+			fr.zr, err = zip.NewReader(r, size)
+			if err != nil {
+				return err
+			}
+			for method, dcomp := range fr.opts.ZipDcomp {
+				fr.zr.RegisterDecompressor(method, dcomp)
+			}
+			fr.ur, fr.err = readZipErrorReader, ErrReadZip
+			endLoop = true
+		default:
+			endLoop = true
+		}
+		if endLoop {
+			break
+		}
+		name = name[:len(name)-len(ext)]
+		ext = path.Ext(name)
+	}
+	return nil
+}
+
+// initCloserAndBuffer sets fr.c and creates a buffer.
+func (fr *reader) initCloserAndBuffer(closers []io.Closer) {
+	switch len(closers) {
+	case 1:
+		fr.c = inout.WrapNoErrorCloser(closers[0])
+	case 0:
+		fr.c = inout.NewNoOpCloser()
+	default:
+		fr.c = inout.NewMultiCloser(true, true, closers...)
+	}
+	if fr.opts.BufSize <= 0 {
+		fr.br = inout.NewBufferedReader(fr.ur)
+	} else {
+		fr.br = inout.NewBufferedReaderSize(fr.ur, fr.opts.BufSize)
+	}
+}
+
 func (fr *reader) Close() error {
 	if fr.c.Closed() {
 		return nil
 	}
-	return errors.AutoWrap(fr.c.Close())
+	err := fr.c.Close()
+	if fr.c.Closed() {
+		fr.ur, fr.err = closedErrorReader, ErrFileReaderClosed
+		fr.br.Reset(fr.ur)
+	}
+	return errors.AutoWrap(err)
 }
 
-// Closed reports whether this reader is closed successfully.
 func (fr *reader) Closed() bool {
 	return fr.c.Closed()
 }
 
-// Read reads data into p.
-//
-// It conforms to interface io.Reader.
 func (fr *reader) Read(p []byte) (n int, err error) {
-	if fr.c.Closed() {
-		return 0, errors.AutoWrap(ErrFileReaderClosed)
+	if fr.err != nil {
+		return 0, errors.AutoWrap(fr.err)
 	}
 	n, err = fr.br.Read(p)
 	return n, errors.AutoWrap(err)
 }
 
-// ReadByte reads and returns a single byte.
-//
-// It conforms to interface io.ByteReader.
 func (fr *reader) ReadByte() (byte, error) {
-	if fr.c.Closed() {
-		return 0, errors.AutoWrap(ErrFileReaderClosed)
+	if fr.err != nil {
+		return 0, errors.AutoWrap(fr.err)
 	}
 	c, err := fr.br.ReadByte()
 	return c, errors.AutoWrap(err)
 }
 
-// UnreadByte unreads the last byte.
-// Only the most recently read byte can be unread.
-//
-// It conforms to interface io.ByteScanner.
 func (fr *reader) UnreadByte() error {
-	if fr.c.Closed() {
-		return errors.AutoWrap(ErrFileReaderClosed)
+	if fr.err != nil {
+		return errors.AutoWrap(fr.err)
 	}
 	return errors.AutoWrap(fr.br.UnreadByte())
 }
 
-// ReadRune reads a single UTF-8 encoded Unicode character and
-// returns the rune and its size in bytes.
-//
-// It conforms to interface io.RuneReader.
 func (fr *reader) ReadRune() (r rune, size int, err error) {
-	if fr.c.Closed() {
-		return 0, 0, errors.AutoWrap(ErrFileReaderClosed)
+	if fr.err != nil {
+		return 0, 0, errors.AutoWrap(fr.err)
 	}
 	r, size, err = fr.br.ReadRune()
 	return r, size, errors.AutoWrap(err)
 }
 
-// UnreadRune unreads the last rune.
-//
-// It conforms to interface io.RuneScanner.
 func (fr *reader) UnreadRune() error {
-	if fr.c.Closed() {
-		return errors.AutoWrap(ErrFileReaderClosed)
+	if fr.err != nil {
+		return errors.AutoWrap(fr.err)
 	}
 	return errors.AutoWrap(fr.br.UnreadRune())
 }
 
-// WriteTo writes data to w until there's no more data to write or
-// when an error occurs.
-//
-// The return value n is the number of bytes written.
-// Any error encountered during the write is also returned.
-//
-// It conforms to interface io.WriterTo.
 func (fr *reader) WriteTo(w io.Writer) (n int64, err error) {
-	if fr.c.Closed() {
-		return 0, errors.AutoWrap(ErrFileReaderClosed)
+	if fr.err != nil {
+		return 0, errors.AutoWrap(fr.err)
 	}
 	n, err = fr.br.WriteTo(w)
 	return n, errors.AutoWrap(err)
 }
 
-// ReadLine reads a line excluding the end-of-line bytes.
-//
-// If the line is too long for the buffer,
-// then more is set and the beginning of the line is returned.
-// The rest of the line will be returned from future calls.
-// more will be false when returning the last fragment of the line.
-//
-// It either returns a non-nil line or it returns an error, never both.
-// If an error (including io.EOF) occurs after reading some content,
-// it returns the content as a line and a nil error.
-// The error encountered will be reported on future read calls.
-//
-// No indication or error is given if the input ends
-// without a final line end.
-// Even if the input ends without end-of-line bytes,
-// the content before EOF is treated as a line.
-//
-// Caller should not keep the return value line,
-// and line is only valid until the next call to the reader,
-// including the method ReadLine and any other possible methods.
 func (fr *reader) ReadLine() (line []byte, more bool, err error) {
-	if fr.c.Closed() {
-		return nil, false, errors.AutoWrap(ErrFileReaderClosed)
+	if fr.err != nil {
+		return nil, false, errors.AutoWrap(fr.err)
 	}
 	line, more, err = fr.br.ReadLine()
 	return line, more, errors.AutoWrap(err)
 }
 
-// ReadEntireLine reads an entire line excluding the end-of-line bytes.
-//
-// It either returns a non-nil line or it returns an error, never both.
-// If an error (including io.EOF) occurs after reading some content,
-// it returns the content as a line and a nil error.
-// The error encountered will be reported on future read calls.
-//
-// No indication or error is given if the input ends
-// without a final line end.
-// Even if the input ends without end-of-line bytes,
-// the content before EOF is treated as a line.
-//
-// Unlike the method ReadLine of interface LineReader,
-// the returned line is always valid.
-// Caller can keep the returned line safely.
-//
-// If the line is too long to be stored in a []byte
-// (hardly happens in text files), it may panic or report an error.
 func (fr *reader) ReadEntireLine() (line []byte, err error) {
-	if fr.c.Closed() {
-		return nil, errors.AutoWrap(ErrFileReaderClosed)
+	if fr.err != nil {
+		return nil, errors.AutoWrap(fr.err)
 	}
 	line, err = fr.br.ReadEntireLine()
 	return line, errors.AutoWrap(err)
 }
 
-// WriteLineTo reads a line excluding the end-of-line bytes
-// from its underlying reader and writes it to w.
-//
-// It stops writing data if an error occurs.
-//
-// It returns the number of bytes written to w and any error encountered.
-//
-// If an error (including io.EOF) occurs while reading from
-// the underlying reader, but some content has already been read,
-// it writes the content as a line and returns a nil error.
-// The error encountered will be reported on future read calls.
-//
-// No indication or error is given if the input ends
-// without a final line end.
-// Even if the input ends without end-of-line bytes,
-// the content before EOF is treated as a line.
 func (fr *reader) WriteLineTo(w io.Writer) (n int64, err error) {
-	if fr.c.Closed() {
-		return 0, errors.AutoWrap(ErrFileReaderClosed)
+	if fr.err != nil {
+		return 0, errors.AutoWrap(fr.err)
 	}
 	n, err = fr.br.WriteLineTo(w)
 	return n, errors.AutoWrap(err)
 }
 
-// Size returns the size of the underlying buffer in bytes.
 func (fr *reader) Size() int {
 	return fr.br.Size()
 }
 
-// Buffered returns the number of bytes
-// that can be read from the current buffer.
 func (fr *reader) Buffered() int {
 	return fr.br.Buffered()
 }
 
-// Peek returns the next n bytes without advancing the reader.
-//
-// The bytes stop being valid at the next read call.
-// If it returns fewer than n bytes,
-// it also returns an error explaining why the read is short.
-// The error is bufio.ErrBufferFull if n is larger than its buffer size.
-// (To test whether err is bufio.ErrBufferFull, use function errors.Is.)
-//
-// Calling Peek prevents an UnreadByte or UnreadRune call from succeeding
-// until the next read operation.
 func (fr *reader) Peek(n int) (data []byte, err error) {
-	if fr.c.Closed() {
-		return nil, errors.AutoWrap(ErrFileReaderClosed)
+	if fr.err != nil {
+		return nil, errors.AutoWrap(fr.err)
 	}
 	data, err = fr.br.Peek(n)
 	return data, errors.AutoWrap(err)
 }
 
-// Discard skips the next n bytes and returns the number of bytes discarded.
-//
-// If it skips fewer than n bytes, it also returns an error explaining why.
-//
-// If 0 <= n <= Buffered(),
-// it is guaranteed to succeed without reading from the underlying reader.
 func (fr *reader) Discard(n int) (discarded int, err error) {
-	if fr.c.Closed() {
-		return 0, errors.AutoWrap(ErrFileReaderClosed)
+	if fr.err != nil {
+		return 0, errors.AutoWrap(fr.err)
 	}
 	discarded, err = fr.br.Discard(n)
 	return discarded, errors.AutoWrap(err)
 }
 
-// TarEnabled returns true if the file is archived by tar
-// (i.e., tape archive) and is not opened in raw mode.
 func (fr *reader) TarEnabled() bool {
 	return fr.tr != nil
 }
 
-// TarNext advances to the next entry in the tar archive.
-//
-// The tar.Header.Size determines how many bytes can be read
-// for the next file.
-// Any remaining data in current file is automatically discarded.
-//
-// io.EOF is returned at the end of the input.
-//
-// If the file is not archived by tar, or the file is opened in raw mode,
-// it does nothing and reports ErrNotTar.
-// (To test whether err is ErrNotTar, use function errors.Is.)
-func (fr *reader) TarNext() (header *tar.Header, err error) {
-	if !fr.TarEnabled() {
+func (fr *reader) TarNext() (hdr *tar.Header, err error) {
+	if fr.tr == nil {
 		return nil, errors.AutoWrap(ErrNotTar)
-	}
-	if fr.c.Closed() {
+	} else if fr.c.Closed() {
 		return nil, errors.AutoWrap(ErrFileReaderClosed)
 	}
-	header, err = fr.tr.Next()
-	if err == nil || errors.Is(err, io.EOF) {
-		fr.br.Reset(fr.ur) // discard current buffered data
+	hdr, err = fr.tr.Next()
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, errors.AutoWrap(err)
 	}
-	return header, errors.AutoWrap(err)
+	if tarHeaderIsDir(hdr) {
+		fr.ur, fr.err = isDirErrorReader, ErrIsDir
+	} else {
+		fr.ur, fr.err = fr.tr, nil
+	}
+	fr.br.Reset(fr.ur)
+	return hdr, errors.AutoWrap(err)
 }
 
-// Options returns a copy of options used by this reader.
+func (fr *reader) ZipEnabled() bool {
+	return fr.zr != nil
+}
+
+func (fr *reader) ZipOpen(name string) (file fs.File, err error) {
+	if fr.zr == nil {
+		return nil, errors.AutoWrap(ErrNotZip)
+	} else if fr.c.Closed() {
+		return nil, errors.AutoWrap(ErrFileReaderClosed)
+	}
+	file, err = fr.zr.Open(name)
+	return file, errors.AutoWrap(err)
+}
+
+func (fr *reader) ZipFiles() (files []*zip.File, err error) {
+	switch {
+	case fr.zr == nil:
+		return nil, errors.AutoWrap(ErrNotZip)
+	case fr.c.Closed():
+		return nil, errors.AutoWrap(ErrFileReaderClosed)
+	case len(fr.zr.File) == 0:
+		return
+	}
+	files = make([]*zip.File, len(fr.zr.File))
+	copy(files, fr.zr.File)
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].Name < files[j].Name
+	})
+	return
+}
+
+func (fr *reader) ZipComment() (comment string, err error) {
+	if fr.zr == nil {
+		return "", errors.AutoWrap(ErrNotZip)
+	} else if fr.c.Closed() {
+		return "", errors.AutoWrap(ErrFileReaderClosed)
+	}
+	return fr.zr.Comment, nil
+}
+
 func (fr *reader) Options() *ReadOptions {
-	opts := new(ReadOptions)
-	*opts = fr.opts
+	opts := &ReadOptions{
+		BufSize:         fr.opts.BufSize,
+		Offset:          fr.opts.Offset,
+		Limit:           fr.opts.Limit,
+		Raw:             fr.opts.Raw,
+		ZipReaderAtFunc: fr.opts.ZipReaderAtFunc,
+	}
+	if len(fr.opts.ZipDcomp) > 0 {
+		opts.ZipDcomp = make(map[uint16]zip.Decompressor, len(fr.opts.ZipDcomp))
+		for method, dcomp := range fr.opts.ZipDcomp {
+			opts.ZipDcomp[method] = dcomp
+		}
+	}
 	return opts
 }
 
-// FileStat returns the io/fs.FileInfo structure describing file.
 func (fr *reader) FileStat() (info fs.FileInfo, err error) {
 	return fr.f.Stat()
 }
+
+// tarHeaderIsDir reports whether the tar header represents a directory.
+func tarHeaderIsDir(hdr *tar.Header) bool {
+	return hdr != nil &&
+		(hdr.Typeflag == '\x00' && len(hdr.Name) > 0 && hdr.Name[len(hdr.Name)-1] == '/' ||
+			hdr.FileInfo().IsDir())
+}
+
+// errorReader implements io.Reader and io.WriterTo.
+// Its methods always return 0 and report the specified error.
+type errorReader struct {
+	// Error reported by methods Write and ReadFrom.
+	err error
+}
+
+func (er *errorReader) Read([]byte) (n int, err error) {
+	return 0, errors.AutoWrap(er.err)
+}
+
+func (er *errorReader) WriteTo(io.Writer) (n int64, err error) {
+	return 0, errors.AutoWrap(er.err)
+}
+
+var (
+	isDirErrorReader   = &errorReader{err: ErrIsDir}
+	readZipErrorReader = &errorReader{err: ErrReadZip}
+	closedErrorReader  = &errorReader{err: ErrFileReaderClosed}
+)
