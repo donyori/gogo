@@ -54,21 +54,26 @@ var ErrSrcTooLarge = errors.AutoNewCustom(
 //
 // The decoding will stop when obtaining a 64-bit unsigned integer.
 // Subsequent content in src (if any) will be ignored.
-func DecodeUint64(src []byte) (u uint64, err error) {
+//
+// It also returns the number of bytes read from src (n).
+// If err is nil, n is exactly Uint64EncodedLen(u).
+// If err is not nil, n is 0.
+func DecodeUint64(src []byte) (u uint64, n int, err error) {
 	end := false
 	for _, b := range src {
+		n++
 		if b&0x80 == 0 {
 			u, end = u|uint64(b), true
 			break
 		}
 		u = u | uint64(b&0x7F) + 1
 		if u&0xFE00_0000_0000_0000 != 0 {
-			return 0, errors.AutoWrap(ErrSrcTooLarge)
+			return 0, 0, errors.AutoWrap(ErrSrcTooLarge)
 		}
 		u <<= 7
 	}
 	if !end {
-		return 0, errors.AutoWrap(ErrSrcIncomplete)
+		return 0, 0, errors.AutoWrap(ErrSrcIncomplete)
 	}
 	return
 }
@@ -80,12 +85,16 @@ func DecodeUint64(src []byte) (u uint64, err error) {
 //
 // The decoding will stop when obtaining a 64-bit signed integer.
 // Subsequent content in src (if any) will be ignored.
-func DecodeInt64(src []byte) (i int64, err error) {
-	u, err := DecodeUint64(src)
+//
+// It also returns the number of bytes read from src (n).
+// If err is nil, n is exactly Int64EncodedLen(i).
+// If err is not nil, n is 0.
+func DecodeInt64(src []byte) (i int64, n int, err error) {
+	u, n, err := DecodeUint64(src)
 	if err != nil {
-		return 0, errors.AutoWrap(err)
+		return 0, 0, errors.AutoWrap(err)
 	}
-	return uintconv.ToInt64Zigzag(u), nil
+	return uintconv.ToInt64Zigzag(u), n, nil
 }
 
 // DecodeFloat64 decodes src into a 64-bit floating-point number
@@ -98,10 +107,14 @@ func DecodeInt64(src []byte) (i int64, err error) {
 //
 // The decoding will stop when obtaining a 64-bit floating-point number.
 // Subsequent content in src (if any) will be ignored.
-func DecodeFloat64(src []byte) (f float64, err error) {
-	u, err := DecodeUint64(src)
+//
+// It also returns the number of bytes read from src (n).
+// If err is nil, n is exactly Float64EncodedLen(f).
+// If err is not nil, n is 0.
+func DecodeFloat64(src []byte) (f float64, n int, err error) {
+	u, n, err := DecodeUint64(src)
 	if err != nil {
-		return 0, errors.AutoWrap(err)
+		return 0, 0, errors.AutoWrap(err)
 	}
-	return uintconv.ToFloat64ByteReversal(u), nil
+	return uintconv.ToFloat64ByteReversal(u), n, nil
 }

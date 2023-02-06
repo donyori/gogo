@@ -23,10 +23,11 @@ package uintconv
 //
 // FromInt64Zigzag(ToInt64Zigzag(x)) == x.
 func FromInt64Zigzag(i int64) uint64 {
-	if i >= 0 {
-		return uint64(i) << 1
+	u := uint64(i) << 1
+	if i < 0 {
+		u = ^u
 	}
-	return (^uint64(i) << 1) | 1
+	return u
 }
 
 // ToInt64Zigzag maps a 64-bit unsigned integer back to
@@ -34,8 +35,9 @@ func FromInt64Zigzag(i int64) uint64 {
 //
 // ToInt64Zigzag(FromInt64Zigzag(x)) == x.
 func ToInt64Zigzag(u uint64) int64 {
-	if u&1 == 0 {
-		return int64(u >> 1)
+	i := int64(u >> 1)
+	if u&1 != 0 {
+		i = ^i
 	}
-	return ^int64(u >> 1)
+	return i
 }
