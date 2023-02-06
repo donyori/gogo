@@ -55,10 +55,10 @@ func ComparableEqual[T comparable](a, b T) bool {
 // it returns false rather than panicking.
 //
 // For more information about identical types,
-// see <https://golang.org/ref/spec#Type_identity>.
+// see <https://go.dev/ref/spec#Type_identity>.
 //
 // For more information about comparable types,
-// see <https://golang.org/ref/spec#Comparison_operators>.
+// see <https://go.dev/ref/spec#Comparison_operators>.
 var AnyEqual EqualFunc[any] = anyEqual
 
 // anyEqual is an implementation of function AnyEqual.

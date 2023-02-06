@@ -23,7 +23,7 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-const emptyQueuePanicMessage string = "job queue is empty"
+const emptyQueuePanicMessage = "job queue is empty"
 
 // fcfsJobQueueMaker is a maker for creating job queues with
 // FCFS (first come, first served) scheduling algorithm.
@@ -45,7 +45,6 @@ func NewFCFSJobQueueMaker[Job, Properties any]() jobsched.JobQueueMaker[Job, Pro
 	return fcfsJobQueueMaker[Job, Properties]{}
 }
 
-// New creates a new FCFS (first come, first served) job queue.
 func (m fcfsJobQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
 	return new(fcfsJobQueue[Job, Properties])
 }
@@ -53,15 +52,10 @@ func (m fcfsJobQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Propert
 // fcfsJobQueue is an FCFS (first come, first served) job queue.
 type fcfsJobQueue[Job, Properties any] []Job
 
-// Len returns the number of jobs in the queue.
 func (jq *fcfsJobQueue[Job, Properties]) Len() int {
 	return len(*jq)
 }
 
-// Enqueue adds metaJob into the queue.
-//
-// The framework guarantees that all items in metaJob are never nil
-// and have a non-zero creation time in their meta information.
 func (jq *fcfsJobQueue[Job, Properties]) Enqueue(metaJob ...*jobsched.MetaJob[Job, Properties]) {
 	if len(metaJob) == 0 {
 		return
@@ -73,9 +67,6 @@ func (jq *fcfsJobQueue[Job, Properties]) Enqueue(metaJob ...*jobsched.MetaJob[Jo
 	}
 }
 
-// Dequeue removes and returns a job in the queue.
-//
-// It panics if the queue is nil or empty.
 func (jq *fcfsJobQueue[Job, Properties]) Dequeue() Job {
 	if len(*jq) == 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))

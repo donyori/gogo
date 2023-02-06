@@ -69,7 +69,7 @@ type PriorityQueue[Item any] interface {
 	Clear()
 }
 
-const emptyQueuePanicMessage string = "priority queue is empty"
+const emptyQueuePanicMessage = "priority queue is empty"
 
 // priorityQueue is an implementation of interface PriorityQueue,
 // based on container/heap.
@@ -117,7 +117,6 @@ func New[Item any](lessFn compare.LessFunc[Item], data container.Container[Item]
 	return pq
 }
 
-// Len returns the number of items in the queue.
 func (pq *priorityQueue[Item]) Len() int {
 	return pq.oha.Len()
 }
@@ -135,14 +134,10 @@ func (pq *priorityQueue[Item]) Range(handler func(x Item) (cont bool)) {
 	pq.oha.Oda.Range(handler)
 }
 
-// Cap returns the current capacity of the queue.
 func (pq *priorityQueue[Item]) Cap() int {
 	return pq.oha.Oda.Cap()
 }
 
-// Enqueue adds items x into the queue.
-//
-// Time complexity: O(m log(m + n)), where m = len(x), n = pq.Len().
 func (pq *priorityQueue[Item]) Enqueue(x ...Item) {
 	if pq.oha.Len() < len(x) {
 		pq.oha.Oda.Append(array.SliceDynamicArray[Item](x))
@@ -154,11 +149,6 @@ func (pq *priorityQueue[Item]) Enqueue(x ...Item) {
 	}
 }
 
-// Dequeue removes and returns the highest-priority item in the queue.
-//
-// It panics if the queue is nil or empty.
-//
-// Time complexity: O(log n), where n = pq.Len().
 func (pq *priorityQueue[Item]) Dequeue() Item {
 	if pq.oha.Len() == 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))
@@ -166,12 +156,6 @@ func (pq *priorityQueue[Item]) Dequeue() Item {
 	return heap.Pop(pq.oha).(Item)
 }
 
-// Top returns the highest-priority item in the queue,
-// without modifying the queue.
-//
-// It panics if the queue is nil or empty.
-//
-// Time complexity: O(1).
 func (pq *priorityQueue[Item]) Top() Item {
 	if pq.oha.Len() == 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))
@@ -179,12 +163,6 @@ func (pq *priorityQueue[Item]) Top() Item {
 	return pq.oha.Oda.Front()
 }
 
-// ReplaceTop replaces the highest-priority item with newX and
-// returns the current highest-priority item.
-//
-// It panics if the queue is nil or empty.
-//
-// Time complexity: O(log n), where n = pq.Len().
 func (pq *priorityQueue[Item]) ReplaceTop(newX Item) Item {
 	if pq.oha.Len() == 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))
@@ -194,7 +172,6 @@ func (pq *priorityQueue[Item]) ReplaceTop(newX Item) Item {
 	return pq.oha.Oda.Front()
 }
 
-// Clear removes all items in the queue and asks to release the memory.
 func (pq *priorityQueue[Item]) Clear() {
 	pq.oha.Oda.Clear()
 }

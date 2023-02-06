@@ -104,7 +104,6 @@ func New[Item any](k int, lessFn compare.LessFunc[Item], data container.Containe
 	return tkb
 }
 
-// Len returns the number of items in the buffer.
 func (tkb *topKBuffer[Item]) Len() int {
 	return tkb.pq.Len()
 }
@@ -122,15 +121,10 @@ func (tkb *topKBuffer[Item]) Range(handler func(x Item) (cont bool)) {
 	tkb.pq.Range(handler)
 }
 
-// K returns the parameter K,
-// which limits the maximum number of items the buffer can hold.
 func (tkb *topKBuffer[Item]) K() int {
 	return tkb.k
 }
 
-// Add adds items x into the buffer.
-//
-// Time complexity: O(m log(m + n)), where m = len(x), n = tkb.Len().
 func (tkb *topKBuffer[Item]) Add(x ...Item) {
 	r := tkb.k - tkb.pq.Len()
 	if len(x) <= r {
@@ -147,9 +141,6 @@ func (tkb *topKBuffer[Item]) Add(x ...Item) {
 	}
 }
 
-// Drain pops all items and returns them in descending order.
-//
-// Time complexity: O(n log n), where n = tkb.Len().
 func (tkb *topKBuffer[Item]) Drain() []Item {
 	n := tkb.pq.Len()
 	if n == 0 {
@@ -162,7 +153,6 @@ func (tkb *topKBuffer[Item]) Drain() []Item {
 	return result
 }
 
-// Clear removes all items in the buffer and asks to release the memory.
 func (tkb *topKBuffer[Item]) Clear() {
 	tkb.pq.Clear()
 }

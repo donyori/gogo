@@ -99,9 +99,6 @@ func NewEncoder(w io.Writer, upper bool) Encoder {
 	}
 }
 
-// Write writes hexadecimal encoding of p to its destination writer.
-//
-// It conforms to interface io.Writer.
 func (enc *encoder) Write(p []byte) (n int, err error) {
 	buf := encodeBufferPool.Get().(*[sourceBufferLen * 2]byte)
 	defer encodeBufferPool.Put(buf)
@@ -119,9 +116,6 @@ func (enc *encoder) Write(p []byte) (n int, err error) {
 	return n, errors.AutoWrap(err)
 }
 
-// WriteByte writes hexadecimal encoding of c to its destination writer.
-//
-// It conforms to interface io.ByteWriter.
 func (enc *encoder) WriteByte(c byte) error {
 	buf := encodeBufferPool.Get().(*[sourceBufferLen * 2]byte)
 	defer encodeBufferPool.Put(buf)
@@ -131,9 +125,6 @@ func (enc *encoder) WriteByte(c byte) error {
 	return errors.AutoWrap(err)
 }
 
-// WriteString writes hexadecimal encoding of s to its destination writer.
-//
-// It conforms to interface io.StringWriter.
 func (enc *encoder) WriteString(s string) (n int, err error) {
 	buf := encodeBufferPool.Get().(*[sourceBufferLen * 2]byte)
 	defer encodeBufferPool.Put(buf)
@@ -151,10 +142,6 @@ func (enc *encoder) WriteString(s string) (n int, err error) {
 	return n, errors.AutoWrap(err)
 }
 
-// ReadFrom writes hexadecimal encoding of data read from r
-// to its destination writer.
-//
-// It conforms to interface io.ReaderFrom.
 func (enc *encoder) ReadFrom(r io.Reader) (n int64, err error) {
 	buf := sourceBufferPool.Get().(*[sourceBufferLen]byte)
 	defer sourceBufferPool.Put(buf)
@@ -180,7 +167,6 @@ func (enc *encoder) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 }
 
-// EncodeDst returns the destination writer of this encoder.
 func (enc *encoder) EncodeDst() io.Writer {
 	return enc.w
 }

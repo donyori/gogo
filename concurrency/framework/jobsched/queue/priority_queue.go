@@ -48,7 +48,6 @@ func NewPriorityFirstJobQueueMaker[Job, Properties any]() jobsched.JobQueueMaker
 	return priorityFirstJobQueueMaker[Job, Properties]{}
 }
 
-// New creates a new priority-first job queue.
 func (m priorityFirstJobQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
 	return &priorityJobQueue[Job, Properties]{
 		pq: pqueue.New(func(a, b *jobsched.MetaJob[Job, Properties]) bool {
@@ -83,7 +82,6 @@ func NewCreationTimeFirstJobQueueMaker[Job, Properties any]() jobsched.JobQueueM
 	return creationTimeFirstJobQueueMaker[Job, Properties]{}
 }
 
-// New creates a new creation-time-first job queue.
 func (m creationTimeFirstJobQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
 	return &priorityJobQueue[Job, Properties]{
 		pq: pqueue.New(func(a, b *jobsched.MetaJob[Job, Properties]) bool {
@@ -146,7 +144,6 @@ func NewJobPriorityQueueMaker[Job, Properties any](
 	return &jobPriorityQueueMaker[Job, Properties]{lessFn: lessFn}
 }
 
-// New creates a new job priority queue.
 func (m *jobPriorityQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
 	return &priorityJobQueue[Job, Properties]{
 		pq: pqueue.New(m.lessFn, nil),
@@ -163,15 +160,10 @@ type priorityJobQueue[Job, Properties any] struct {
 	pq pqueue.PriorityQueue[*jobsched.MetaJob[Job, Properties]]
 }
 
-// Len returns the number of jobs in the queue.
 func (jq *priorityJobQueue[Job, Properties]) Len() int {
 	return jq.pq.Len()
 }
 
-// Enqueue adds metaJob into the queue.
-//
-// The framework guarantees that all items in metaJob are never nil
-// and have a non-zero creation time in their meta information.
 func (jq *priorityJobQueue[Job, Properties]) Enqueue(metaJob ...*jobsched.MetaJob[Job, Properties]) {
 	if len(metaJob) == 0 {
 		return
@@ -179,9 +171,6 @@ func (jq *priorityJobQueue[Job, Properties]) Enqueue(metaJob ...*jobsched.MetaJo
 	jq.pq.Enqueue(metaJob...)
 }
 
-// Dequeue removes and returns a job in the queue.
-//
-// It panics if the queue is nil or empty.
 func (jq *priorityJobQueue[Job, Properties]) Dequeue() Job {
 	if jq.pq.Len() == 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))

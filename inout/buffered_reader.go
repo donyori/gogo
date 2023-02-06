@@ -120,116 +120,39 @@ func NewBufferedReaderSize(r io.Reader, size int) ResettableBufferedReader {
 	return &resettableBufferedReader{br}
 }
 
-// Read reads data into p.
-//
-// It returns the number of bytes read into p.
-// The bytes are taken from at most one Read on the underlying reader,
-// hence n may be less than len(p).
-//
-// To read exactly len(p) bytes, use io.ReadFull(b, p).
-// At EOF, the count will be zero and err will be io.EOF.
 func (rbr *resettableBufferedReader) Read(p []byte) (n int, err error) {
 	n, err = rbr.br.Read(p)
 	return n, errors.AutoWrap(err)
 }
 
-// ReadByte reads and returns a single byte.
-//
-// If no byte is available, returns an error.
 func (rbr *resettableBufferedReader) ReadByte() (byte, error) {
 	c, err := rbr.br.ReadByte()
 	return c, errors.AutoWrap(err)
 }
 
-// UnreadByte unreads the last byte.
-// Only the most recently read byte can be unread.
-//
-// UnreadByte returns an error if the most recent method called on the
-// reader was not a read operation.
-// Notably, Peek is not considered a read operation.
 func (rbr *resettableBufferedReader) UnreadByte() error {
 	return errors.AutoWrap(rbr.br.UnreadByte())
 }
 
-// ReadRune reads a single UTF-8 encoded Unicode character and
-// returns the rune and its size in bytes.
-//
-// If the encoded rune is invalid,
-// it consumes one byte and returns unicode.ReplacementChar (U+FFFD)
-// with a size of 1.
 func (rbr *resettableBufferedReader) ReadRune() (r rune, size int, err error) {
 	r, size, err = rbr.br.ReadRune()
 	return r, size, errors.AutoWrap(err)
 }
 
-// UnreadRune unreads the last rune.
-//
-// If the most recent method called on the reader was not a ReadRune,
-// UnreadRune returns an error.
-// (In this regard it is stricter than UnreadByte,
-// which will unread the last byte from any read operation.)
 func (rbr *resettableBufferedReader) UnreadRune() error {
 	return errors.AutoWrap(rbr.br.UnreadRune())
 }
 
-// WriteTo writes data to w until there's no more data to write or
-// when an error occurs.
-//
-// The return value n is the number of bytes written.
-// Any error encountered during the write is also returned.
-//
-// This may make multiple calls to the Read method of the underlying reader.
-//
-// If the underlying reader supports the WriteTo method,
-// this calls the underlying WriteTo without buffering.
 func (rbr *resettableBufferedReader) WriteTo(w io.Writer) (n int64, err error) {
 	n, err = rbr.br.WriteTo(w)
 	return n, errors.AutoWrap(err)
 }
 
-// ReadLine reads a line excluding the end-of-line bytes.
-//
-// If the line is too long for the buffer,
-// then more is set and the beginning of the line is returned.
-// The rest of the line will be returned from future calls.
-// more will be false when returning the last fragment of the line.
-//
-// It either returns a non-nil line or it returns an error, never both.
-// If an error (including io.EOF) occurs after reading some content,
-// it returns the content as a line and a nil error.
-// The error encountered will be reported on future read calls.
-//
-// No indication or error is given if the input ends
-// without a final line end.
-// Even if the input ends without end-of-line bytes,
-// the content before EOF is treated as a line.
-//
-// Caller should not keep the return value line,
-// and line is only valid until the next call to the reader,
-// including the method ReadLine and any other possible methods.
 func (rbr *resettableBufferedReader) ReadLine() (line []byte, more bool, err error) {
 	line, more, err = rbr.br.ReadLine()
 	return line, more, errors.AutoWrap(err)
 }
 
-// ReadEntireLine reads an entire line excluding the end-of-line bytes.
-//
-// It either returns a non-nil line or it returns an error, never both.
-// If an error (including io.EOF) occurs after reading some content,
-// it returns the content as a line and a nil error.
-// The error encountered will be reported on future read calls.
-//
-// No indication or error is given if the input ends
-// without a final line end.
-// Even if the input ends without end-of-line bytes,
-// the content before EOF is treated as a line.
-//
-// Unlike the method ReadLine of interface LineReader,
-// the returned line is always valid.
-// Caller can keep the returned line safely.
-//
-// If the line is too long to be stored in a []byte
-// (hardly happens in text files), it may panic or report an error.
 func (rbr *resettableBufferedReader) ReadEntireLine() (line []byte, err error) {
 	var parts [][]byte
 	var n int
@@ -258,22 +181,6 @@ func (rbr *resettableBufferedReader) ReadEntireLine() (line []byte, err error) {
 	return
 }
 
-// WriteLineTo reads a line excluding the end-of-line bytes
-// from its underlying reader and writes it to w.
-//
-// It stops writing data if an error occurs.
-//
-// It returns the number of bytes written to w and any error encountered.
-//
-// If an error (including io.EOF) occurs while reading from
-// the underlying reader, but some content has already been read,
-// it writes the content as a line and returns a nil error.
-// The error encountered will be reported on future read calls.
-//
-// No indication or error is given if the input ends
-// without a final line end.
-// Even if the input ends without end-of-line bytes,
-// the content before EOF is treated as a line.
 func (rbr *resettableBufferedReader) WriteLineTo(w io.Writer) (n int64, err error) {
 	errList, more := errors.NewErrorList(true), true
 	for more {
@@ -296,44 +203,24 @@ func (rbr *resettableBufferedReader) WriteLineTo(w io.Writer) (n int64, err erro
 	return // err must be nil.
 }
 
-// Size returns the size of the underlying buffer in bytes.
 func (rbr *resettableBufferedReader) Size() int {
 	return rbr.br.Size()
 }
 
-// Buffered returns the number of bytes
-// that can be read from the current buffer.
 func (rbr *resettableBufferedReader) Buffered() int {
 	return rbr.br.Buffered()
 }
 
-// Peek returns the next n bytes without advancing the reader.
-//
-// The bytes stop being valid at the next read call.
-// If it returns fewer than n bytes,
-// it also returns an error explaining why the read is short.
-// The error is bufio.ErrBufferFull if n is larger than its buffer size.
-// (To test whether err is bufio.ErrBufferFull, use function errors.Is.)
-//
-// Calling Peek prevents an UnreadByte or UnreadRune call from succeeding
-// until the next read operation.
 func (rbr *resettableBufferedReader) Peek(n int) (data []byte, err error) {
 	data, err = rbr.br.Peek(n)
 	return data, errors.AutoWrap(err)
 }
 
-// Discard skips the next n bytes and returns the number of bytes discarded.
-//
-// If it skips fewer than n bytes, it also returns an error explaining why.
-//
-// If 0 <= n <= Buffered(),
-// it is guaranteed to succeed without reading from the underlying reader.
 func (rbr *resettableBufferedReader) Discard(n int) (discarded int, err error) {
 	discarded, err = rbr.br.Discard(n)
 	return discarded, errors.AutoWrap(err)
 }
 
-// Reset resets all states and switches to read from r.
 func (rbr *resettableBufferedReader) Reset(r io.Reader) {
 	rbr.br.Reset(r)
 }

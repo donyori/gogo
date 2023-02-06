@@ -117,7 +117,6 @@ type broadcaster[Message any] struct {
 	dbs int           // Default buffer size.
 }
 
-// Closed reports whether the broadcaster is closed.
 func (b *broadcaster[Message]) Closed() bool {
 	if atomic.LoadInt32(&b.bs) > 0 {
 		// The broadcaster is executing the method Broadcast,
@@ -131,12 +130,6 @@ func (b *broadcaster[Message]) Closed() bool {
 	return b.coi.Test()
 }
 
-// Broadcast sends the message x to all subscribers.
-//
-// The method will block until all subscribers receive
-// or buffer the message.
-//
-// It will panic if the broadcaster is closed.
 func (b *broadcaster[Message]) Broadcast(x Message) {
 	b.m.Lock()
 	defer b.m.Unlock()
@@ -182,18 +175,6 @@ func (b *broadcaster[Message]) Broadcast(x Message) {
 	}
 }
 
-// Close closes the broadcaster.
-//
-// All channels assigned by the broadcaster will be closed to notify
-// its subscribers that there are no more messages.
-//
-// After calling the method Close, all subsequent calls to
-// the method Broadcast will panic.
-//
-// This method can take effect only once for one instance.
-// All calls after the first call will perform nothing.
-//
-// This method should only be used by the sender.
 func (b *broadcaster[Message]) Close() {
 	b.coi.Do(func() {
 		b.m.Lock()
@@ -205,14 +186,6 @@ func (b *broadcaster[Message]) Close() {
 	})
 }
 
-// Subscribe subscribes the broadcaster to get messages from the sender.
-//
-// bufSize is the buffer size of the returned channel.
-// 0 for no buffer.
-// Negative values for using the default buffer size.
-//
-// It returns a channel for receiving messages from the sender.
-// If the broadcaster is closed, it returns nil.
 func (b *broadcaster[Message]) Subscribe(bufSize int) <-chan Message {
 	if bufSize < 0 {
 		bufSize = b.dbs
@@ -232,19 +205,6 @@ func (b *broadcaster[Message]) Subscribe(bufSize int) <-chan Message {
 	return c
 }
 
-// Unsubscribe unsubscribes the broadcaster to stop receiving messages.
-//
-// c is the channel acquired by the method Subscribe.
-// It will panic if c is not gotten from the method Subscribe,
-// or c has already unsubscribed, unless the broadcaster is closed.
-// Note that this method may read messages from the channel c.
-// Set c to a channel not assigned by this broadcaster may cause data loss.
-//
-// After calling Unsubscribe, the channel c will be closed and drained
-// by the broadcaster.
-//
-// It returns all buffered and unreceived messages on the channel c
-// before unsubscribing, in order of the broadcaster sending them.
 func (b *broadcaster[Message]) Unsubscribe(c <-chan Message) []Message {
 	var r []Message
 	inC, unlocked := c, true

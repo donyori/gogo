@@ -63,7 +63,6 @@ func NewExponentialJobQueueMaker[Job, Properties any](n int, b float64) jobsched
 	return m
 }
 
-// New creates a new exponential job queue.
 func (m *exponentialJobQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
 	jq := &exponentialJobQueue[Job, Properties]{
 		b:  m.b,
@@ -92,15 +91,10 @@ type exponentialJobQueue[Job, Properties any] struct {
 	t float64
 }
 
-// Len returns the number of jobs in the queue.
 func (jq *exponentialJobQueue[Job, Properties]) Len() int {
 	return jq.pq.Len()
 }
 
-// Enqueue adds metaJob into the queue.
-//
-// The framework guarantees that all items in metaJob are never nil
-// and have a non-zero creation time in their meta information.
 func (jq *exponentialJobQueue[Job, Properties]) Enqueue(metaJob ...*jobsched.MetaJob[Job, Properties]) {
 	if len(metaJob) == 0 {
 		return
@@ -119,9 +113,6 @@ func (jq *exponentialJobQueue[Job, Properties]) Enqueue(metaJob ...*jobsched.Met
 	jq.pq.Enqueue(a...)
 }
 
-// Dequeue removes and returns a job in the queue.
-//
-// It panics if the queue is nil or empty.
 func (jq *exponentialJobQueue[Job, Properties]) Dequeue() Job {
 	n := jq.pq.Len()
 	if n == 0 {

@@ -298,14 +298,10 @@ func WrapArrayLessEqual[Item any](
 	}
 }
 
-// SetGoal sets the search goal.
-//
-// It will be called once at the beginning of the search functions.
 func (absa *arrayBinarySearchAdapter[Item]) SetGoal(goal Item) {
 	absa.goal = goal
 }
 
-// Len returns the number of items in the sequence.
 func (absa *arrayBinarySearchAdapter[Item]) Len() int {
 	if absa == nil || absa.data == nil {
 		return 0
@@ -313,24 +309,6 @@ func (absa *arrayBinarySearchAdapter[Item]) Len() int {
 	return absa.data.Len()
 }
 
-// Cmp compares the item with index i and the search goal.
-//
-// It returns an integer and a boolean indicator,
-// where the integer represents the item with index i is less than,
-// equal to, or greater than the search goal,
-// and the indicator reports whether the item with index i
-// is the search goal (only valid when the returned integer is 0).
-//
-// The returned integer is 0
-// if the item with index i is equal to the search goal.
-//
-// The returned integer is positive
-// if the item with index i is greater than the search goal.
-//
-// The returned integer is negative
-// if the item with index i is less than the search goal.
-//
-// It panics if i is out of range.
 func (absa *arrayBinarySearchAdapter[Item]) Cmp(i int) (lessEqualOrGreater int, isGoal bool) {
 	item := absa.data.Get(i)
 	if absa.lessFn(item, absa.goal) {

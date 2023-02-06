@@ -42,9 +42,12 @@ type Mutex interface {
 	//
 	// The client can acquire the lock by receiving a signal on this channel,
 	// which has the same effect as calling the method Lock, i.e.,
-	//  <-m.C()
+	//
+	//	<-m.C()
+	//
 	// is equivalent to
-	//  m.Lock()
+	//
+	//	m.Lock()
 	C() <-chan struct{}
 
 	// Locked reports whether the mutex is locked.
@@ -79,21 +82,10 @@ func (m *mutex) Unlock() {
 	}
 }
 
-// C returns the channel for acquiring the lock.
-//
-// The client can acquire the lock by receiving a signal on this channel,
-// which has the same effect as calling the method Lock, i.e.,
-//
-//	<-m.C()
-//
-// is equivalent to
-//
-//	m.Lock()
 func (m *mutex) C() <-chan struct{} {
 	return m.c
 }
 
-// Locked reports whether the mutex is locked.
 func (m *mutex) Locked() bool {
 	return len(m.c) == 0
 }

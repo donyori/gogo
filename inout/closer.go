@@ -47,13 +47,11 @@ func NewNoOpCloser() Closer {
 	return new(noOpCloser)
 }
 
-// Close does nothing and returns nil.
 func (noc *noOpCloser) Close() error {
 	noc.closed = true
 	return nil
 }
 
-// Closed reports whether the method Close has been called.
 func (noc *noOpCloser) Closed() bool {
 	return noc.closed
 }
@@ -79,9 +77,6 @@ func WrapNoErrorCloser(closer io.Closer) Closer {
 	return &noErrorCloser{c: closer}
 }
 
-// Close closes its underlying closer and returns error encountered.
-//
-// It does nothing and returns nil after the first successful call.
 func (nec *noErrorCloser) Close() error {
 	if nec.closed {
 		return nil
@@ -93,7 +88,6 @@ func (nec *noErrorCloser) Close() error {
 	return err // Don't wrap the error.
 }
 
-// Closed reports whether this closer is closed successfully.
 func (nec *noErrorCloser) Closed() bool {
 	return nec.closed
 }
@@ -145,9 +139,6 @@ func WrapErrorCloser(closer io.Closer, deviceName string, parentErr error) Close
 	}
 }
 
-// Close closes its underlying closer and returns error encountered.
-//
-// It does nothing and returns a *ClosedError after the first successful call.
 func (ec *errorCloser) Close() error {
 	if ec.closed {
 		return NewClosedError(ec.dn, ec.pe)
@@ -159,7 +150,6 @@ func (ec *errorCloser) Close() error {
 	return err // Don't wrap the error.
 }
 
-// Closed reports whether this closer is closed successfully.
 func (ec *errorCloser) Closed() bool {
 	return ec.closed
 }
@@ -251,20 +241,6 @@ func NewMultiCloser(tryAll, noError bool, closer ...io.Closer) MultiCloser {
 	return mc
 }
 
-// Close closes its closers sequentially from the last one to the first one.
-//
-// If the option tryAll is enabled, it will try to close all its closers,
-// regardless of whether any error occurs, and return all errors encountered.
-// (It returns an ErrorList if there are multiple errors.)
-//
-// If the option tryAll is disabled, when an error occurs,
-// it will stop closing other closers and return this error.
-//
-// If the option noError is enabled,
-// it will do nothing and return nil after the first successful call.
-//
-// If the option noError is disabled,
-// it will do nothing and return a *ClosedError after the first successful call.
 func (mc *multiCloser) Close() error {
 	if mc.idx == 0 {
 		var err error
@@ -302,17 +278,10 @@ func (mc *multiCloser) Close() error {
 	return el.ToError() // Don't wrap the error.
 }
 
-// Closed reports whether all its closers are closed successfully.
 func (mc *multiCloser) Closed() bool {
 	return mc.idx == 0
 }
 
-// CloserClosed reports whether the specified closer is closed successfully.
-//
-// It returns two boolean indicators:
-// closed reports whether the specified closer
-// has been successfully closed by this MultiCloser.
-// ok reports whether the specified closer is in this MultiCloser.
 func (mc *multiCloser) CloserClosed(closer io.Closer) (closed, ok bool) {
 	closed, ok = mc.cm[closer]
 	return

@@ -148,34 +148,18 @@ type controller[Message any] struct {
 	lnchCommMaps []map[string]Communicator[Message]
 }
 
-// QuitChan returns the channel for the quit signal.
-// When the job is finished or quit, this channel will be closed
-// to broadcast the quit signal.
 func (ctrl *controller[Message]) QuitChan() <-chan struct{} {
 	return ctrl.qd.QuitChan()
 }
 
-// IsQuit detects the quit signal on the quit channel.
-// It returns true if a quit signal is detected, and false otherwise.
 func (ctrl *controller[Message]) IsQuit() bool {
 	return ctrl.qd.IsQuit()
 }
 
-// Quit broadcasts a quit signal to quit the job.
-//
-// This method will NOT wait until the job ends.
 func (ctrl *controller[Message]) Quit() {
 	ctrl.qd.Quit()
 }
 
-// Launch starts the job.
-//
-// This method will NOT wait until the job ends.
-// Use method Wait if you want to wait for that.
-//
-// Note that Launch can take effect only once.
-// To do the same job again, create a new Controller
-// with the same parameters.
 func (ctrl *controller[Message]) Launch() {
 	ctrl.lnchOi.Do(func() {
 		n, commMaps := len(ctrl.world.comms), ctrl.lnchCommMaps
@@ -199,10 +183,6 @@ func (ctrl *controller[Message]) Launch() {
 	})
 }
 
-// Wait waits for the job to finish or quit.
-// It returns the number of panic goroutines.
-//
-// If the job was not launched, it does nothing and returns -1.
 func (ctrl *controller[Message]) Wait() int {
 	if !ctrl.lnchOi.Test() {
 		return -1
@@ -217,24 +197,15 @@ func (ctrl *controller[Message]) Wait() int {
 	return ctrl.pr.Len()
 }
 
-// Run launches the job and waits for it.
-// It returns the number of panic goroutines.
 func (ctrl *controller[Message]) Run() int {
 	ctrl.Launch()
 	return ctrl.Wait()
 }
 
-// NumGoroutine returns the number of goroutines to process this job.
-//
-// Note that it only includes the main goroutines to process the job.
-// Any possible control goroutines, daemon goroutines, auxiliary goroutines,
-// or the goroutines launched in the client's business functions
-// are all excluded.
 func (ctrl *controller[Message]) NumGoroutine() int {
 	return len(ctrl.world.comms)
 }
 
-// PanicRecords returns a list of the panic records.
 func (ctrl *controller[Message]) PanicRecords() []framework.PanicRecord {
 	return ctrl.pr.List()
 }

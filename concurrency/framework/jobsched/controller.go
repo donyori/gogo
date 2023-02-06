@@ -157,34 +157,18 @@ type controller[Job, Properties any] struct {
 	lsi  bool                      // An indicator to report whether the method Launch is started.
 }
 
-// QuitChan returns the channel for the quit signal.
-// When the job is finished or quit, this channel will be closed
-// to broadcast the quit signal.
 func (ctrl *controller[Job, Properties]) QuitChan() <-chan struct{} {
 	return ctrl.qd.QuitChan()
 }
 
-// IsQuit detects the quit signal on the quit channel.
-// It returns true if a quit signal is detected, and false otherwise.
 func (ctrl *controller[Job, Properties]) IsQuit() bool {
 	return ctrl.qd.IsQuit()
 }
 
-// Quit broadcasts a quit signal to quit the job.
-//
-// This method will NOT wait until the job ends.
 func (ctrl *controller[Job, Properties]) Quit() {
 	ctrl.qd.Quit()
 }
 
-// Launch starts the job.
-//
-// This method will NOT wait until the job ends.
-// Use method Wait if you want to wait for that.
-//
-// Note that Launch can take effect only once.
-// To do the same job again, create a new Controller
-// with the same parameters.
 func (ctrl *controller[Job, Properties]) Launch() {
 	ctrl.loi.Do(func() {
 		ctrl.m.Lock()
@@ -223,10 +207,6 @@ func (ctrl *controller[Job, Properties]) Launch() {
 	})
 }
 
-// Wait waits for the job to finish or quit.
-// It returns the number of panic goroutines.
-//
-// If the job was not launched, it does nothing and returns -1.
 func (ctrl *controller[Job, Properties]) Wait() int {
 	if !ctrl.loi.Test() {
 		return -1
@@ -237,42 +217,19 @@ func (ctrl *controller[Job, Properties]) Wait() int {
 	return ctrl.pr.Len()
 }
 
-// Run launches the job and waits for it.
-// It returns the number of panic goroutines.
 func (ctrl *controller[Job, Properties]) Run() int {
 	ctrl.Launch()
 	return ctrl.Wait()
 }
 
-// NumGoroutine returns the number of goroutines to process this job.
-//
-// Note that it only includes the main goroutines to process the job.
-// Any possible control goroutines, daemon goroutines, auxiliary goroutines,
-// or the goroutines launched in the client's business functions
-// are all excluded.
 func (ctrl *controller[Job, Properties]) NumGoroutine() int {
 	return ctrl.n
 }
 
-// PanicRecords returns a list of the panic records.
 func (ctrl *controller[Job, Properties]) PanicRecords() []framework.PanicRecord {
 	return ctrl.pr.List()
 }
 
-// Input enables the client to input new jobs.
-//
-// If an item in metaJob is nil, it will be treated as a zero-value job
-// (with the field Job to its zero value, Meta.Priority to 0,
-// Meta.CreationTime to time.Now(), and Meta.Custom to its zero value).
-// If an item in metaJob has the field Meta.CreationTime with a zero value,
-// this field will be set to time.Now().
-//
-// It returns the number of jobs input successfully.
-//
-// The client can input new jobs before the first effective call to
-// the method Wait (i.e., the call after invoking the method Launch).
-// After calling the method Wait, Input will do nothing and return 0.
-// Note that the method Run will call Wait inside.
 func (ctrl *controller[Job, Properties]) Input(metaJob ...*MetaJob[Job, Properties]) int {
 	if ctrl.wsoi.Test() {
 		return 0

@@ -65,7 +65,6 @@ func New[Item comparable](capacity int, items container.Container[Item]) set.Set
 	return &mapSet[Item]{m: m}
 }
 
-// Len returns the number of items in the set.
 func (ms *mapSet[Item]) Len() int {
 	return len(ms.m)
 }
@@ -87,13 +86,11 @@ func (ms *mapSet[Item]) Range(handler func(x Item) (cont bool)) {
 	}
 }
 
-// ContainsItem reports whether the item x is in the set.
 func (ms *mapSet[Item]) ContainsItem(x Item) bool {
 	_, ok := ms.m[x]
 	return ok
 }
 
-// ContainsSet reports whether the set s is a subset of this set.
 func (ms *mapSet[Item]) ContainsSet(s set.Set[Item]) bool {
 	if s == nil {
 		return true
@@ -113,9 +110,6 @@ func (ms *mapSet[Item]) ContainsSet(s set.Set[Item]) bool {
 	return ok
 }
 
-// ContainsAny reports whether any item in c is in this set.
-//
-// If c is nil or empty, it returns false.
 func (ms *mapSet[Item]) ContainsAny(c container.Container[Item]) bool {
 	if c == nil || c.Len() == 0 {
 		return false
@@ -128,25 +122,18 @@ func (ms *mapSet[Item]) ContainsAny(c container.Container[Item]) bool {
 	return ok
 }
 
-// Add adds x to the set.
 func (ms *mapSet[Item]) Add(x ...Item) {
 	for _, item := range x {
 		ms.m[item] = v
 	}
 }
 
-// Remove removes x from the set.
-// It does nothing for the items in x that are not in the set.
 func (ms *mapSet[Item]) Remove(x ...Item) {
 	for _, item := range x {
 		delete(ms.m, item)
 	}
 }
 
-// Union adds the items in s to this set.
-// That is, perform the following assignment:
-//
-//	thisSet = thisSet ∪ s
 func (ms *mapSet[Item]) Union(s set.Set[Item]) {
 	if s == nil || s.Len() == 0 {
 		return
@@ -157,10 +144,6 @@ func (ms *mapSet[Item]) Union(s set.Set[Item]) {
 	})
 }
 
-// Intersect removes the items not in s.
-// That is, perform the following assignment:
-//
-//	thisSet = thisSet ∩ s
 func (ms *mapSet[Item]) Intersect(s set.Set[Item]) {
 	if s == nil || s.Len() == 0 {
 		ms.m = make(map[Item]struct{})
@@ -173,10 +156,6 @@ func (ms *mapSet[Item]) Intersect(s set.Set[Item]) {
 	}
 }
 
-// Subtract removes the items in s.
-// That is, perform the following assignment:
-//
-//	thisSet = thisSet \ s
 func (ms *mapSet[Item]) Subtract(s set.Set[Item]) {
 	if s == nil || s.Len() == 0 {
 		return
@@ -187,11 +166,6 @@ func (ms *mapSet[Item]) Subtract(s set.Set[Item]) {
 	})
 }
 
-// DisjunctiveUnion removes the items both in s and this set and
-// adds the items only in s.
-// That is, perform the following assignment:
-//
-//	thisSet = thisSet △ s
 func (ms *mapSet[Item]) DisjunctiveUnion(s set.Set[Item]) {
 	if s == nil || s.Len() == 0 {
 		return
@@ -206,7 +180,6 @@ func (ms *mapSet[Item]) DisjunctiveUnion(s set.Set[Item]) {
 	})
 }
 
-// Clear removes all items in the set and asks to release the memory.
 func (ms *mapSet[Item]) Clear() {
 	ms.m = make(map[Item]struct{})
 }
