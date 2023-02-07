@@ -26,11 +26,16 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-var errorsForErrorReadOnlySet [][]error // It will be set in function init.
+var (
+	errorsForErrorReadOnlySet       [][]error
+	anotherErrorForErrorReadOnlySet error
+)
 
 func init() {
+	anotherErrorForErrorReadOnlySet = stderrors.New("another error")
+
 	const N int = 3
-	errorsForErrorReadOnlySet = make([][]error, 4)
+	errorsForErrorReadOnlySet = make([][]error, 5)
 	errorsForErrorReadOnlySet[0] = make([]error, N)
 	for i := 0; i < N; i++ {
 		errorsForErrorReadOnlySet[0][i] = fmt.Errorf("test error %d", i)
@@ -46,6 +51,14 @@ func init() {
 		errorsForErrorReadOnlySet[2][i*2+1] = &errorIsAlwaysTrue{errorsForErrorReadOnlySet[1][i*2]}
 		errorsForErrorReadOnlySet[3][i*2] = &errorIsAlwaysFalse{errorsForErrorReadOnlySet[0][i]}
 		errorsForErrorReadOnlySet[3][i*2+1] = &errorIsAlwaysFalse{errorsForErrorReadOnlySet[1][i*2]}
+	}
+	errorsForErrorReadOnlySet[4] = make([]error, N)
+	for i := 0; i < N; i++ {
+		errorsForErrorReadOnlySet[4][i] = stderrors.Join(
+			errorsForErrorReadOnlySet[1][i*2],
+			errorsForErrorReadOnlySet[3][i*2],
+			anotherErrorForErrorReadOnlySet,
+		)
 	}
 }
 
@@ -81,7 +94,7 @@ func TestErrorReadOnlySetEqual_Contains(t *testing.T) {
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
-	testCases := make([]errorReadOnlySetContainsCase, 0, len(setErrs)*5+1)
+	testCases := make([]errorReadOnlySetContainsCase, 0, len(setErrs)*7+1)
 	for _, err := range setErrs {
 		testCases = append(
 			testCases,
@@ -90,6 +103,8 @@ func TestErrorReadOnlySetEqual_Contains(t *testing.T) {
 			errorReadOnlySetContainsCase{&errorUnwrap{err}, false},
 			errorReadOnlySetContainsCase{&errorIsAlwaysTrue{err}, false},
 			errorReadOnlySetContainsCase{&errorIsAlwaysFalse{err}, false},
+			errorReadOnlySetContainsCase{anotherErrorForErrorReadOnlySet, false},
+			errorReadOnlySetContainsCase{stderrors.Join(anotherErrorForErrorReadOnlySet, err), false},
 		)
 	}
 	testCases = append(testCases, errorReadOnlySetContainsCase{}) // {nil, false}
@@ -154,7 +169,7 @@ func TestErrorReadOnlySetIs_Contains(t *testing.T) {
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
-	testCases := make([]errorReadOnlySetContainsCase, 0, len(setErrs)*5+4)
+	testCases := make([]errorReadOnlySetContainsCase, 0, len(setErrs)*7+5)
 	for _, err := range setErrs {
 		testCases = append(
 			testCases,
@@ -162,8 +177,10 @@ func TestErrorReadOnlySetIs_Contains(t *testing.T) {
 			errorReadOnlySetContainsCase{stderrors.New(err.Error()), false},
 			errorReadOnlySetContainsCase{&errorUnwrap{err}, true},
 			errorReadOnlySetContainsCase{&errorIsAlwaysTrue{err}, true},
-			// When method Is returns false, errors.Is will continue testing along the Unwrap error chain rather than return false.
+			// When method Is returns false, errors.Is will continue testing along the Unwrap error tree rather than return false.
 			errorReadOnlySetContainsCase{&errorIsAlwaysFalse{err}, true},
+			errorReadOnlySetContainsCase{anotherErrorForErrorReadOnlySet, false},
+			errorReadOnlySetContainsCase{stderrors.Join(anotherErrorForErrorReadOnlySet, err), true},
 		)
 	}
 	err := stderrors.New("test error +1")
@@ -173,6 +190,7 @@ func TestErrorReadOnlySetIs_Contains(t *testing.T) {
 		errorReadOnlySetContainsCase{&errorUnwrap{err}, false},
 		errorReadOnlySetContainsCase{&errorIsAlwaysTrue{err}, true},
 		errorReadOnlySetContainsCase{&errorIsAlwaysFalse{err}, false},
+		errorReadOnlySetContainsCase{stderrors.Join(anotherErrorForErrorReadOnlySet, err), false},
 	)
 
 	for i, tc := range testCases {
@@ -239,7 +257,7 @@ func TestErrorReadOnlySetSameMessage_Contains(t *testing.T) {
 			msgSet[err.Error()] = true
 		}
 	}
-	testCases := make([]errorReadOnlySetContainsCase, 0, len(setErrs)*5+1)
+	testCases := make([]errorReadOnlySetContainsCase, 0, len(setErrs)*7+1)
 	for _, err := range setErrs {
 		eu, et, ef := &errorUnwrap{err}, &errorIsAlwaysTrue{err}, &errorIsAlwaysFalse{err}
 		testCases = append(
@@ -249,6 +267,8 @@ func TestErrorReadOnlySetSameMessage_Contains(t *testing.T) {
 			errorReadOnlySetContainsCase{eu, msgSet[eu.Error()]},
 			errorReadOnlySetContainsCase{et, msgSet[et.Error()]},
 			errorReadOnlySetContainsCase{ef, msgSet[ef.Error()]},
+			errorReadOnlySetContainsCase{anotherErrorForErrorReadOnlySet, false},
+			errorReadOnlySetContainsCase{stderrors.Join(anotherErrorForErrorReadOnlySet, err), false},
 		)
 	}
 	testCases = append(testCases, errorReadOnlySetContainsCase{}) // {nil, false}

@@ -24,7 +24,7 @@ package errors
 // ErrorUnwrap is an error with method Unwrap,
 // to simplify working with errors that contain other errors since Go 1.13.
 //
-// For more details, see <https://blog.golang.org/go1.13-errors>.
+// For more details, see <https://go.dev/blog/go1.13-errors>.
 type ErrorUnwrap interface {
 	error
 
@@ -35,13 +35,29 @@ type ErrorUnwrap interface {
 	Unwrap() error
 }
 
+// ErrorUnwrapMultiple is an error with method Unwrap
+// that returns multiple errors.
+//
+// Since Go 1.20, the standard library expands support for error wrapping
+// to permit an error to wrap multiple other errors.
+// For more details, see <https://go.dev/doc/go1.20#errors>.
+type ErrorUnwrapMultiple interface {
+	error
+
+	// Unwrap returns a list of the contained errors.
+	// It permits an error to wrap multiple other errors.
+	//
+	// The []error returned should not contain any nil-value error.
+	Unwrap() []error
+}
+
 // ErrorIs is an error with method Is, to custom the behavior of errors.Is.
 //
-// For more details, see <https://blog.golang.org/go1.13-errors>.
+// For more details, see <https://go.dev/blog/go1.13-errors>.
 type ErrorIs interface {
 	error
 
-	// Is reports whether any error in its Unwrap error chain matches target.
+	// Is reports whether any error in its Unwrap error tree matches target.
 	//
 	// See errors.Is for detail.
 	Is(target error) bool
@@ -49,11 +65,11 @@ type ErrorIs interface {
 
 // ErrorAs is an error with method As, to custom the behavior of errors.As.
 //
-// For more details, see <https://blog.golang.org/go1.13-errors>.
+// For more details, see <https://go.dev/blog/go1.13-errors>.
 type ErrorAs interface {
 	error
 
-	// As finds the first error in its Unwrap error chain that matches target,
+	// As finds the first error in its Unwrap error tree that matches target,
 	// and if so, sets target to that error value and returns true.
 	// Otherwise, it returns false.
 	//

@@ -34,7 +34,7 @@ import (
 // report them after exiting the process.
 // Therefore, it only supports append operation, not delete operation.
 type ErrorList interface {
-	error
+	ErrorUnwrapMultiple
 
 	// Len returns the number of errors in the error list.
 	Len() int
@@ -81,6 +81,7 @@ type errorList struct {
 //
 // ignoreNil indicates whether the ErrorList ignores nil errors.
 // If ignoreNil is true, the ErrorList will discard all nil errors.
+//
 // err is errors added to the ErrorList initially.
 func NewErrorList(ignoreNil bool, err ...error) ErrorList {
 	el := &errorList{ignoreNil: ignoreNil}
@@ -132,12 +133,33 @@ func (el *errorList) Error() string {
 	return builder.String()
 }
 
-// Len returns the number of errors in the error list.
+// Unwrap is like ToList, but drops nil-value errors.
+func (el *errorList) Unwrap() []error {
+	if el.ignoreNil {
+		return el.ToList()
+	}
+	var n int
+	for _, err := range el.list {
+		if err != nil {
+			n++
+		}
+	}
+	if n == 0 {
+		return nil
+	}
+	errs := make([]error, 0, n)
+	for _, err := range el.list {
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errs
+}
+
 func (el *errorList) Len() int {
 	return len(el.list)
 }
 
-// Erroneous reports whether the error list contains non-nil errors.
 func (el *errorList) Erroneous() bool {
 	if el.ignoreNil {
 		return len(el.list) > 0
@@ -150,23 +172,15 @@ func (el *errorList) Erroneous() bool {
 	return false
 }
 
-// ToList returns a copy of the list of errors, as type []error.
-//
-// If there is no errors in the list, it returns nil.
 func (el *errorList) ToList() []error {
 	if len(el.list) == 0 {
 		return nil
 	}
-	errs := make([]error, len(el.list)) // Explicitly set the capacity of the slice to len(el.list).
+	errs := make([]error, len(el.list))
 	copy(errs, el.list)
 	return errs
 }
 
-// ToError returns a necessary error.
-//
-// If there is no error, it returns nil.
-// If there is only one item, it returns this item.
-// Otherwise, it returns the error list itself.
 func (el *errorList) ToError() error {
 	switch len(el.list) {
 	case 0:
@@ -178,11 +192,6 @@ func (el *errorList) ToError() error {
 	}
 }
 
-// Range calls handler on all items in the list one by one.
-//
-// handler has two parameters: i (the index of the error) and
-// err (the error value),
-// and returns an indicator cont to report whether to continue the iteration.
 func (el *errorList) Range(handler func(i int, err error) (cont bool)) {
 	for i, err := range el.list {
 		if !handler(i, err) {
@@ -191,7 +200,6 @@ func (el *errorList) Range(handler func(i int, err error) (cont bool)) {
 	}
 }
 
-// Append appends err to the error list.
 func (el *errorList) Append(err ...error) {
 	for _, e := range err {
 		if e != nil || !el.ignoreNil {
@@ -200,10 +208,6 @@ func (el *errorList) Append(err ...error) {
 	}
 }
 
-// Deduplicate removes duplicate and nil errors.
-//
-// An error is regarded as duplicate if its method Error returns
-// the same string as that of a previous error.
 func (el *errorList) Deduplicate() {
 	if len(el.list) == 0 {
 		return

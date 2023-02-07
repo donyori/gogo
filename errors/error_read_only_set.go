@@ -48,7 +48,7 @@ type ErrorReadOnlySet interface {
 // An error is regarded as "belonging to" this set
 // if it is equal to any item in this set.
 type errorReadOnlySetEqual struct {
-	set map[error]bool
+	errSet map[error]struct{}
 }
 
 // NewErrorReadOnlySetEqual creates a new ErrorReadOnlySet.
@@ -56,16 +56,15 @@ type errorReadOnlySetEqual struct {
 // The returned set regards that an error "belongs to" it
 // if the error is equal to any item in this set.
 func NewErrorReadOnlySetEqual(err ...error) ErrorReadOnlySet {
-	erose := &errorReadOnlySetEqual{make(map[error]bool, len(err))}
+	erose := &errorReadOnlySetEqual{errSet: make(map[error]struct{}, len(err))}
 	for _, e := range err {
-		erose.set[e] = true
+		erose.errSet[e] = setMapV
 	}
 	return erose
 }
 
-// Len returns the number of errors in the error set.
 func (erose *errorReadOnlySetEqual) Len() int {
-	return len(erose.set)
+	return len(erose.errSet)
 }
 
 // Contains reports whether err belongs to this error set.
@@ -73,15 +72,12 @@ func (erose *errorReadOnlySetEqual) Len() int {
 // err is regarded as "belonging to" this set
 // if it is equal to any item in this set.
 func (erose *errorReadOnlySetEqual) Contains(err error) bool {
-	return erose.set[err]
+	_, ok := erose.errSet[err]
+	return ok
 }
 
-// Range calls handler on all items in the set.
-//
-// handler has one parameter: err (the error value),
-// and returns an indicator cont to report whether to continue the iteration.
 func (erose *errorReadOnlySetEqual) Range(handler func(err error) (cont bool)) {
-	for err := range erose.set {
+	for err := range erose.errSet {
 		if !handler(err) {
 			return
 		}
@@ -93,8 +89,7 @@ func (erose *errorReadOnlySetEqual) Range(handler func(err error) (cont bool)) {
 // An error err is regarded as "belonging to" this set
 // if there is an item x in this set such that errors.Is(err, x) returns true.
 type errorReadOnlySetIs struct {
-	set map[error]map[error]bool
-	cis map[error]bool // a set of errors that have custom Is method along the Unwrap error chain
+	errs []error
 }
 
 // NewErrorReadOnlySetIs creates a new ErrorReadOnlySet.
@@ -102,46 +97,19 @@ type errorReadOnlySetIs struct {
 // The returned set regards that an error err "belongs to" it
 // if there is an item x in this set such that errors.Is(err, x) returns true.
 func NewErrorReadOnlySetIs(err ...error) ErrorReadOnlySet {
-	erosi := &errorReadOnlySetIs{set: make(map[error]map[error]bool, len(err))}
+	errSet := make(map[error]struct{}, len(err))
 	for _, e := range err {
-		var hasIs bool
-		if _, ok := e.(ErrorIs); ok {
-			hasIs = true
-		}
-		root := e
-		for tmp := stderrors.Unwrap(e); tmp != nil; tmp = stderrors.Unwrap(tmp) {
-			root = tmp
-			if !hasIs {
-				if _, ok := tmp.(ErrorIs); ok {
-					hasIs = true
-				}
-			}
-		}
-		subset := erosi.set[root]
-		if subset == nil {
-			subset = map[error]bool{e: true}
-			erosi.set[root] = subset
-		} else {
-			subset[e] = true
-		}
-		if hasIs {
-			if erosi.cis == nil {
-				erosi.cis = map[error]bool{e: true}
-			} else {
-				erosi.cis[e] = true
-			}
-		}
+		errSet[e] = setMapV
+	}
+	erosi := &errorReadOnlySetIs{errs: make([]error, 0, len(errSet))}
+	for e := range errSet {
+		erosi.errs = append(erosi.errs, e)
 	}
 	return erosi
 }
 
-// Len returns the number of errors in the error set.
 func (erosi *errorReadOnlySetIs) Len() int {
-	var n int
-	for _, subset := range erosi.set {
-		n += len(subset)
-	}
-	return n
+	return len(erosi.errs)
 }
 
 // Contains reports whether err belongs to this error set.
@@ -149,35 +117,18 @@ func (erosi *errorReadOnlySetIs) Len() int {
 // err is regarded as "belonging to" this set if there is an item x
 // in this set such that errors.Is(err, x) returns true.
 func (erosi *errorReadOnlySetIs) Contains(err error) bool {
-	root := err
-	for tmp := stderrors.Unwrap(err); tmp != nil; tmp = stderrors.Unwrap(tmp) {
-		root = tmp
-	}
-	subset := erosi.set[root]
-	for x := range subset {
-		if stderrors.Is(err, x) {
-			return true
-		}
-	}
-	for x := range erosi.cis {
-		if (subset == nil || !subset[x]) && stderrors.Is(err, x) {
+	for _, target := range erosi.errs {
+		if stderrors.Is(err, target) {
 			return true
 		}
 	}
 	return false
 }
 
-// Range calls handler on all items in the set.
-//
-// handler has one parameter: err (the error value),
-// and returns an indicator cont to report
-// whether to continue the iteration.
 func (erosi *errorReadOnlySetIs) Range(handler func(err error) (cont bool)) {
-	for _, subset := range erosi.set {
-		for err := range subset {
-			if !handler(err) {
-				return
-			}
+	for _, err := range erosi.errs {
+		if !handler(err) {
+			return
 		}
 	}
 }
@@ -190,7 +141,7 @@ func (erosi *errorReadOnlySetIs) Range(handler func(err error) (cont bool)) {
 //
 // In particular, the message of nil error is considered "<nil>".
 type errorReadOnlySetSameMessage struct {
-	set map[string]map[error]bool
+	errsSet map[string][]error
 }
 
 // NewErrorReadOnlySetSameMessage creates a new ErrorReadOnlySet.
@@ -200,28 +151,37 @@ type errorReadOnlySetSameMessage struct {
 //
 // In particular, the message of nil error is considered "<nil>".
 func NewErrorReadOnlySetSameMessage(err ...error) ErrorReadOnlySet {
-	erossm := &errorReadOnlySetSameMessage{make(map[string]map[error]bool, len(err))}
+	errSetMap := make(map[string]map[error]struct{}, len(err))
 	for _, e := range err {
 		msg := "<nil>"
 		if e != nil {
 			msg = e.Error()
 		}
-		subset := erossm.set[msg]
-		if subset == nil {
-			subset = map[error]bool{e: true}
-			erossm.set[msg] = subset
+		set := errSetMap[msg]
+		if set == nil {
+			set = map[error]struct{}{e: setMapV}
+			errSetMap[msg] = set
 		} else {
-			subset[e] = true
+			set[e] = setMapV
 		}
+	}
+	erossm := &errorReadOnlySetSameMessage{
+		errsSet: make(map[string][]error, len(errSetMap)),
+	}
+	for k, set := range errSetMap {
+		errs := make([]error, 0, len(set))
+		for e := range set {
+			errs = append(errs, e)
+		}
+		erossm.errsSet[k] = errs
 	}
 	return erossm
 }
 
-// Len returns the number of errors in the error set.
 func (erossm *errorReadOnlySetSameMessage) Len() int {
 	var n int
-	for _, subset := range erossm.set {
-		n += len(subset)
+	for _, errs := range erossm.errsSet {
+		n += len(errs)
 	}
 	return n
 }
@@ -234,22 +194,21 @@ func (erossm *errorReadOnlySetSameMessage) Len() int {
 // In particular, the message of nil error is considered "<nil>".
 func (erossm *errorReadOnlySetSameMessage) Contains(err error) bool {
 	if err == nil {
-		return erossm.set["<nil>"] != nil
+		return erossm.errsSet["<nil>"] != nil
 	}
-	return erossm.set[err.Error()] != nil
+	return erossm.errsSet[err.Error()] != nil
 }
 
-// Range calls handler on all items in the set.
-//
-// handler has one parameter: err (the error value),
-// and returns an indicator cont to report
-// whether to continue the iteration.
 func (erossm *errorReadOnlySetSameMessage) Range(handler func(err error) (cont bool)) {
-	for _, subset := range erossm.set {
-		for err := range subset {
+	for _, errs := range erossm.errsSet {
+		for _, err := range errs {
 			if !handler(err) {
 				return
 			}
 		}
 	}
 }
+
+// setMapV is the value for map[Type]struct{}.
+// May be redundant.
+var setMapV = struct{}{}
