@@ -41,7 +41,7 @@ var dataList = [][]int{
 	{0, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5},
 }
 
-var dataSetList []map[int]bool // It will be set in function init.
+var dataSetList []map[int]bool // it will be set in function init
 
 func init() {
 	dataSetList = make([]map[int]bool, len(dataList))
@@ -114,6 +114,49 @@ func TestMapSet_Range(t *testing.T) {
 				} else if ctr < 0 {
 					t.Errorf("too many accesses to %d", x)
 				}
+			}
+		})
+	}
+}
+
+func TestMapSet_Filter(t *testing.T) {
+	filterList := []func(x int) (keep bool){
+		func(x int) (keep bool) {
+			return x > 1
+		},
+		func(x int) (keep bool) {
+			return x%2 == 0
+		},
+	}
+
+	testCases := make([]struct {
+		data      []int
+		filterIdx int
+		want      map[int]bool
+	}, len(dataList)*len(filterList))
+	var idx int
+	for _, data := range dataList {
+		for filterIdx, filter := range filterList {
+			testCases[idx].data = data
+			testCases[idx].filterIdx = filterIdx
+			for _, x := range data {
+				if filter(x) {
+					if testCases[idx].want == nil {
+						testCases[idx].want = make(map[int]bool, len(data))
+					}
+					testCases[idx].want[x] = true
+				}
+			}
+			idx++
+		}
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("data=%s&filterIdx=%d", sliceToName(tc.data), tc.filterIdx), func(t *testing.T) {
+			ms := mapset.New[int](0, array.SliceDynamicArray[int](tc.data))
+			ms.Filter(filterList[tc.filterIdx])
+			if setWrong(ms, tc.want) {
+				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
 			}
 		})
 	}

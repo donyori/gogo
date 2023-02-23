@@ -25,6 +25,7 @@ import "github.com/donyori/gogo/container"
 // Set should guarantee to contain no duplicate items.
 type Set[Item any] interface {
 	container.Container[Item]
+	container.Filter[Item]
 
 	// ContainsItem reports whether the item x is in the set.
 	ContainsItem(x Item) bool

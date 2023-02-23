@@ -117,6 +117,30 @@ func (sda SliceDynamicArray[Item]) Slice(begin, end int) Array[Item] {
 	return sda[begin:end:end]
 }
 
+// Filter refines items in the slice (in-place).
+//
+// Its parameter filter is a function to report
+// whether to keep the item x.
+func (sda *SliceDynamicArray[Item]) Filter(filter func(x Item) (keep bool)) {
+	if sda == nil || len(*sda) == 0 {
+		return
+	}
+	var n int
+	for _, x := range *sda {
+		if filter(x) {
+			(*sda)[n], n = x, n+1
+		}
+	}
+	if n == len(*sda) {
+		return
+	}
+	var zero Item
+	for i := n; i < len(*sda); i++ {
+		(*sda)[i] = zero // avoid memory leak
+	}
+	*sda = (*sda)[:n]
+}
+
 // Cap returns the current capacity of the slice.
 //
 // It returns 0 if the slice is nil.
@@ -358,28 +382,4 @@ func (sda *SliceDynamicArray[Item]) Clear() {
 	if sda != nil {
 		*sda = nil
 	}
-}
-
-// Filter refines items in the slice (in-place).
-//
-// Its parameter filter is a function to report
-// whether to keep the item x.
-func (sda *SliceDynamicArray[Item]) Filter(filter func(x Item) (keep bool)) {
-	if sda == nil || len(*sda) == 0 {
-		return
-	}
-	var n int
-	for _, x := range *sda {
-		if filter(x) {
-			(*sda)[n], n = x, n+1
-		}
-	}
-	if n == len(*sda) {
-		return
-	}
-	var zero Item
-	for i := n; i < len(*sda); i++ {
-		(*sda)[i] = zero // avoid memory leak
-	}
-	*sda = (*sda)[:n]
 }

@@ -322,6 +322,59 @@ func TestSliceDynamicArray_Slice(t *testing.T) {
 	}
 }
 
+func TestSliceDynamicArray_Filter(t *testing.T) {
+	dataList := [][]int{nil, {}, {0}, {-1, 0, 1}, {-2, -1, 0, 1, 2}}
+	filterList := []func(x int) (keep bool){
+		func(x int) (keep bool) {
+			return x >= 0
+		},
+		func(x int) (keep bool) {
+			return x%2 == 0
+		},
+	}
+
+	testCases := make([]struct {
+		data      []int
+		filterIdx int
+		want      []int
+	}, len(dataList)*len(filterList))
+	var idx int
+	for _, data := range dataList {
+		for filterIdx, filter := range filterList {
+			testCases[idx].data = data
+			testCases[idx].filterIdx = filterIdx
+			if len(data) > 0 {
+				want := make([]int, 0, len(data))
+				for _, x := range data {
+					if filter(x) {
+						want = append(want, x)
+					}
+				}
+				testCases[idx].want = want
+			} else if data != nil {
+				testCases[idx].want = data
+			}
+			idx++
+		}
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("s=%s&filterIdx=%d", sliceToName(tc.data), tc.filterIdx), func(t *testing.T) {
+			sda := copySda(tc.data)
+			var ptrBefore, ptrAfter *[0]int
+			ptrBefore = (*[0]int)(sda)
+			sda.Filter(filterList[tc.filterIdx])
+			ptrAfter = (*[0]int)(sda)
+			if sliceUnequal(sda, tc.want) {
+				t.Errorf("got %v; want %v", sda, tc.want)
+			}
+			if ptrAfter != ptrBefore {
+				t.Error("allocated new array, not in-place")
+			}
+		})
+	}
+}
+
 func TestSliceDynamicArray_Cap(t *testing.T) {
 	testCases := []struct {
 		sda  array.SliceDynamicArray[int]
@@ -852,59 +905,6 @@ func TestSliceDynamicArray_Clear(t *testing.T) {
 			sda.Clear()
 			if sda != nil {
 				t.Errorf("got %v; want <nil>", sda)
-			}
-		})
-	}
-}
-
-func TestSliceDynamicArray_Filter(t *testing.T) {
-	dataList := [][]int{nil, {}, {0}, {-1, 0, 1}, {-2, -1, 0, 1, 2}}
-	filterList := []func(x int) (keep bool){
-		func(x int) (keep bool) {
-			return x >= 0
-		},
-		func(x int) (keep bool) {
-			return x%2 == 0
-		},
-	}
-
-	testCases := make([]struct {
-		data      []int
-		filterIdx int
-		want      []int
-	}, len(dataList)*len(filterList))
-	var idx int
-	for _, data := range dataList {
-		for filterIdx, filter := range filterList {
-			testCases[idx].data = data
-			testCases[idx].filterIdx = filterIdx
-			if len(data) > 0 {
-				want := make([]int, 0, len(data))
-				for _, x := range data {
-					if filter(x) {
-						want = append(want, x)
-					}
-				}
-				testCases[idx].want = want
-			} else if data != nil {
-				testCases[idx].want = data
-			}
-			idx++
-		}
-	}
-
-	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("s=%s&filterIdx=%d", sliceToName(tc.data), tc.filterIdx), func(t *testing.T) {
-			sda := copySda(tc.data)
-			var ptrBefore, ptrAfter *[0]int
-			ptrBefore = (*[0]int)(sda)
-			sda.Filter(filterList[tc.filterIdx])
-			ptrAfter = (*[0]int)(sda)
-			if sliceUnequal(sda, tc.want) {
-				t.Errorf("got %v; want %v", sda, tc.want)
-			}
-			if ptrAfter != ptrBefore {
-				t.Error("allocated new array, not in-place")
 			}
 		})
 	}

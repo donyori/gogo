@@ -18,11 +18,16 @@
 
 package array
 
-import "github.com/donyori/gogo/container/sequence"
+import (
+	"github.com/donyori/gogo/container"
+	"github.com/donyori/gogo/container/sequence"
+)
 
 // DynamicArraySpecific is an interface that groups
 // the dynamic-array-specific methods.
 type DynamicArraySpecific[Item any] interface {
+	container.Filter[Item]
+
 	// Cap returns the current capacity of the dynamic array.
 	Cap() int
 
@@ -109,12 +114,6 @@ type DynamicArraySpecific[Item any] interface {
 	// Clear removes all items in the dynamic array and
 	// asks to release the memory.
 	Clear()
-
-	// Filter refines items in the dynamic array (in-place).
-	//
-	// Its parameter filter is a function to report
-	// whether to keep the item x.
-	Filter(filter func(x Item) (keep bool))
 }
 
 // DynamicArray is an interface representing

@@ -86,6 +86,14 @@ func (ms *mapSet[Item]) Range(handler func(x Item) (cont bool)) {
 	}
 }
 
+func (ms *mapSet[Item]) Filter(filter func(x Item) (keep bool)) {
+	for x := range ms.m {
+		if !filter(x) {
+			delete(ms.m, x)
+		}
+	}
+}
+
 func (ms *mapSet[Item]) ContainsItem(x Item) bool {
 	_, ok := ms.m[x]
 	return ok
