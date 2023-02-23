@@ -151,7 +151,7 @@ var undirectedGraphDataOrderingMap = map[string][]int{
 	"dls-0":  {0},
 	"dls-1":  {0, 1, 2, 3},
 	"dls-2":  {0, 1, 4, 5, 2, 6, 3},
-	"dls-3":  nil, // It is the same as dfs and will be set in function init.
+	"dls-3":  nil, // it is the same as dfs and will be set in function init
 	"dls-m1": {},
 	"ids":    {0, 1, 2, 3, 0, 1, 4, 5, 2, 6, 3, 0, 1, 4, 5, 3, 2, 6},
 }
@@ -199,10 +199,10 @@ var undirectedGraphDataVertexPathMap = map[string][][]int{
 		{0, 2},
 		{0, 3},
 	},
-	"dls-2":  nil, // It is the same as bfs and will be set in function init.
-	"dls-3":  nil, // It is the same as dfs and will be set in function init.
+	"dls-2":  nil, // it is the same as bfs and will be set in function init
+	"dls-3":  nil, // it is the same as dfs and will be set in function init
 	"dls-m1": {},
-	"ids":    nil, // It is the same as bfs and will be set in function init.
+	"ids":    nil, // it is the same as bfs and will be set in function init
 }
 
 func init() {

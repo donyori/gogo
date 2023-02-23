@@ -138,7 +138,7 @@ var treeDataOrderingMap = map[string][]int{
 	"dls-0":  {0},
 	"dls-1":  {0, 1, 2, 3},
 	"dls-2":  {0, 1, 4, 5, 2, 3, 6, 7},
-	"dls-3":  nil, // It is the same as dfs and will be set in function init.
+	"dls-3":  nil, // it is the same as dfs and will be set in function init
 	"dls-m1": {},
 	"ids":    {0, 1, 2, 3, 0, 1, 4, 5, 2, 3, 6, 7, 0, 1, 4, 8, 9, 5, 2, 3, 6, 10, 11, 7},
 }

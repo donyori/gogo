@@ -41,7 +41,7 @@ var dataList = [][]int{
 	{3, 2, 1, 0, 4, 5, 6}, {6, 5, 4, 3, 2, 1, 0},
 }
 
-var maxK int // It will be set in function init.
+var maxK int // it will be set in function init
 
 func init() {
 	for _, data := range dataList {
