@@ -41,7 +41,7 @@ var dataList = [][]int{
 	{0, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5},
 }
 
-var dataSetList []map[int]bool // it will be set in function init
+var dataSetList []map[int]bool // it is set in function init
 
 func init() {
 	dataSetList = make([]map[int]bool, len(dataList))

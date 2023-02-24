@@ -31,7 +31,7 @@ const emptyQueuePanicMessage = "job queue is empty"
 // The FCFS job queue implements a simple scheduling algorithm that
 // queues jobs in the order that they arrive.
 // All the properties (such as the priority and creation time)
-// of jobs will be ignored.
+// of jobs are ignored.
 type fcfsJobQueueMaker[Job, Properties any] struct{}
 
 // NewFCFSJobQueueMaker returns a job queue maker that creates job queues
@@ -40,7 +40,7 @@ type fcfsJobQueueMaker[Job, Properties any] struct{}
 // The FCFS job queue implements a simple scheduling algorithm that
 // queues jobs in the order that they arrive.
 // All the properties (such as the priority and creation time)
-// of jobs will be ignored.
+// of jobs are ignored.
 func NewFCFSJobQueueMaker[Job, Properties any]() jobsched.JobQueueMaker[Job, Properties] {
 	return fcfsJobQueueMaker[Job, Properties]{}
 }

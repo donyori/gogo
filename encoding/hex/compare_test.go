@@ -417,7 +417,7 @@ func canEncodeToPrefixBytesString(src []byte, prefix string) bool {
 // CanEncodeTo[[]byte, string] and CanEncodeToPrefix[[]byte, string],
 // and their alternative implementations.
 //
-// If prefixLen is not positive, prefix will be the same as dst.
+// If prefixLen is not positive, prefix is the same as dst.
 // If prefixLen is greater than len(dst),
 // makeCanEncodeToPrefixBytesStringFunctionsTestData logs an error and
 // returns zero-value src, dst, prefix, and sameLen.

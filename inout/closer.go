@@ -59,14 +59,14 @@ func (noc *noOpCloser) Closed() bool {
 // noErrorCloser is an implementation of interface Closer.
 //
 // After the first successful call to method Close,
-// method Close will do nothing and return nil.
+// method Close does nothing and returns nil.
 type noErrorCloser struct {
 	c      io.Closer
 	closed bool // closed is true if the closer is successfully closed.
 }
 
 // WrapNoErrorCloser wraps the specified closer into a Closer,
-// whose method Close will do nothing and return nil
+// whose method Close does nothing and returns nil
 // after the first successful call.
 //
 // It panics if closer is nil.
@@ -95,7 +95,7 @@ func (nec *noErrorCloser) Closed() bool {
 // errorCloser is an implementation of interface Closer.
 //
 // After the first successful call to method Close,
-// method Close will do nothing and return a *ClosedError.
+// method Close does nothing and returns a *ClosedError.
 type errorCloser struct {
 	c      io.Closer
 	closed bool   // closed is true if the closer is successfully closed.
@@ -104,13 +104,13 @@ type errorCloser struct {
 }
 
 // WrapErrorCloser wraps the specified closer into a Closer,
-// whose method Close will do nothing and return a *ClosedError
+// whose method Close does nothing and returns a *ClosedError
 // after the first successful call.
 //
 // It panics if closer is nil.
 //
 // deviceName is the name of the specified closer.
-// If deviceName is empty, it will use "closer" instead.
+// If deviceName is empty, it uses "closer" instead.
 //
 // parentErr is the parent error of the ClosedError returned by method Close.
 // The parent error here is used to classify ClosedError instances,
@@ -118,7 +118,7 @@ type errorCloser struct {
 // parentErr must either be nil or satisfy that
 // errors.Is(parentErr, ErrClosed) is true.
 // If not, WrapErrorCloser panics.
-// If parentErr is nil, it will use ErrClosed instead.
+// If parentErr is nil, it uses ErrClosed instead.
 func WrapErrorCloser(closer io.Closer, deviceName string, parentErr error) Closer {
 	if closer == nil {
 		panic(errors.AutoMsg("closer is nil"))
@@ -162,18 +162,18 @@ func (ec *errorCloser) Closed() bool {
 // all its closers are already successfully closed.
 //
 // If its option tryAll is enabled,
-// its method Close will try to close all its closers,
-// regardless of whether any error occurs, and return all errors encountered.
+// its method Close tries to close all its closers,
+// regardless of whether any error occurs, and returns all errors encountered.
 // (It returns an ErrorList if there are multiple errors.)
 //
 // If its option tryAll is disabled, when an error occurs,
-// its method Close will stop closing other closers and return this error.
+// its method Close stops closing other closers and returns this error.
 //
-// If its option noError is enabled, its method Close will do nothing and
-// return nil after the first successful call.
+// If its option noError is enabled, its method Close does nothing and
+// returns nil after the first successful call.
 //
-// If its option noError is disabled, its method Close will do nothing and
-// return a *ClosedError after the first successful call.
+// If its option noError is disabled, its method Close does nothing and
+// returns a *ClosedError after the first successful call.
 type MultiCloser interface {
 	Closer
 
@@ -203,23 +203,23 @@ type multiCloser struct {
 // NewMultiCloser creates a new MultiCloser.
 //
 // If the option tryAll is enabled,
-// its method Close will try to close all its closers,
-// regardless of whether any error occurs, and return all errors encountered.
+// its method Close tries to close all its closers,
+// regardless of whether any error occurs, and returns all errors encountered.
 // (It returns an ErrorList if there are multiple errors.)
 //
 // If the option tryAll is disabled, when an error occurs,
-// its method Close will stop closing other closers and return this error.
+// its method Close stops closing other closers and returns this error.
 //
-// If the option noError is enabled, its method Close will do nothing and
-// return nil after the first successful call.
+// If the option noError is enabled, its method Close does nothing and
+// returns nil after the first successful call.
 //
-// If the option noError is disabled, its method Close will do nothing and
-// return a *ClosedError after the first successful call.
+// If the option noError is disabled, its method Close does nothing and
+// returns a *ClosedError after the first successful call.
 //
 // closer is the closers provided to the MultiCloser.
-// All nil closers will be ignored.
+// All nil closers are ignored.
 // If there is no non-nil closer,
-// the MultiCloser will perform as an already closed closer.
+// the MultiCloser performs as an already closed closer.
 func NewMultiCloser(tryAll, noError bool, closer ...io.Closer) MultiCloser {
 	mc := &multiCloser{
 		cm: make(map[io.Closer]bool),

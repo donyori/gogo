@@ -99,7 +99,7 @@ func NewBufferedReader(r io.Reader) ResettableBufferedReader {
 // NewBufferedReaderSize creates a ResettableBufferedReader on r,
 // whose buffer has at least the specified size.
 //
-// If size is less than 16, it will use 16 instead.
+// If size is less than 16, it uses 16 instead.
 //
 // If r is a ResettableBufferedReader with a large enough buffer,
 // it returns r directly.

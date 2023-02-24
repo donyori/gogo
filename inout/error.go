@@ -48,8 +48,8 @@ type ClosedError struct {
 // errors.Is(parentErr, ErrClosed) is true.
 // If not, NewClosedError panics.
 //
-// If deviceName is empty, it will use "closer" instead.
-// If parentErr is nil, it will use ErrClosed instead.
+// If deviceName is empty, it uses "closer" instead.
+// If parentErr is nil, it uses ErrClosed instead.
 func NewClosedError(deviceName string, parentErr error) *ClosedError {
 	deviceName = strings.TrimSpace(deviceName)
 	if deviceName == "" {

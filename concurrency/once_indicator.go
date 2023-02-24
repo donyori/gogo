@@ -34,7 +34,7 @@ type OnceIndicator interface {
 	// and then returns false.
 	//
 	// If the client wants to do nothing but trigger this indicator,
-	// just set f to nil (no panic will happen).
+	// just set f to nil (no panic happens).
 	Do(f func()) bool
 
 	// C returns a channel that will be closed after calling the method Do

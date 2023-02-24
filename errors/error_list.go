@@ -80,7 +80,7 @@ type errorList struct {
 // NewErrorList creates a new ErrorList.
 //
 // ignoreNil indicates whether the ErrorList ignores nil errors.
-// If ignoreNil is true, the ErrorList will discard all nil errors.
+// If ignoreNil is true, the ErrorList discards all nil errors.
 //
 // err is errors added to the ErrorList initially.
 func NewErrorList(ignoreNil bool, err ...error) ErrorList {
@@ -102,7 +102,7 @@ func NewErrorList(ignoreNil bool, err ...error) ErrorList {
 // If there are two or more items, it returns the number of errors,
 // followed by an error array, in which each item is double-quoted
 // in Go string literal.
-// In particular, nil error item will be "<nil>".
+// In particular, nil error item is "<nil>".
 func (el *errorList) Error() string {
 	if len(el.list) == 0 {
 		return "no error"

@@ -22,7 +22,7 @@ import "github.com/donyori/gogo/container"
 
 // Set is an interface representing a set.
 //
-// Set should guarantee to contain no duplicate items.
+// Set guarantees to contain no duplicate items.
 type Set[Item any] interface {
 	container.Container[Item]
 	container.Filter[Item]

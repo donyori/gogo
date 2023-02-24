@@ -58,20 +58,20 @@ var ErrAuthorMissing = errors.AutoNewCustom(
 // PrintCopyrightNotice prints a short copyright notice to w,
 // typically for terminal interaction.
 //
-// If w is nil, it will use os.Stdout instead.
+// If w is nil, it uses os.Stdout instead.
 //
 // program is the name of the program.
-// If program is empty, it will use the base name without the extension
+// If program is empty, it uses the base name without the extension
 // of os.Args[0] instead.
 //
 // year is the publishing year of the software.
-// If year is empty, it will use current year instead.
+// If year is empty, it uses current year instead.
 //
 // author is the name of the author.
-// If author is empty, it will return (0, ErrAuthorMissing).
+// If author is empty, it returns (0, ErrAuthorMissing).
 //
 // source is the URL of the source of the software.
-// If source is empty, the program source part will be discarded.
+// If source is empty, the program source part is discarded.
 //
 // It returns the number of bytes written to w and any error encountered.
 func PrintCopyrightNotice(w io.Writer, program, year, author, source string) (n int, err error) {
@@ -101,15 +101,15 @@ func PrintCopyrightNotice(w io.Writer, program, year, author, source string) (n 
 // where "show w" means printing the disclaimer of warranty and
 // "show c" means printing the terms and conditions.
 //
-// If w is nil, it will use os.Stdout instead.
+// If w is nil, it uses os.Stdout instead.
 //
 // args is a list of arguments input by the user.
-// If args is nil, it will use os.Args[1:] instead.
+// If args is nil, it uses os.Args[1:] instead.
 // If the user inputs nothing, set args to []string{} instead of nil.
 //
 // It returns the number of bytes written to w and any write error encountered.
 // If args is neither "show w" nor "show c",
-// ResponseShowWC will do nothing and return (0, nil).
+// ResponseShowWC does nothing and returns (0, nil).
 func ResponseShowWC(w io.Writer, args ...string) (n int, err error) {
 	if args == nil {
 		args = os.Args[1:]

@@ -71,17 +71,17 @@ type WriteOptions struct {
 	// It should be used when the ZIP data is appended to an existing file,
 	// such as a binary executable.
 	//
-	// Non-positive values will be ignored.
+	// Non-positive values are ignored.
 	ZipOffset int64
 
 	// The end-of-central-directory comment field of the ZIP archive.
 	// It should be 65535 bytes at most.
-	// If the comment is too long, an error will be reported.
+	// If the comment is too long, an error is reported.
 	ZipComment string
 
 	// A method-compressor map for writing the ZIP archive.
-	// These compressors will be registered to the archive/zip.Writer.
-	// (Nil compressors will be ignored.)
+	// These compressors are registered to the archive/zip.Writer.
+	// (Nil compressors are ignored.)
 	//
 	// Package archive/zip has two built-in compressors for the common methods
 	// archive/zip.Store (0) and archive/zip.Deflate (8).
@@ -99,8 +99,8 @@ var defaultWriteOptions = &WriteOptions{DeflateLv: flate.BestCompression}
 // Its method Close closes all closable objects opened by this writer
 // (may include the file).
 // After successfully closing this writer,
-// its method Close will do nothing and return nil,
-// and its write methods will report ErrFileWriterClosed.
+// its method Close does nothing and returns nil,
+// and its write methods report ErrFileWriterClosed.
 // (To test whether the error is ErrFileWriterClosed, use function errors.Is.)
 type Writer interface {
 	inout.Closer
@@ -115,7 +115,7 @@ type Writer interface {
 	//
 	// The tar.Header.Size determines how many bytes can be written for
 	// the next file.
-	// If the current file is not fully written, it will return an error.
+	// If the current file is not fully written, it returns an error.
 	// It implicitly flushes any padding necessary before writing the header.
 	//
 	// If the file is not archived by tar or is opened in raw mode,
@@ -130,7 +130,7 @@ type Writer interface {
 	// ZipCreate adds a file with specified name to the ZIP archive and
 	// switches the writer to that file.
 	//
-	// The file contents will be compressed with DEFLATE.
+	// The file contents are compressed with DEFLATE.
 	//
 	// The name must be a relative path: it must not start with a drive letter
 	// (e.g., "C:") or leading slash. Only forward slashes are allowed;
@@ -161,7 +161,7 @@ type Writer interface {
 	ZipCreateHeader(fh *zip.FileHeader) error
 
 	// ZipCreateRaw is like ZipCreateHeader,
-	// but the bytes passed to the writer will not be compressed.
+	// but the bytes passed to the writer are not compressed.
 	ZipCreateRaw(fh *zip.FileHeader) error
 
 	// ZipCopy copies the file f (obtained from an archive/zip.Reader)
@@ -201,7 +201,7 @@ type writer struct {
 // If the file is a directory, Write reports ErrIsDir and returns a nil Writer.
 // (To test whether err is ErrIsDir, use function errors.Is.)
 //
-// If opts are nil, the default options will be used.
+// If opts are nil, the default options are used.
 // The default options are as follows:
 //   - BufSize: 0
 //   - Raw: false
@@ -220,8 +220,8 @@ type writer struct {
 // after closing the writer.
 // If closeFile is true, the client should not close the file,
 // even if this function reports an error.
-// In this case, the file will be closed during the method Close of the writer,
-// and it will also be closed by this function when encountering an error.
+// In this case, the file is closed during the method Close of the writer,
+// and it is also closed by this function when encountering an error.
 //
 // This function panics if file is nil.
 func Write(file WritableFile, opts *WriteOptions, closeFile bool) (w Writer, err error) {

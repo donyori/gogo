@@ -107,7 +107,7 @@ type DynamicArraySpecific[Item any] interface {
 	//
 	// Note that it isn't equivalent to operations on Go slice
 	// like s[:len(s):len(s)],
-	// because it will allocate a new array and copy the content
+	// because it allocates a new array and copies the content
 	// if Cap() > Len().
 	Shrink()
 

@@ -42,8 +42,8 @@ import (
 // The length of the returned checksums is the same as that of newHashes.
 // The hash result of newHashes[i] is checksums[i], encoded in hexadecimal.
 // In particular, if newHashes[i] is nil or returns nil,
-// checksums[i] will be an empty string.
-// If len(newHashes) is 0, checksums will be nil.
+// checksums[i] is an empty string.
+// If len(newHashes) is 0, checksums is nil.
 func Checksum(filename string, upper bool, newHashes ...func() hash.Hash) (
 	checksums []string, err error) {
 	f, err := os.Open(filename)
@@ -57,12 +57,12 @@ func Checksum(filename string, upper bool, newHashes ...func() hash.Hash) (
 //
 // It returns true if the file can be read and matches all
 // filesys.HashVerifier in hvs
-// (nil and duplicate filesys.HashVerifier will be ignored).
+// (nil and duplicate filesys.HashVerifier are ignored).
 // In particular, it returns true if there is no non-nil filesys.HashVerifier
 // in hvs and the file can be opened for reading.
-// In this case, the file will not be read.
+// In this case, the file is not read.
 //
-// Note that VerifyChecksum will not reset the hash state of anyone in hvs.
+// Note that VerifyChecksum does not reset the hash state of anyone in hvs.
 // The client should use new filesys.HashVerifier
 // returned by filesys.NewHashVerifier or
 // call the Reset method of filesys.HashVerifier

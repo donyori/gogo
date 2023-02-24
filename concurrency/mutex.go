@@ -33,7 +33,7 @@ import (
 // Like sync.Mutex, it permits the client to get the lock
 // on one goroutine, and release it on another goroutine.
 // It does not support reentry.
-// And it will panic if the client calls the method Unlock
+// And it panics if the client calls the method Unlock
 // when the lock has been released.
 type Mutex interface {
 	sync.Locker

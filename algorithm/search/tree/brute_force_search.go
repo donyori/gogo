@@ -39,8 +39,7 @@ type Common[Node any] interface {
 	// NextSibling returns the next sibling of the specified node
 	// (i.e., the next child of the parent of the specified node)
 	// and an indicator ok to report whether the node has the next sibling.
-	// (If the node is the root or the last child of its parent,
-	// ok will be false.)
+	// (If the node is the root or the last child of its parent, ok is false.)
 	NextSibling(node Node) (ns Node, ok bool)
 }
 
@@ -375,7 +374,7 @@ func dlsPath[Node any](itf AccessPath[Node], root Node, limit int) (pathFound []
 //
 // initLimit is the depth limit used in the first iteration.
 // The depth of the root is 0, of children of the root is 1, and so on.
-// If initLimit < 1, the depth limit in the first iteration will be 1.
+// If initLimit < 1, the depth limit in the first iteration is 1.
 //
 // initArgs are the arguments to initialize itf.
 //

@@ -24,7 +24,7 @@ type Container[Item any] interface {
 	Len() int
 
 	// Range accesses the items in the container.
-	// Each item will be accessed once.
+	// Each item is accessed once.
 	// The order of the access depends on the specific implementation.
 	//
 	// Its parameter handler is a function to deal with the item x in the

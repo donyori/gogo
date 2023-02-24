@@ -45,7 +45,7 @@ import (
 //
 // closeFile indicates whether this function should close the file.
 // If closeFile is false, the client is responsible for closing file after use.
-// If closeFile is true, file will be closed by this function.
+// If closeFile is true, file is closed by this function.
 //
 // upper indicates whether to use uppercase in hexadecimal representation.
 //
@@ -55,8 +55,8 @@ import (
 // The length of the returned checksums is the same as that of newHashes.
 // The hash result of newHashes[i] is checksums[i], encoded in hexadecimal.
 // In particular, if newHashes[i] is nil or returns nil,
-// checksums[i] will be an empty string.
-// If len(newHashes) is 0, checksums will be nil.
+// checksums[i] is an empty string.
+// If len(newHashes) is 0, checksums is nil.
 //
 // This function panics if file is nil.
 func Checksum(file fs.File, closeFile, upper bool, newHashes ...func() hash.Hash) (
@@ -133,8 +133,8 @@ func Checksum(file fs.File, closeFile, upper bool, newHashes ...func() hash.Hash
 // The length of the returned checksums is the same as that of newHashes.
 // The hash result of newHashes[i] is checksums[i], encoded in hexadecimal.
 // In particular, if newHashes[i] is nil or returns nil,
-// checksums[i] will be an empty string.
-// If len(newHashes) is 0, checksums will be nil.
+// checksums[i] is an empty string.
+// If len(newHashes) is 0, checksums is nil.
 //
 // This function panics if fsys is nil.
 func ChecksumFromFS(fsys fs.FS, name string, upper bool, newHashes ...func() hash.Hash) (
@@ -227,16 +227,15 @@ func (hv *hashVerifier) Match() bool {
 //
 // closeFile indicates whether this function should close the file.
 // If closeFile is false, the client is responsible for closing file after use.
-// If closeFile is true and file is not nil,
-// file will be closed by this function.
+// If closeFile is true and file is not nil, file is closed by this function.
 //
 // It returns true if the file is not nil and can be read,
 // and matches all HashVerifier in hvs
-// (nil and duplicate HashVerifier will be ignored).
+// (nil and duplicate HashVerifier are ignored).
 // In particular, it returns true if there is no non-nil HashVerifier in hvs.
-// In this case, the file will not be read.
+// In this case, the file is not read.
 //
-// Note that VerifyChecksum will not reset the hash state of anyone in hvs.
+// Note that VerifyChecksum does not reset the hash state of anyone in hvs.
 // The client should use new HashVerifier returned by NewHashVerifier or
 // call the Reset method of HashVerifier before calling this function if needed.
 func VerifyChecksum(file fs.File, closeFile bool, hvs ...HashVerifier) bool {
@@ -290,12 +289,12 @@ func VerifyChecksum(file fs.File, closeFile bool, hvs ...HashVerifier) bool {
 //
 // It returns true if fsys is not nil,
 // and the file can be read and matches all HashVerifier in hvs
-// (nil and duplicate HashVerifier will be ignored).
+// (nil and duplicate HashVerifier are ignored).
 // In particular, it returns true if there is no non-nil HashVerifier
 // in hvs and the file can be opened for reading.
-// In this case, the file will not be read.
+// In this case, the file is not read.
 //
-// Note that VerifyChecksumFromFS will not reset
+// Note that VerifyChecksumFromFS does not reset
 // the hash state of anyone in hvs.
 // The client should use new HashVerifier returned by NewHashVerifier or
 // call the Reset method of HashVerifier before calling this function if needed.
@@ -316,7 +315,7 @@ func VerifyChecksumFromFS(fsys fs.FS, name string, hvs ...HashVerifier) bool {
 // If there is no nil or duplicate HashVerifier in hvs, it returns hvs itself.
 // Otherwise, it copies all non-nil deduplicated HashVerifier from hvs to
 // a new slice and returns that slice.
-// The content of hvs will not be modified in both cases.
+// The content of hvs is not modified in both cases.
 //
 // If there is no non-nil HashVerifier in hvs, it returns nil.
 func nonNilDeduplicatedHashVerifiers(hvs []HashVerifier) []HashVerifier {

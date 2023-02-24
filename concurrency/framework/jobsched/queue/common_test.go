@@ -31,7 +31,7 @@ import (
 // The number of jobs in metaJobs.
 const N int = 600
 
-var metaJobs []*jobsched.MetaJob[int, jobsched.NoProperty] // it will be set in function init
+var metaJobs []*jobsched.MetaJob[int, jobsched.NoProperty] // it is set in function init
 
 var enqueueFnTestCases = []struct {
 	name      string

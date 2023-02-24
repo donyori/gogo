@@ -29,8 +29,8 @@ import (
 // schedule jobs according to their priority, and then creation time.
 //
 // A job with a higher priority (the field Priority in its meta information)
-// will be dequeued earlier.
-// The jobs with the same priority will be scheduled according to their
+// is dequeued earlier.
+// The jobs with the same priority are scheduled according to their
 // creation time (the field CreationTime in the meta information).
 // The earlier the creation time, the earlier dequeued.
 type priorityFirstJobQueueMaker[Job, Properties any] struct{}
@@ -40,8 +40,8 @@ type priorityFirstJobQueueMaker[Job, Properties any] struct{}
 // and then creation time.
 //
 // A job with a higher priority (the field Priority in its meta information)
-// will be dequeued earlier.
-// The jobs with the same priority will be scheduled according to their
+// is dequeued earlier.
+// The jobs with the same priority are scheduled according to their
 // creation time (the field CreationTime in the meta information).
 // The earlier the creation time, the earlier dequeued.
 func NewPriorityFirstJobQueueMaker[Job, Properties any]() jobsched.JobQueueMaker[Job, Properties] {
@@ -63,8 +63,8 @@ func (m priorityFirstJobQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job
 // schedule jobs according to their creation time, and then priority.
 //
 // A job with an earlier creation time (the field CreationTime
-// in its meta information) will be dequeued earlier.
-// The jobs with the same creation time will be scheduled according to
+// in its meta information) is dequeued earlier.
+// The jobs with the same creation time are scheduled according to
 // their priority (the field Priority in the meta information).
 // The higher the priority, the earlier dequeued.
 type creationTimeFirstJobQueueMaker[Job, Properties any] struct{}
@@ -74,8 +74,8 @@ type creationTimeFirstJobQueueMaker[Job, Properties any] struct{}
 // and then priority.
 //
 // A job with a higher priority (the field Priority in its meta information)
-// will be dequeued earlier.
-// The jobs with the same priority will be scheduled according to their
+// is dequeued earlier.
+// The jobs with the same priority are scheduled according to their
 // creation time (the field CreationTime in the meta information).
 // The earlier the creation time, the earlier dequeued.
 func NewCreationTimeFirstJobQueueMaker[Job, Properties any]() jobsched.JobQueueMaker[Job, Properties] {

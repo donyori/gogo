@@ -43,7 +43,7 @@ type Common[Vertex any] interface {
 	// Adjacency returns the adjacent vertices of the specified vertex
 	// as an adjacency list.
 	//
-	// The first item in the list will be accessed first.
+	// The first item in the list is accessed first.
 	Adjacency(vertex Vertex) []Vertex
 
 	// Discovered reports whether the specified vertex
@@ -488,7 +488,7 @@ type IDSAccessPath[Vertex any] interface {
 //
 // initLimit is the depth limit used in the first iteration.
 // The depth of the root is 0, of adjacent vertices of the root is 1, and so on.
-// If initLimit < 1, the depth limit in the first iteration will be 1.
+// If initLimit < 1, the depth limit in the first iteration is 1.
 //
 // initArgs are the arguments to initialize itf.
 func IDS[Vertex any](itf IDSAccessVertex[Vertex], initLimit int, initArgs ...any) (vertexFound Vertex, found bool) {

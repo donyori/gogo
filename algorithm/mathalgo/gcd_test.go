@@ -435,7 +435,7 @@ func gcdBruteForce[Int constraints.Integer](xs ...Int) Int {
 // to remove trailing zeros.
 //
 // Caller should guarantee that both a and b are not zero.
-// If a or b is zero, gcd2Uint64SteinAnother will fall into an infinite loop.
+// If a or b is zero, gcd2Uint64SteinAnother falls into an infinite loop.
 func gcd2Uint64SteinAnother(a, b uint64) uint64 {
 	var m, n int
 	for a&1 == 0 {

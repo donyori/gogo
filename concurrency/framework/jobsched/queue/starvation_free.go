@@ -47,11 +47,11 @@ type exponentialJobQueueMaker[Job, Properties any] struct {
 // The priority of jobs increases exponentially.
 //
 // n is the number of goroutines to process jobs.
-// If n is non-positive, runtime.NumCPU() will be used instead.
+// If n is non-positive, runtime.NumCPU() is used instead.
 //
 // b is the base of the exponent.
 // The greater b is, the faster the priority of jobs increases.
-// If b is not greater than 1, 1.025 will be used instead.
+// If b is not greater than 1, 1.025 is used instead.
 func NewExponentialJobQueueMaker[Job, Properties any](n int, b float64) jobsched.JobQueueMaker[Job, Properties] {
 	m := &exponentialJobQueueMaker[Job, Properties]{n: n, b: b}
 	if m.n <= 0 {

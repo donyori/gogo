@@ -49,21 +49,21 @@ var groupIDPattern = regexp.MustCompile(`[a-z0-9][a-z0-9_]*`)
 // New creates a Controller for a new job.
 //
 // n is the number of goroutines to process the job.
-// If n is non-positive, runtime.NumCPU() will be used instead.
+// If n is non-positive, runtime.NumCPU() is used instead.
 //
 // biz is the business handler for the job.
-// It will panic if biz is nil.
+// It panics if biz is nil.
 //
 // groupMap is the map of custom groups.
 // The key is the ID of the group, which consists of lowercase English letters,
 // numbers, and underscores, and cannot be empty.
 // For custom groups, the ID cannot start with an underscore.
 // (i.e., in regular expression: [a-z0-9][a-z0-9_]*).
-// An illegal ID will cause a panic.
+// An illegal ID causes a panic.
 // The value is a list of the world ranks of goroutines.
-// Duplicate numbers will be ignored.
-// Out-of-range numbers (i.e., < 0 or >= n) will cause a panic.
-// A nil or empty group will also cause a panic.
+// Duplicate numbers are ignored.
+// Out-of-range numbers (i.e., < 0 or >= n) cause a panic.
+// A nil or empty group also causes a panic.
 // Each group has its own communicator for each goroutine.
 // The rank of the communicator depends on the order of the world ranks
 // in the list.

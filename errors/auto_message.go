@@ -28,7 +28,7 @@ import (
 // AutoMsg generates an error message by prepending the full function name
 // (i.e., the package path-qualified function name) of its caller to msg.
 //
-// If msg is empty, it will use "<no error message>" instead.
+// If msg is empty, it uses "<no error message>" instead.
 func AutoMsg(msg string) string {
 	return AutoMsgCustom(msg, -1, 1)
 }
@@ -40,10 +40,10 @@ func AutoMsg(msg string) string {
 // skip is the number of stack frames to ascend,
 // with 0 identifying the caller of AutoMsgCustom.
 // For example, if skip is 1, instead of the caller of AutoMsgCustom,
-// the information of that caller's caller will be used.
+// the information of that caller's caller is used.
 //
-// If msg is empty, it will use "<no error message>" instead.
-// If ms is invalid, it will use PrependFullFuncName instead.
+// If msg is empty, it uses "<no error message>" instead.
+// If ms is invalid, it uses PrependFullFuncName instead.
 func AutoMsgCustom(msg string, ms ErrorMessageStrategy, skip int) string {
 	if msg == "" {
 		msg = "<no error message>"

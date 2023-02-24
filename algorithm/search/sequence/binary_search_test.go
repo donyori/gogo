@@ -73,7 +73,7 @@ const MaxValue int = 6                // The range of values in dataList is {0, 
 const BaseLength = (MaxValue+1)*3 + 1 // Each value is repeated 3 times, and finally, a nil *idValue is appended.
 const MaxCopy int = 3
 
-// These variables will be set in function init.
+// These variables are set in function init.
 var (
 	valueCounter map[int]int
 	dataList     [][]*idValue

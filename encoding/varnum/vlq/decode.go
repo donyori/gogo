@@ -52,8 +52,8 @@ var ErrSrcTooLarge = errors.AutoNewCustom(
 //
 // If src is nil or empty, it reports ErrSrcIncomplete.
 //
-// The decoding will stop when obtaining a 64-bit unsigned integer.
-// Subsequent content in src (if any) will be ignored.
+// The decoding stops when obtaining a 64-bit unsigned integer.
+// Subsequent content in src (if any) is ignored.
 //
 // It also returns the number of bytes read from src (n).
 // If err is nil, n is exactly Uint64EncodedLen(u).
@@ -83,8 +83,8 @@ func DecodeUint64(src []byte) (u uint64, n int, err error) {
 //
 // If src is nil or empty, it reports ErrSrcIncomplete.
 //
-// The decoding will stop when obtaining a 64-bit signed integer.
-// Subsequent content in src (if any) will be ignored.
+// The decoding stops when obtaining a 64-bit signed integer.
+// Subsequent content in src (if any) is ignored.
 //
 // It also returns the number of bytes read from src (n).
 // If err is nil, n is exactly Int64EncodedLen(i).
@@ -105,8 +105,8 @@ func DecodeInt64(src []byte) (i int64, n int, err error) {
 //
 // If src is nil or empty, it reports ErrSrcIncomplete.
 //
-// The decoding will stop when obtaining a 64-bit floating-point number.
-// Subsequent content in src (if any) will be ignored.
+// The decoding stops when obtaining a 64-bit floating-point number.
+// Subsequent content in src (if any) is ignored.
 //
 // It also returns the number of bytes read from src (n).
 // If err is nil, n is exactly Float64EncodedLen(f).

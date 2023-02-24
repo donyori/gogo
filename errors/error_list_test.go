@@ -28,7 +28,7 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-var errorsForErrorList []error // it will be set in function init
+var errorsForErrorList []error // it is set in function init
 
 func init() {
 	errorsForErrorList = make([]error, 3)

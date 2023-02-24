@@ -32,11 +32,11 @@ import (
 // and returns a nil Reader.
 // (To test whether err is filesys.ErrIsDir, use function errors.Is.)
 //
-// If opts are nil, a zero-value filesys.ReadOptions will be used.
+// If opts are nil, a zero-value filesys.ReadOptions is used.
 //
-// The file will be closed when the returned reader is closed.
+// The file is closed when the returned reader is closed.
 //
-// If the file is a symlink, it will be evaluated by filepath.EvalSymlinks.
+// If the file is a symlink, it is evaluated by filepath.EvalSymlinks.
 //
 // The file is opened by os.Open;
 // the associated file descriptor has mode os.O_RDONLY.

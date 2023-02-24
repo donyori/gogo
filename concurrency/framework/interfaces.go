@@ -22,7 +22,7 @@ package framework
 // detect the quit signal, and broadcast a quit signal to quit the job.
 type QuitDevice interface {
 	// QuitChan returns the channel for the quit signal.
-	// When the job is finished or quit, this channel will be closed
+	// When the job is finished or quit, this channel is closed
 	// to broadcast the quit signal.
 	QuitChan() <-chan struct{}
 

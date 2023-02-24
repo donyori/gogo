@@ -54,8 +54,8 @@ type ReadOptions struct {
 	Raw bool
 
 	// A method-decompressor map for reading the ZIP archive.
-	// These decompressors will be registered to the archive/zip.Reader.
-	// (Nil decompressors will be ignored.)
+	// These decompressors are registered to the archive/zip.Reader.
+	// (Nil decompressors are ignored.)
 	//
 	// Package archive/zip has two built-in decompressors for the common methods
 	// archive/zip.Store (0) and archive/zip.Deflate (8).
@@ -79,8 +79,8 @@ type ReadOptions struct {
 // Its method Close closes all closable objects opened by this reader
 // (may include the file).
 // After successfully closing this reader,
-// its method Close will do nothing and return nil,
-// and its read methods will report ErrFileReaderClosed.
+// its method Close does nothing and returns nil,
+// and its read methods report ErrFileReaderClosed.
 // (To test whether the error is ErrFileReaderClosed, use function errors.Is.)
 type Reader interface {
 	inout.Closer
@@ -159,7 +159,7 @@ type reader struct {
 // If the file is a directory, Read reports ErrIsDir and returns a nil Reader.
 // (To test whether err is ErrIsDir, use function errors.Is.)
 //
-// If opts are nil, a zero-value ReadOptions will be used.
+// If opts are nil, a zero-value ReadOptions is used.
 //
 // To ensure that this function and the returned reader can work as expected,
 // the input file must not be operated by anyone else
@@ -173,8 +173,8 @@ type reader struct {
 // after closing the reader.
 // If closeFile is true, the client should not close the file,
 // even if this function reports an error.
-// In this case, the file will be closed during the method Close of the reader,
-// and it will also be closed by this function when encountering an error.
+// In this case, the file is closed during the method Close of the reader,
+// and it is also closed by this function when encountering an error.
 //
 // This function panics if file is nil.
 func Read(file fs.File, opts *ReadOptions, closeFile bool) (r Reader, err error) {
@@ -251,9 +251,9 @@ func Read(file fs.File, opts *ReadOptions, closeFile bool) (r Reader, err error)
 // and returns a nil Reader.
 // (To test whether err is ErrIsDir, use function errors.Is.)
 //
-// If opts are nil, a zero-value ReadOptions will be used.
+// If opts are nil, a zero-value ReadOptions is used.
 //
-// The file will be closed when the returned reader is closed.
+// The file is closed when the returned reader is closed.
 //
 // This function panics if fsys is nil.
 func ReadFromFS(fsys fs.FS, name string, opts *ReadOptions) (r Reader, err error) {

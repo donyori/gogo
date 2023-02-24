@@ -42,9 +42,9 @@ type Communicator[Message any] interface {
 
 	// Send sends the message msg to another goroutine.
 	//
-	// The method will block until the destination goroutine receives
+	// The method blocks until the destination goroutine receives
 	// the message successfully, or a quit signal is detected.
-	// It will panic if the destination goroutine is the sender itself.
+	// It panics if the destination goroutine is the sender itself.
 	//
 	// dst is the rank of the destination goroutine.
 	// msg is the message to be sent.
@@ -55,9 +55,9 @@ type Communicator[Message any] interface {
 
 	// Receive receives a message from another goroutine.
 	//
-	// The method will block until it receives the message from
+	// The method blocks until it receives the message from
 	// the source goroutine successfully, or a quit signal is detected.
-	// It will panic if the source goroutine is the receiver itself.
+	// It panics if the source goroutine is the receiver itself.
 	//
 	// src is the rank of the source goroutine.
 	//
@@ -69,9 +69,9 @@ type Communicator[Message any] interface {
 	// SendPublic sends the message msg to the public channel of this group.
 	// All other goroutines can get this message from the public channel.
 	//
-	// The method will block until a goroutine receives this message
+	// The method blocks until a goroutine receives this message
 	// successfully, or a quit signal is detected.
-	// It will panic if there is only one goroutine in this group.
+	// It panics if there is only one goroutine in this group.
 	//
 	// It returns the rank of the receiver.
 	// If a quit signal is detected, it returns -1.
@@ -79,9 +79,9 @@ type Communicator[Message any] interface {
 
 	// ReceivePublic receives a message from the public channel of this group.
 	//
-	// The method will block until it receives a message successfully,
+	// The method blocks until it receives a message successfully,
 	// or a quit signal is detected.
-	// It will panic if there is only one goroutine in this group.
+	// It panics if there is only one goroutine in this group.
 	//
 	// It returns the rank of the sender and the received message.
 	// If a quit signal is detected, it returns src to -1 and msg to zero value.
@@ -93,21 +93,21 @@ type Communicator[Message any] interface {
 	// the public channel of this group.
 	// Note that when there are two or more goroutines ready for receiving this
 	// message, this method cannot guarantee that the first ready goroutine
-	// will receive the message first.
-	// Which message will receive it depends on the implementation.
+	// receives the message first.
+	// Which goroutine receives it depends on the implementation.
 	//
-	// The method will block until a goroutine receives this message
+	// The method blocks until a goroutine receives this message
 	// successfully, or a quit signal is detected.
-	// It will panic if there is only one goroutine in this group.
+	// It panics if there is only one goroutine in this group.
 	//
 	// It returns the rank of the receiver.
 	// If a quit signal is detected, it returns -1.
 	//
 	// To get higher performance, you should try to avoid using this method.
-	// If you know which goroutine will receive the message,
+	// If you know which goroutine receives the message,
 	// use the method Send instead.
 	// If you just want to send the message to another goroutine and
-	// you are sure that the receiver won't wait for this message through
+	// you are sure that the receiver does not wait for this message through
 	// the method Receive, use the method SendPublic instead.
 	SendAny(msg Message) int
 
@@ -117,21 +117,21 @@ type Communicator[Message any] interface {
 	// the public channel of this group.
 	// Note that when there are two or more messages sent to this goroutine or
 	// the public channel, this method cannot guarantee that the first message
-	// will be received first.
-	// Which message will be received depends on the implementation.
+	// is received first.
+	// Which message is received depends on the implementation.
 	//
-	// The method will block until it receives a message successfully,
+	// The method blocks until it receives a message successfully,
 	// or a quit signal is detected.
-	// It will panic if there is only one goroutine in this group.
+	// It panics if there is only one goroutine in this group.
 	//
 	// It returns the rank of the sender and the received message.
 	// If a quit signal is detected, it returns src to -1 and msg to zero value.
 	//
 	// To get higher performance, you should try to avoid using this method.
-	// If you know which goroutine will send the message,
+	// If you know which goroutine sends the message,
 	// use the method Receive instead.
 	// If you just want to receive a message from another goroutine and
-	// you are sure that the sender won't send the message through
+	// you are sure that the sender does not send the message through
 	// the method Send, use the method ReceivePublic instead.
 	ReceiveAny() (src int, msg Message)
 
@@ -147,14 +147,14 @@ type Communicator[Message any] interface {
 
 	// Broadcast sends the message x from the root to others in this group.
 	//
-	// The method will not wait for all goroutines to finish the broadcast.
+	// The method does not wait for all goroutines to finish the broadcast.
 	// To synchronize all goroutines, use method Barrier.
 	//
 	// root is the rank of the sender goroutine in this group.
-	// It will panic if root is out of range.
+	// It panics if root is out of range.
 	//
 	// For the root, x is the message to be broadcast.
-	// For others, x can be anything (including zero value) and will be ignored.
+	// For others, x can be anything (including zero value) and is ignored.
 	//
 	// It returns the message to be broadcast (equals to x of the root) and
 	// an indicator ok. ok is false if and only if a quit signal is detected.
@@ -165,14 +165,14 @@ type Communicator[Message any] interface {
 	// to all goroutines (including the root) in this group
 	// in turn according to their ranks.
 	//
-	// The method will not wait for all goroutines to finish the scattering.
+	// The method does not wait for all goroutines to finish the scattering.
 	// To synchronize all goroutines, use method Barrier.
 	//
 	// root is the rank of the sender goroutine in this group.
-	// It will panic if root is out of range.
+	// It panics if root is out of range.
 	//
 	// For the root, x is the message to be scattered.
-	// For others, x can be anything (including nil) and will be ignored.
+	// For others, x can be anything (including nil) and is ignored.
 	//
 	// It returns the received message and an indicator ok.
 	// ok is false if and only if a quit signal is detected.
@@ -181,13 +181,13 @@ type Communicator[Message any] interface {
 	// Gather collects messages from all goroutines (including the root)
 	// in this group to the root.
 	//
-	// The method will not wait for all goroutines to finish the gathering.
+	// The method does not wait for all goroutines to finish the gathering.
 	// To synchronize all goroutines, use method Barrier.
 	//
 	// root is the rank of the receiver goroutine in this group.
-	// It will panic if root is out of range.
+	// It panics if root is out of range.
 	//
-	// msg is the message to be sent to the root.
+	// msg is the message sent to the root.
 	//
 	// It returns the gathered messages as a list x, and an indicator ok.
 	// For the root, x is the list of messages ordered by

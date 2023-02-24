@@ -38,7 +38,7 @@ type Meta[Properties any] struct {
 
 	// The creation time of the job.
 	//
-	// A zero-value CreationTime will be set to time.Now() by the framework
+	// A zero-value CreationTime is set to time.Now() by the framework
 	// before adding to a job queue.
 	CreationTime time.Time
 

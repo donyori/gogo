@@ -30,7 +30,7 @@ import (
 // PriorityQueue is an interface representing a priority queue.
 //
 // Its method Range may not access items in a priority-related order.
-// It only guarantees that each item will be accessed once.
+// It only guarantees that each item is accessed once.
 type PriorityQueue[Item any] interface {
 	container.Container[Item]
 
@@ -122,7 +122,7 @@ func (pq *priorityQueue[Item]) Len() int {
 }
 
 // Range accesses the items in the queue.
-// Each item will be accessed once.
+// Each item is accessed once.
 // The order of the access may not involve priority.
 //
 // Its parameter handler is a function to deal with the item x in the

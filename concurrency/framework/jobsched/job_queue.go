@@ -26,7 +26,7 @@ package jobsched
 // The second type parameter Properties is the type of custom properties
 // in the meta information of jobs.
 //
-// A JobQueue will be used in only one goroutine.
+// A JobQueue is used in only one goroutine.
 // Its implementation does not need to consider concurrency issues.
 type JobQueue[Job, Properties any] interface {
 	// Len returns the number of jobs in the queue.

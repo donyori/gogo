@@ -679,7 +679,7 @@ func testTarTgzFile(t *testing.T, file *WritableFileImpl) {
 //
 // createFn is a function that calls
 // w.ZipCreate, w.ZipCreateHeader, or w.ZipCreateRaw.
-// If createFn is nil, writeZipFiles will write the file through ZipCopy.
+// If createFn is nil, writeZipFiles writes the file through ZipCopy.
 //
 // Caller should set file.Name before calling this function and
 // guarantee that file.Name has extension ".zip".

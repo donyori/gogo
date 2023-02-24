@@ -43,18 +43,18 @@ type Controller[Job, Properties any] interface {
 
 	// Input enables the client to input new jobs.
 	//
-	// If an item in metaJob is nil, it will be treated as a zero-value job
+	// If an item in metaJob is nil, it is treated as a zero-value job
 	// (with the field Job to its zero value, Meta.Priority to 0,
 	// Meta.CreationTime to time.Now(), and Meta.Custom to its zero value).
 	// If an item in metaJob has the field Meta.CreationTime with a zero value,
-	// this field will be set to time.Now().
+	// this field is set to time.Now().
 	//
 	// It returns the number of jobs input successfully.
 	//
 	// The client can input new jobs before the first effective call to
 	// the method Wait (i.e., the call after invoking the method Launch).
-	// After calling the method Wait, Input will do nothing and return 0.
-	// Note that the method Run will call Wait inside.
+	// After calling the method Wait, Input does nothing and returns 0.
+	// Note that the method Run calls Wait inside.
 	Input(metaJob ...*MetaJob[Job, Properties]) int
 }
 
@@ -72,11 +72,11 @@ type Controller[Job, Properties any] interface {
 //
 // It returns new jobs generated during or after processing
 // the current job, called newJobs.
-// If an item in newJobs is nil, it will be treated as a zero-value job
+// If an item in newJobs is nil, it is treated as a zero-value job
 // (with the field Job to its zero value, Meta.Priority to 0,
 // Meta.CreationTime to time.Now(), and Meta.Custom to its zero value).
 // If an item in newJobs has the field Meta.CreationTime with a zero value,
-// this field will be set to time.Now().
+// this field is set to time.Now().
 type JobHandler[Job, Properties any] func(job Job, quitDevice framework.QuitDevice) (newJobs []*MetaJob[Job, Properties])
 
 // New creates a new Controller.
@@ -86,7 +86,7 @@ type JobHandler[Job, Properties any] func(job Job, quitDevice framework.QuitDevi
 // in the meta information of jobs.
 //
 // n is the number of goroutines to process jobs.
-// If n is non-positive, runtime.NumCPU() will be used instead.
+// If n is non-positive, runtime.NumCPU() is used instead.
 //
 // handler is the job handler.
 // It panics if handler is nil.

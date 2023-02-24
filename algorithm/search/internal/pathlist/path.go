@@ -23,7 +23,7 @@ package pathlist
 // The path represented by this Path is constructed by
 // extending path P with element E.
 //
-// For example, the path "0 -> 1 -> 2" will be represented as
+// For example, the path "0 -> 1 -> 2" is represented as
 //
 //	&Path[int]{
 //	    E: 2,

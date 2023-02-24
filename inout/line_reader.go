@@ -30,7 +30,7 @@ type LineReader interface {
 	// If the line is too long for the buffer,
 	// then more is set and the beginning of the line is returned.
 	// The rest of the line will be returned from future calls.
-	// more will be false when returning the last fragment of the line.
+	// more is false when returning the last fragment of the line.
 	//
 	// It either returns a non-nil line or it returns an error, never both.
 	// If an error (including io.EOF) occurs after reading some content,

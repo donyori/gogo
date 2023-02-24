@@ -31,16 +31,16 @@ type mapSet[Item comparable] struct {
 
 // New creates a new Go-map-based set.
 //
-// The method Range of the set will access items in random order.
+// The method Range of the set accesses items in random order.
 // The access order in two calls to Range may be different.
 //
 // capacity asks to allocate enough space to hold
 // the specified number of items.
-// If capacity is negative, it will be ignored.
+// If capacity is negative, it is ignored.
 //
 // items are the initial items added to the set.
 //
-// New(0, nil) will create an empty set with a small starting capacity.
+// New(0, nil) creates an empty set with a small starting capacity.
 func New[Item comparable](capacity int, items container.Container[Item]) set.Set[Item] {
 	var n int
 	if items != nil {
@@ -70,7 +70,7 @@ func (ms *mapSet[Item]) Len() int {
 }
 
 // Range accesses the items in the set.
-// Each item will be accessed once.
+// Each item is accessed once.
 // The order of the access is random.
 //
 // Its parameter handler is a function to deal with the item x in the

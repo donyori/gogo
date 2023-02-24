@@ -34,7 +34,7 @@ func NewQuitDevice() *QuitDevice {
 }
 
 // QuitChan returns the channel for the quit signal.
-// When the job is finished or quit, this channel will be closed
+// When the job is finished or quit, this channel is closed
 // to broadcast the quit signal.
 func (qd *QuitDevice) QuitChan() <-chan struct{} {
 	if qd == nil {

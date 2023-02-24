@@ -30,7 +30,7 @@ import (
 // TopKBuffer is a buffer for storing the top-K greatest items.
 //
 // Its method Range may not access items in ascending or descending order.
-// It only guarantees that each item will be accessed once.
+// It only guarantees that each item is accessed once.
 type TopKBuffer[Item any] interface {
 	container.Container[Item]
 
@@ -63,7 +63,7 @@ type topKBuffer[Item any] struct {
 }
 
 // New creates a new TopKBuffer with the parameter k.
-// The buffer will hold the top-k greatest items.
+// The buffer holds the top-k greatest items.
 //
 // lessFn is a function to report whether a < b.
 // It must describe a transitive ordering:
@@ -109,7 +109,7 @@ func (tkb *topKBuffer[Item]) Len() int {
 }
 
 // Range accesses the items in the buffer.
-// Each item will be accessed once.
+// Each item is accessed once.
 // The order of the access may not be ascending or descending.
 //
 // Its parameter handler is a function to deal with the item x in the

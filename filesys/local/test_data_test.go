@@ -61,7 +61,7 @@ var (
 // lazyLoadTestData loads a file with specified name.
 //
 // It stores the file contents in the memory the first time reading that file.
-// Subsequent reads will get the file contents from the memory instead of
+// Subsequent reads get the file contents from the memory instead of
 // reading the file again.
 // Therefore, all modifications to the file after the first read cannot
 // take effect on this function.

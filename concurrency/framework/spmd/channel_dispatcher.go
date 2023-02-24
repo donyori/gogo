@@ -59,11 +59,11 @@ func newChanDispr[Message any]() *chanDispr[Message] {
 //
 // quitDevice is the device to receive a quit signal.
 // It should be obtained from Controller.
-// The function will panic if quitDevice is nil.
+// The function panics if quitDevice is nil.
 //
 // finChan is a channel to broadcast a finish signal by closing the channel.
-// It will be closed at the end of this function.
-// finChan will be ignored if it is nil.
+// It is closed at the end of this function.
+// finChan is ignored if it is nil.
 func (cd *chanDispr[Message]) Run(quitDevice framework.QuitDevice, finChan chan<- struct{}) {
 	if finChan != nil {
 		defer close(finChan)

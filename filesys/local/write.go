@@ -34,7 +34,7 @@ import (
 // mkDirs indicates whether to make necessary directories
 // before opening the file.
 //
-// The file will be closed when the returned writer is closed.
+// The file is closed when the returned writer is closed.
 func writeOpenFile(
 	name string,
 	flag int,
@@ -63,8 +63,8 @@ func writeOpenFile(
 // WriteTrunc creates (if necessary) and opens a file
 // with specified name and options opts for writing.
 //
-// If the file exists, it will be truncated.
-// If the file does not exist, it will be created
+// If the file exists, it is truncated.
+// If the file does not exist, it is created
 // with specified permission perm (before umask).
 //
 // mkDirs indicates whether to make necessary directories
@@ -73,7 +73,7 @@ func writeOpenFile(
 // opts are handled the same as in
 // function github.com/donyori/gogo/filesys.Write.
 //
-// The file will be closed when the returned writer is closed.
+// The file is closed when the returned writer is closed.
 func WriteTrunc(
 	name string,
 	perm fs.FileMode,
@@ -87,8 +87,8 @@ func WriteTrunc(
 // WriteAppend creates (if necessary) and opens a file
 // with specified name and options opts for writing.
 //
-// If the file exists, new data will be appended to the file.
-// If the file does not exist, it will be created
+// If the file exists, new data is appended to the file.
+// If the file does not exist, it is created
 // with specified permission perm (before umask).
 //
 // mkDirs indicates whether to make necessary directories
@@ -97,7 +97,7 @@ func WriteTrunc(
 // opts are handled the same as in
 // function github.com/donyori/gogo/filesys.Write.
 //
-// The file will be closed when the returned writer is closed.
+// The file is closed when the returned writer is closed.
 func WriteAppend(
 	name string,
 	perm fs.FileMode,
@@ -111,7 +111,7 @@ func WriteAppend(
 // WriteExcl creates and opens a file with specified name
 // and options opts for writing.
 //
-// The file will be created with specified permission perm (before umask).
+// The file is created with specified permission perm (before umask).
 // If the file exists, it reports an error that satisfies
 // errors.Is(err, fs.ErrExist) is true.
 //
@@ -121,7 +121,7 @@ func WriteAppend(
 // opts are handled the same as in
 // function github.com/donyori/gogo/filesys.Write.
 //
-// The file will be closed when the returned writer is closed.
+// The file is closed when the returned writer is closed.
 func WriteExcl(
 	name string,
 	perm fs.FileMode,

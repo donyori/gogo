@@ -41,7 +41,7 @@ func (sda SliceDynamicArray[Item]) Len() int {
 }
 
 // Range accesses the items in the slice from first to last.
-// Each item will be accessed once.
+// Each item is accessed once.
 //
 // Its parameter handler is a function to deal with the item x in the
 // slice and report whether to continue to access the next item.
@@ -366,7 +366,7 @@ func (sda *SliceDynamicArray[Item]) Reserve(capacity int) {
 //
 // Note that it isn't equivalent to operations on Go slice
 // like s[:len(s):len(s)],
-// because it will allocate a new array and copy the content
+// because it allocates a new array and copies the content
 // if Cap() > Len().
 func (sda *SliceDynamicArray[Item]) Shrink() {
 	if sda == nil || len(*sda) == cap(*sda) {

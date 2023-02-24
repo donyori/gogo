@@ -50,10 +50,10 @@ var ErrContainsPathSeparator = errors.AutoNewCustom(
 // it returns a nil f and an error ErrContainsPathSeparator.
 // (To test whether err is ErrContainsPathSeparator, use function errors.Is.)
 //
-// If dir is empty, it will use the default directory for temporary files
+// If dir is empty, it uses the default directory for temporary files
 // (as returned by os.TempDir) instead.
 //
-// Calling this function simultaneously will not choose the same file.
+// Calling this function simultaneously does not choose the same file.
 //
 // The client can use f.Name() to find the pathname of the file.
 // The client is responsible for removing the file when no longer needed.
@@ -89,10 +89,10 @@ func Tmp(dir, prefix, suffix string, perm fs.FileMode) (f *os.File, err error) {
 // it returns an empty name and an error ErrContainsPathSeparator.
 // (To test whether err is ErrContainsPathSeparator, use function errors.Is.)
 //
-// If dir is empty, it will use the default directory for temporary files
+// If dir is empty, it uses the default directory for temporary files
 // (as returned by os.TempDir) instead.
 //
-// Calling this function simultaneously will not choose the same directory.
+// Calling this function simultaneously does not choose the same directory.
 //
 // The client is responsible for removing the directory when no longer needed.
 func TmpDir(dir, prefix, suffix string, perm fs.FileMode) (name string, err error) {

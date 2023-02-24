@@ -43,22 +43,22 @@ type Broadcaster[Message any] interface {
 
 	// Broadcast sends the message x to all subscribers.
 	//
-	// The method will block until all subscribers receive
+	// The method blocks until all subscribers receive
 	// or buffer the message.
 	//
-	// It will panic if the broadcaster is closed.
+	// It panics if the broadcaster is closed.
 	Broadcast(x Message)
 
 	// Close closes the broadcaster.
 	//
-	// All channels assigned by the broadcaster will be closed to notify
+	// All channels assigned by the broadcaster are closed to notify
 	// its subscribers that there are no more messages.
 	//
 	// After calling the method Close, all subsequent calls to
-	// the method Broadcast will panic.
+	// the method Broadcast panic.
 	//
 	// This method can take effect only once for one instance.
-	// All calls after the first call will perform nothing.
+	// All calls after the first call perform nothing.
 	//
 	// This method should only be used by the sender.
 	Close()
@@ -76,12 +76,12 @@ type Broadcaster[Message any] interface {
 	// Unsubscribe unsubscribes the broadcaster to stop receiving messages.
 	//
 	// c is the channel acquired by the method Subscribe.
-	// It will panic if c is not gotten from the method Subscribe,
+	// It panics if c is not gotten from the method Subscribe,
 	// or c has already unsubscribed, unless the broadcaster is closed.
 	// Note that this method may read messages from the channel c.
 	// Set c to a channel not assigned by this broadcaster may cause data loss.
 	//
-	// After calling Unsubscribe, the channel c will be closed and drained
+	// After calling Unsubscribe, the channel c is closed and drained
 	// by the broadcaster.
 	//
 	// It returns all buffered and unreceived messages on the channel c
