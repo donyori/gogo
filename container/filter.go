@@ -24,7 +24,6 @@ package container
 type Filter[Item any] interface {
 	// Filter refines items in the container.
 	//
-	// Its parameter filter is a function to report
-	// whether to keep the item x.
+	// Its parameter filter is a function to report whether to keep the item x.
 	Filter(filter func(x Item) (keep bool))
 }

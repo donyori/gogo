@@ -150,7 +150,7 @@ func TestBinarySearch(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d?data=%s&goal=%v",
 			i, dataToName(tc.data), tc.goal), func(t *testing.T) {
 			itf := sequence.WrapArrayLessEqual[*idValue](
-				array.SliceDynamicArray[*idValue](tc.data), idValueLess, idValueEqual)
+				(*array.SliceDynamicArray[*idValue])(&tc.data), idValueLess, idValueEqual)
 			if idx := sequence.BinarySearch(itf, tc.goal); !tc.accept[idx] {
 				t.Errorf("got %d; accept %s", idx, acceptSetString(tc.accept))
 			}
@@ -193,7 +193,7 @@ func TestBinarySearchMaxLess(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d?data=%s&goal=%v",
 			i, dataToName(tc.data), tc.goal), func(t *testing.T) {
 			itf := sequence.WrapArrayLessEqual[*idValue](
-				array.SliceDynamicArray[*idValue](tc.data), idValueLess, idValueEqual)
+				(*array.SliceDynamicArray[*idValue])(&tc.data), idValueLess, idValueEqual)
 			if idx := sequence.BinarySearchMaxLess(itf, tc.goal); idx != tc.accept {
 				t.Errorf("got %d; want %d", idx, tc.accept)
 			}
@@ -236,7 +236,7 @@ func TestBinarySearchMinGreater(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d?data=%s&goal=%v",
 			i, dataToName(tc.data), tc.goal), func(t *testing.T) {
 			itf := sequence.WrapArrayLessEqual[*idValue](
-				array.SliceDynamicArray[*idValue](tc.data), idValueLess, idValueEqual)
+				(*array.SliceDynamicArray[*idValue])(&tc.data), idValueLess, idValueEqual)
 			if idx := sequence.BinarySearchMinGreater(itf, tc.goal); idx != tc.accept {
 				t.Errorf("got %d; want %d", idx, tc.accept)
 			}

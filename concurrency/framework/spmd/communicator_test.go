@@ -261,11 +261,11 @@ func TestCommunicator_Scatter(t *testing.T) {
 		{7, 8},
 		{9, 10},
 	}
-	data := [][4]array.SliceDynamicArray[int]{
-		{a},
-		{nil, a},
-		{nil, nil, a},
-		{nil, nil, nil, a},
+	data := [][4]*array.SliceDynamicArray[int]{
+		{&a},
+		{nil, &a},
+		{nil, nil, &a},
+		{nil, nil, nil, &a},
 		{},
 	}
 	ctrl := spmd.New(4, func(world spmd.Communicator[int], commMap map[string]spmd.Communicator[int]) {

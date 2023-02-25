@@ -75,9 +75,6 @@ func (ms *mapSet[Item]) Len() int {
 //
 // Its parameter handler is a function to deal with the item x in the
 // set and report whether to continue to access the next item.
-//
-// The client should do read-only operations on x
-// to avoid corrupting the set.
 func (ms *mapSet[Item]) Range(handler func(x Item) (cont bool)) {
 	for x := range ms.m {
 		if !handler(x) {

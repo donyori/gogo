@@ -42,6 +42,7 @@ type Set[Item any] interface {
 	Add(x ...Item)
 
 	// Remove removes x from the set.
+	//
 	// It does nothing for the items in x that are not in the set.
 	Remove(x ...Item)
 

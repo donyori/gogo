@@ -140,7 +140,7 @@ func (pq *priorityQueue[Item]) Cap() int {
 
 func (pq *priorityQueue[Item]) Enqueue(x ...Item) {
 	if pq.oha.Len() < len(x) {
-		pq.oha.Oda.Append(array.SliceDynamicArray[Item](x))
+		pq.oha.Oda.Append((*array.SliceDynamicArray[Item])(&x))
 		heap.Init(pq.oha)
 	} else {
 		for _, item := range x {

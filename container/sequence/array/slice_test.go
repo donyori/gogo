@@ -445,10 +445,10 @@ func TestSliceDynamicArray_Append(t *testing.T) {
 	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
 	seqList := []sequence.Sequence[int]{
 		nil,
-		array.SliceDynamicArray[int]{},
-		array.SliceDynamicArray[int]{3},
-		array.SliceDynamicArray[int]{3, 4},
-		array.SliceDynamicArray[int]{3, 4, 5},
+		&array.SliceDynamicArray[int]{},
+		&array.SliceDynamicArray[int]{3},
+		&array.SliceDynamicArray[int]{3, 4},
+		&array.SliceDynamicArray[int]{3, 4, 5},
 		newSequence([]int{}),
 		newSequence([]int{3}),
 		newSequence([]int{3, 4}),
@@ -612,10 +612,10 @@ func TestSliceDynamicArray_InsertSequence(t *testing.T) {
 	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
 	seqList := []sequence.Sequence[int]{
 		nil,
-		array.SliceDynamicArray[int]{},
-		array.SliceDynamicArray[int]{3},
-		array.SliceDynamicArray[int]{3, 4},
-		array.SliceDynamicArray[int]{3, 4, 5},
+		&array.SliceDynamicArray[int]{},
+		&array.SliceDynamicArray[int]{3},
+		&array.SliceDynamicArray[int]{3, 4},
+		&array.SliceDynamicArray[int]{3, 4, 5},
 		newSequence([]int{}),
 		newSequence([]int{3}),
 		newSequence([]int{3, 4}),

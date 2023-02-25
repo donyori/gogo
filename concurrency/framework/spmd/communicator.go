@@ -535,12 +535,12 @@ func (comm *communicator[Message]) Scatter(root int, x sequence.Sequence[Message
 		// No other goroutines in this group.
 		ok = !comm.ctx.ctrl.qd.IsQuit()
 		if ok && x != nil {
-			if a, b := x.(array.Array[Message]); b {
+			if a, b := any(x).(array.Array[Message]); b {
 				msg = a
 			} else {
 				sda := make(array.SliceDynamicArray[Message], 0, x.Len())
 				sda.Append(x)
-				msg = sda
+				msg = &sda
 			}
 		}
 		return
@@ -586,11 +586,11 @@ func (comm *communicator[Message]) Scatter(root int, x sequence.Sequence[Message
 		}
 
 		size := x.Len()
-		a, b := x.(array.Array[Message])
+		a, b := any(x).(array.Array[Message])
 		if !b {
 			sda := make(array.SliceDynamicArray[Message], 0, size)
 			sda.Append(x)
-			a = sda
+			a = &sda
 		}
 		n, idx, cIdx := len(comm.ctx.comms), 0, 0
 		q, r := size/n, size%n
