@@ -23,8 +23,8 @@ import (
 	"testing"
 
 	"github.com/donyori/gogo/algorithm/permutation"
+	"github.com/donyori/gogo/fmtcoll"
 	"github.com/donyori/gogo/function/compare"
-	"github.com/donyori/gogo/internal/testaux"
 )
 
 var dataList = [][][]int{
@@ -218,7 +218,7 @@ func TestNextPermutation(t *testing.T) {
 }
 
 func dataToName(data []int) string {
-	return testaux.SliceToName(data, ",", "%d", false)
+	return fmtcoll.FormatSlice(data, ",", "%d", false, false)
 }
 
 func dataUnequal(a, b []int) bool {

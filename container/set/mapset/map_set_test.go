@@ -20,15 +20,17 @@ package mapset_test
 
 import (
 	"fmt"
-	"sort"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/donyori/gogo/container/sequence/array"
 	"github.com/donyori/gogo/container/set"
 	"github.com/donyori/gogo/container/set/mapset"
-	"github.com/donyori/gogo/internal/testaux"
+	"github.com/donyori/gogo/fmtcoll"
+)
+
+type (
+	IntSDA    = array.SliceDynamicArray[int]
+	IntSDAPtr = *array.SliceDynamicArray[int]
 )
 
 var dataList = [][]int{
@@ -76,7 +78,7 @@ func TestNew(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&cap=%d", sliceToName(tc.data), tc.capacity), func(t *testing.T) {
-			ms := mapset.New[int](tc.capacity, (*array.SliceDynamicArray[int])(&tc.data))
+			ms := mapset.New[int](tc.capacity, IntSDAPtr(&tc.data))
 			if setWrong(ms, tc.want) {
 				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
 			}
@@ -88,7 +90,7 @@ func TestMapSet_Len(t *testing.T) {
 	for i, data := range dataList {
 		want := len(dataSetList[i])
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			ms := mapset.New[int](0, (*array.SliceDynamicArray[int])(&data))
+			ms := mapset.New[int](0, IntSDAPtr(&data))
 			if n := ms.Len(); n != want {
 				t.Errorf("got %d; want %d", n, want)
 			}
@@ -103,7 +105,7 @@ func TestMapSet_Range(t *testing.T) {
 			counterMap[x] = 1
 		}
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			ms := mapset.New[int](0, (*array.SliceDynamicArray[int])(&data))
+			ms := mapset.New[int](0, IntSDAPtr(&data))
 			ms.Range(func(x int) (cont bool) {
 				counterMap[x]--
 				return true
@@ -153,7 +155,7 @@ func TestMapSet_Filter(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&filterIdx=%d", sliceToName(tc.data), tc.filterIdx), func(t *testing.T) {
-			ms := mapset.New[int](0, (*array.SliceDynamicArray[int])(&tc.data))
+			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
 			ms.Filter(filterList[tc.filterIdx])
 			if setWrong(ms, tc.want) {
 				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
@@ -182,7 +184,7 @@ func TestMapSet_ContainsItem(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&x=%d", sliceToName(tc.data), tc.x), func(t *testing.T) {
-			ms := mapset.New[int](0, (*array.SliceDynamicArray[int])(&tc.data))
+			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
 			if got := ms.ContainsItem(tc.x); got != tc.want {
 				t.Errorf("got %t; want %t", got, tc.want)
 			}
@@ -193,13 +195,13 @@ func TestMapSet_ContainsItem(t *testing.T) {
 func TestMapSet_ContainsSet(t *testing.T) {
 	setList := []set.Set[int]{
 		nil, mapset.New[int](0, nil),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3, 4}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3, 4, 5}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3, 4, 5, 6}),
+		mapset.New[int](0, &IntSDA{0}),
+		mapset.New[int](0, &IntSDA{0, 1}),
+		mapset.New[int](0, &IntSDA{0, 1, 2}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3, 4}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3, 4, 5}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3, 4, 5, 6}),
 	}
 
 	testCases := make([]struct {
@@ -229,7 +231,7 @@ func TestMapSet_ContainsSet(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&s=%s", sliceToName(tc.data), setToString(tc.s)), func(t *testing.T) {
-			ms := mapset.New[int](0, (*array.SliceDynamicArray[int])(&tc.data))
+			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
 			if got := ms.ContainsSet(tc.s); got != tc.want {
 				t.Errorf("got %t; want %t", got, tc.want)
 			}
@@ -276,8 +278,8 @@ func TestMapSet_ContainsAny(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&c=%s", sliceToName(tc.data), sliceToName(tc.c)), func(t *testing.T) {
-			ms := mapset.New[int](0, (*array.SliceDynamicArray[int])(&tc.data))
-			if got := ms.ContainsAny((*array.SliceDynamicArray[int])(&tc.c)); got != tc.want {
+			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
+			if got := ms.ContainsAny(IntSDAPtr(&tc.c)); got != tc.want {
 				t.Errorf("got %t; want %t", got, tc.want)
 			}
 		})
@@ -305,7 +307,7 @@ func TestMapSet_Add(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&x=%s", sliceToName(tc.data), sliceToName(tc.x)), func(t *testing.T) {
-			ms := mapset.New[int](0, (*array.SliceDynamicArray[int])(&tc.data))
+			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
 			ms.Add(tc.x...)
 			if setWrong(ms, tc.want) {
 				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
@@ -335,7 +337,7 @@ func TestMapSet_Remove(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&x=%s", sliceToName(tc.data), sliceToName(tc.x)), func(t *testing.T) {
-			ms := mapset.New[int](0, (*array.SliceDynamicArray[int])(&tc.data))
+			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
 			ms.Remove(tc.x...)
 			if setWrong(ms, tc.want) {
 				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
@@ -347,13 +349,13 @@ func TestMapSet_Remove(t *testing.T) {
 func TestMapSet_Union(t *testing.T) {
 	setList := []set.Set[int]{
 		nil, mapset.New[int](0, nil),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3, 4}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3, 4, 5}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3, 4, 5, 6}),
+		mapset.New[int](0, &IntSDA{0}),
+		mapset.New[int](0, &IntSDA{0, 1}),
+		mapset.New[int](0, &IntSDA{0, 1, 2}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3, 4}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3, 4, 5}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3, 4, 5, 6}),
 	}
 
 	testCases := make([]struct {
@@ -380,7 +382,7 @@ func TestMapSet_Union(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&s=%s", sliceToName(tc.data), setToString(tc.s)), func(t *testing.T) {
-			ms := mapset.New[int](0, (*array.SliceDynamicArray[int])(&tc.data))
+			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
 			ms.Union(tc.s)
 			if setWrong(ms, tc.want) {
 				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
@@ -392,13 +394,13 @@ func TestMapSet_Union(t *testing.T) {
 func TestMapSet_Intersect(t *testing.T) {
 	setList := []set.Set[int]{
 		nil, mapset.New[int](0, nil),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3, 4}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3, 4, 5}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3, 4, 5, 6}),
+		mapset.New[int](0, &IntSDA{0}),
+		mapset.New[int](0, &IntSDA{0, 1}),
+		mapset.New[int](0, &IntSDA{0, 1, 2}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3, 4}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3, 4, 5}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3, 4, 5, 6}),
 	}
 
 	testCases := make([]struct {
@@ -426,7 +428,7 @@ func TestMapSet_Intersect(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&s=%s", sliceToName(tc.data), setToString(tc.s)), func(t *testing.T) {
-			ms := mapset.New[int](0, (*array.SliceDynamicArray[int])(&tc.data))
+			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
 			ms.Intersect(tc.s)
 			if setWrong(ms, tc.want) {
 				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
@@ -438,13 +440,13 @@ func TestMapSet_Intersect(t *testing.T) {
 func TestMapSet_Subtract(t *testing.T) {
 	setList := []set.Set[int]{
 		nil, mapset.New[int](0, nil),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3, 4}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3, 4, 5}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3, 4, 5, 6}),
+		mapset.New[int](0, &IntSDA{0}),
+		mapset.New[int](0, &IntSDA{0, 1}),
+		mapset.New[int](0, &IntSDA{0, 1, 2}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3, 4}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3, 4, 5}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3, 4, 5, 6}),
 	}
 
 	testCases := make([]struct {
@@ -471,7 +473,7 @@ func TestMapSet_Subtract(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&s=%s", sliceToName(tc.data), setToString(tc.s)), func(t *testing.T) {
-			ms := mapset.New[int](0, (*array.SliceDynamicArray[int])(&tc.data))
+			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
 			ms.Subtract(tc.s)
 			if setWrong(ms, tc.want) {
 				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
@@ -483,13 +485,13 @@ func TestMapSet_Subtract(t *testing.T) {
 func TestMapSet_DisjunctiveUnion(t *testing.T) {
 	setList := []set.Set[int]{
 		nil, mapset.New[int](0, nil),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3, 4}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3, 4, 5}),
-		mapset.New[int](0, &array.SliceDynamicArray[int]{0, 1, 2, 3, 4, 5, 6}),
+		mapset.New[int](0, &IntSDA{0}),
+		mapset.New[int](0, &IntSDA{0, 1}),
+		mapset.New[int](0, &IntSDA{0, 1, 2}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3, 4}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3, 4, 5}),
+		mapset.New[int](0, &IntSDA{0, 1, 2, 3, 4, 5, 6}),
 	}
 
 	testCases := make([]struct {
@@ -526,7 +528,7 @@ func TestMapSet_DisjunctiveUnion(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&s=%s", sliceToName(tc.data), setToString(tc.s)), func(t *testing.T) {
-			ms := mapset.New[int](0, (*array.SliceDynamicArray[int])(&tc.data))
+			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
 			ms.DisjunctiveUnion(tc.s)
 			if setWrong(ms, tc.want) {
 				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
@@ -538,7 +540,7 @@ func TestMapSet_DisjunctiveUnion(t *testing.T) {
 func TestMapSet_Clear(t *testing.T) {
 	for _, data := range dataList {
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			ms := mapset.New[int](0, (*array.SliceDynamicArray[int])(&data))
+			ms := mapset.New[int](0, IntSDAPtr(&data))
 			ms.Clear()
 			if setWrong(ms, nil) {
 				t.Errorf("got %s; want {}", setToString(ms))
@@ -548,7 +550,7 @@ func TestMapSet_Clear(t *testing.T) {
 }
 
 func sliceToName[T any](s []T) string {
-	return testaux.SliceToName(s, ",", "%v", true)
+	return fmtcoll.FormatSlice(s, ",", "%v", true, false)
 }
 
 func setWrong(s set.Set[int], want map[int]bool) bool {
@@ -578,38 +580,21 @@ func setToString(s set.Set[int]) string {
 	if s == nil {
 		return "<nil>"
 	}
-	data := make([]int, 0, s.Len())
+	m := make(map[int]struct{}, s.Len())
 	s.Range(func(x int) (cont bool) {
-		data = append(data, x)
+		m[x] = struct{}{}
 		return true
 	})
-	return setOrMapKeyToString(data)
+	return mapKeyToString(m)
 }
 
-func mapKeyToString(m map[int]bool) string {
-	if m == nil {
-		return "<nil>"
-	}
-	data := make([]int, 0, len(m))
-	for x := range m {
-		data = append(data, x)
-	}
-	return setOrMapKeyToString(data)
-}
-
-func setOrMapKeyToString(data []int) string {
-	sort.Ints(data)
-	var b strings.Builder
-	b.Grow(len(data)*2 + 2)
-	b.WriteByte('{')
-	for i, x := range data {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteString(strconv.Itoa(x))
-	}
-	b.WriteByte('}')
-	return b.String()
+func mapKeyToString[V any](m map[int]V) string {
+	return fmtcoll.FormatMap(
+		m, ",", "%d", "", false, false,
+		func(key1 int, _ V, key2 int, _ V) bool {
+			return key1 < key2
+		},
+	)
 }
 
 func copyMap[K comparable, V any](m map[K]V) map[K]V {

@@ -27,53 +27,25 @@ import (
 	"github.com/donyori/gogo/container/sequence"
 	"github.com/donyori/gogo/container/sequence/array"
 	"github.com/donyori/gogo/errors"
+	"github.com/donyori/gogo/fmtcoll"
 	"github.com/donyori/gogo/function/compare"
-	"github.com/donyori/gogo/internal/testaux"
 )
 
-func TestTypeConversion(t *testing.T) {
-	t.Run("int", func(t *testing.T) {
-		_ = array.SliceDynamicArray[int]([]int{1, 2, 3})
-	})
-	t.Run("any", func(t *testing.T) {
-		_ = array.SliceDynamicArray[any]([]any{1, nil, 3., "4"})
-	})
-}
-
-func TestMake(t *testing.T) {
-	const N, C int = 2, 10
-	t.Run("int", func(t *testing.T) {
-		sda := make(array.SliceDynamicArray[int], N, C)
-		if n := sda.Len(); n != N {
-			t.Errorf("sda.Len: %d; want %d", n, N)
-		}
-		if c := sda.Cap(); c != C {
-			t.Errorf("sda.Cap: %d; want %d", c, C)
-		}
-	})
-	t.Run("any", func(t *testing.T) {
-		sda := make(array.SliceDynamicArray[any], N, C)
-		if n := sda.Len(); n != N {
-			t.Errorf("sda.Len: %d; want %d", n, N)
-		}
-		if c := sda.Cap(); c != C {
-			t.Errorf("sda.Cap: %d; want %d", c, C)
-		}
-	})
-}
+type IntSDA = array.SliceDynamicArray[int]
 
 func TestSliceDynamicArray_Len(t *testing.T) {
 	testCases := []struct {
-		sda  array.SliceDynamicArray[int]
+		sda  *IntSDA
 		want int
 	}{
 		{nil, 0},
-		{array.SliceDynamicArray[int]{}, 0},
-		{array.SliceDynamicArray[int]{1}, 1},
+		{new(IntSDA), 0},
+		{&IntSDA{}, 0},
+		{&IntSDA{1}, 1},
 	}
 
 	for _, tc := range testCases {
-		t.Run("s="+sliceToName(tc.sda), func(t *testing.T) {
+		t.Run("s="+sdaPtrToName(tc.sda), func(t *testing.T) {
 			if n := tc.sda.Len(); n != tc.want {
 				t.Errorf("got %d; want %d", n, tc.want)
 			}
@@ -82,7 +54,7 @@ func TestSliceDynamicArray_Len(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Range(t *testing.T) {
-	sda := array.SliceDynamicArray[int]{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
+	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
 	want := []int{0, 1, 2, 3, 4}
 	s := make([]int, 0, len(sda))
 	sda.Range(func(x int) (cont bool) {
@@ -94,17 +66,29 @@ func TestSliceDynamicArray_Range(t *testing.T) {
 	}
 }
 
+func TestSliceDynamicArray_Range_NilAndEmpty(t *testing.T) {
+	sdas := []*IntSDA{nil, new(IntSDA), {}}
+	for _, sda := range sdas {
+		t.Run("s="+sdaPtrToName(sda), func(t *testing.T) {
+			sda.Range(func(x int) (cont bool) {
+				t.Error("handler was called, x:", x)
+				return true
+			})
+		})
+	}
+}
+
 func TestSliceDynamicArray_Front(t *testing.T) {
 	testCases := []struct {
-		sda  array.SliceDynamicArray[int]
+		sda  IntSDA
 		want int
 	}{
-		{array.SliceDynamicArray[int]{0}, 0},
-		{array.SliceDynamicArray[int]{0, 1}, 0},
-		{array.SliceDynamicArray[int]{0, 1, 2}, 0},
-		{array.SliceDynamicArray[int]{1}, 1},
-		{array.SliceDynamicArray[int]{1, 2}, 1},
-		{array.SliceDynamicArray[int]{1, 2, 3}, 1},
+		{IntSDA{0}, 0},
+		{IntSDA{0, 1}, 0},
+		{IntSDA{0, 1, 2}, 0},
+		{IntSDA{1}, 1},
+		{IntSDA{1, 2}, 1},
+		{IntSDA{1, 2, 3}, 1},
 	}
 
 	for _, tc := range testCases {
@@ -143,15 +127,15 @@ func TestSliceDynamicArray_SetFront(t *testing.T) {
 
 func TestSliceDynamicArray_Back(t *testing.T) {
 	testCases := []struct {
-		sda  array.SliceDynamicArray[int]
+		sda  IntSDA
 		want int
 	}{
-		{array.SliceDynamicArray[int]{0}, 0},
-		{array.SliceDynamicArray[int]{0, 1}, 1},
-		{array.SliceDynamicArray[int]{0, 1, 2}, 2},
-		{array.SliceDynamicArray[int]{1}, 1},
-		{array.SliceDynamicArray[int]{1, 2}, 2},
-		{array.SliceDynamicArray[int]{1, 2, 3}, 3},
+		{IntSDA{0}, 0},
+		{IntSDA{0, 1}, 1},
+		{IntSDA{0, 1, 2}, 2},
+		{IntSDA{1}, 1},
+		{IntSDA{1, 2}, 2},
+		{IntSDA{1, 2, 3}, 3},
 	}
 
 	for _, tc := range testCases {
@@ -209,10 +193,18 @@ func TestSliceDynamicArray_Reverse(t *testing.T) {
 			}
 		})
 	}
+
+	var nilSDA *IntSDA
+	t.Run("s="+sdaPtrToName(nilSDA), func(t *testing.T) {
+		nilSDA.Reverse()
+		if nilSDA != nil {
+			t.Errorf("got %v; want <nil>", nilSDA)
+		}
+	})
 }
 
 func TestSliceDynamicArray_Get(t *testing.T) {
-	sda := array.SliceDynamicArray[int]{2, 3, 4, 5, 6}
+	sda := IntSDA{2, 3, 4, 5, 6}
 	testCases := []struct {
 		i, want int
 	}{
@@ -288,7 +280,7 @@ func TestSliceDynamicArray_Swap(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Slice(t *testing.T) {
-	sda := array.SliceDynamicArray[int]{0, 1, 2, 3, 4}
+	sda := IntSDA{0, 1, 2, 3, 4}
 	n := len(sda)
 
 	testCases := make([]struct {
@@ -375,20 +367,39 @@ func TestSliceDynamicArray_Filter(t *testing.T) {
 	}
 }
 
+func TestSliceDynamicArray_Filter_NilAndEmpty(t *testing.T) {
+	sdas := []*IntSDA{nil, new(IntSDA), {}}
+	for _, sda := range sdas {
+		t.Run("s="+sdaPtrToName(sda), func(t *testing.T) {
+			sda.Filter(func(x int) (keep bool) {
+				t.Error("handler was called, x:", x)
+				return true
+			})
+		})
+	}
+}
+
 func TestSliceDynamicArray_Cap(t *testing.T) {
+	sda1 := make(IntSDA, 0, 3)
+	sda2 := IntSDA{1, 2, 3}[:1]
 	testCases := []struct {
-		sda  array.SliceDynamicArray[int]
+		sda  *IntSDA
 		want int
 	}{
 		{nil, 0},
-		{array.SliceDynamicArray[int]{}, 0},
-		{make(array.SliceDynamicArray[int], 0, 3), 3},
-		{array.SliceDynamicArray[int]{1}, 1},
-		{array.SliceDynamicArray[int]{1, 2, 3}[:1], 3},
+		{new(IntSDA), 0},
+		{&IntSDA{}, 0},
+		{&sda1, 3},
+		{&IntSDA{1}, 1},
+		{&sda2, 3},
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("s=%s&cap=%d", sliceToName(tc.sda), cap(tc.sda)), func(t *testing.T) {
+		var sdaCap int
+		if tc.sda != nil {
+			sdaCap = cap(*tc.sda)
+		}
+		t.Run(fmt.Sprintf("s=%s&cap=%d", sdaPtrToName(tc.sda), sdaCap), func(t *testing.T) {
 			if c := tc.sda.Cap(); c != tc.want {
 				t.Errorf("got %d; want %d", c, tc.want)
 			}
@@ -445,10 +456,10 @@ func TestSliceDynamicArray_Append(t *testing.T) {
 	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
 	seqList := []sequence.Sequence[int]{
 		nil,
-		&array.SliceDynamicArray[int]{},
-		&array.SliceDynamicArray[int]{3},
-		&array.SliceDynamicArray[int]{3, 4},
-		&array.SliceDynamicArray[int]{3, 4, 5},
+		&IntSDA{},
+		&IntSDA{3},
+		&IntSDA{3, 4},
+		&IntSDA{3, 4, 5},
 		newSequence([]int{}),
 		newSequence([]int{3}),
 		newSequence([]int{3, 4}),
@@ -612,10 +623,10 @@ func TestSliceDynamicArray_InsertSequence(t *testing.T) {
 	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
 	seqList := []sequence.Sequence[int]{
 		nil,
-		&array.SliceDynamicArray[int]{},
-		&array.SliceDynamicArray[int]{3},
-		&array.SliceDynamicArray[int]{3, 4},
-		&array.SliceDynamicArray[int]{3, 4, 5},
+		&IntSDA{},
+		&IntSDA{3},
+		&IntSDA{3, 4},
+		&IntSDA{3, 4, 5},
 		newSequence([]int{}),
 		newSequence([]int{3}),
 		newSequence([]int{3, 4}),
@@ -908,10 +919,25 @@ func TestSliceDynamicArray_Clear(t *testing.T) {
 			}
 		})
 	}
+
+	var nilSDA *IntSDA
+	t.Run("s="+sdaPtrToName(nilSDA), func(t *testing.T) {
+		nilSDA.Clear()
+		if nilSDA != nil {
+			t.Errorf("got %v; want <nil>", nilSDA)
+		}
+	})
 }
 
 func sliceToName[T any](s []T) string {
-	return testaux.SliceToName(s, ",", "%v", true)
+	return fmtcoll.FormatSlice(s, ",", "%v", true, false)
+}
+
+func sdaPtrToName[T any](p *array.SliceDynamicArray[T]) string {
+	if p == nil {
+		return fmt.Sprintf("(%T)<nil>", p)
+	}
+	return sliceToName(*p)
 }
 
 func sequenceToName[Item any](s sequence.Sequence[Item]) string {

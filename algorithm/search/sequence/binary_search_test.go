@@ -27,7 +27,7 @@ import (
 
 	"github.com/donyori/gogo/algorithm/search/sequence"
 	"github.com/donyori/gogo/container/sequence/array"
-	"github.com/donyori/gogo/internal/testaux"
+	"github.com/donyori/gogo/fmtcoll"
 )
 
 type idValue struct {
@@ -268,5 +268,5 @@ func acceptSetString(acceptSet map[int]bool) string {
 }
 
 func dataToName(data []*idValue) string {
-	return testaux.SliceToName(data, ",", "%v", false)
+	return fmtcoll.FormatSlice(data, ",", "%v", false, false)
 }

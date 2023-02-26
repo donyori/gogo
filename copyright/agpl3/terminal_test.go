@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/donyori/gogo/copyright/agpl3"
-	"github.com/donyori/gogo/internal/testaux"
+	"github.com/donyori/gogo/fmtcoll"
 )
 
 const CopyrightNoticePatternLayout = "" +
@@ -188,5 +188,5 @@ func TestResponseShowWC(t *testing.T) {
 }
 
 func argsToName(args []string) string {
-	return testaux.SliceToName(args, ",", "%+q", false)
+	return fmtcoll.FormatSlice(args, ",", "%+q", false, false)
 }

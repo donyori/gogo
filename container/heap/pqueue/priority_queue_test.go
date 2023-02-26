@@ -26,11 +26,13 @@ import (
 
 	"github.com/donyori/gogo/container/heap/pqueue"
 	"github.com/donyori/gogo/container/sequence/array"
+	"github.com/donyori/gogo/fmtcoll"
 	"github.com/donyori/gogo/function/compare"
-	"github.com/donyori/gogo/internal/testaux"
 )
 
-var intLess = compare.OrderedLess[int]
+type IntSDAPtr = *array.SliceDynamicArray[int]
+
+var IntLess = compare.OrderedLess[int]
 
 var dataList = [][]int{
 	nil, {},
@@ -46,7 +48,7 @@ func TestNew(t *testing.T) {
 	for _, data := range dataList {
 		sorted := copyAndSort(data)
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.New[int](intLess, (*array.SliceDynamicArray[int])(&data))
+			pq := pqueue.New[int](IntLess, IntSDAPtr(&data))
 			checkPriorityQueueByDequeue[int](t, pq, sorted)
 		})
 	}
@@ -55,7 +57,7 @@ func TestNew(t *testing.T) {
 func TestPriorityQueue_Len(t *testing.T) {
 	for _, data := range dataList {
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.New[int](intLess, (*array.SliceDynamicArray[int])(&data))
+			pq := pqueue.New[int](IntLess, IntSDAPtr(&data))
 			if n := pq.Len(); n != len(data) {
 				t.Errorf("got %d; want %d", n, len(data))
 			}
@@ -70,7 +72,7 @@ func TestPriorityQueue_Range(t *testing.T) {
 			counterMap[x]++
 		}
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.New[int](intLess, (*array.SliceDynamicArray[int])(&data))
+			pq := pqueue.New[int](IntLess, IntSDAPtr(&data))
 			pq.Range(func(x int) (cont bool) {
 				counterMap[x]--
 				return true
@@ -89,7 +91,7 @@ func TestPriorityQueue_Range(t *testing.T) {
 func TestPriorityQueue_Cap(t *testing.T) {
 	for _, data := range dataList {
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.New[int](intLess, (*array.SliceDynamicArray[int])(&data))
+			pq := pqueue.New[int](IntLess, IntSDAPtr(&data))
 			if c := pq.Cap(); c < len(data) {
 				t.Errorf("got %d; want >= %d", c, len(data))
 			}
@@ -118,7 +120,7 @@ func TestPriorityQueue_Enqueue(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&xs=%s", sliceToName(tc.data), sliceToName(tc.xs)), func(t *testing.T) {
-			pq := pqueue.New[int](intLess, (*array.SliceDynamicArray[int])(&tc.data))
+			pq := pqueue.New[int](IntLess, IntSDAPtr(&tc.data))
 			pq.Enqueue(tc.xs...)
 			checkPriorityQueueByDequeue(t, pq, tc.want)
 		})
@@ -132,7 +134,7 @@ func TestPriorityQueue_Dequeue(t *testing.T) {
 		}
 		sorted := copyAndSort(data)
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.New[int](intLess, (*array.SliceDynamicArray[int])(&data))
+			pq := pqueue.New[int](IntLess, IntSDAPtr(&data))
 			if x := pq.Dequeue(); x != sorted[0] {
 				t.Errorf("got %d; want %d", x, sorted[0])
 			}
@@ -153,7 +155,7 @@ func TestPriorityQueue_Top(t *testing.T) {
 			}
 		}
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.New[int](intLess, (*array.SliceDynamicArray[int])(&data))
+			pq := pqueue.New[int](IntLess, IntSDAPtr(&data))
 			if x := pq.Top(); x != min {
 				t.Errorf("got %d; want %d", x, min)
 			}
@@ -194,7 +196,7 @@ func TestPriorityQueue_ReplaceTop(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&newX=%d", sliceToName(tc.data), tc.newX), func(t *testing.T) {
-			pq := pqueue.New[int](intLess, (*array.SliceDynamicArray[int])(&tc.data))
+			pq := pqueue.New[int](IntLess, IntSDAPtr(&tc.data))
 			if x := pq.ReplaceTop(tc.newX); x != tc.want[0] {
 				t.Errorf("got %d; want %d", x, tc.want[0])
 			}
@@ -206,7 +208,7 @@ func TestPriorityQueue_ReplaceTop(t *testing.T) {
 func TestPriorityQueue_Clear(t *testing.T) {
 	for _, data := range dataList {
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.New[int](intLess, (*array.SliceDynamicArray[int])(&data))
+			pq := pqueue.New[int](IntLess, IntSDAPtr(&data))
 			pq.Clear()
 			checkPriorityQueueByDequeue[int](t, pq, nil)
 		})
@@ -214,7 +216,7 @@ func TestPriorityQueue_Clear(t *testing.T) {
 }
 
 func sliceToName[T any](s []T) string {
-	return testaux.SliceToName(s, ",", "%v", true)
+	return fmtcoll.FormatSlice(s, ",", "%v", true, false)
 }
 
 func copyAndSort(data []int) []int {

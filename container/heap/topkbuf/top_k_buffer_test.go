@@ -25,11 +25,13 @@ import (
 
 	"github.com/donyori/gogo/container/heap/topkbuf"
 	"github.com/donyori/gogo/container/sequence/array"
+	"github.com/donyori/gogo/fmtcoll"
 	"github.com/donyori/gogo/function/compare"
-	"github.com/donyori/gogo/internal/testaux"
 )
 
-var intLess = compare.OrderedLess[int]
+type IntSDAPtr = *array.SliceDynamicArray[int]
+
+var IntLess = compare.OrderedLess[int]
 
 var dataList = [][]int{
 	nil, {},
@@ -69,7 +71,7 @@ func TestNew(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k), func(t *testing.T) {
-			tkb := topkbuf.New[int](tc.k, intLess, (*array.SliceDynamicArray[int])(&tc.data))
+			tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
 			checkTopKBufferByDrain(t, tkb, tc.want)
 		})
 	}
@@ -96,7 +98,7 @@ func TestTopKBuffer_Len(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k), func(t *testing.T) {
-			tkb := topkbuf.New[int](tc.k, intLess, (*array.SliceDynamicArray[int])(&tc.data))
+			tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
 			if n := tkb.Len(); n != tc.want {
 				t.Errorf("got %d; want %d", n, tc.want)
 			}
@@ -126,7 +128,7 @@ func TestTopKBuffer_Range(t *testing.T) {
 			counterMap[x]++
 		}
 		t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k), func(t *testing.T) {
-			tkb := topkbuf.New[int](tc.k, intLess, (*array.SliceDynamicArray[int])(&tc.data))
+			tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
 			tkb.Range(func(x int) (cont bool) {
 				counterMap[x]--
 				return true
@@ -146,7 +148,7 @@ func TestTopKBuffer_K(t *testing.T) {
 	for _, data := range dataList {
 		for k := 1; k <= maxK; k++ {
 			t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(data), k), func(t *testing.T) {
-				tkb := topkbuf.New[int](k, intLess, (*array.SliceDynamicArray[int])(&data))
+				tkb := topkbuf.New[int](k, IntLess, IntSDAPtr(&data))
 				if got := tkb.K(); got != k {
 					t.Errorf("got %d; want %d", got, k)
 				}
@@ -182,7 +184,7 @@ func TestTopKBuffer_Add(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&k=%d&xs=%s",
 			sliceToName(tc.data), tc.k, sliceToName(tc.xs)), func(t *testing.T) {
-			tkb := topkbuf.New[int](tc.k, intLess, (*array.SliceDynamicArray[int])(&tc.data))
+			tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
 			tkb.Add(tc.xs...)
 			checkTopKBufferByDrain(t, tkb, tc.want)
 		})
@@ -207,7 +209,7 @@ func TestTopKBuffer_Drain(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k), func(t *testing.T) {
-			tkb := topkbuf.New[int](tc.k, intLess, (*array.SliceDynamicArray[int])(&tc.data))
+			tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
 			if topK := tkb.Drain(); !compare.ComparableSliceEqual(topK, tc.want) {
 				t.Errorf("got %v; want %v", topK, tc.want)
 			}
@@ -219,7 +221,7 @@ func TestTopKBuffer_Clear(t *testing.T) {
 	for _, data := range dataList {
 		for k := 1; k <= maxK; k++ {
 			t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(data), k), func(t *testing.T) {
-				tkb := topkbuf.New[int](k, intLess, (*array.SliceDynamicArray[int])(&data))
+				tkb := topkbuf.New[int](k, IntLess, IntSDAPtr(&data))
 				tkb.Clear()
 				checkTopKBufferByDrain(t, tkb, nil)
 			})
@@ -228,7 +230,7 @@ func TestTopKBuffer_Clear(t *testing.T) {
 }
 
 func sliceToName[T any](s []T) string {
-	return testaux.SliceToName(s, ",", "%v", true)
+	return fmtcoll.FormatSlice(s, ",", "%v", true, false)
 }
 
 func copyAndSort(data []int) []int {

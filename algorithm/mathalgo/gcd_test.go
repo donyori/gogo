@@ -26,7 +26,7 @@ import (
 
 	"github.com/donyori/gogo/algorithm/mathalgo"
 	"github.com/donyori/gogo/constraints"
-	"github.com/donyori/gogo/internal/testaux"
+	"github.com/donyori/gogo/fmtcoll"
 )
 
 const NumTestIntegerPrimeFactors int = 3
@@ -395,7 +395,7 @@ func BenchmarkGCD2Uint64Functions(b *testing.B) {
 }
 
 func xsToName[Int constraints.Integer](xs []Int) string {
-	return testaux.SliceToName(xs, ",", "%d", false)
+	return fmtcoll.FormatSlice(xs, ",", "%d", false, false)
 }
 
 // gcdBruteForce finds the greatest common divisor of the integers xs
