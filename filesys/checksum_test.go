@@ -202,9 +202,9 @@ func TestNewHashVerifier(t *testing.T) {
 			}()
 			got := filesys.NewHashVerifier(tc.newHash, tc.prefixHex)
 			if tc.panicMsg != "" {
-				t.Error("function returned but want panic")
+				t.Error("want panic but got", got)
 			} else if got == nil {
-				t.Error("got nil")
+				t.Error("got <nil>")
 			}
 		})
 	}

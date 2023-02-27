@@ -141,11 +141,9 @@ func TestMapSet_Filter(t *testing.T) {
 		for filterIdx, filter := range filterList {
 			testCases[idx].data = data
 			testCases[idx].filterIdx = filterIdx
+			testCases[idx].want = make(map[int]bool, len(data))
 			for _, x := range data {
 				if filter(x) {
-					if testCases[idx].want == nil {
-						testCases[idx].want = make(map[int]bool, len(data))
-					}
 					testCases[idx].want[x] = true
 				}
 			}
@@ -194,7 +192,8 @@ func TestMapSet_ContainsItem(t *testing.T) {
 
 func TestMapSet_ContainsSet(t *testing.T) {
 	setList := []set.Set[int]{
-		nil, mapset.New[int](0, nil),
+		nil,
+		mapset.New[int](0, nil),
 		mapset.New[int](0, &IntSDA{0}),
 		mapset.New[int](0, &IntSDA{0, 1}),
 		mapset.New[int](0, &IntSDA{0, 1, 2}),
@@ -241,7 +240,8 @@ func TestMapSet_ContainsSet(t *testing.T) {
 
 func TestMapSet_ContainsAny(t *testing.T) {
 	ctnrDataList := [][]int{
-		nil, {},
+		nil,
+		{},
 		{0},
 		{0, 1},
 		{0, 1, 2},
@@ -348,7 +348,8 @@ func TestMapSet_Remove(t *testing.T) {
 
 func TestMapSet_Union(t *testing.T) {
 	setList := []set.Set[int]{
-		nil, mapset.New[int](0, nil),
+		nil,
+		mapset.New[int](0, nil),
 		mapset.New[int](0, &IntSDA{0}),
 		mapset.New[int](0, &IntSDA{0, 1}),
 		mapset.New[int](0, &IntSDA{0, 1, 2}),
@@ -393,7 +394,8 @@ func TestMapSet_Union(t *testing.T) {
 
 func TestMapSet_Intersect(t *testing.T) {
 	setList := []set.Set[int]{
-		nil, mapset.New[int](0, nil),
+		nil,
+		mapset.New[int](0, nil),
 		mapset.New[int](0, &IntSDA{0}),
 		mapset.New[int](0, &IntSDA{0, 1}),
 		mapset.New[int](0, &IntSDA{0, 1, 2}),
@@ -413,15 +415,18 @@ func TestMapSet_Intersect(t *testing.T) {
 		for _, s := range setList {
 			testCases[idx].data = data
 			testCases[idx].s = s
+			var want map[int]bool
 			if s != nil {
-				want := copyMap(dataSetList[i])
+				want = copyMap(dataSetList[i])
 				for x := range want {
 					if !s.ContainsItem(x) {
 						delete(want, x)
 					}
 				}
-				testCases[idx].want = want
+			} else {
+				want = map[int]bool{}
 			}
+			testCases[idx].want = want
 			idx++
 		}
 	}
@@ -439,7 +444,8 @@ func TestMapSet_Intersect(t *testing.T) {
 
 func TestMapSet_Subtract(t *testing.T) {
 	setList := []set.Set[int]{
-		nil, mapset.New[int](0, nil),
+		nil,
+		mapset.New[int](0, nil),
 		mapset.New[int](0, &IntSDA{0}),
 		mapset.New[int](0, &IntSDA{0, 1}),
 		mapset.New[int](0, &IntSDA{0, 1, 2}),
@@ -484,7 +490,8 @@ func TestMapSet_Subtract(t *testing.T) {
 
 func TestMapSet_DisjunctiveUnion(t *testing.T) {
 	setList := []set.Set[int]{
-		nil, mapset.New[int](0, nil),
+		nil,
+		mapset.New[int](0, nil),
 		mapset.New[int](0, &IntSDA{0}),
 		mapset.New[int](0, &IntSDA{0, 1}),
 		mapset.New[int](0, &IntSDA{0, 1, 2}),
@@ -542,7 +549,7 @@ func TestMapSet_Clear(t *testing.T) {
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
 			ms := mapset.New[int](0, IntSDAPtr(&data))
 			ms.Clear()
-			if setWrong(ms, nil) {
+			if setWrong(ms, map[int]bool{}) {
 				t.Errorf("got %s; want {}", setToString(ms))
 			}
 		})
@@ -551,29 +558,6 @@ func TestMapSet_Clear(t *testing.T) {
 
 func sliceToName[T any](s []T) string {
 	return fmtcoll.FormatSlice(s, ",", "%v", true, false)
-}
-
-func setWrong(s set.Set[int], want map[int]bool) bool {
-	if s == nil {
-		return len(want) != 0
-	}
-	if s.Len() != len(want) {
-		return true
-	}
-	counterMap := make(map[int]int, len(want))
-	for x := range want {
-		counterMap[x] = 1
-	}
-	s.Range(func(x int) (cont bool) {
-		counterMap[x]--
-		return true
-	})
-	for _, ctr := range counterMap {
-		if ctr != 0 {
-			return true
-		}
-	}
-	return false
 }
 
 func setToString(s set.Set[int]) string {
@@ -595,6 +579,28 @@ func mapKeyToString[V any](m map[int]V) string {
 			return key1 < key2
 		},
 	)
+}
+
+func setWrong(s set.Set[int], want map[int]bool) bool {
+	if s == nil {
+		return want != nil
+	} else if want == nil || s.Len() != len(want) {
+		return true
+	}
+	counterMap := make(map[int]int, len(want))
+	for x := range want {
+		counterMap[x] = 1
+	}
+	s.Range(func(x int) (cont bool) {
+		counterMap[x]--
+		return true
+	})
+	for _, ctr := range counterMap {
+		if ctr != 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func copyMap[K comparable, V any](m map[K]V) map[K]V {

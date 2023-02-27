@@ -495,7 +495,7 @@ func TestWrite_AfterClose(t *testing.T) {
 			}()
 			err = tc.f(t, w)
 			if tc.writePanic {
-				t.Error("function returned but want panic")
+				t.Error("want panic but got", err)
 			} else if !errors.Is(err, tc.wantErr) {
 				t.Errorf("got error %v; want %v", err, tc.wantErr)
 			}

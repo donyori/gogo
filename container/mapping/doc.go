@@ -16,31 +16,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package testaux
-
-import (
-	"fmt"
-	"strings"
-)
-
-// SliceToName formats s into a string for subtest names.
-func SliceToName[T any](s []T, sep, format string, prependType bool) string {
-	var typeStr string
-	if prependType {
-		typeStr = fmt.Sprintf("(%T)", s)
-	}
-	if s == nil {
-		return typeStr + "<nil>"
-	}
-	var b strings.Builder
-	b.WriteString(typeStr)
-	b.WriteByte('[')
-	for i := range s {
-		if i > 0 {
-			b.WriteString(sep)
-		}
-		_, _ = fmt.Fprintf(&b, format, s[i]) // ignore error as error is always nil
-	}
-	b.WriteByte(']')
-	return b.String()
-}
+// Package mapping provides OOP-style maps.
+//
+// For better performance, all functions in this package are unsafe
+// for concurrency unless otherwise specified.
+package mapping
