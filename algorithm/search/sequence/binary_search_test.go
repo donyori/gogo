@@ -268,5 +268,10 @@ func acceptSetString(acceptSet map[int]bool) string {
 }
 
 func dataToName(data []*idValue) string {
-	return fmtcoll.FormatSlice(data, ",", "%v", false, false)
+	return fmtcoll.MustFormatSliceToString(data, &fmtcoll.SequenceFormat[*idValue]{
+		CommonFormat: fmtcoll.CommonFormat{
+			Separator: ",",
+		},
+		FormatItemFn: fmtcoll.FprintfToFormatFunc[*idValue]("%v"),
+	})
 }

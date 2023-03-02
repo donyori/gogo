@@ -930,7 +930,13 @@ func TestSliceDynamicArray_Clear(t *testing.T) {
 }
 
 func sliceToName[T any](s []T) string {
-	return fmtcoll.FormatSlice(s, ",", "%v", true, false)
+	return fmtcoll.MustFormatSliceToString(s, &fmtcoll.SequenceFormat[T]{
+		CommonFormat: fmtcoll.CommonFormat{
+			Separator:   ",",
+			PrependType: true,
+		},
+		FormatItemFn: fmtcoll.FprintfToFormatFunc[T]("%v"),
+	})
 }
 
 func sdaPtrToName[T any](p *array.SliceDynamicArray[T]) string {

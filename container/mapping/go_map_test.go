@@ -513,7 +513,12 @@ func TestGoMap_Clear(t *testing.T) {
 }
 
 func keysToName(keys []string) string {
-	return fmtcoll.FormatSlice(keys, ",", "%+q", false, false)
+	return fmtcoll.MustFormatSliceToString(keys, &fmtcoll.SequenceFormat[string]{
+		CommonFormat: fmtcoll.CommonFormat{
+			Separator: ",",
+		},
+		FormatItemFn: fmtcoll.FprintfToFormatFunc[string]("%+q"),
+	})
 }
 
 func gmPtrToName(p *SIGM) string {
@@ -524,15 +529,19 @@ func gmPtrToName(p *SIGM) string {
 }
 
 func mapToString(m SIM) string {
-	return fmtcoll.FormatMap(
-		m, ",", "%+q", "%d", false, false,
-		func(key1 string, value1 int, key2 string, value2 int) bool {
+	return fmtcoll.MustFormatMapToString(m, &fmtcoll.MapFormat[string, int]{
+		CommonFormat: fmtcoll.CommonFormat{
+			Separator: ",",
+		},
+		FormatKeyFn:   fmtcoll.FprintfToFormatFunc[string]("%+q"),
+		FormatValueFn: fmtcoll.FprintfToFormatFunc[int]("%d"),
+		KeyValueLess: func(key1, key2 string, value1, value2 int) bool {
 			if key1 != key2 {
 				return key1 < key2
 			}
 			return value1 < value2
 		},
-	)
+	})
 }
 
 func mapItfToString(m mapping.Map[string, int]) string {

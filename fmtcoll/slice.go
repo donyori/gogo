@@ -21,65 +21,66 @@ package fmtcoll
 import (
 	"fmt"
 	"strings"
+
+	"github.com/donyori/gogo/errors"
 )
 
-// FormatSlice formats s into a string.
+// FormatSliceToString formats the slice s into a string
+// with the specified format options.
 //
-// sep is the separator between every two items in s.
+// It returns the result string and any error encountered.
 //
-// format is the layout passed to fmt.Fprintf to print one item in s.
-// It requires exactly one argument (e.g., "%v") for the item.
-// If format is empty, the items in s are not printed.
-//
-// prependType indicates whether to add the slice type before the content.
-// prependLen indicates whether to add the length of s before the content.
-// If prependType is true and prependLen is false,
-// the result begins with the type name
-// wrapped in parentheses (e.g., "([]int)").
-// If prependType is false and prependLen is true,
-// the result begins with the length of s wrapped in parentheses (e.g., "(3)").
-// If both prependType and prependLen are true,
-// the result begins with the type name and the length of s,
-// separated by a comma (','), and wrapped in parentheses (e.g., "([]int,3)").
-//
-// The result is as follows:
-//   - <type-and-length> "<nil>", if s is nil, e.g., "([]int,0)<nil>"
-//   - <type-and-length> "[]", if s is not nil but empty, e.g, "([]int,0)[]"
-//   - <type-and-length> "[" <item> "]", if s has only one item, e.g., "([]int,1)[1]"
-//   - <type-and-length> "[" <item-1> <sep> <item-2> <sep> ... <sep> <item-n> "]",
-//     otherwise, e.g., "([]int,3)[1,2,3]"
-//
-// where the <type-and-length> is as follows:
-//   - "(" <type> "," <length> ")", if both prependType and prependLen are true, e.g., "([]int,3)"
-//   - "(" <type> ")", if prependType is true and prependLen is false, e.g, "([]int)"
-//   - "(" <length> ")", if prependType is false and prependLen is true, e.g, "(3)"
-//   - "", if both prependType and prependLen are false
-func FormatSlice[T any](s []T, sep, format string, prependType, prependLen bool) string {
+// If format is nil, it uses default format options
+// as returned by NewDefaultSequenceFormat instead.
+func FormatSliceToString[Item any](s []Item, format *SequenceFormat[Item]) (
+	result string, err error) {
+	if format == nil {
+		format = NewDefaultSequenceFormat[Item]()
+	}
 	var prefix string
-	if prependType {
-		if prependLen {
+	if format.PrependType {
+		if format.PrependSize {
 			prefix = fmt.Sprintf("(%T,%d)", s, len(s))
 		} else {
 			prefix = fmt.Sprintf("(%T)", s)
 		}
-	} else if prependLen {
+	} else if format.PrependSize {
 		prefix = fmt.Sprintf("(%d)", len(s))
 	}
 	if s == nil {
-		return prefix + "<nil>"
+		return prefix + "<nil>", nil
 	}
 
 	var b strings.Builder
 	b.WriteString(prefix)
 	b.WriteByte('[')
-	for i := range s {
-		if i > 0 {
-			b.WriteString(sep)
-		}
-		if format != "" {
-			_, _ = fmt.Fprintf(&b, format, s[i]) // ignore error as error is always nil
+	if len(s) > 0 {
+		if format.FormatItemFn != nil {
+			b.WriteString(format.Prefix)
+			for i := range s {
+				if i > 0 {
+					b.WriteString(format.Separator)
+				}
+				err = format.FormatItemFn(&b, s[i])
+				if err != nil {
+					return "", errors.AutoWrap(err)
+				}
+			}
+			b.WriteString(format.Suffix)
+		} else {
+			b.WriteString("...")
 		}
 	}
 	b.WriteByte(']')
-	return b.String()
+	return b.String(), nil
+}
+
+// MustFormatSliceToString is like FormatSliceToString
+// but panics when encountering an error.
+func MustFormatSliceToString[Item any](s []Item, format *SequenceFormat[Item]) string {
+	result, err := FormatSliceToString(s, format)
+	if err != nil {
+		panic(errors.AutoWrap(err))
+	}
+	return result
 }

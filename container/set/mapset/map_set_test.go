@@ -557,7 +557,13 @@ func TestMapSet_Clear(t *testing.T) {
 }
 
 func sliceToName[T any](s []T) string {
-	return fmtcoll.FormatSlice(s, ",", "%v", true, false)
+	return fmtcoll.MustFormatSliceToString(s, &fmtcoll.SequenceFormat[T]{
+		CommonFormat: fmtcoll.CommonFormat{
+			Separator:   ",",
+			PrependType: true,
+		},
+		FormatItemFn: fmtcoll.FprintfToFormatFunc[T]("%v"),
+	})
 }
 
 func setToString(s set.Set[int]) string {
@@ -573,12 +579,15 @@ func setToString(s set.Set[int]) string {
 }
 
 func mapKeyToString[V any](m map[int]V) string {
-	return fmtcoll.FormatMap(
-		m, ",", "%d", "", false, false,
-		func(key1 int, _ V, key2 int, _ V) bool {
+	return fmtcoll.MustFormatMapToString(m, &fmtcoll.MapFormat[int, V]{
+		CommonFormat: fmtcoll.CommonFormat{
+			Separator: ",",
+		},
+		FormatKeyFn: fmtcoll.FprintfToFormatFunc[int]("%d"),
+		KeyValueLess: func(key1, key2 int, _, _ V) bool {
 			return key1 < key2
 		},
-	)
+	})
 }
 
 func setWrong(s set.Set[int], want map[int]bool) bool {

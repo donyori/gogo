@@ -22,113 +22,96 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/donyori/gogo/errors"
 )
 
 // mapEntry represents a key-value pair of a map.
-type mapEntry[K, V any] struct {
-	key   K
-	value V
+type mapEntry[Key, Value any] struct {
+	key   Key
+	value Value
 }
 
-// FormatMap formats m into a string.
+// FormatMapToString formats the map m into a string
+// with the specified format options.
 //
-// sep is the separator between every two key-value pairs in m.
+// It returns the result string and any error encountered.
 //
-// keyFormat and valueFormat are the layouts passed to fmt.Fprintf
-// to print one key and one value in m, respectively.
-// Both of them require exactly one argument (e.g., "%v") for the key or value.
-// If keyFormat is empty, the keys are not printed.
-// If valueFormat is empty, the values are not printed.
-// If both keyFormat and valueFormat are non-empty,
-// a colon (':') is inserted between the key and value.
-//
-// prependType indicates whether to add the slice type before the content.
-// prependLen indicates whether to add the length of m before the content.
-// If prependType is true and prependLen is false,
-// the result begins with the type name
-// wrapped in parentheses (e.g., "(map[string]int)").
-// If prependType is false and prependLen is true,
-// the result begins with the length of m wrapped in parentheses (e.g., "(3)").
-// If both prependType and prependLen are true,
-// the result begins with the type name and the length of m,
-// separated by a comma (','), and wrapped in parentheses
-// (e.g., "(map[string]int,3)").
-//
-// entryLess is a function to report whether the key-value pair 1
-// is less than the key-value pair 2.
-// It is used to sort the key-value pairs in m.
-// It must describe a transitive ordering.
-// Note that floating-point comparison
-// (the < operator on float32 or float64 values)
-// is not a transitive ordering when not-a-number (NaN) values are involved.
-// If entryLess is nil, the key-value pairs may be unsorted.
-//
-// The result is as follows:
-//   - <type-and-length> "<nil>", if m is nil, e.g., "(map[string]int,0)<nil>"
-//   - <type-and-length> "{}", if m is not nil but empty, e.g, "(map[string]int,0){}"
-//   - <type-and-length> "{" <item> "}", if m has only one key-value pair, e.g., `(map[string]int,1){"A":1}`
-//   - <type-and-length> "{" <item-1> <sep> <item-2> <sep> ... <sep> <item-n> "}",
-//     otherwise, e.g., `(map[string]int,3){"A":1,"B":2,"C":3}`
-//
-// where the <type-and-length> is as follows:
-//   - "(" <type> "," <length> ")", if both prependType and prependLen are true, e.g., "(map[string]int,3)"
-//   - "(" <type> ")", if prependType is true and prependLen is false, e.g, "(map[string]int)"
-//   - "(" <length> ")", if prependType is false and prependLen is true, e.g., "(3)"
-//   - "", if both prependType and prependLen are false
-//
-// and the <item> is as follows:
-//   - <key> ":" <value>, if both keyFormat and valueFormat are non-empty, e.g., `"A":1`
-//   - <key>, if keyFormat is non-empty and valueFormat is empty, e.g., `"A"`
-//   - <value>, if keyFormat is empty and valueFormat is non-empty, e.g., "1"
-//   - "", if both keyFormat and valueFormat are empty
-func FormatMap[K comparable, V any](
-	m map[K]V,
-	sep, keyFormat, valueFormat string,
-	prependType, prependLen bool,
-	entryLess func(key1 K, value1 V, key2 K, value2 V) bool,
-) string {
+// If format is nil, it uses default format options
+// as returned by NewDefaultMapFormat instead.
+func FormatMapToString[Key comparable, Value any](
+	m map[Key]Value, format *MapFormat[Key, Value],
+) (result string, err error) {
+	if format == nil {
+		format = NewDefaultMapFormat[Key, Value]()
+	}
 	var prefix string
-	if prependType {
-		if prependLen {
+	if format.PrependType {
+		if format.PrependSize {
 			prefix = fmt.Sprintf("(%T,%d)", m, len(m))
 		} else {
 			prefix = fmt.Sprintf("(%T)", m)
 		}
-	} else if prependLen {
+	} else if format.PrependSize {
 		prefix = fmt.Sprintf("(%d)", len(m))
 	}
 	if m == nil {
-		return prefix + "<nil>"
-	}
-
-	entries := make([]mapEntry[K, V], 0, len(m))
-	for k, v := range m {
-		entries = append(entries, mapEntry[K, V]{key: k, value: v})
-	}
-	if entryLess != nil {
-		sort.Slice(entries, func(i, j int) bool {
-			return entryLess(entries[i].key, entries[i].value,
-				entries[j].key, entries[j].value)
-		})
+		return prefix + "<nil>", nil
 	}
 
 	var b strings.Builder
 	b.WriteString(prefix)
 	b.WriteByte('{')
-	for i := range entries {
-		if i > 0 {
-			b.WriteString(sep)
-		}
-		if keyFormat != "" {
-			_, _ = fmt.Fprintf(&b, keyFormat, entries[i].key) // ignore error as error is always nil
-			if valueFormat != "" {
-				b.WriteByte(':')
+	if len(m) > 0 {
+		if format.FormatKeyFn != nil || format.FormatValueFn != nil {
+			entries := make([]mapEntry[Key, Value], 0, len(m))
+			for k, v := range m {
+				entries = append(entries, mapEntry[Key, Value]{key: k, value: v})
 			}
-		}
-		if valueFormat != "" {
-			_, _ = fmt.Fprintf(&b, valueFormat, entries[i].value) // ignore error as error is always nil
+			if format.KeyValueLess != nil {
+				sort.Slice(entries, func(i, j int) bool {
+					return format.KeyValueLess(entries[i].key, entries[j].key,
+						entries[i].value, entries[j].value)
+				})
+			}
+
+			b.WriteString(format.Prefix)
+			for i := range entries {
+				if i > 0 {
+					b.WriteString(format.Separator)
+				}
+				if format.FormatKeyFn != nil {
+					err = format.FormatKeyFn(&b, entries[i].key)
+					if err != nil {
+						return "", errors.AutoWrap(err)
+					}
+					if format.FormatValueFn != nil {
+						b.WriteByte(':')
+					}
+				}
+				if format.FormatValueFn != nil {
+					err = format.FormatValueFn(&b, entries[i].value)
+					if err != nil {
+						return "", errors.AutoWrap(err)
+					}
+				}
+			}
+			b.WriteString(format.Suffix)
+		} else {
+			b.WriteString("...")
 		}
 	}
 	b.WriteByte('}')
-	return b.String()
+	return b.String(), nil
+}
+
+// MustFormatMapToString is like FormatMapToString
+// but panics when encountering an error.
+func MustFormatMapToString[Key comparable, Value any](
+	m map[Key]Value, format *MapFormat[Key, Value]) string {
+	result, err := FormatMapToString(m, format)
+	if err != nil {
+		panic(errors.AutoWrap(err))
+	}
+	return result
 }

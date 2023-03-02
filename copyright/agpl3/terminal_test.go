@@ -188,5 +188,10 @@ func TestResponseShowWC(t *testing.T) {
 }
 
 func argsToName(args []string) string {
-	return fmtcoll.FormatSlice(args, ",", "%+q", false, false)
+	return fmtcoll.MustFormatSliceToString(args, &fmtcoll.SequenceFormat[string]{
+		CommonFormat: fmtcoll.CommonFormat{
+			Separator: ",",
+		},
+		FormatItemFn: fmtcoll.FprintfToFormatFunc[string]("%+q"),
+	})
 }

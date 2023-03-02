@@ -20,142 +20,154 @@ package fmtcoll_test
 
 import (
 	"fmt"
+	"io"
+	"sort"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/donyori/gogo/fmtcoll"
 )
 
-func TestFormatMap(t *testing.T) {
-	dataList := []map[string]int{
+func TestFormatMapToString(t *testing.T) {
+	const NilItemStr = "<nilptr>"
+	const Separator, Prefix, Suffix = ",", "<PREFIX>", "<SUFFIX>"
+	two, three := 2, 3
+	dataList := []map[string]*int{
 		nil,
 		{},
-		{"A": 1},
-		{"A": 1, "B": 2},
-		{"A": 1, "B": 2, "C": 3},
+		{"A": nil},
+		{"A": nil, "B": &two},
+		{"A": nil, "B": &two, "C": &three},
 	}
-	testCases := []struct {
-		dataIdx                     int
-		sep, keyFormat, valueFormat string
-		prependType, prependLen     bool
-		want                        string
-	}{
-		{0, "", "", "", false, false, "<nil>"},
-		{0, "", "", "", false, true, "(0)<nil>"},
-		{0, "", "", "", true, false, "(map[string]int)<nil>"},
-		{0, "", "", "", true, true, "(map[string]int,0)<nil>"},
+	formatKeyFn := fmtcoll.FprintfToFormatFunc[string]("%q")
+	formatValueFn := func(w io.Writer, x *int) error {
+		var err error
+		if x != nil {
+			_, err = fmt.Fprintf(w, "%d", *x)
+		} else if sw, ok := w.(io.StringWriter); ok {
+			_, err = sw.WriteString(NilItemStr)
+		} else {
+			_, err = w.Write([]byte(NilItemStr))
+		}
+		return err
+	}
+	keyValueLess := func(key1, key2 string, _, _ *int) bool {
+		return key1 < key2
+	}
+	commonFormatList := []fmtcoll.CommonFormat{
+		{},
+		{PrependType: true},
+		{PrependSize: true},
+		{PrependType: true, PrependSize: true},
+		{Separator: Separator},
+		{Separator: Separator, PrependType: true},
+		{Separator: Separator, PrependSize: true},
+		{Separator: Separator, PrependType: true, PrependSize: true},
+		{Separator: Separator, Prefix: Prefix, Suffix: Suffix},
+		{Separator: Separator, Prefix: Prefix, Suffix: Suffix, PrependType: true},
+		{Separator: Separator, Prefix: Prefix, Suffix: Suffix, PrependSize: true},
+		{Separator: Separator, Prefix: Prefix, Suffix: Suffix, PrependType: true, PrependSize: true},
+	}
 
-		{1, "", "", "", false, false, "{}"},
-		{1, "", "", "", false, true, "(0){}"},
-		{1, "", "", "", true, false, "(map[string]int){}"},
-		{1, "", "", "", true, true, "(map[string]int,0){}"},
+	testCases := make([]struct {
+		dataIdx         int
+		commonFormatIdx int
+		formatKeyFn     fmtcoll.FormatFunc[string]
+		formatValueFn   fmtcoll.FormatFunc[*int]
+		want            string
+	}, len(dataList)*len(commonFormatList)*2*2)
+	var idx int
+	for dataIdx, data := range dataList {
+		for commonFormatIdx := range commonFormatList {
+			var prefix string
+			if commonFormatList[commonFormatIdx].PrependType {
+				if commonFormatList[commonFormatIdx].PrependSize {
+					prefix = fmt.Sprintf("(map[string]*int,%d)", len(data))
+				} else {
+					prefix = "(map[string]*int)"
+				}
+			} else if commonFormatList[commonFormatIdx].PrependSize {
+				prefix = fmt.Sprintf("(%d)", len(data))
+			}
 
-		{2, "", "", "", false, false, "{}"},
-		{2, "", "", "", false, true, "(1){}"},
-		{2, "", "", "", true, false, "(map[string]int){}"},
-		{2, "", "", "", true, true, "(map[string]int,1){}"},
-		{2, "", "", "%d", false, false, "{1}"},
-		{2, "", "", "%d", false, true, "(1){1}"},
-		{2, "", "", "%d", true, false, "(map[string]int){1}"},
-		{2, "", "", "%d", true, true, "(map[string]int,1){1}"},
-		{2, "", "%q", "", false, false, `{"A"}`},
-		{2, "", "%q", "", false, true, `(1){"A"}`},
-		{2, "", "%q", "", true, false, `(map[string]int){"A"}`},
-		{2, "", "%q", "", true, true, `(map[string]int,1){"A"}`},
-		{2, "", "%q", "%d", false, false, `{"A":1}`},
-		{2, "", "%q", "%d", false, true, `(1){"A":1}`},
-		{2, "", "%q", "%d", true, false, `(map[string]int){"A":1}`},
-		{2, "", "%q", "%d", true, true, `(map[string]int,1){"A":1}`},
+			for _, fmtKeyFn := range []fmtcoll.FormatFunc[string]{nil, formatKeyFn} {
+				for _, fmtValueFn := range []fmtcoll.FormatFunc[*int]{nil, formatValueFn} {
+					var s string
+					switch {
+					case data == nil:
+						s = "<nil>"
+					case len(data) == 0:
+						s = "{}"
+					case fmtKeyFn == nil && fmtValueFn == nil:
+						s = "{...}"
+					default:
+						keys := make([]string, 0, len(data))
+						for key := range data {
+							keys = append(keys, key)
+						}
+						sort.Strings(keys)
+						var b strings.Builder
+						b.WriteByte('{')
+						b.WriteString(commonFormatList[commonFormatIdx].Prefix)
+						for i, key := range keys {
+							if i > 0 {
+								b.WriteString(commonFormatList[commonFormatIdx].Separator)
+							}
+							if fmtKeyFn != nil {
+								b.WriteString(strconv.Quote(key))
+								if fmtValueFn != nil {
+									b.WriteByte(':')
+								}
+							}
+							if fmtValueFn != nil {
+								if x := data[key]; x != nil {
+									b.WriteString(strconv.Itoa(*x))
+								} else {
+									b.WriteString(NilItemStr)
+								}
+							}
+						}
+						b.WriteString(commonFormatList[commonFormatIdx].Suffix)
+						b.WriteByte('}')
+						s = b.String()
+					}
 
-		{3, "", "", "", false, false, "{}"},
-		{3, "", "", "", false, true, "(2){}"},
-		{3, "", "", "", true, false, "(map[string]int){}"},
-		{3, "", "", "", true, true, "(map[string]int,2){}"},
-		{3, "", "", "%d", false, false, "{12}"},
-		{3, "", "", "%d", false, true, "(2){12}"},
-		{3, "", "", "%d", true, false, "(map[string]int){12}"},
-		{3, "", "", "%d", true, true, "(map[string]int,2){12}"},
-		{3, "", "%q", "", false, false, `{"A""B"}`},
-		{3, "", "%q", "", false, true, `(2){"A""B"}`},
-		{3, "", "%q", "", true, false, `(map[string]int){"A""B"}`},
-		{3, "", "%q", "", true, true, `(map[string]int,2){"A""B"}`},
-		{3, "", "%q", "%d", false, false, `{"A":1"B":2}`},
-		{3, "", "%q", "%d", false, true, `(2){"A":1"B":2}`},
-		{3, "", "%q", "%d", true, false, `(map[string]int){"A":1"B":2}`},
-		{3, "", "%q", "%d", true, true, `(map[string]int,2){"A":1"B":2}`},
-		{3, ",", "", "", false, false, "{,}"},
-		{3, ",", "", "", false, true, "(2){,}"},
-		{3, ",", "", "", true, false, "(map[string]int){,}"},
-		{3, ",", "", "", true, true, "(map[string]int,2){,}"},
-		{3, ",", "", "%d", false, false, "{1,2}"},
-		{3, ",", "", "%d", false, true, "(2){1,2}"},
-		{3, ",", "", "%d", true, false, "(map[string]int){1,2}"},
-		{3, ",", "", "%d", true, true, "(map[string]int,2){1,2}"},
-		{3, ",", "%q", "", false, false, `{"A","B"}`},
-		{3, ",", "%q", "", false, true, `(2){"A","B"}`},
-		{3, ",", "%q", "", true, false, `(map[string]int){"A","B"}`},
-		{3, ",", "%q", "", true, true, `(map[string]int,2){"A","B"}`},
-		{3, ",", "%q", "%d", false, false, `{"A":1,"B":2}`},
-		{3, ",", "%q", "%d", false, true, `(2){"A":1,"B":2}`},
-		{3, ",", "%q", "%d", true, false, `(map[string]int){"A":1,"B":2}`},
-		{3, ",", "%q", "%d", true, true, `(map[string]int,2){"A":1,"B":2}`},
-
-		{4, "", "", "", false, false, "{}"},
-		{4, "", "", "", false, true, "(3){}"},
-		{4, "", "", "", true, false, "(map[string]int){}"},
-		{4, "", "", "", true, true, "(map[string]int,3){}"},
-		{4, "", "", "%d", false, false, "{123}"},
-		{4, "", "", "%d", false, true, "(3){123}"},
-		{4, "", "", "%d", true, false, "(map[string]int){123}"},
-		{4, "", "", "%d", true, true, "(map[string]int,3){123}"},
-		{4, "", "%q", "", false, false, `{"A""B""C"}`},
-		{4, "", "%q", "", false, true, `(3){"A""B""C"}`},
-		{4, "", "%q", "", true, false, `(map[string]int){"A""B""C"}`},
-		{4, "", "%q", "", true, true, `(map[string]int,3){"A""B""C"}`},
-		{4, "", "%q", "%d", false, false, `{"A":1"B":2"C":3}`},
-		{4, "", "%q", "%d", false, true, `(3){"A":1"B":2"C":3}`},
-		{4, "", "%q", "%d", true, false, `(map[string]int){"A":1"B":2"C":3}`},
-		{4, "", "%q", "%d", true, true, `(map[string]int,3){"A":1"B":2"C":3}`},
-		{4, ",", "", "", false, false, "{,,}"},
-		{4, ",", "", "", false, true, "(3){,,}"},
-		{4, ",", "", "", true, false, "(map[string]int){,,}"},
-		{4, ",", "", "", true, true, "(map[string]int,3){,,}"},
-		{4, ",", "", "%d", false, false, "{1,2,3}"},
-		{4, ",", "", "%d", false, true, "(3){1,2,3}"},
-		{4, ",", "", "%d", true, false, "(map[string]int){1,2,3}"},
-		{4, ",", "", "%d", true, true, "(map[string]int,3){1,2,3}"},
-		{4, ",", "%q", "", false, false, `{"A","B","C"}`},
-		{4, ",", "%q", "", false, true, `(3){"A","B","C"}`},
-		{4, ",", "%q", "", true, false, `(map[string]int){"A","B","C"}`},
-		{4, ",", "%q", "", true, true, `(map[string]int,3){"A","B","C"}`},
-		{4, ",", "%q", "%d", false, false, `{"A":1,"B":2,"C":3}`},
-		{4, ",", "%q", "%d", false, true, `(3){"A":1,"B":2,"C":3}`},
-		{4, ",", "%q", "%d", true, false, `(map[string]int){"A":1,"B":2,"C":3}`},
-		{4, ",", "%q", "%d", true, true, `(map[string]int,3){"A":1,"B":2,"C":3}`},
+					testCases[idx].dataIdx = dataIdx
+					testCases[idx].commonFormatIdx = commonFormatIdx
+					testCases[idx].formatKeyFn = fmtKeyFn
+					testCases[idx].formatValueFn = fmtValueFn
+					testCases[idx].want = prefix + s
+					idx++
+				}
+			}
+		}
 	}
 
 	for _, tc := range testCases {
-		t.Run(
-			fmt.Sprintf("dataIdx=%d&sep=%+q&keyFormat=%+q&valueFormat=%+q&prependType=%t&prependLen=%t",
-				tc.dataIdx, tc.sep, tc.keyFormat, tc.valueFormat, tc.prependType, tc.prependLen),
-			func(t *testing.T) {
-				got := fmtcoll.FormatMap(
-					dataList[tc.dataIdx],
-					tc.sep,
-					tc.keyFormat,
-					tc.valueFormat,
-					tc.prependType,
-					tc.prependLen,
-					func(key1 string, value1 int, key2 string, value2 int) bool {
-						if key1 != key2 {
-							return key1 < key2
-						}
-						return value1 < value2
-					},
-				)
-				if got != tc.want {
-					t.Errorf("got %#q; want %#q", got, tc.want)
-				}
-			},
-		)
+		name := fmt.Sprintf("dataIdx=%d&commonFormatIdx=%d", tc.dataIdx, tc.commonFormatIdx)
+		if tc.formatKeyFn == nil {
+			name += "&formatKeyFn=<nil>"
+		}
+		if tc.formatValueFn == nil {
+			name += "&formatValueFn=<nil>"
+		}
+		t.Run(name, func(t *testing.T) {
+			got, err := fmtcoll.FormatMapToString(
+				dataList[tc.dataIdx],
+				&fmtcoll.MapFormat[string, *int]{
+					CommonFormat:  commonFormatList[tc.commonFormatIdx],
+					FormatKeyFn:   tc.formatKeyFn,
+					FormatValueFn: tc.formatValueFn,
+					KeyValueLess:  keyValueLess,
+				},
+			)
+			if err != nil {
+				t.Fatal("err -", err)
+			}
+			if got != tc.want {
+				t.Errorf("got %#q; want %#q", got, tc.want)
+			}
+		})
 	}
 }

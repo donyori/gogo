@@ -218,7 +218,12 @@ func TestNextPermutation(t *testing.T) {
 }
 
 func dataToName(data []int) string {
-	return fmtcoll.FormatSlice(data, ",", "%d", false, false)
+	return fmtcoll.MustFormatSliceToString(data, &fmtcoll.SequenceFormat[int]{
+		CommonFormat: fmtcoll.CommonFormat{
+			Separator: ",",
+		},
+		FormatItemFn: fmtcoll.FprintfToFormatFunc[int]("%d"),
+	})
 }
 
 func dataUnequal(a, b []int) bool {

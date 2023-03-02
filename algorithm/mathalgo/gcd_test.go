@@ -395,7 +395,12 @@ func BenchmarkGCD2Uint64Functions(b *testing.B) {
 }
 
 func xsToName[Int constraints.Integer](xs []Int) string {
-	return fmtcoll.FormatSlice(xs, ",", "%d", false, false)
+	return fmtcoll.MustFormatSliceToString(xs, &fmtcoll.SequenceFormat[Int]{
+		CommonFormat: fmtcoll.CommonFormat{
+			Separator: ",",
+		},
+		FormatItemFn: fmtcoll.FprintfToFormatFunc[Int]("%d"),
+	})
 }
 
 // gcdBruteForce finds the greatest common divisor of the integers xs
