@@ -18,7 +18,10 @@
 
 package errors
 
-import stderrors "errors"
+import (
+	stderrors "errors"
+	"reflect"
+)
 
 // Export functions from standard package errors for convenience.
 
@@ -37,8 +40,15 @@ func Is(err, target error) bool {
 	return stderrors.Is(err, target)
 }
 
-// As directly calls standard errors.As.
+// As calls standard errors.As,
+// but panics if target is of type *error,
+// because As always returns true for that
+// so that the function call is senseless.
 func As(err error, target any) bool {
+	if reflect.TypeOf(target) == errorPointerType {
+		panic(AutoMsg("target is of type *error; " +
+			"As always returns true for that"))
+	}
 	return stderrors.As(err, target)
 }
 
@@ -46,3 +56,6 @@ func As(err error, target any) bool {
 func Join(errs ...error) error {
 	return stderrors.Join(errs...)
 }
+
+// errorPointerType is the reflect.Type of *error.
+var errorPointerType = reflect.TypeOf((*error)(nil))
