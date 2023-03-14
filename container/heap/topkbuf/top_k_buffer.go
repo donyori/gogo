@@ -80,8 +80,7 @@ type topKBuffer[Item any] struct {
 func New[Item any](k int, lessFn compare.LessFunc[Item], data container.Container[Item]) TopKBuffer[Item] {
 	if k <= 0 {
 		panic(errors.AutoMsg(fmt.Sprintf("k (%d) is non-positive", k)))
-	}
-	if lessFn == nil {
+	} else if lessFn == nil {
 		panic(errors.AutoMsg("lessFn is nil"))
 	}
 	tkb := &topKBuffer[Item]{
@@ -130,8 +129,7 @@ func (tkb *topKBuffer[Item]) Add(x ...Item) {
 	if len(x) <= r {
 		tkb.pq.Enqueue(x...)
 		return
-	}
-	if r > 0 {
+	} else if r > 0 {
 		tkb.pq.Enqueue(x[:r]...)
 	}
 	for _, item := range x[r:] {

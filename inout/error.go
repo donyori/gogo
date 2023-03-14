@@ -82,8 +82,7 @@ func (ce *ClosedError) DeviceName() string {
 func (ce *ClosedError) Error() string {
 	if ce == nil {
 		return "<nil>"
-	}
-	if ce.device == "" {
+	} else if ce.device == "" {
 		if ce.parent != nil {
 			// This should never happen, but will act as a safeguard for later.
 			panic(errors.AutoMsg("ClosedError has an empty device but a non-nil parent"))
@@ -153,8 +152,7 @@ func NewWritePanic(causeErr error) *WritePanic {
 func (wp *WritePanic) Error() string {
 	if wp == nil {
 		return "<nil>"
-	}
-	if wp.err != nil {
+	} else if wp.err != nil {
 		if msg := wp.err.Error(); msg != "" {
 			return msg
 		}

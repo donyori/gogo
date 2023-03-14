@@ -653,8 +653,7 @@ func testZipFiles(t *testing.T, r filesys.Reader) {
 	if err != nil {
 		t.Error("ZipFiles -", err)
 		return
-	}
-	if len(files) != len(testFSZipFileNameBodyMap) {
+	} else if len(files) != len(testFSZipFileNameBodyMap) {
 		t.Errorf("got %d zip files; want %d",
 			len(files), len(testFSZipFileNameBodyMap))
 	}

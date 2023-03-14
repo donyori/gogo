@@ -89,8 +89,7 @@ func NewBufferedWriterSize(w io.Writer, size int) ResettableBufferedWriter {
 	}
 	if bw, ok := w.(ResettableBufferedWriter); ok && bw.Size() >= size {
 		return bw
-	}
-	if bw, ok := w.(*resettableBufferedWriter); ok {
+	} else if bw, ok := w.(*resettableBufferedWriter); ok {
 		return &resettableBufferedWriter{bufio.NewWriterSize(bw.bw, size)}
 	}
 	bw, ok := w.(*bufio.Writer)

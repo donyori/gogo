@@ -72,8 +72,7 @@ var groupIDPattern = regexp.MustCompile(`[a-z0-9][a-z0-9_]*`)
 func New[Message any](n int, biz BusinessFunc[Message], groupMap map[string][]int) framework.Controller {
 	if biz == nil {
 		panic(errors.AutoMsg("biz is nil"))
-	}
-	if n <= 0 {
+	} else if n <= 0 {
 		n = runtime.NumCPU()
 	}
 	ctrl := &controller[Message]{
@@ -92,8 +91,7 @@ func New[Message any](n int, biz BusinessFunc[Message], groupMap map[string][]in
 	for id, group := range groupMap {
 		if !groupIDPattern.MatchString(id) {
 			panic(errors.AutoMsg("group ID is illegal: " + id))
-		}
-		if len(group) == 0 {
+		} else if len(group) == 0 {
 			panic(errors.AutoMsg("group is nil or empty"))
 		}
 		g, set := make(array.SliceDynamicArray[int], 0, len(group)), make(map[int]bool, len(group))
@@ -101,8 +99,7 @@ func New[Message any](n int, biz BusinessFunc[Message], groupMap map[string][]in
 		for _, wr := range group {
 			if wr < 0 || wr >= n {
 				panic(errors.AutoMsg(fmt.Sprintf("world rank %d is out of range (n: %d)", wr, n)))
-			}
-			if set[wr] {
+			} else if set[wr] {
 				continue
 			}
 			set[wr] = true

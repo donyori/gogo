@@ -142,19 +142,19 @@ func DFS[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (vertexFound Ver
 		v, adj := adj[i], adj[1+i:]
 		depth := stack[idx].depth
 		r, cont := itf.AccessVertex(v, depth)
-		if r {
+		switch {
+		case r:
 			return v, true
-		}
-		if !cont {
+		case !cont:
 			return
-		}
+
 		// Following code is a simplification of the procedure:
 		//  1. Pop the old adjacency list from the stack;
 		//  2. Push the updated adjacency list (adj) to the stack if it is nonempty;
 		//  3. Push the adjacency list of the current vertex (vAdj) to the stack if it is nonempty.
-		if len(adj) > 0 {
+		case len(adj) > 0:
 			stack[idx].adjacency = adj // Just update stack[idx].adjacency.
-		} else {
+		default:
 			stack, idx = stack[:idx], idx-1
 		}
 		if vAdj := itf.Adjacency(v); len(vAdj) > 0 {
@@ -190,15 +190,14 @@ func DFSPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 		p, pl := pl[i], pl[1+i:]
 		pathList := p.ToList()
 		r, cont := itf.AccessPath(pathList)
-		if r {
+		switch {
+		case r:
 			return pathList
-		}
-		if !cont {
+		case !cont:
 			return nil
-		}
-		if len(pl) > 0 {
+		case len(pl) > 0:
 			stack[idx] = pl
-		} else {
+		default:
 			stack, idx = stack[:idx], idx-1
 		}
 		if vAdj := itf.Adjacency(p.E); len(vAdj) > 0 {
@@ -230,11 +229,9 @@ func BFS[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (vertexFound Ver
 				r, cont := itf.AccessVertex(vertex, head.depth)
 				if r {
 					return vertex, true
-				}
-				if !cont {
+				} else if !cont {
 					return
-				}
-				if vAdj := itf.Adjacency(vertex); len(vAdj) > 0 {
+				} else if vAdj := itf.Adjacency(vertex); len(vAdj) > 0 {
 					queue = append(
 						queue,
 						adjListDepth[Vertex]{vAdj, head.depth + 1},
@@ -266,11 +263,9 @@ func BFSPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 				r, cont := itf.AccessPath(pathList)
 				if r {
 					return pathList
-				}
-				if !cont {
+				} else if !cont {
 					return nil
-				}
-				if vAdj := itf.Adjacency(p.E); len(vAdj) > 0 {
+				} else if vAdj := itf.Adjacency(p.E); len(vAdj) > 0 {
 					vAdjPathList := make([]*pathlist.Path[Vertex], len(vAdj))
 					for i := range vAdj {
 						vAdjPathList[i] = &pathlist.Path[Vertex]{E: vAdj[i], P: p}
@@ -337,17 +332,16 @@ func dls[Vertex any](itf AccessVertex[Vertex], root Vertex, limit int) (vertexFo
 		v, adj := adj[i], adj[1+i:]
 		depth := stack[idx].depth
 		r, cont := itf.AccessVertex(v, depth)
-		if r {
+		switch {
+		case r:
 			vertexFound, found = v, true
 			return
-		}
-		if !cont {
+		case !cont:
 			quit = true
 			return
-		}
-		if len(adj) > 0 {
+		case len(adj) > 0:
 			stack[idx].adjacency = adj // Just update stack[idx].adjacency.
-		} else {
+		default:
 			stack, idx = stack[:idx], idx-1
 		}
 		if vAdj := itf.Adjacency(v); len(vAdj) > 0 {
@@ -415,17 +409,16 @@ func dlsPath[Vertex any](itf AccessPath[Vertex], root Vertex, limit int) (pathFo
 		p, pl := pl[i], pl[1+i:]
 		pathList := p.ToList()
 		r, cont := itf.AccessPath(pathList)
-		if r {
+		switch {
+		case r:
 			pathFound = pathList
 			return
-		}
-		if !cont {
+		case !cont:
 			quit = true
 			return
-		}
-		if len(pl) > 0 {
+		case len(pl) > 0:
 			stack[idx] = pl
-		} else {
+		default:
 			stack, idx = stack[:idx], idx-1
 		}
 		if vAdj := itf.Adjacency(p.E); len(vAdj) > 0 {
@@ -501,8 +494,7 @@ func IDS[Vertex any](itf IDSAccessVertex[Vertex], initLimit int, initArgs ...any
 		vertex, r, more, quit := dls[Vertex](itf, root, limit)
 		if r {
 			return vertex, true
-		}
-		if !more || quit {
+		} else if !more || quit {
 			return
 		}
 		itf.ResetSearchState()
@@ -525,8 +517,7 @@ func IDSPath[Vertex any](itf IDSAccessPath[Vertex], initLimit int, initArgs ...a
 		path, more, quit := dlsPath[Vertex](itf, root, limit)
 		if path != nil {
 			return path
-		}
-		if !more || quit {
+		} else if !more || quit {
 			return nil
 		}
 		itf.ResetSearchState()

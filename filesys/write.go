@@ -562,12 +562,12 @@ func (fw *writer) TarWriteHeader(hdr *tar.Header) error {
 		return errors.AutoWrap(err)
 	}
 	err = fw.tw.WriteHeader(hdr)
-	if err != nil {
+	switch {
+	case err != nil:
 		return errors.AutoWrap(err)
-	}
-	if tarHeaderIsDir(hdr) {
+	case tarHeaderIsDir(hdr):
 		fw.uw, fw.err = isDirErrorWriter, ErrIsDir
-	} else {
+	default:
 		fw.uw, fw.err = fw.tw, nil
 	}
 	fw.bw.Reset(fw.uw)

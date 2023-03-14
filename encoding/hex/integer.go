@@ -127,8 +127,7 @@ func EncodeInt64ToString(x int64, upper bool, digits int) string {
 	// Special cases for 0 and -0x8000000000000000 (minimum value of int64):
 	if x == 0 && digits <= 1 {
 		return "0"
-	}
-	if x == math.MinInt64 {
+	} else if x == math.MinInt64 {
 		if digits < int64BufferLen {
 			return minInt64Hex
 		}

@@ -335,7 +335,8 @@ func testTarTgzFile(t *testing.T, name string, wantTarFiles []struct {
 	tr := tar.NewReader(r)
 	for i := 0; ; i++ {
 		hdr, err := tr.Next()
-		if err != nil {
+		switch {
+		case err != nil:
 			if errors.Is(err, io.EOF) {
 				if i != len(wantTarFiles) {
 					t.Errorf("tar header number: %d != %d, but got EOF",
@@ -345,12 +346,10 @@ func testTarTgzFile(t *testing.T, name string, wantTarFiles []struct {
 			}
 			t.Errorf("read No.%d tar header - %v", i, err)
 			return
-		}
-		if i >= len(wantTarFiles) {
+		case i >= len(wantTarFiles):
 			t.Error("tar headers more than", len(wantTarFiles))
 			return
-		}
-		if hdr.Name != wantTarFiles[i].name {
+		case hdr.Name != wantTarFiles[i].name:
 			t.Errorf("No.%d tar header name unequal - got %s; want %s",
 				i, hdr.Name, wantTarFiles[i].name)
 		}
@@ -361,8 +360,7 @@ func testTarTgzFile(t *testing.T, name string, wantTarFiles []struct {
 		if err != nil {
 			t.Errorf("read No.%d tar file body - %v", i, err)
 			return
-		}
-		if !bytes.Equal(body, wantTarFiles[i].body) {
+		} else if !bytes.Equal(body, wantTarFiles[i].body) {
 			t.Errorf(
 				"got No.%d tar file body (len: %d)\n%s\nwant (len: %d)\n%s",
 				i,
@@ -457,8 +455,7 @@ func testZipFile(t *testing.T, name string, wantZipNameBodyMap map[string][]byte
 		if err != nil {
 			t.Errorf("read %q - %v", file.Name, err)
 			return
-		}
-		if !bytes.Equal(data, body) {
+		} else if !bytes.Equal(data, body) {
 			t.Errorf(
 				"%q file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
 				file.Name,

@@ -47,8 +47,7 @@ func CanEncodeToPrefix[Bytes1, Bytes2 constraints.ByteString](src Bytes1, prefix
 	n := len(prefix)
 	if n > EncodedLen(len(src)) {
 		return false
-	}
-	if n&1 > 0 { // n is odd
+	} else if n&1 > 0 { // n is odd
 		n--
 	}
 	for i := 0; i < n; i += 2 {

@@ -51,8 +51,7 @@ func encodeInt64Baseline(dst []byte, x int64, upper bool, digits int) int {
 	n, err := fmt.Fprintf(w, layout, x)
 	if err != nil {
 		panic(errors.AutoWrap(err))
-	}
-	if n > len(dst) {
+	} else if n > len(dst) {
 		panic(errors.AutoMsg(fmt.Sprintf("dst is too small, len(dst): %d, need: %d", len(dst), n)))
 	}
 	return n

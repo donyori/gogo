@@ -63,19 +63,18 @@ func Checksum(file fs.File, closeFile, upper bool, newHashes ...func() hash.Hash
 	checksums []string, err error) {
 	if file == nil {
 		panic(errors.AutoMsg("file is nil"))
-	}
-	if closeFile {
+	} else if closeFile {
 		defer func(f fs.File) {
 			_ = f.Close() // ignore error
 		}(file)
 	}
 	info, err := file.Stat()
-	if err != nil {
+	switch {
+	case err != nil:
 		return nil, errors.AutoWrap(err)
-	} else if info.IsDir() {
+	case info.IsDir():
 		return nil, errors.AutoWrap(ErrIsDir)
-	}
-	if len(newHashes) == 0 {
+	case len(newHashes) == 0:
 		return
 	}
 
@@ -177,8 +176,7 @@ type hashVerifier struct {
 func NewHashVerifier(newHash func() hash.Hash, prefixHex string) HashVerifier {
 	if newHash == nil {
 		panic(errors.AutoMsg("newHash is nil"))
-	}
-	if strings.IndexFunc(prefixHex, func(r rune) bool {
+	} else if strings.IndexFunc(prefixHex, func(r rune) bool {
 		return r < '0' || r > '9' && r < 'A' || r > 'F' && r < 'a' || r > 'f'
 	}) >= 0 {
 		panic(errors.AutoMsg(fmt.Sprintf("prefixHex (%q) is not hexadecimal", prefixHex)))
@@ -241,8 +239,7 @@ func (hv *hashVerifier) Match() bool {
 func VerifyChecksum(file fs.File, closeFile bool, hvs ...HashVerifier) bool {
 	if file == nil {
 		return false
-	}
-	if closeFile {
+	} else if closeFile {
 		defer func(f fs.File) {
 			_ = f.Close() // ignore error
 		}(file)

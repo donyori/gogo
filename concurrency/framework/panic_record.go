@@ -79,8 +79,7 @@ func (pr *PanicRecords) List() []PanicRecord {
 func (pr *PanicRecords) Append(panicRec ...PanicRecord) {
 	if pr == nil {
 		panic(errors.AutoMsg("*PanicRecords is nil"))
-	}
-	if len(panicRec) == 0 {
+	} else if len(panicRec) == 0 {
 		return
 	}
 	pr.lock.Lock()

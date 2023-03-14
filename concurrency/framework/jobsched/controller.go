@@ -99,13 +99,12 @@ type JobHandler[Job, Properties any] func(job Job, quitDevice framework.QuitDevi
 func New[Job, Properties any](n int, handler JobHandler[Job, Properties],
 	jobQueueMaker JobQueueMaker[Job, Properties],
 	metaJob ...*MetaJob[Job, Properties]) Controller[Job, Properties] {
-	if handler == nil {
+	switch {
+	case handler == nil:
 		panic(errors.AutoMsg("handler is nil"))
-	}
-	if jobQueueMaker == nil {
+	case jobQueueMaker == nil:
 		panic(errors.AutoMsg("job queue maker is nil"))
-	}
-	if n <= 0 {
+	case n <= 0:
 		n = runtime.NumCPU()
 	}
 	jq := jobQueueMaker.New()

@@ -253,8 +253,7 @@ func copyAndSort(data []int) []int {
 func kSuffixAndReverse[Item any](s []Item, k int) []Item {
 	if s == nil {
 		return nil
-	}
-	if len(s) > k {
+	} else if len(s) > k {
 		s = s[len(s)-k:]
 	}
 	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {

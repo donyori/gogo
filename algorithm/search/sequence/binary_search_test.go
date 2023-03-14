@@ -57,13 +57,12 @@ func idValueEqual(a, b *idValue) bool {
 }
 
 func idValueSortLess(a, b *idValue) bool {
-	if a == nil {
+	switch {
+	case a == nil:
 		return b != nil
-	}
-	if b == nil {
+	case b == nil:
 		return false
-	}
-	if a.value != b.value {
+	case a.value != b.value:
 		return a.value < b.value
 	}
 	return a.id < b.id

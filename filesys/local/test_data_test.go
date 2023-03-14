@@ -77,8 +77,7 @@ func lazyLoadTestData(name string) (data []byte, err error) {
 	data, err = os.ReadFile(name)
 	if err != nil {
 		return nil, errors.AutoWrap(err)
-	}
-	if testDataMap == nil {
+	} else if testDataMap == nil {
 		testDataMap = make(map[string][]byte, len(testFileEntries))
 	}
 	testDataMap[name] = data
@@ -121,8 +120,7 @@ func lazyLoadTarFile(name string) (files []struct {
 		hdr, err := tr.Next()
 		if errors.Is(err, io.EOF) {
 			return files, nil // end of archive
-		}
-		if err != nil {
+		} else if err != nil {
 			return files, errors.AutoWrap(err)
 		}
 		data, err := io.ReadAll(tr)

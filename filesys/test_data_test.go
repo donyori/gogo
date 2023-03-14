@@ -144,8 +144,7 @@ func init() {
 		err = tw.WriteHeader(hdr)
 		if err != nil {
 			panic(err)
-		}
-		if len(testFSTarFiles[i].body) > 0 {
+		} else if len(testFSTarFiles[i].body) > 0 {
 			_, err = tw.Write([]byte(testFSTarFiles[i].body))
 			if err != nil {
 				panic(err)
@@ -184,8 +183,7 @@ func init() {
 		err = tw.WriteHeader(hdr)
 		if err != nil {
 			panic(err)
-		}
-		if len(testFSTarFiles[i].body) > 0 {
+		} else if len(testFSTarFiles[i].body) > 0 {
 			_, err = tw.Write([]byte(testFSTarFiles[i].body))
 			if err != nil {
 				panic(err)
@@ -227,8 +225,7 @@ func init() {
 		w, err = zw.Create(name)
 		if err != nil {
 			panic(err)
-		}
-		if len(name) > 0 && name[len(name)-1] == '/' {
+		} else if len(name) > 0 && name[len(name)-1] == '/' {
 			continue
 		}
 		_, err = w.Write([]byte(body))
@@ -265,8 +262,7 @@ func init() {
 		w, err = zw.Create(name)
 		if err != nil {
 			panic(err)
-		}
-		if len(name) > 0 && name[len(name)-1] == '/' {
+		} else if len(name) > 0 && name[len(name)-1] == '/' {
 			continue
 		}
 		_, err = w.Write([]byte(body))

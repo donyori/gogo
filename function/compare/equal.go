@@ -65,8 +65,7 @@ var AnyEqual EqualFunc[any] = anyEqual
 func anyEqual(a, b any) bool {
 	if a == nil {
 		return b == nil || reflect.ValueOf(b).IsZero()
-	}
-	if b == nil {
+	} else if b == nil {
 		return reflect.ValueOf(a).IsZero()
 	}
 	// It's sufficient to just test whether a is comparable.
@@ -134,8 +133,7 @@ func ComparableSliceEqualWithoutOrder[T comparable](a, b []T) bool {
 	n := len(a)
 	if n != len(b) {
 		return false
-	}
-	if n == 0 {
+	} else if n == 0 {
 		return true
 	}
 	counter := make(map[T]int, n)

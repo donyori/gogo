@@ -455,8 +455,7 @@ func timestampToTime(tsType timestampType, ts []byte) (t time.Time, err error) {
 	if len(ts) == 0 {
 		err = errors.AutoNew("empty timestamp")
 		return
-	}
-	if !timestampRegExprMapping[tsType].Match(ts) {
+	} else if !timestampRegExprMapping[tsType].Match(ts) {
 		err = errors.AutoNew("invalid timestamp")
 		return
 	}
@@ -497,8 +496,7 @@ func timestampToTime(tsType timestampType, ts []byte) (t time.Time, err error) {
 	sec, err = strconv.ParseInt(string(s), 10, 64)
 	if err != nil {
 		return
-	}
-	if ns != nil {
+	} else if ns != nil {
 		nsec, err = strconv.ParseInt(string(ns), 10, 64)
 		if err != nil {
 			return

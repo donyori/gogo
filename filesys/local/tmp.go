@@ -61,8 +61,7 @@ func Tmp(dir, prefix, suffix string, perm fs.FileMode) (f *os.File, err error) {
 	err = checkTmpPrefixAndSuffix(prefix, suffix)
 	if err != nil {
 		return nil, errors.AutoWrap(err)
-	}
-	if dir == "" {
+	} else if dir == "" {
 		dir = os.TempDir()
 	}
 	prefix = filepath.Join(dir, prefix)
@@ -99,8 +98,7 @@ func TmpDir(dir, prefix, suffix string, perm fs.FileMode) (name string, err erro
 	err = checkTmpPrefixAndSuffix(prefix, suffix)
 	if err != nil {
 		return "", errors.AutoWrap(err)
-	}
-	if dir == "" {
+	} else if dir == "" {
 		dir = os.TempDir()
 	}
 	prefix = filepath.Join(dir, prefix)

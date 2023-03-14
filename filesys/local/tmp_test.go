@@ -54,8 +54,7 @@ func TestTmp_Sync(t *testing.T) {
 	wg.Wait()
 	if t.Failed() {
 		return
-	}
-	if n := len(files); n != N {
+	} else if n := len(files); n != N {
 		t.Errorf("got %d files; want %d", n, N)
 	}
 	set := make(map[string]bool)
@@ -91,8 +90,7 @@ func TestTmpDir_Sync(t *testing.T) {
 	wg.Wait()
 	if t.Failed() {
 		return
-	}
-	if n := len(dirs); n != N {
+	} else if n := len(dirs); n != N {
 		t.Errorf("got %d dirs; want %d", n, N)
 	}
 	set := make(map[string]bool)

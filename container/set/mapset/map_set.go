@@ -103,8 +103,7 @@ func (ms *mapSet[Item]) ContainsSet(s set.Set[Item]) bool {
 	n := s.Len()
 	if n == 0 {
 		return true
-	}
-	if n > len(ms.m) {
+	} else if n > len(ms.m) {
 		return false
 	}
 	var ok bool

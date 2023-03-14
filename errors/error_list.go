@@ -106,8 +106,7 @@ func NewErrorList(ignoreNil bool, err ...error) ErrorList {
 func (el *errorList) Error() string {
 	if len(el.list) == 0 {
 		return "no error"
-	}
-	if len(el.list) == 1 {
+	} else if len(el.list) == 1 {
 		err := el.list[0]
 		if err != nil {
 			return err.Error()

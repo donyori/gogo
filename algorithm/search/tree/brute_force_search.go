@@ -110,8 +110,7 @@ func DFS[Node any](itf AccessNode[Node], initArgs ...any) (nodeFound Node, found
 		r, cont := itf.AccessNode(top.node, top.depth)
 		if r {
 			return top.node, true
-		}
-		if !cont {
+		} else if !cont {
 			return
 		}
 		// Following code is a simplification of the procedure:
@@ -151,8 +150,7 @@ func DFSPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 		r, cont := itf.AccessPath(pathList)
 		if r {
 			return pathList
-		}
-		if !cont {
+		} else if !cont {
 			return nil
 		}
 		ns, ok := itf.NextSibling(top.E)
@@ -187,11 +185,9 @@ func BFS[Node any](itf AccessNode[Node], initArgs ...any) (nodeFound Node, found
 			r, cont := itf.AccessNode(node, head.depth)
 			if r {
 				return node, true
-			}
-			if !cont {
+			} else if !cont {
 				return
-			}
-			if fc, ok := itf.FirstChild(node); ok {
+			} else if fc, ok := itf.FirstChild(node); ok {
 				queue = append(queue, nodeDepth[Node]{fc, head.depth + 1})
 			}
 		}
@@ -219,11 +215,9 @@ func BFSPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 			r, cont := itf.AccessPath(pathList)
 			if r {
 				return pathList
-			}
-			if !cont {
+			} else if !cont {
 				return nil
-			}
-			if fc, ok := itf.FirstChild(node); ok {
+			} else if fc, ok := itf.FirstChild(node); ok {
 				queue = append(queue, &pathlist.Path[Node]{E: fc, P: path})
 			}
 		}
@@ -277,8 +271,7 @@ func dls[Node any](itf AccessNode[Node], root Node, limit int) (nodeFound Node, 
 		if r {
 			nodeFound, found = top.node, true
 			return
-		}
-		if !cont {
+		} else if !cont {
 			quit = true
 			return
 		}
@@ -342,8 +335,7 @@ func dlsPath[Node any](itf AccessPath[Node], root Node, limit int) (pathFound []
 		if r {
 			pathFound = pathList
 			return
-		}
-		if !cont {
+		} else if !cont {
 			quit = true
 			return
 		}
@@ -402,13 +394,12 @@ func IDS[Node any](itf AccessNode[Node], initLimit int, initArgs ...any) (nodeFo
 	}
 	for { // The loop ends when the node is found, more is false, or quit is true.
 		node, r, more, quit := dls(itf, root, limit)
-		if r {
+		switch {
+		case r:
 			return node, true
-		}
-		if !more || quit {
+		case !more || quit:
 			return
-		}
-		if resettable {
+		case resettable:
 			resetter.ResetSearchState()
 		}
 		limit++
@@ -445,13 +436,12 @@ func IDSPath[Node any](itf AccessPath[Node], initLimit int, initArgs ...any) []N
 	}
 	for { // The loop ends when the node is found, more is false, or quit is true.
 		path, more, quit := dlsPath(itf, root, limit)
-		if path != nil {
+		switch {
+		case path != nil:
 			return path
-		}
-		if !more || quit {
+		case !more || quit:
 			return nil
-		}
-		if resettable {
+		case resettable:
 			resetter.ResetSearchState()
 		}
 		limit++

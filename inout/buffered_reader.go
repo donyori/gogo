@@ -109,8 +109,7 @@ func NewBufferedReaderSize(r io.Reader, size int) ResettableBufferedReader {
 	}
 	if br, ok := r.(ResettableBufferedReader); ok && br.Size() >= size {
 		return br
-	}
-	if br, ok := r.(*resettableBufferedReader); ok {
+	} else if br, ok := r.(*resettableBufferedReader); ok {
 		return &resettableBufferedReader{bufio.NewReaderSize(br.br, size)}
 	}
 	br, ok := r.(*bufio.Reader)

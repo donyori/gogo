@@ -634,7 +634,8 @@ func testTarTgzFile(t *testing.T, file *WritableFileImpl) {
 	tr := tar.NewReader(r)
 	for i := 0; ; i++ {
 		hdr, err := tr.Next()
-		if err != nil {
+		switch {
+		case err != nil:
 			if errors.Is(err, io.EOF) {
 				if i != len(testFSTarFiles) {
 					t.Errorf("tar header number: %d != %d, but got EOF",
@@ -644,12 +645,10 @@ func testTarTgzFile(t *testing.T, file *WritableFileImpl) {
 			}
 			t.Errorf("read No.%d tar header - %v", i, err)
 			return
-		}
-		if i >= len(testFSTarFiles) {
+		case i >= len(testFSTarFiles):
 			t.Error("tar headers more than", len(testFSTarFiles))
 			return
-		}
-		if hdr.Name != testFSTarFiles[i].name {
+		case hdr.Name != testFSTarFiles[i].name:
 			t.Errorf("No.%d tar header name unequal - got %s; want %s",
 				i, hdr.Name, testFSTarFiles[i].name)
 		}
@@ -660,8 +659,7 @@ func testTarTgzFile(t *testing.T, file *WritableFileImpl) {
 		if err != nil {
 			t.Errorf("read No.%d tar file body - %v", i, err)
 			return
-		}
-		if string(body) != testFSTarFiles[i].body {
+		} else if string(body) != testFSTarFiles[i].body {
 			t.Errorf(
 				"got No.%d tar file body (len: %d)\n%s\nwant (len: %d)\n%s",
 				i,
@@ -801,8 +799,7 @@ func testZipFile(t *testing.T, file *WritableFileImpl) {
 		if err != nil {
 			t.Errorf("read %q - %v", file.Name, err)
 			return
-		}
-		if string(data) != body {
+		} else if string(data) != body {
 			t.Errorf(
 				"%q file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
 				file.Name,

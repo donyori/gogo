@@ -54,8 +54,7 @@ func WrapSliceLess[Item any](
 	slicePtr *[]Item, lessFn compare.LessFunc[Item]) OrderedDynamicArray[Item] {
 	if slicePtr == nil {
 		panic(errors.AutoMsg("slicePtr is nil"))
-	}
-	if lessFn == nil {
+	} else if lessFn == nil {
 		panic(errors.AutoMsg("lessFn is nil"))
 	}
 	return &sliceLess[Item]{

@@ -325,8 +325,7 @@ func (sda *SliceDynamicArray[Item]) Cut(begin, end int) {
 	_ = (*sda)[begin:end] // ensure begin and end are valid
 	if begin == end {
 		return
-	}
-	if end == len(*sda) {
+	} else if end == len(*sda) {
 		sda.Truncate(begin)
 		return
 	}
@@ -347,8 +346,7 @@ func (sda *SliceDynamicArray[Item]) CutWithoutOrder(begin, end int) {
 	_ = (*sda)[begin:end] // ensure begin and end are valid
 	if begin == end {
 		return
-	}
-	if end == len(*sda) {
+	} else if end == len(*sda) {
 		sda.Truncate(begin)
 		return
 	}

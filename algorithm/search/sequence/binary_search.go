@@ -313,8 +313,7 @@ func (absa *arrayBinarySearchAdapter[Item]) Cmp(i int) (lessEqualOrGreater int, 
 	item := absa.data.Get(i)
 	if absa.lessFn(item, absa.goal) {
 		return -1, false
-	}
-	if absa.lessFn(absa.goal, item) {
+	} else if absa.lessFn(absa.goal, item) {
 		return 1, false
 	}
 	return 0, absa.equalFn == nil || absa.equalFn(item, absa.goal)

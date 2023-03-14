@@ -304,8 +304,7 @@ func (fr *reader) initOffsetAndLimit(size int64) (n int64, err error) {
 		}
 		fr.ur = io.NewSectionReader(r, offset, n)
 		return
-	}
-	if fr.opts.Offset > 0 {
+	} else if fr.opts.Offset > 0 {
 		if seeker, ok := fr.ur.(io.Seeker); ok {
 			_, err = seeker.Seek(fr.opts.Offset, io.SeekStart)
 		} else {
@@ -322,8 +321,7 @@ func (fr *reader) initOffsetAndLimit(size int64) (n int64, err error) {
 	}
 	if err != nil {
 		return 0, err
-	}
-	if fr.opts.Limit > 0 && fr.opts.Limit < n {
+	} else if fr.opts.Limit > 0 && fr.opts.Limit < n {
 		n = fr.opts.Limit
 		fr.ur = io.LimitReader(fr.ur, n)
 	}
@@ -537,12 +535,12 @@ func (fr *reader) TarNext() (hdr *tar.Header, err error) {
 		return nil, errors.AutoWrap(ErrFileReaderClosed)
 	}
 	hdr, err = fr.tr.Next()
-	if err != nil && !errors.Is(err, io.EOF) {
+	switch {
+	case err != nil && !errors.Is(err, io.EOF):
 		return nil, errors.AutoWrap(err)
-	}
-	if tarHeaderIsDir(hdr) {
+	case tarHeaderIsDir(hdr):
 		fr.ur, fr.err = isDirErrorReader, ErrIsDir
-	} else {
+	default:
 		fr.ur, fr.err = fr.tr, nil
 	}
 	fr.br.Reset(fr.ur)

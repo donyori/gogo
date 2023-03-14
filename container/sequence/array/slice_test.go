@@ -1024,20 +1024,19 @@ func (s *sequenceImpl[Item]) Len() int {
 func (s *sequenceImpl[Item]) Front() Item {
 	if s.Len() == 0 {
 		panic(errors.AutoMsg("sequence is nil or empty"))
-	}
-	if s.useFrontAndNext {
+	} else if s.useFrontAndNext {
 		return s.linkedList.Front().Value.(Item)
 	}
 	return s.linkedList.Back().Value.(Item)
 }
 
 func (s *sequenceImpl[Item]) SetFront(x Item) {
-	if s.Len() == 0 {
+	switch {
+	case s.Len() == 0:
 		panic(errors.AutoMsg("sequence is nil or empty"))
-	}
-	if s.useFrontAndNext {
+	case s.useFrontAndNext:
 		s.linkedList.Front().Value = x
-	} else {
+	default:
 		s.linkedList.Back().Value = x
 	}
 }
@@ -1045,20 +1044,19 @@ func (s *sequenceImpl[Item]) SetFront(x Item) {
 func (s *sequenceImpl[Item]) Back() Item {
 	if s.Len() == 0 {
 		panic(errors.AutoMsg("sequence is nil or empty"))
-	}
-	if s.useFrontAndNext {
+	} else if s.useFrontAndNext {
 		return s.linkedList.Back().Value.(Item)
 	}
 	return s.linkedList.Front().Value.(Item)
 }
 
 func (s *sequenceImpl[Item]) SetBack(x Item) {
-	if s.Len() == 0 {
+	switch {
+	case s.Len() == 0:
 		panic(errors.AutoMsg("sequence is nil or empty"))
-	}
-	if s.useFrontAndNext {
+	case s.useFrontAndNext:
 		s.linkedList.Back().Value = x
-	} else {
+	default:
 		s.linkedList.Front().Value = x
 	}
 }
@@ -1070,10 +1068,10 @@ func (s *sequenceImpl[Item]) Reverse() {
 }
 
 func (s *sequenceImpl[Item]) Range(handler func(x Item) (cont bool)) {
-	if s.Len() == 0 {
+	switch {
+	case s.Len() == 0:
 		return
-	}
-	if s.useFrontAndNext {
+	case s.useFrontAndNext:
 		elem := s.linkedList.Front()
 		for elem != nil {
 			if !handler(elem.Value.(Item)) {
@@ -1081,7 +1079,7 @@ func (s *sequenceImpl[Item]) Range(handler func(x Item) (cont bool)) {
 			}
 			elem = elem.Next()
 		}
-	} else {
+	default:
 		elem := s.linkedList.Back()
 		for elem != nil {
 			if !handler(elem.Value.(Item)) {

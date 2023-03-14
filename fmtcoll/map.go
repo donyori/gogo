@@ -84,8 +84,7 @@ func FormatMapToString[Key comparable, Value any](
 					err = format.FormatKeyFn(&b, entries[i].key)
 					if err != nil {
 						return "", errors.AutoWrap(err)
-					}
-					if format.FormatValueFn != nil {
+					} else if format.FormatValueFn != nil {
 						b.WriteByte(':')
 					}
 				}
