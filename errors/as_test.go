@@ -19,11 +19,56 @@
 package errors_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/donyori/gogo/errors"
 )
+
+// MyError is a trivial implementation of interface error
+// for testing errors.As.
+type MyError string
+
+func (err MyError) Error() string {
+	return string(err)
+}
+
+func TestAs(t *testing.T) {
+	newErr := errors.New("newError")
+	myErr := MyError("myError")
+	testCases := []struct {
+		err  error
+		want bool
+	}{
+		{nil, false},
+		{newErr, false},
+		{myErr, true},
+		{errors.Join(newErr, myErr), true},
+		{fmt.Errorf("fmtErrorf%w", newErr), false},
+		{fmt.Errorf("fmtErrorf%w", myErr), true},
+		{fmt.Errorf("fmtErrorf%w%w", newErr, myErr), true},
+		{errors.AutoWrap(newErr), false},
+		{errors.AutoWrap(myErr), true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("err=%v", tc.err), func(t *testing.T) {
+			var target MyError
+			got := errors.As(tc.err, &target)
+			if got != tc.want {
+				t.Errorf("got %t; want %t", got, tc.want)
+			}
+			if tc.want {
+				if target != myErr {
+					t.Errorf("got target %v; want %v", target, myErr)
+				}
+			} else if target != "" {
+				t.Error("target was modified unexpectedly; target:", target)
+			}
+		})
+	}
+}
 
 func TestAs_PanicForErrorPointer(t *testing.T) {
 	target := new(error)
