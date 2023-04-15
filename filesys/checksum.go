@@ -100,7 +100,11 @@ func Checksum(file fs.File, closeFile, upper bool, newHashes ...func() hash.Hash
 		w = io.MultiWriter(ws...)
 		bufSize = mathalgo.LCM(bs...) // make bufSize a multiple of the block sizes
 	}
-	if shift := 13 - bits.Len(bufSize); shift > 0 {
+	if bufSize == 0 {
+		// Act as a safeguard for the hash.Hash
+		// whose BlockSize returns 0.
+		bufSize = 5120 // = (2^10) * 5
+	} else if shift := 13 - bits.Len(bufSize); shift > 0 {
 		bufSize <<= shift // make bufSize at least 4096
 	}
 
@@ -265,7 +269,11 @@ func VerifyChecksum(file fs.File, closeFile bool, hvs ...HashVerifier) bool {
 		w = io.MultiWriter(ws...)
 		bufSize = mathalgo.LCM(bs...) // make bufSize a multiple of the block sizes
 	}
-	if shift := 13 - bits.Len(bufSize); shift > 0 {
+	if bufSize == 0 {
+		// Act as a safeguard for the hash.Hash
+		// whose BlockSize returns 0.
+		bufSize = 5120 // = (2^10) * 5
+	} else if shift := 13 - bits.Len(bufSize); shift > 0 {
 		bufSize <<= shift // make bufSize at least 4096
 	}
 
