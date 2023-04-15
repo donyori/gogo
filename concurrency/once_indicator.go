@@ -18,14 +18,14 @@
 
 package concurrency
 
-import "sync"
-
-// OnceIndicator is an object that performs exactly one action, like sync.Once.
+// OnceIndicator is an object that performs exactly one action,
+// similar to sync.Once, but based on Go channel.
 // Moreover, it can indicate whether the action has been performed,
 // and enable the client on another goroutine to wait for the action to finish.
 type OnceIndicator interface {
-	// Do performs the same as the method Do of sync.Once, and indicate whether
-	// the function f is called in this invocation.
+	// Do performs similarly to the method Do of sync.Once.
+	// Moreover, it indicates whether the function f is called
+	// in this invocation.
 	//
 	// In detail, it calls the function f and returns true if and only if
 	// the method Do is being called for the first time for this instance
@@ -54,38 +54,61 @@ type OnceIndicator interface {
 
 // NewOnceIndicator creates a new instance of OnceIndicator.
 func NewOnceIndicator() OnceIndicator {
-	return &onceIndicator{c: make(chan struct{})}
+	firstC := make(chan struct{}, 1)
+	firstC <- struct{}{}
+	close(firstC)
+	return &onceIndicator{
+		firstC: firstC,
+		doneC:  make(chan struct{}),
+	}
 }
 
 // onceIndicator is an implementation of interface OnceIndicator.
 type onceIndicator struct {
-	once sync.Once     // Once object.
-	c    chan struct{} // Channel to broadcast the finish signal.
+	// Channel to determine whether the current call is
+	// the first call to the method Do.
+	//
+	// Usage:
+	//
+	//	// in the initialization of the onceIndicator
+	//	c := make(chan struct{}, 1)
+	//	c <- struct{}
+	//	close(c)
+	//	oi.firstC = c
+	//
+	//	// in the body of method Do
+	//	_, ok := <-oi.firstC
+	//	// ok indicates whether the current call is the first
+	firstC <-chan struct{}
+
+	// Channel to broadcast the finish signal.
+	doneC chan struct{}
 }
 
 func (oi *onceIndicator) Do(f func()) bool {
-	var r bool
-	oi.once.Do(func() {
-		r = true
-		defer close(oi.c)
+	_, ok := <-oi.firstC
+	if ok {
+		defer close(oi.doneC)
 		if f != nil {
 			f()
 		}
-	})
-	return r
+	} else {
+		<-oi.doneC // wait for the first call to finish
+	}
+	return ok
 }
 
 func (oi *onceIndicator) C() <-chan struct{} {
-	return oi.c
+	return oi.doneC
 }
 
 func (oi *onceIndicator) Wait() {
-	<-oi.c
+	<-oi.doneC
 }
 
 func (oi *onceIndicator) Test() bool {
 	select {
-	case <-oi.c:
+	case <-oi.doneC:
 		return true
 	default:
 		return false
