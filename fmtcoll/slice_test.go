@@ -25,10 +25,95 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/donyori/gogo/container/sequence"
+	"github.com/donyori/gogo/container/sequence/array"
+	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/fmtcoll"
 )
 
 func TestFormatSliceToString(t *testing.T) {
+	testFormatSequenceToString(
+		t,
+		"[]*int",
+		func(
+			tc sequenceTestCase,
+			dataList [][]*int,
+			commonFormatList []fmtcoll.CommonFormat,
+		) (result string, err error) {
+			return fmtcoll.FormatSliceToString(
+				dataList[tc.dataIdx],
+				&fmtcoll.SequenceFormat[*int]{
+					CommonFormat: commonFormatList[tc.commonFormatIdx],
+					FormatItemFn: tc.formatItemFn,
+				},
+			)
+		},
+	)
+}
+
+func TestMustFormatSliceToString_Panic(t *testing.T) {
+	testMustFormatToStringPanic(
+		t,
+		func(errorFormatItemFn fmtcoll.FormatFunc[int]) {
+			fmtcoll.MustFormatSliceToString(
+				[]int{0},
+				&fmtcoll.SequenceFormat[int]{FormatItemFn: errorFormatItemFn},
+			)
+		},
+	)
+}
+
+func TestFormatSequenceToString(t *testing.T) {
+	testFormatSequenceToString(
+		t,
+		"sequence.Sequence[*int]",
+		func(
+			tc sequenceTestCase,
+			dataList [][]*int,
+			commonFormatList []fmtcoll.CommonFormat,
+		) (result string, err error) {
+			var s sequence.Sequence[*int]
+			if dataList[tc.dataIdx] != nil {
+				s = (*array.SliceDynamicArray[*int])(&dataList[tc.dataIdx])
+			}
+			return fmtcoll.FormatSequenceToString(
+				s, &fmtcoll.SequenceFormat[*int]{
+					CommonFormat: commonFormatList[tc.commonFormatIdx],
+					FormatItemFn: tc.formatItemFn,
+				},
+			)
+		},
+	)
+}
+
+func TestMustFormatSequenceToString_Panic(t *testing.T) {
+	testMustFormatToStringPanic(
+		t,
+		func(errorFormatItemFn fmtcoll.FormatFunc[int]) {
+			fmtcoll.MustFormatSequenceToString[int](
+				&array.SliceDynamicArray[int]{0},
+				&fmtcoll.SequenceFormat[int]{FormatItemFn: errorFormatItemFn},
+			)
+		},
+	)
+}
+
+type sequenceTestCase struct {
+	dataIdx         int
+	commonFormatIdx int
+	formatItemFn    fmtcoll.FormatFunc[*int]
+	want            string
+}
+
+func testFormatSequenceToString(
+	t *testing.T,
+	typeStr string,
+	f func(
+		tc sequenceTestCase,
+		dataList [][]*int,
+		commonFormatList []fmtcoll.CommonFormat,
+	) (result string, err error),
+) {
 	const NilItemStr = "<nilptr>"
 	const Separator, Prefix, Suffix = ",", "<PREFIX>", "<SUFFIX>"
 	two, three := 2, 3
@@ -59,21 +144,16 @@ func TestFormatSliceToString(t *testing.T) {
 		{Separator: Separator, Prefix: Prefix, Suffix: Suffix, PrependType: true, PrependSize: true},
 	}
 
-	testCases := make([]struct {
-		dataIdx         int
-		commonFormatIdx int
-		formatItemFn    fmtcoll.FormatFunc[*int]
-		want            string
-	}, len(dataList)*len(commonFormatList)*2)
+	testCases := make([]sequenceTestCase, len(dataList)*len(commonFormatList)*2)
 	var idx int
 	for dataIdx, data := range dataList {
 		for commonFormatIdx := range commonFormatList {
 			var prefix string
 			if commonFormatList[commonFormatIdx].PrependType {
 				if commonFormatList[commonFormatIdx].PrependSize {
-					prefix = fmt.Sprintf("([]*int,%d)", len(data))
+					prefix = fmt.Sprintf("(%s,%d)", typeStr, len(data))
 				} else {
-					prefix = "([]*int)"
+					prefix = fmt.Sprintf("(%s)", typeStr)
 				}
 			} else if commonFormatList[commonFormatIdx].PrependSize {
 				prefix = fmt.Sprintf("(%d)", len(data))
@@ -122,19 +202,34 @@ func TestFormatSliceToString(t *testing.T) {
 			name += "&formatItemFn=<nil>"
 		}
 		t.Run(name, func(t *testing.T) {
-			got, err := fmtcoll.FormatSliceToString(
-				dataList[tc.dataIdx],
-				&fmtcoll.SequenceFormat[*int]{
-					CommonFormat: commonFormatList[tc.commonFormatIdx],
-					FormatItemFn: tc.formatItemFn,
-				},
-			)
+			got, err := f(tc, dataList, commonFormatList)
 			if err != nil {
-				t.Fatal("err -", err)
-			}
-			if got != tc.want {
+				t.Error("err -", err)
+			} else if got != tc.want {
 				t.Errorf("got %q; want %q", got, tc.want)
 			}
 		})
 	}
+}
+
+func testMustFormatToStringPanic(
+	t *testing.T,
+	f func(errorFormatItemFn fmtcoll.FormatFunc[int]),
+) {
+	wantErr := errors.New("want error")
+	errorFormatItemFn := func(io.Writer, int) error {
+		return errors.AutoWrap(wantErr)
+	}
+	defer func() {
+		e := recover()
+		if e == nil {
+			t.Error("want panic but not")
+			return
+		}
+		err, ok := e.(error)
+		if !ok || !errors.Is(err, wantErr) {
+			t.Error("panic -", e)
+		}
+	}()
+	f(errorFormatItemFn)
 }

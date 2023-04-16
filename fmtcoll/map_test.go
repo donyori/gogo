@@ -26,10 +26,101 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/donyori/gogo/container/mapping"
 	"github.com/donyori/gogo/fmtcoll"
 )
 
 func TestFormatMapToString(t *testing.T) {
+	testFormatMapToString(
+		t,
+		"map[string]*int",
+		func(
+			tc mapTestCase,
+			dataList []map[string]*int,
+			commonFormatList []fmtcoll.CommonFormat,
+			keyValueLess func(key1 string, key2 string, _ *int, _ *int) bool,
+		) (result string, err error) {
+			return fmtcoll.FormatMapToString(
+				dataList[tc.dataIdx],
+				&fmtcoll.MapFormat[string, *int]{
+					CommonFormat:  commonFormatList[tc.commonFormatIdx],
+					FormatKeyFn:   tc.formatKeyFn,
+					FormatValueFn: tc.formatValueFn,
+					KeyValueLess:  keyValueLess,
+				},
+			)
+		},
+	)
+}
+
+func TestMustFormatMapToString_Panic(t *testing.T) {
+	testMustFormatToStringPanic(
+		t,
+		func(errorFormatItemFn fmtcoll.FormatFunc[int]) {
+			fmtcoll.MustFormatMapToString(
+				map[int]int{0: 0},
+				&fmtcoll.MapFormat[int, int]{FormatKeyFn: errorFormatItemFn},
+			)
+		},
+	)
+}
+
+func TestFormatGogoMapToString(t *testing.T) {
+	testFormatMapToString(
+		t,
+		"mapping.Map[string,*int]",
+		func(
+			tc mapTestCase,
+			dataList []map[string]*int,
+			commonFormatList []fmtcoll.CommonFormat,
+			keyValueLess func(key1 string, key2 string, _ *int, _ *int) bool,
+		) (result string, err error) {
+			var m mapping.Map[string, *int]
+			if dataList[tc.dataIdx] != nil {
+				m = (*mapping.GoMap[string, *int])(&dataList[tc.dataIdx])
+			}
+			return fmtcoll.FormatGogoMapToString(
+				m, &fmtcoll.MapFormat[string, *int]{
+					CommonFormat:  commonFormatList[tc.commonFormatIdx],
+					FormatKeyFn:   tc.formatKeyFn,
+					FormatValueFn: tc.formatValueFn,
+					KeyValueLess:  keyValueLess,
+				},
+			)
+		},
+	)
+}
+
+func TestMustFormatGogoMapToString_Panic(t *testing.T) {
+	testMustFormatToStringPanic(
+		t,
+		func(errorFormatItemFn fmtcoll.FormatFunc[int]) {
+			fmtcoll.MustFormatGogoMapToString[int, int](
+				&mapping.GoMap[int, int]{0: 0},
+				&fmtcoll.MapFormat[int, int]{FormatKeyFn: errorFormatItemFn},
+			)
+		},
+	)
+}
+
+type mapTestCase struct {
+	dataIdx         int
+	commonFormatIdx int
+	formatKeyFn     fmtcoll.FormatFunc[string]
+	formatValueFn   fmtcoll.FormatFunc[*int]
+	want            string
+}
+
+func testFormatMapToString(
+	t *testing.T,
+	typeStr string,
+	f func(
+		tc mapTestCase,
+		dataList []map[string]*int,
+		commonFormatList []fmtcoll.CommonFormat,
+		keyValueLess func(key1, key2 string, _, _ *int) bool,
+	) (result string, err error),
+) {
 	const NilItemStr = "<nilptr>"
 	const Separator, Prefix, Suffix = ",", "<PREFIX>", "<SUFFIX>"
 	two, three := 2, 3
@@ -83,9 +174,9 @@ func TestFormatMapToString(t *testing.T) {
 			var prefix string
 			if commonFormatList[commonFormatIdx].PrependType {
 				if commonFormatList[commonFormatIdx].PrependSize {
-					prefix = fmt.Sprintf("(map[string]*int,%d)", len(data))
+					prefix = fmt.Sprintf("(%s,%d)", typeStr, len(data))
 				} else {
-					prefix = "(map[string]*int)"
+					prefix = fmt.Sprintf("(%s)", typeStr)
 				}
 			} else if commonFormatList[commonFormatIdx].PrependSize {
 				prefix = fmt.Sprintf("(%d)", len(data))
@@ -153,19 +244,10 @@ func TestFormatMapToString(t *testing.T) {
 			name += "&formatValueFn=<nil>"
 		}
 		t.Run(name, func(t *testing.T) {
-			got, err := fmtcoll.FormatMapToString(
-				dataList[tc.dataIdx],
-				&fmtcoll.MapFormat[string, *int]{
-					CommonFormat:  commonFormatList[tc.commonFormatIdx],
-					FormatKeyFn:   tc.formatKeyFn,
-					FormatValueFn: tc.formatValueFn,
-					KeyValueLess:  keyValueLess,
-				},
-			)
+			got, err := f(tc, dataList, commonFormatList, keyValueLess)
 			if err != nil {
-				t.Fatal("err -", err)
-			}
-			if got != tc.want {
+				t.Error("err -", err)
+			} else if got != tc.want {
 				t.Errorf("got %#q; want %#q", got, tc.want)
 			}
 		})
