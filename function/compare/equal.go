@@ -18,7 +18,11 @@
 
 package compare
 
-import "reflect"
+import (
+	"reflect"
+
+	"github.com/donyori/gogo/constraints"
+)
 
 // EqualFunc is a function to test whether a == b.
 type EqualFunc[T any] func(a, b T) bool
@@ -33,8 +37,21 @@ func (ef EqualFunc[T]) Not() EqualFunc[T] {
 // ComparableEqual is a generic function to test whether a == b.
 //
 // The client can instantiate it to get an EqualFunc.
+//
+// For floating-point numbers, to consider NaN values equal to each other,
+// use function FloatEqual.
 func ComparableEqual[T comparable](a, b T) bool {
 	return a == b
+}
+
+// FloatEqual is a generic function that returns true
+// if a == b or both a and b are NaN.
+//
+// The client can instantiate it to get an EqualFunc.
+//
+// To just test whether a == b, use function ComparableEqual.
+func FloatEqual[T constraints.Float](a, b T) bool {
+	return a == b || a != a && b != b // "x != x" means that x is a NaN
 }
 
 // AnyEqual is a prefab EqualFunc performing as follows:
@@ -53,6 +70,9 @@ func ComparableEqual[T comparable](a, b T) bool {
 //
 // If any input variable is not comparable,
 // it returns false rather than panicking.
+//
+// Note that for floating-point numbers, NaN values are not equal to each other.
+// To consider NaN values equal to each other, use function FloatEqual.
 //
 // For more information about identical types,
 // see <https://go.dev/ref/spec#Type_identity>.
@@ -93,6 +113,28 @@ func ComparableSliceEqual[T comparable](a, b []T) bool {
 	return true
 }
 
+// FloatSliceEqual is a generic function to test whether
+// the specified slices have the same length and the items
+// with the same index are equal.
+//
+// Two items (floating-point numbers) a and b are considered equal
+// if a == b or both a and b are NaN.
+//
+// The client can instantiate it to get an EqualFunc.
+func FloatSliceEqual[T constraints.Float](a, b []T) bool {
+	n := len(a)
+	if n != len(b) {
+		return false
+	}
+	for i := 0; i < n; i++ {
+		// "x == x" means that x is not a NaN.
+		if a[i] != b[i] && (a[i] == a[i] || b[i] == b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 // AnySliceEqual is a generic function to test whether
 // the specified slices have the same length and the items
 // with the same index are equal.
@@ -112,6 +154,37 @@ func AnySliceEqual[T any](a, b []T) bool {
 		}
 	}
 	return true
+}
+
+// ToSliceEqual returns a function to test whether two slices of type []T,
+// a and b, have the same length and whether their items
+// with the same index are equal.
+//
+// It uses ef to test the equality of the slice items.
+// If ef is nil, it uses AnyEqual instead.
+//
+// nilEqualToEmpty indicates whether to consider
+// nil slices equal to non-nil empty slices.
+func ToSliceEqual[T any](ef EqualFunc[T], nilEqualToEmpty bool) EqualFunc[[]T] {
+	if ef == nil {
+		ef = func(a, b T) bool {
+			return AnyEqual(a, b)
+		}
+	}
+	return func(a, b []T) bool {
+		n := len(a)
+		if n != len(b) {
+			return false
+		} else if n == 0 && !nilEqualToEmpty {
+			return (a == nil) == (b == nil)
+		}
+		for i := 0; i < n; i++ {
+			if !ef(a[i], b[i]) {
+				return false
+			}
+		}
+		return true
+	}
 }
 
 // ComparableSliceEqualWithoutOrder is a generic function to test whether
@@ -146,6 +219,49 @@ func ComparableSliceEqualWithoutOrder[T comparable](a, b []T) bool {
 			return false
 		}
 		counter[x] = c
+	}
+	for _, c := range counter {
+		if c > 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// FloatSliceEqualWithoutOrder is like ComparableSliceEqualWithoutOrder,
+// but it considers two items (floating-point numbers) a and b equal
+// if a == b or both a and b are NaN.
+//
+// The client can instantiate it to get an EqualFunc.
+func FloatSliceEqualWithoutOrder[T constraints.Float](a, b []T) bool {
+	n := len(a)
+	if n != len(b) {
+		return false
+	} else if n == 0 {
+		return true
+	}
+	counter, numNaN := make(map[T]int, n), 0
+	// "x == x" means that x is not a NaN.
+	for _, x := range a {
+		if x == x {
+			counter[x]++
+		} else {
+			numNaN++
+		}
+	}
+	for _, x := range b {
+		if x == x {
+			c := counter[x] - 1
+			if c < 0 {
+				return false
+			}
+			counter[x] = c
+		} else {
+			if numNaN <= 0 {
+				return false
+			}
+			numNaN--
+		}
 	}
 	for _, c := range counter {
 		if c > 0 {
