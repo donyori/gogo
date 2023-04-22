@@ -76,17 +76,18 @@ func TestWriteTrunc_MkDirs(t *testing.T) {
 }
 
 func TestWriteTrunc_TarTgz(t *testing.T) {
-	big := make([]byte, 1<<20)
-	rand.New(rand.NewSource(10)).Read(big)
+	big := make([]byte, 13<<10)
+	rand.New(rand.NewSource(100)).Read(big)
 	tarFiles := []struct {
 		name string
 		body []byte
 	}{
+		{"tardir/", nil},
 		{"tardir/tar file1.txt", []byte("This is tar file 1.")},
 		{"tardir/tar file2.txt", []byte("Here is tar file 2!")},
 		{"emptydir/", nil},
 		{"roses are red.txt", []byte("Roses are red.\n  Violets are blue.\nSugar is sweet.\n  And so are you.\n")},
-		{"1MB.dat", big},
+		{"13KB.dat", big},
 	}
 	filenames := []string{"test.tar", "test.tar.gz", "test.tgz"}
 	tmpRoot := t.TempDir()
@@ -102,14 +103,15 @@ func TestWriteTrunc_TarTgz(t *testing.T) {
 }
 
 func TestWriteTrunc_Zip(t *testing.T) {
-	big := make([]byte, 1<<20)
-	rand.New(rand.NewSource(10)).Read(big)
+	big := make([]byte, 13<<10)
+	rand.New(rand.NewSource(100)).Read(big)
 	zipNameBodyMap := map[string][]byte{
+		"zipdir/":              nil,
 		"zipdir/zip file1.txt": []byte("This is ZIP file 1."),
 		"zipdir/zip file2.txt": []byte("Here is ZIP file 2!"),
 		"emptydir/":            nil,
 		"roses are red.txt":    []byte("Roses are red.\n  Violets are blue.\nSugar is sweet.\n  And so are you.\n"),
-		"1MB.dat":              big,
+		"13KB.dat":             big,
 	}
 	name := filepath.Join(t.TempDir(), "test.zip")
 	writeZipFiles(t, name, zipNameBodyMap)

@@ -25,8 +25,8 @@ import (
 	"compress/flate"
 	"compress/gzip"
 	"crypto"
-	_ "crypto/md5"    // to register crypto.MD5
-	_ "crypto/sha256" // to register crypto.SHA256
+	_ "crypto/md5"    // link crypto.MD5 to the binary
+	_ "crypto/sha256" // link crypto.SHA256 to the binary
 	"encoding/hex"
 	"io"
 	"math/rand"
@@ -81,10 +81,10 @@ func init() {
 		},
 	}
 
-	big := make([]byte, 1<<20)
-	random := rand.New(rand.NewSource(10))
+	big := make([]byte, 13<<10)
+	random := rand.New(rand.NewSource(100))
 	random.Read(big)
-	testFS["1MB.dat"] = &fstest.MapFile{
+	testFS["13KB.dat"] = &fstest.MapFile{
 		Data:    big,
 		Mode:    0755,
 		ModTime: now,
@@ -92,18 +92,20 @@ func init() {
 
 	bigStr := string(big)
 	testFSTarFiles = []struct{ name, body string }{
+		{"tardir/", ""},
 		{"tardir/tar file1.txt", "This is tar file 1."},
 		{"tardir/tar file2.txt", "Here is tar file 2!"},
 		{"emptydir/", ""},
 		{"roses are red.txt", "Roses are red.\n  Violets are blue.\nSugar is sweet.\n  And so are you.\n"},
-		{"1MB.dat", bigStr},
+		{"13KB.dat", bigStr},
 	}
 	testFSZipFileNameBodyMap = map[string]string{
+		"zipdir/":              "",
 		"zipdir/zip file1.txt": "This is ZIP file 1.",
 		"zipdir/zip file2.txt": "Here is ZIP file 2!",
 		"emptydir/":            "",
 		"roses are red.txt":    "Roses are red.\n  Violets are blue.\nSugar is sweet.\n  And so are you.\n",
-		"1MB.dat":              bigStr,
+		"13KB.dat":             bigStr,
 	}
 
 	// ------ .gz ------
@@ -120,7 +122,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	testFS["1MB.dat.gz"] = &fstest.MapFile{
+	testFS["13KB.dat.gz"] = &fstest.MapFile{
 		Data:    copyBuffer(buf),
 		Mode:    0755,
 		ModTime: now,
