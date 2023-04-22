@@ -54,38 +54,35 @@ func AutoMsgCustom(msg string, ms ErrorMessageStrategy, skip int) string {
 	if ms == OriginalMsg {
 		return msg
 	}
+	const AutoMsgCustomPrefix = "github.com/donyori/gogo/errors.AutoMsgCustom: "
+	const CannotRetrieveCallerPanicMsg = AutoMsgCustomPrefix +
+		"cannot retrieve caller function name"
 	frame, ok := runtime.CallerFrame(skip + 1)
-	if !ok {
-		return "(retrieving caller failed) error: " + msg
+	if !ok || frame.Function == "" {
+		panic(CannotRetrieveCallerPanicMsg)
 	}
-	var prefix string
-	switch ms {
-	case PrependFullFuncName:
-		prefix = frame.Function
-	case PrependFullPkgName:
-		prefix, _, ok = runtime.FramePkgFunc(frame)
-		if !ok {
-			return "(retrieving caller failed) error: " + msg
+	prefix := frame.Function
+	pkg := runtime.FuncPkg(frame.Function)
+	if len(pkg) >= len(frame.Function) {
+		panic(CannotRetrieveCallerPanicMsg)
+	}
+	if ms != PrependFullFuncName {
+		switch ms {
+		case PrependFullPkgName:
+			prefix = pkg
+		case PrependSimpleFuncName:
+			prefix = frame.Function[len(pkg)+1:]
+		case PrependSimplePkgName:
+			prefix = pkg[strings.LastIndexByte(pkg, '/')+1:]
+		default:
+			// This should never happen, but will act as a safeguard for later,
+			// as a default value doesn't make sense here.
+			panic(fmt.Sprintf(
+				AutoMsgCustomPrefix+
+					"error message strategy is invalid (%v), which should never happen",
+				ms,
+			))
 		}
-	case PrependSimpleFuncName:
-		_, prefix, ok = runtime.FramePkgFunc(frame)
-		if !ok {
-			return "(retrieving caller failed) error: " + msg
-		}
-	case PrependSimplePkgName:
-		prefix, _, ok = runtime.FramePkgFunc(frame)
-		if !ok {
-			return "(retrieving caller failed) error: " + msg
-		}
-		prefix = prefix[strings.LastIndex(prefix, "/")+1:]
-	default:
-		// This should never happen, but will act as a safeguard for later,
-		// as a default value doesn't make sense here.
-		panic(fmt.Sprintf(
-			"github.com/donyori/gogo/errors.AutoMsgCustom: "+
-				"error message strategy is invalid (%v), which should never happen",
-			ms,
-		))
 	}
 	if prefix == "" {
 		return msg

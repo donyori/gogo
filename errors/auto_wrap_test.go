@@ -45,13 +45,13 @@ func TestAutoWrap(t *testing.T) {
 	const FullFuncPrefix = "github.com/donyori/gogo/errors_test.TestAutoWrap.func1: "
 
 	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrappedError(err0, "manually created: error 1 - "+err0.Error())
-	err2 := errors.NewAutoWrappedError(err1, "manually created: error 2 - "+err1.Error())
+	err1 := errors.NewAutoWrappedError(err0)
+	err2 := errors.NewAutoWrappedError(err1)
 	wantMsgErr0To2 := FullFuncPrefix + err0.Error()
 
 	err3 := &testError{err: err2}
-	err4 := errors.NewAutoWrappedError(err3, "manually created: error 4 - "+err3.Error())
-	err5 := errors.NewAutoWrappedError(err4, "manually created: error 5 - "+err4.Error())
+	err4 := errors.NewAutoWrappedError(err3)
+	err5 := errors.NewAutoWrappedError(err4)
 	wantMsgErr3To5 := FullFuncPrefix + err3.Error()
 
 	err6 := stderrors.New("")
@@ -74,7 +74,11 @@ func TestAutoWrap(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?err=%+q", i, tc.err), func(t *testing.T) {
+		errName := "<nil>"
+		if tc.err != nil {
+			errName = strconv.QuoteToASCII(tc.err.Error())
+		}
+		t.Run(fmt.Sprintf("case %d?err=%s", i, errName), func(t *testing.T) {
 			got := errors.AutoWrap(tc.err)
 			if (got == tc.err) != tc.equal {
 				if tc.equal {
@@ -103,14 +107,14 @@ func TestAutoWrapSkip(t *testing.T) {
 	const FullFuncSkip1Prefix = "github.com/donyori/gogo/errors_test.TestAutoWrapSkip.func1: "
 
 	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrappedError(err0, "manually created: error 1 - "+err0.Error())
-	err2 := errors.NewAutoWrappedError(err1, "manually created: error 2 - "+err1.Error())
+	err1 := errors.NewAutoWrappedError(err0)
+	err2 := errors.NewAutoWrappedError(err1)
 	wantMsgErr0To2Skip0 := FullFuncSkip0Prefix + err0.Error()
 	wantMsgErr0To2Skip1 := FullFuncSkip1Prefix + err0.Error()
 
 	err3 := &testError{err: err2}
-	err4 := errors.NewAutoWrappedError(err3, "manually created: error 4 - "+err3.Error())
-	err5 := errors.NewAutoWrappedError(err4, "manually created: error 5 - "+err4.Error())
+	err4 := errors.NewAutoWrappedError(err3)
+	err5 := errors.NewAutoWrappedError(err4)
 	wantMsgErr3To5Skip0 := FullFuncSkip0Prefix + err3.Error()
 	wantMsgErr3To5Skip1 := FullFuncSkip1Prefix + err3.Error()
 
@@ -145,7 +149,11 @@ func TestAutoWrapSkip(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?err=%+q&skip=%d", i, tc.err, tc.skip), func(t *testing.T) {
+		errName := "<nil>"
+		if tc.err != nil {
+			errName = strconv.QuoteToASCII(tc.err.Error())
+		}
+		t.Run(fmt.Sprintf("case %d?err=%s&skip=%d", i, errName, tc.skip), func(t *testing.T) {
 			func() { // Use an inner function to test the "skip".
 				got := errors.AutoWrapSkip(tc.err, tc.skip)
 				if (got == tc.err) != tc.equal {
@@ -180,11 +188,11 @@ func TestAutoWrapCustom(t *testing.T) {
 	const SimplePkgPrefix = "errors_test: "
 
 	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrappedError(err0, "manually created: error 1 - "+err0.Error())
-	err2 := errors.NewAutoWrappedError(err1, "manually created: error 2 - "+err1.Error())
+	err1 := errors.NewAutoWrappedError(err0)
+	err2 := errors.NewAutoWrappedError(err1)
 	err3 := &testError{err: err2}
-	err4 := errors.NewAutoWrappedError(err3, "manually created: error 4 - "+err3.Error())
-	err5 := errors.NewAutoWrappedError(err4, "manually created: error 5 - "+err4.Error())
+	err4 := errors.NewAutoWrappedError(err3)
+	err5 := errors.NewAutoWrappedError(err4)
 	err6 := stderrors.New("")
 
 	excl := errors.NewErrorReadOnlySetIs(io.EOF, err0)
@@ -265,8 +273,12 @@ func TestAutoWrapCustom(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
+		errName := "<nil>"
+		if tc.err != nil {
+			errName = strconv.QuoteToASCII(tc.err.Error())
+		}
 		t.Run(
-			fmt.Sprintf("case %d?err=%q&ms=%s(%[3]d)&skip=%d&hasExcl=%t", i, tc.err, tc.ms, tc.skip, tc.excl != nil),
+			fmt.Sprintf("case %d?err=%s&ms=%s(%[3]d)&skip=%d&hasExcl=%t", i, errName, tc.ms, tc.skip, tc.excl != nil),
 			func(t *testing.T) {
 				func() { // Use an inner function to test the "skip".
 					got := errors.AutoWrapCustom(tc.err, tc.ms, tc.skip, tc.excl)
@@ -294,17 +306,18 @@ func TestAutoWrapCustom(t *testing.T) {
 
 func TestIsAutoWrappedError(t *testing.T) {
 	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrappedError(err0, "manually created: error 1 - "+err0.Error())
-	err2 := errors.NewAutoWrappedError(err1, "manually created: error 2 - "+err1.Error())
-	err3 := errors.NewAutoWrappedError(err2, "manually created: error 3 - "+err2.Error())
+	err1 := errors.NewAutoWrappedError(err0)
+	err2 := errors.NewAutoWrappedError(err1)
+	err3 := errors.NewAutoWrappedError(err2)
 	err4 := &testError{err: err2}
-	err5 := errors.NewAutoWrappedError(err4, "manually created: error 5 - "+err4.Error())
-	err6 := errors.NewAutoWrappedError(err5, "manually created: error 6 - "+err5.Error())
+	err5 := errors.NewAutoWrappedError(err4)
+	err6 := errors.NewAutoWrappedError(err5)
 
 	testCases := []struct {
 		err  error
 		want bool
 	}{
+		{nil, false},
 		{err0, false},
 		{err1, true},
 		{err2, true},
@@ -315,7 +328,11 @@ func TestIsAutoWrappedError(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?err=%+q", i, tc.err), func(t *testing.T) {
+		errName := "<nil>"
+		if tc.err != nil {
+			errName = strconv.QuoteToASCII(tc.err.Error())
+		}
+		t.Run(fmt.Sprintf("case %d?err=%s", i, errName), func(t *testing.T) {
 			if got := errors.IsAutoWrappedError(tc.err); got != tc.want {
 				t.Errorf("got %t; want %t", got, tc.want)
 			}
@@ -325,17 +342,18 @@ func TestIsAutoWrappedError(t *testing.T) {
 
 func TestUnwrapAutoWrappedError(t *testing.T) {
 	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrappedError(err0, "manually created: error 1 - "+err0.Error())
-	err2 := errors.NewAutoWrappedError(err1, "manually created: error 2 - "+err1.Error())
-	err3 := errors.NewAutoWrappedError(err2, "manually created: error 3 - "+err2.Error())
+	err1 := errors.NewAutoWrappedError(err0)
+	err2 := errors.NewAutoWrappedError(err1)
+	err3 := errors.NewAutoWrappedError(err2)
 	err4 := &testError{err: err2}
-	err5 := errors.NewAutoWrappedError(err4, "manually created: error 5 - "+err4.Error())
-	err6 := errors.NewAutoWrappedError(err5, "manually created: error 6 - "+err5.Error())
+	err5 := errors.NewAutoWrappedError(err4)
+	err6 := errors.NewAutoWrappedError(err5)
 
 	testCases := []struct {
 		err     error
 		wantErr error
 	}{
+		{nil, nil},
 		{err0, err0},
 		{err1, err0},
 		{err2, err1},
@@ -346,8 +364,12 @@ func TestUnwrapAutoWrappedError(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
+		errName := "<nil>"
+		if tc.err != nil {
+			errName = strconv.QuoteToASCII(tc.err.Error())
+		}
 		wantBool := tc.err != tc.wantErr
-		t.Run(fmt.Sprintf("case %d?err=%+q", i, tc.err), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?err=%s", i, errName), func(t *testing.T) {
 			gotErr, gotBool := errors.UnwrapAutoWrappedError(tc.err)
 			if gotErr != tc.wantErr || gotBool != wantBool {
 				t.Errorf("got (%q, %t); want (%q, %t)", gotErr, gotBool, tc.wantErr, wantBool)
@@ -358,17 +380,18 @@ func TestUnwrapAutoWrappedError(t *testing.T) {
 
 func TestUnwrapAllAutoWrappedErrors(t *testing.T) {
 	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrappedError(err0, "manually created: error 1 - "+err0.Error())
-	err2 := errors.NewAutoWrappedError(err1, "manually created: error 2 - "+err1.Error())
-	err3 := errors.NewAutoWrappedError(err2, "manually created: error 3 - "+err2.Error())
+	err1 := errors.NewAutoWrappedError(err0)
+	err2 := errors.NewAutoWrappedError(err1)
+	err3 := errors.NewAutoWrappedError(err2)
 	err4 := &testError{err: err2}
-	err5 := errors.NewAutoWrappedError(err4, "manually created: error 5 - "+err4.Error())
-	err6 := errors.NewAutoWrappedError(err5, "manually created: error 6 - "+err5.Error())
+	err5 := errors.NewAutoWrappedError(err4)
+	err6 := errors.NewAutoWrappedError(err5)
 
 	testCases := []struct {
 		err     error
 		wantErr error
 	}{
+		{nil, nil},
 		{err0, err0},
 		{err1, err0},
 		{err2, err0},
@@ -379,8 +402,12 @@ func TestUnwrapAllAutoWrappedErrors(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
+		errName := "<nil>"
+		if tc.err != nil {
+			errName = strconv.QuoteToASCII(tc.err.Error())
+		}
 		wantBool := tc.err != tc.wantErr
-		t.Run(fmt.Sprintf("case %d?err=%+q", i, tc.err), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d?err=%s", i, errName), func(t *testing.T) {
 			gotErr, gotBool := errors.UnwrapAllAutoWrappedErrors(tc.err)
 			if gotErr != tc.wantErr || gotBool != wantBool {
 				t.Errorf("got (%q, %t); want (%q, %t)", gotErr, gotBool, tc.wantErr, wantBool)
