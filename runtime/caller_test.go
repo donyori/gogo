@@ -19,12 +19,54 @@
 package runtime_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/donyori/gogo/runtime"
 	"github.com/donyori/gogo/runtime/internal/testing/dotpkg.v1"
 	"github.com/donyori/gogo/runtime/internal/testing/dotpkg.v1/subpkg"
 )
+
+func TestFuncPkg(t *testing.T) {
+	// testCases contain some inputs that are not legal function names,
+	// to test robustness.
+	testCases := []struct {
+		fn, want string
+	}{
+		{"", ""},
+		{".", ""},
+		{"..", ""},
+		{"/", "/"},
+		{"/.", "/"},
+		{"/..", "/"},
+		{"//", "//"},
+		{"//.", "//"},
+		{"//..", "//"},
+		{"./", "./"},
+		{"./.", "./"},
+		{"./..", "./"},
+		{"pkg", "pkg"},
+		{"pkg.foo", "pkg"},
+		{"pkg.foo.1", "pkg"},
+		{"pkg%2ev1", "pkg%2ev1"},
+		{"pkg%2ev1.foo", "pkg%2ev1"},
+		{"pkg%2ev1.foo.1", "pkg%2ev1"},
+		{"parent/pkg", "parent/pkg"},
+		{"parent/pkg.foo", "parent/pkg"},
+		{"parent/pkg.foo.1", "parent/pkg"},
+		{"parent/pkg%2ev1", "parent/pkg%2ev1"},
+		{"parent/pkg%2ev1.foo", "parent/pkg%2ev1"},
+		{"parent/pkg%2ev1.foo.1", "parent/pkg%2ev1"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("fn=%+q", tc.fn), func(t *testing.T) {
+			if got := runtime.FuncPkg(tc.fn); got != tc.want {
+				t.Errorf("got %q; want %q", got, tc.want)
+			}
+		})
+	}
+}
 
 type ExportedStruct struct{}
 

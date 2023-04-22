@@ -31,9 +31,12 @@ func FuncPkg(fn string) string {
 	// The first dot ('.') after the last slash ('/') splits the package name
 	// and the function name. The dots in the package name after the last slash
 	// are escaped to URL encoding ('.' -> "%2e").
-	i := strings.LastIndex(fn, "/")
-	i = strings.Index(fn[i+1:], ".") + i + 1
-	return fn[:i]
+	i := strings.LastIndexByte(fn, '/')
+	j := strings.IndexByte(fn[i+1:], '.')
+	if j < 0 {
+		return fn
+	}
+	return fn[:i+1+j]
 }
 
 // CallerFrame returns the stack frame information of caller.
@@ -61,6 +64,9 @@ func FramePkgFunc(frame stdruntime.Frame) (pkg, fn string, ok bool) {
 		return
 	}
 	pkg = FuncPkg(frame.Function)
+	if len(pkg) >= len(frame.Function) {
+		return "", "", false
+	}
 	return pkg, frame.Function[len(pkg)+1:], true
 }
 
