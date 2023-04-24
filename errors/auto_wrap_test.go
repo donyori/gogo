@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/donyori/gogo/errors"
+	"github.com/donyori/gogo/function/compare"
 )
 
 type testError struct {
@@ -45,13 +46,13 @@ func TestAutoWrap(t *testing.T) {
 	const FullFuncPrefix = "github.com/donyori/gogo/errors_test.TestAutoWrap.func1: "
 
 	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrappedError(err0)
-	err2 := errors.NewAutoWrappedError(err1)
+	err1 := errors.NewAutoWrappedError(err0, "1")
+	err2 := errors.NewAutoWrappedError(err1, "2")
 	wantMsgErr0To2 := FullFuncPrefix + err0.Error()
 
 	err3 := &testError{err: err2}
-	err4 := errors.NewAutoWrappedError(err3)
-	err5 := errors.NewAutoWrappedError(err4)
+	err4 := errors.NewAutoWrappedError(err3, "4")
+	err5 := errors.NewAutoWrappedError(err4, "5")
 	wantMsgErr3To5 := FullFuncPrefix + err3.Error()
 
 	err6 := stderrors.New("")
@@ -107,14 +108,14 @@ func TestAutoWrapSkip(t *testing.T) {
 	const FullFuncSkip1Prefix = "github.com/donyori/gogo/errors_test.TestAutoWrapSkip.func1: "
 
 	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrappedError(err0)
-	err2 := errors.NewAutoWrappedError(err1)
+	err1 := errors.NewAutoWrappedError(err0, "1")
+	err2 := errors.NewAutoWrappedError(err1, "2")
 	wantMsgErr0To2Skip0 := FullFuncSkip0Prefix + err0.Error()
 	wantMsgErr0To2Skip1 := FullFuncSkip1Prefix + err0.Error()
 
 	err3 := &testError{err: err2}
-	err4 := errors.NewAutoWrappedError(err3)
-	err5 := errors.NewAutoWrappedError(err4)
+	err4 := errors.NewAutoWrappedError(err3, "4")
+	err5 := errors.NewAutoWrappedError(err4, "5")
 	wantMsgErr3To5Skip0 := FullFuncSkip0Prefix + err3.Error()
 	wantMsgErr3To5Skip1 := FullFuncSkip1Prefix + err3.Error()
 
@@ -188,11 +189,11 @@ func TestAutoWrapCustom(t *testing.T) {
 	const SimplePkgPrefix = "errors_test: "
 
 	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrappedError(err0)
-	err2 := errors.NewAutoWrappedError(err1)
+	err1 := errors.NewAutoWrappedError(err0, "1")
+	err2 := errors.NewAutoWrappedError(err1, "2")
 	err3 := &testError{err: err2}
-	err4 := errors.NewAutoWrappedError(err3)
-	err5 := errors.NewAutoWrappedError(err4)
+	err4 := errors.NewAutoWrappedError(err3, "4")
+	err5 := errors.NewAutoWrappedError(err4, "5")
 	err6 := stderrors.New("")
 
 	excl := errors.NewErrorReadOnlySetIs(io.EOF, err0)
@@ -306,12 +307,12 @@ func TestAutoWrapCustom(t *testing.T) {
 
 func TestIsAutoWrappedError(t *testing.T) {
 	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrappedError(err0)
-	err2 := errors.NewAutoWrappedError(err1)
-	err3 := errors.NewAutoWrappedError(err2)
+	err1 := errors.NewAutoWrappedError(err0, "1")
+	err2 := errors.NewAutoWrappedError(err1, "2")
+	err3 := errors.NewAutoWrappedError(err2, "3")
 	err4 := &testError{err: err2}
-	err5 := errors.NewAutoWrappedError(err4)
-	err6 := errors.NewAutoWrappedError(err5)
+	err5 := errors.NewAutoWrappedError(err4, "5")
+	err6 := errors.NewAutoWrappedError(err5, "6")
 
 	testCases := []struct {
 		err  error
@@ -342,12 +343,12 @@ func TestIsAutoWrappedError(t *testing.T) {
 
 func TestUnwrapAutoWrappedError(t *testing.T) {
 	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrappedError(err0)
-	err2 := errors.NewAutoWrappedError(err1)
-	err3 := errors.NewAutoWrappedError(err2)
+	err1 := errors.NewAutoWrappedError(err0, "1")
+	err2 := errors.NewAutoWrappedError(err1, "2")
+	err3 := errors.NewAutoWrappedError(err2, "3")
 	err4 := &testError{err: err2}
-	err5 := errors.NewAutoWrappedError(err4)
-	err6 := errors.NewAutoWrappedError(err5)
+	err5 := errors.NewAutoWrappedError(err4, "5")
+	err6 := errors.NewAutoWrappedError(err5, "6")
 
 	testCases := []struct {
 		err     error
@@ -380,12 +381,12 @@ func TestUnwrapAutoWrappedError(t *testing.T) {
 
 func TestUnwrapAllAutoWrappedErrors(t *testing.T) {
 	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrappedError(err0)
-	err2 := errors.NewAutoWrappedError(err1)
-	err3 := errors.NewAutoWrappedError(err2)
+	err1 := errors.NewAutoWrappedError(err0, "1")
+	err2 := errors.NewAutoWrappedError(err1, "2")
+	err3 := errors.NewAutoWrappedError(err2, "3")
 	err4 := &testError{err: err2}
-	err5 := errors.NewAutoWrappedError(err4)
-	err6 := errors.NewAutoWrappedError(err5)
+	err5 := errors.NewAutoWrappedError(err4, "5")
+	err6 := errors.NewAutoWrappedError(err5, "6")
 
 	testCases := []struct {
 		err     error
@@ -411,6 +412,56 @@ func TestUnwrapAllAutoWrappedErrors(t *testing.T) {
 			gotErr, gotBool := errors.UnwrapAllAutoWrappedErrors(tc.err)
 			if gotErr != tc.wantErr || gotBool != wantBool {
 				t.Errorf("got (%q, %t); want (%q, %t)", gotErr, gotBool, tc.wantErr, wantBool)
+			}
+		})
+	}
+}
+
+func TestListFunctionNamesInAutoWrappedErrors(t *testing.T) {
+	const FullFunc = "github.com/donyori/gogo/errors_test.TestListFunctionNamesInAutoWrappedErrors"
+
+	err0 := stderrors.New("error 0")
+	err1 := errors.NewAutoWrappedError(err0, "1")
+	err2 := errors.NewAutoWrappedError(err1, "2")
+	err3 := errors.NewAutoWrappedError(err2, "3")
+	err4 := &testError{err: err2}
+	err5 := errors.NewAutoWrappedError(err4, "5")
+	err6 := errors.NewAutoWrappedError(err5, "6")
+
+	testCases := []struct {
+		err       error
+		wantNames []string
+		wantRoot  error
+	}{
+		{nil, nil, nil},
+		{err0, nil, err0},
+		{err1, []string{FullFunc + "_1"}, err0},
+		{err2, []string{FullFunc + "_2", FullFunc + "_1"}, err0},
+		{err3, []string{FullFunc + "_3", FullFunc + "_2", FullFunc + "_1"}, err0},
+		{err4, nil, err4},
+		{err5, []string{FullFunc + "_5"}, err4},
+		{err6, []string{FullFunc + "_6", FullFunc + "_5"}, err4},
+	}
+
+	for i, tc := range testCases {
+		errName := "<nil>"
+		if tc.err != nil {
+			errName = strconv.QuoteToASCII(tc.err.Error())
+		}
+		t.Run(fmt.Sprintf("case %d?err=%s", i, errName), func(t *testing.T) {
+			gotNames, gotRoot := errors.ListFunctionNamesInAutoWrappedErrors(tc.err)
+			switch {
+			case tc.wantNames == nil:
+				if gotNames != nil {
+					t.Errorf("got names %v; want <nil>", gotNames)
+				}
+			case gotNames == nil:
+				t.Errorf("got names <nil>; want %v", tc.wantNames)
+			case !compare.ComparableSliceEqual(gotNames, tc.wantNames):
+				t.Errorf("got names %v; want %v", gotNames, tc.wantNames)
+			}
+			if gotRoot != tc.wantRoot {
+				t.Errorf("got root %v; want %v", gotRoot, tc.wantRoot)
 			}
 		})
 	}
