@@ -56,7 +56,7 @@ type Controller interface {
 	// Wait waits for the job to finish or quit.
 	// It returns the number of panic goroutines.
 	//
-	// If the job was not launched, it does nothing and returns -1.
+	// If the job is not launched, it does nothing and returns -1.
 	Wait() int
 
 	// Run launches the job and waits for it.

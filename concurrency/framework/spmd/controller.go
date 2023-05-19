@@ -117,7 +117,7 @@ func New[Message any](n int, biz BusinessFunc[Message], groupMap map[string][]in
 	return ctrl
 }
 
-// Run creates a Controller with specified parameters, and then run it.
+// Run creates a Controller with specified parameters, and then runs it.
 // It returns the panic records of the Controller.
 //
 // The parameters are the same as those of function New.

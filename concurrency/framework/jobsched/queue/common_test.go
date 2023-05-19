@@ -193,9 +193,6 @@ func gotWrong(got []int, want [][]int) bool {
 }
 
 func isDequeuePanicMessage(err any) bool {
-	if err == nil {
-		return false
-	}
 	msg, ok := err.(string)
 	return ok && strings.HasSuffix(msg, "job queue is empty")
 }

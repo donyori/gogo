@@ -41,7 +41,8 @@ func (pr PanicRecord) Error() string {
 	return fmt.Sprintf("panic on goroutine %s: %v", pr.Name, pr.Content)
 }
 
-// PanicRecords are panic records, used by the framework codes.
+// PanicRecords are panic records,
+// used by the framework codes to collect panic information.
 //
 // It is safe for concurrent use by multiple goroutines.
 type PanicRecords struct {
@@ -76,6 +77,8 @@ func (pr *PanicRecords) List() []PanicRecord {
 }
 
 // Append adds new panic records to the back of its panic record list.
+//
+// The records with nil Content are ignored.
 func (pr *PanicRecords) Append(panicRec ...PanicRecord) {
 	if pr == nil {
 		panic(errors.AutoMsg("*PanicRecords is nil"))
@@ -84,5 +87,37 @@ func (pr *PanicRecords) Append(panicRec ...PanicRecord) {
 	}
 	pr.lock.Lock()
 	defer pr.lock.Unlock()
-	pr.recs = append(pr.recs, panicRec...)
+	for i := range panicRec {
+		if panicRec[i].Content != nil {
+			pr.recs = append(pr.recs, panicRec[i])
+		}
+	}
+}
+
+// Error formats the panic records into a string
+// and reports it as an error message.
+func (pr *PanicRecords) Error() string {
+	errs := pr.Unwrap()
+	if len(errs) == 0 {
+		return "no panic"
+	}
+	return errors.NewErrorList(true, errs...).Error()
+}
+
+// Unwrap copies and returns the panic records as a slice of error.
+// It returns nil if there is no panic record.
+func (pr *PanicRecords) Unwrap() []error {
+	if pr == nil {
+		return nil
+	}
+	pr.lock.RLock()
+	defer pr.lock.RUnlock()
+	if len(pr.recs) == 0 {
+		return nil
+	}
+	errs := make([]error, len(pr.recs))
+	for i := range errs {
+		errs[i] = pr.recs[i] // this assignment let errs[i] refer to a copy of pr.recs[i], not pr.recs[i] itself
+	}
+	return errs
 }

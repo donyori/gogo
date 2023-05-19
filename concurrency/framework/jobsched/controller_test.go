@@ -34,15 +34,15 @@ func TestRun(t *testing.T) {
 	var x int32
 	var wg sync.WaitGroup
 	wg.Add(3)
-	prs := jobsched.Run[int, jobsched.NoProperty](3, func(job int, quitDevice framework.QuitDevice) (
-		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty]) {
+	prs := jobsched.Run(3, func(job int, quitDevice framework.QuitDevice) (
+		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback jobsched.NoFeedback) {
 		atomic.AddInt32(&x, 1)
 		wg.Done()
 		wg.Wait()
 		panic(PanicMsg)
-	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty](), nil, nil, nil)
-	if got := atomic.LoadInt32(&x); got != 3 {
-		t.Errorf("got %d; want 3", got)
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty](), 0, nil, nil, nil)
+	if gotX := atomic.LoadInt32(&x); gotX != 3 {
+		t.Errorf("got x %d; want 3", gotX)
 	}
 	if len(prs) != 3 {
 		t.Errorf("got len(prs) %d; want 3", len(prs))
@@ -60,10 +60,10 @@ func TestRun(t *testing.T) {
 }
 
 func TestController_Wait_BeforeLaunch(t *testing.T) {
-	ctrl := jobsched.New[int, jobsched.NoProperty](0, func(job int, quitDevice framework.QuitDevice) (
-		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty]) {
+	ctrl := jobsched.New(0, func(job int, quitDevice framework.QuitDevice) (
+		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		return // do nothing
-	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty]())
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty](), 0)
 	if got := ctrl.Wait(); got != -1 {
 		t.Errorf("got %d; want -1", got)
 	}
@@ -71,17 +71,22 @@ func TestController_Wait_BeforeLaunch(t *testing.T) {
 
 func TestController_Input_BeforeLaunch(t *testing.T) {
 	var x int32
-	ctrl := jobsched.New[int, jobsched.NoProperty](0, func(job int, quitDevice framework.QuitDevice) (
-		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty]) {
+	ctrl := jobsched.New(0, func(job int, quitDevice framework.QuitDevice) (
+		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		atomic.AddInt32(&x, 1)
-		return
-	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty]())
-	if got := ctrl.Input(nil, nil, nil); got != 3 {
-		t.Fatalf("before calling Launch, got %d; want 3", got)
+		return nil, 1
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty](), 0)
+	feedbackRecvDoneC := make(chan struct{})
+	defer func() {
+		<-feedbackRecvDoneC
+	}()
+	go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, 3)
+	if gotInput := ctrl.Input(nil, nil, nil); gotInput != 3 {
+		t.Fatalf("before calling Launch, got %d; want 3", gotInput)
 	}
 	ctrl.Run()
-	if got := atomic.LoadInt32(&x); got != 3 {
-		t.Errorf("got x %d; want 3", got)
+	if gotX := atomic.LoadInt32(&x); gotX != 3 {
+		t.Errorf("got x %d; want 3", gotX)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
@@ -90,23 +95,28 @@ func TestController_Input_BeforeLaunch(t *testing.T) {
 
 func TestController_Input_DuringLaunch(t *testing.T) {
 	var x int32
-	c := make(chan struct{})
-	ctrl := jobsched.New[int, jobsched.NoProperty](0, func(job int, quitDevice framework.QuitDevice) (
-		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty]) {
+	ctrl := jobsched.New(0, func(job int, quitDevice framework.QuitDevice) (
+		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		atomic.AddInt32(&x, 1)
-		return
-	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty]())
+		return nil, 1
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty](), 0)
+	feedbackRecvDoneC := make(chan struct{})
+	defer func() {
+		<-feedbackRecvDoneC
+	}()
+	go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, 3)
+	lnchDoneC := make(chan struct{})
 	go func() {
 		ctrl.Launch()
-		close(c)
+		close(lnchDoneC)
 	}()
-	if got := ctrl.Input(nil, nil, nil); got != 3 {
-		t.Fatalf("during calling Launch, got %d; want 3", got)
+	if gotInput := ctrl.Input(nil, nil, nil); gotInput != 3 {
+		t.Fatalf("during calling Launch, got %d; want 3", gotInput)
 	}
-	<-c
+	<-lnchDoneC
 	ctrl.Wait()
-	if got := atomic.LoadInt32(&x); got != 3 {
-		t.Errorf("got %d; want 3", got)
+	if gotX := atomic.LoadInt32(&x); gotX != 3 {
+		t.Errorf("got x %d; want 3", gotX)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
@@ -115,18 +125,23 @@ func TestController_Input_DuringLaunch(t *testing.T) {
 
 func TestController_Input_AfterLaunch(t *testing.T) {
 	var x int32
-	ctrl := jobsched.New[int, jobsched.NoProperty](0, func(job int, quitDevice framework.QuitDevice) (
-		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty]) {
+	ctrl := jobsched.New(0, func(job int, quitDevice framework.QuitDevice) (
+		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		atomic.AddInt32(&x, 1)
-		return
-	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty]())
+		return nil, 1
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty](), 0)
+	feedbackRecvDoneC := make(chan struct{})
+	defer func() {
+		<-feedbackRecvDoneC
+	}()
+	go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, 3)
 	ctrl.Launch()
-	if got := ctrl.Input(nil, nil, nil); got != 3 {
-		t.Fatalf("after calling Launch, got %d; want 3", got)
+	if gotInput := ctrl.Input(nil, nil, nil); gotInput != 3 {
+		t.Fatalf("after calling Launch, got %d; want 3", gotInput)
 	}
 	ctrl.Wait()
-	if got := atomic.LoadInt32(&x); got != 3 {
-		t.Errorf("got %d; want 3", got)
+	if gotX := atomic.LoadInt32(&x); gotX != 3 {
+		t.Errorf("got x %d; want 3", gotX)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
@@ -135,25 +150,31 @@ func TestController_Input_AfterLaunch(t *testing.T) {
 
 func TestController_Input_DuringWaiting(t *testing.T) {
 	var x int32
-	c1, c2 := make(chan struct{}), make(chan struct{})
-	ctrl := jobsched.New[int, jobsched.NoProperty](0, func(job int, quitDevice framework.QuitDevice) (
-		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty]) {
+	handlerPauseC := make(chan struct{})
+	ctrl := jobsched.New(0, func(job int, quitDevice framework.QuitDevice) (
+		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		atomic.AddInt32(&x, 1)
-		<-c2
-		return
-	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty]())
+		<-handlerPauseC
+		return nil, 1
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty](), 0)
+	feedbackRecvDoneC := make(chan struct{})
+	defer func() {
+		<-feedbackRecvDoneC
+	}()
+	go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, 0)
 	ctrl.Launch()
+	waitStartC := make(chan struct{})
 	go func() {
-		close(c1)
+		close(waitStartC)
 		ctrl.Wait()
 	}()
-	<-c1
-	if got := ctrl.Input(nil, nil, nil); got != 0 {
-		t.Fatalf("during waiting, got %d; want 0", got)
+	<-waitStartC
+	if gotInput := ctrl.Input(nil, nil, nil); gotInput != 0 {
+		t.Fatalf("during waiting, got %d; want 0", gotInput)
 	}
-	close(c2)
-	if got := atomic.LoadInt32(&x); got != 0 {
-		t.Errorf("got %d; want 0", got)
+	close(handlerPauseC)
+	if gotX := atomic.LoadInt32(&x); gotX != 0 {
+		t.Errorf("got x %d; want 0", gotX)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
@@ -162,17 +183,22 @@ func TestController_Input_DuringWaiting(t *testing.T) {
 
 func TestController_Input_AfterWait(t *testing.T) {
 	var x int32
-	ctrl := jobsched.New[int, jobsched.NoProperty](0, func(job int, quitDevice framework.QuitDevice) (
-		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty]) {
+	ctrl := jobsched.New(0, func(job int, quitDevice framework.QuitDevice) (
+		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		atomic.AddInt32(&x, 1)
-		return
-	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty]())
+		return nil, 1
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty](), 0)
+	feedbackRecvDoneC := make(chan struct{})
+	defer func() {
+		<-feedbackRecvDoneC
+	}()
+	go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, 0)
 	ctrl.Run()
-	if got := ctrl.Input(nil, nil, nil); got != 0 {
-		t.Fatalf("after calling Wait, got %d; want 0", got)
+	if gotInput := ctrl.Input(nil, nil, nil); gotInput != 0 {
+		t.Fatalf("after calling Wait, got %d; want 0", gotInput)
 	}
-	if got := atomic.LoadInt32(&x); got != 0 {
-		t.Errorf("got %d; want 0", got)
+	if gotX := atomic.LoadInt32(&x); gotX != 0 {
+		t.Errorf("got x %d; want 0", gotX)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
@@ -181,22 +207,78 @@ func TestController_Input_AfterWait(t *testing.T) {
 
 func TestController_Input_AfterIneffectiveWait(t *testing.T) {
 	var x int32
-	ctrl := jobsched.New[int, jobsched.NoProperty](0, func(job int, quitDevice framework.QuitDevice) (
-		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty]) {
+	ctrl := jobsched.New(0, func(job int, quitDevice framework.QuitDevice) (
+		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		atomic.AddInt32(&x, 1)
-		return
-	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty]())
-	if got := ctrl.Wait(); got != -1 {
-		t.Errorf("got %d on ineffective call to Wait; want -1", got)
+		return nil, 1
+	}, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty](), 0)
+	feedbackRecvDoneC := make(chan struct{})
+	defer func() {
+		<-feedbackRecvDoneC
+	}()
+	go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, 3)
+	if gotWait := ctrl.Wait(); gotWait != -1 {
+		t.Errorf("got %d on ineffective call to Wait; want -1", gotWait)
 	}
-	if got := ctrl.Input(nil, nil, nil); got != 3 {
-		t.Errorf("after calling Wait ineffectively, got %d; want 3", got)
+	if gotInput := ctrl.Input(nil, nil, nil); gotInput != 3 {
+		t.Errorf("after calling Wait ineffectively, got %d; want 3", gotInput)
 	}
 	ctrl.Run()
-	if got := atomic.LoadInt32(&x); got != 3 {
-		t.Errorf("got %d; want 3", got)
+	if gotX := atomic.LoadInt32(&x); gotX != 3 {
+		t.Errorf("got x %d; want 3", gotX)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
+	}
+}
+
+func TestController_NoFeedback(t *testing.T) {
+	var x int32
+	ctrl := jobsched.New(
+		2,
+		func(job int, quitDevice framework.QuitDevice) (
+			newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback jobsched.NoFeedback) {
+			atomic.AddInt32(&x, 1)
+			return
+		},
+		queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty](),
+		0,
+		nil, nil, nil, nil, nil, nil, // 2 workers and 6 jobs to test blocking
+	)
+	if gotFbC := ctrl.FeedbackChan(); gotFbC != nil {
+		t.Error("got non-nil feedback channel; want nil")
+	}
+	ctrl.Run()
+	if gotX := atomic.LoadInt32(&x); gotX != 6 {
+		t.Errorf("got x %d; want 6", gotX)
+	}
+	if prs := ctrl.PanicRecords(); len(prs) > 0 {
+		t.Errorf("panic %q", prs)
+	}
+}
+
+// receiveIntFeedbackAndTestSum receives feedback (of type int)
+// from ctrl.FeedbackChan(), calculates the sum,
+// and compares the result with wantSum.
+// If ctrl.FeedbackChan returns nil or the sum is not equal to wantSum,
+// it reports the error message using t.Error and t.Errorf.
+func receiveIntFeedbackAndTestSum[Job, Properties any](
+	t *testing.T,
+	ctrl jobsched.Controller[Job, Properties, int],
+	doneChan chan<- struct{},
+	wantSum int,
+) {
+	defer close(doneChan)
+	fbc := ctrl.FeedbackChan()
+	if fbc == nil {
+		t.Error("got nil feedback channel")
+		return
+	}
+	var sum int
+	for feedback := range fbc {
+		sum += feedback
+	}
+	if sum != wantSum {
+		t.Errorf("got sum of feedback %d; want %d", sum, wantSum)
 	}
 }

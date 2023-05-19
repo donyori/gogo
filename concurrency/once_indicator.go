@@ -72,7 +72,7 @@ type onceIndicator struct {
 	//
 	//	// in the initialization of the onceIndicator
 	//	c := make(chan struct{}, 1)
-	//	c <- struct{}
+	//	c <- struct{}{}
 	//	close(c)
 	//	oi.firstC = c
 	//
