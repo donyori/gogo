@@ -66,6 +66,8 @@ type Controller[Job, Properties, Feedback any] interface {
 	//
 	// It returns the number of jobs input successfully.
 	//
+	// It is safe for concurrent use by multiple goroutines.
+	//
 	// The client can input new jobs before the first effective call to
 	// the method Wait (i.e., the call after invoking the method Launch).
 	// After calling the method Wait, Input does nothing and returns 0.
@@ -183,19 +185,28 @@ func New[Job, Properties, Feedback any](
 	return ctrl
 }
 
+// NewNoFeedback is similar to function New, but without feedback.
+func NewNoFeedback[Job, Properties any](
+	n int,
+	handler JobHandler[Job, Properties, NoFeedback],
+	jobQueueMaker JobQueueMaker[Job, Properties],
+	metaJob ...*MetaJob[Job, Properties],
+) Controller[Job, Properties, NoFeedback] {
+	return New(n, handler, jobQueueMaker, 0, metaJob...)
+}
+
 // Run creates a Controller[Job, Properties, NoFeedback]
 // with specified arguments, and then runs it.
 // It returns the panic records of the Controller.
 //
-// The parameters are the same as those of function New.
+// The parameters are the same as those of function NewNoFeedback.
 func Run[Job, Properties any](
 	n int,
 	handler JobHandler[Job, Properties, NoFeedback],
 	jobQueueMaker JobQueueMaker[Job, Properties],
-	feedbackChanBufSize int,
 	metaJob ...*MetaJob[Job, Properties],
 ) []framework.PanicRecord {
-	ctrl := New(n, handler, jobQueueMaker, feedbackChanBufSize, metaJob...)
+	ctrl := NewNoFeedback(n, handler, jobQueueMaker, metaJob...)
 	ctrl.Run()
 	return ctrl.PanicRecords()
 }
@@ -217,8 +228,11 @@ type controller[Job, Properties, Feedback any] struct {
 	wg   sync.WaitGroup            // Wait group for the main process.
 	loi  concurrency.OnceIndicator // For launching the framework.
 	wsoi concurrency.OnceIndicator // For indicating the start of the first effective call to the method Wait.
-	m    sync.Mutex                // Lock to avoid the race condition on jq when calling Launch and Input at the same time.
-	lsi  bool                      // An indicator to report whether the method Launch is started.
+	// Lock to avoid the race condition on jq
+	// when calling Launch and Input at the same time
+	// or calling Input simultaneously.
+	m   sync.Mutex
+	lsi bool // An indicator to report whether the method Launch is started.
 }
 
 func (ctrl *controller[Job, Properties, Feedback]) QuitChan() <-chan struct{} {
