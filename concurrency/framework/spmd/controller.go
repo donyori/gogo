@@ -163,6 +163,7 @@ func (ctrl *controller[Message]) Launch() {
 		ctrl.wg.Add(n)
 		for i := 0; i < n; i++ {
 			go func(rank int) {
+				defer ctrl.wg.Done()
 				defer func() {
 					if e := recover(); e != nil {
 						ctrl.qd.Quit()
@@ -171,7 +172,6 @@ func (ctrl *controller[Message]) Launch() {
 							Content: e,
 						})
 					}
-					ctrl.wg.Done()
 				}()
 				ctrl.biz(ctrl.world.comms[rank], commMaps[rank])
 			}(i)

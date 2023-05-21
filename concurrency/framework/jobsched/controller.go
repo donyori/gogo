@@ -117,7 +117,53 @@ type JobHandler[Job, Properties, Feedback any] func(
 	job Job, quitDevice framework.QuitDevice,
 ) (newJobs []*MetaJob[Job, Properties], feedback Feedback)
 
-// New creates a new Controller.
+// Options are options for creating Controller.
+type Options[Job, Properties, Feedback any] struct {
+	// The number of worker goroutines to process jobs.
+	// Non-positive values for using runtime.NumCPU().
+	NumWorker int
+
+	// The maker to create a new job queue.
+	// It enables the client to make custom JobQueue.
+	// If it is nil, an FCFS (first come, first served) job queue is used.
+	JobQueueMaker JobQueueMaker[Job, Properties]
+
+	// The buffer size of the feedback channel.
+	// Non-positive values for no buffer.
+	// Only take effect when the type of feedback is not NoFeedback.
+	FeedbackChanBufSize int
+
+	// The setup function called by each worker goroutine that processes jobs.
+	//
+	// If it is not nil, each worker goroutine calls it
+	// when the goroutine starts.
+	//
+	// Its first parameter is the controller.
+	// Its second parameter is the rank of the worker goroutine
+	// (from 0 to ctrl.NumGoroutine()-1) to identify the goroutine uniquely.
+	//
+	// The client is responsible for guaranteeing that
+	// this function is safe for concurrency.
+	Setup func(ctrl Controller[Job, Properties, Feedback], rank int)
+
+	// The cleanup function called by each worker goroutine that processes jobs.
+	//
+	// If this cleanup function is not nil,
+	// and the goroutine has successfully executed the setup function
+	// (if the setup function is not nil),
+	// then each worker goroutine calls this cleanup function
+	// before the goroutine ends (even if the goroutine panics).
+	//
+	// Its first parameter is the controller.
+	// Its second parameter is the rank of the worker goroutine
+	// (from 0 to ctrl.NumGoroutine()-1) to identify the goroutine uniquely.
+	//
+	// The client is responsible for guaranteeing that
+	// this function is safe for concurrency.
+	Cleanup func(ctrl Controller[Job, Properties, Feedback], rank int)
+}
+
+// New creates a new Controller with options opts.
 //
 // The first type parameter Job is the type of jobs.
 // The second type parameter Properties is the type of custom properties
@@ -125,19 +171,10 @@ type JobHandler[Job, Properties, Feedback any] func(
 // The third type parameter Feedback is the type of feedback on the jobs,
 // which is collected through a dedicated channel.
 //
-// n is the number of goroutines to process jobs.
-// If n is non-positive, runtime.NumCPU() is used instead.
-//
 // handler is the job handler.
-// It panics if handler is nil.
+// New panics if handler is nil.
 //
-// jobQueueMaker is a maker to create a new job queue.
-// It enables the client to make custom JobQueue.
-// It panics if jobQueueMaker is nil.
-//
-// feedbackChanBufSize is the buffer size of the feedback channel.
-// If feedbackChanBufSize is not positive, the feedback channel is unbuffered.
-// It only takes effect when the type of feedback is not NoFeedback.
+// If opts are nil, a zero-value Options is used.
 //
 // metaJob is initial jobs to process.
 // If an item in metaJob is nil, it is treated as a zero-value job
@@ -146,74 +183,70 @@ type JobHandler[Job, Properties, Feedback any] func(
 // If an item in metaJob has the field Meta.CreationTime with a zero value,
 // this field is set to time.Now() by the framework.
 func New[Job, Properties, Feedback any](
-	n int,
 	handler JobHandler[Job, Properties, Feedback],
-	jobQueueMaker JobQueueMaker[Job, Properties],
-	feedbackChanBufSize int,
+	opts *Options[Job, Properties, Feedback],
 	metaJob ...*MetaJob[Job, Properties],
 ) Controller[Job, Properties, Feedback] {
-	switch {
-	case handler == nil:
+	if handler == nil {
 		panic(errors.AutoMsg("handler is nil"))
-	case jobQueueMaker == nil:
-		panic(errors.AutoMsg("job queue maker is nil"))
-	case n <= 0:
+	} else if opts == nil {
+		opts = new(Options[Job, Properties, Feedback])
+	}
+	n := opts.NumWorker
+	if n <= 0 {
 		n = runtime.NumCPU()
 	}
-	jq := jobQueueMaker.New()
+	var jq JobQueue[Job, Properties]
+	if opts.JobQueueMaker != nil {
+		jq = opts.JobQueueMaker.New()
+	} else {
+		jq = new(fcfsJobQueue[Job, Properties])
+	}
 	if len(metaJob) > 0 {
 		jq.Enqueue(copyMetaJobs(metaJob)...)
 	}
 	ctrl := &controller[Job, Properties, Feedback]{
-		n:    n,
-		h:    handler,
-		qd:   quitdevice.NewQuitDevice(),
-		jq:   jq,
-		ic:   make(chan []*MetaJob[Job, Properties]),
-		eqc:  make(chan []*MetaJob[Job, Properties]),
-		dqc:  make(chan Job),
-		loi:  concurrency.NewOnceIndicator(),
-		wsoi: concurrency.NewOnceIndicator(),
+		n:       n,
+		h:       handler,
+		qd:      quitdevice.NewQuitDevice(),
+		jq:      jq,
+		ic:      make(chan []*MetaJob[Job, Properties]),
+		eqc:     make(chan []*MetaJob[Job, Properties]),
+		dqc:     make(chan Job),
+		loi:     concurrency.NewOnceIndicator(),
+		wsoi:    concurrency.NewOnceIndicator(),
+		setup:   opts.Setup,
+		cleanup: opts.Cleanup,
 	}
 	// Use reflect.TypeOf((*Feedback)(nil)).Elem() to work with interface types.
 	if reflect.TypeOf((*Feedback)(nil)).Elem() != noFeedbackType {
-		if feedbackChanBufSize < 0 {
-			feedbackChanBufSize = 0
+		bufSize := opts.FeedbackChanBufSize
+		if bufSize < 0 {
+			bufSize = 0
 		}
-		ctrl.fc = make(chan Feedback, feedbackChanBufSize)
+		ctrl.fc = make(chan Feedback, bufSize)
 	}
 	return ctrl
-}
-
-// NewNoFeedback is similar to function New, but without feedback.
-func NewNoFeedback[Job, Properties any](
-	n int,
-	handler JobHandler[Job, Properties, NoFeedback],
-	jobQueueMaker JobQueueMaker[Job, Properties],
-	metaJob ...*MetaJob[Job, Properties],
-) Controller[Job, Properties, NoFeedback] {
-	return New(n, handler, jobQueueMaker, 0, metaJob...)
 }
 
 // Run creates a Controller[Job, Properties, NoFeedback]
 // with specified arguments, and then runs it.
 // It returns the panic records of the Controller.
 //
-// The parameters are the same as those of function NewNoFeedback.
+// The parameters are the same as those of function New.
 func Run[Job, Properties any](
-	n int,
 	handler JobHandler[Job, Properties, NoFeedback],
-	jobQueueMaker JobQueueMaker[Job, Properties],
+	opts *Options[Job, Properties, NoFeedback],
 	metaJob ...*MetaJob[Job, Properties],
 ) []framework.PanicRecord {
-	ctrl := NewNoFeedback(n, handler, jobQueueMaker, metaJob...)
+	ctrl := New(handler, opts, metaJob...)
 	ctrl.Run()
 	return ctrl.PanicRecords()
 }
 
 // controller is an implementation of interface Controller.
 type controller[Job, Properties, Feedback any] struct {
-	n int                                   // The number of goroutines to process jobs.
+	n int                                   // The number of worker goroutines to process jobs.
 	h JobHandler[Job, Properties, Feedback] // Job handler.
 
 	qd framework.QuitDevice      // Quit device.
@@ -233,6 +266,9 @@ type controller[Job, Properties, Feedback any] struct {
 	// or calling Input simultaneously.
 	m   sync.Mutex
 	lsi bool // An indicator to report whether the method Launch is started.
+
+	setup   func(ctrl Controller[Job, Properties, Feedback], rank int) // Worker setup function.
+	cleanup func(ctrl Controller[Job, Properties, Feedback], rank int) // Worker cleanup function.
 }
 
 func (ctrl *controller[Job, Properties, Feedback]) QuitChan() <-chan struct{} {
@@ -256,6 +292,7 @@ func (ctrl *controller[Job, Properties, Feedback]) Launch() {
 		ctrl.wg.Add(ctrl.n + 1) // n workers + 1 allocator
 		for i := 0; i < ctrl.n; i++ {
 			go func(rank int) {
+				defer ctrl.wg.Done()
 				defer func() {
 					if e := recover(); e != nil {
 						ctrl.qd.Quit()
@@ -264,12 +301,12 @@ func (ctrl *controller[Job, Properties, Feedback]) Launch() {
 							Content: e,
 						})
 					}
-					ctrl.wg.Done()
 				}()
-				ctrl.workerProc()
+				ctrl.workerProc(rank)
 			}(i)
 		}
 		go func() {
+			defer ctrl.wg.Done()
 			defer func() {
 				if e := recover(); e != nil {
 					ctrl.qd.Quit()
@@ -278,7 +315,6 @@ func (ctrl *controller[Job, Properties, Feedback]) Launch() {
 						Content: e,
 					})
 				}
-				ctrl.wg.Done()
 			}()
 			ctrl.allocatorProc()
 		}()
@@ -332,7 +368,13 @@ func (ctrl *controller[Job, Properties, Feedback]) Input(metaJob ...*MetaJob[Job
 
 // workerProc is the worker main process,
 // without panic checking and wg.Done().
-func (ctrl *controller[Job, Properties, Feedback]) workerProc() {
+func (ctrl *controller[Job, Properties, Feedback]) workerProc(rank int) {
+	if ctrl.setup != nil {
+		ctrl.setup(ctrl, rank)
+	}
+	if ctrl.cleanup != nil {
+		defer ctrl.cleanup(ctrl, rank)
+	}
 	quitChan := ctrl.qd.QuitChan()
 	for {
 		var mjs []*MetaJob[Job, Properties]

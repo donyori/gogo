@@ -18,6 +18,8 @@
 
 package jobsched
 
+import "github.com/donyori/gogo/errors"
+
 // JobQueue is a queue for job scheduling.
 // The client can customize a job scheduling algorithm
 // by implementing this interface.
@@ -56,4 +58,39 @@ type JobQueue[Job, Properties any] interface {
 type JobQueueMaker[Job, Properties any] interface {
 	// New creates a new job queue.
 	New() JobQueue[Job, Properties]
+}
+
+// The following code is copied from
+// "github.com/donyori/gogo/concurrency/framework/jobsched/queue/fcfs.go"
+// to avoid cycle import.
+
+// emptyQueuePanicMessage is the panic message
+// to indicate that the job queue is empty.
+const emptyQueuePanicMessage = "job queue is empty"
+
+// fcfsJobQueue is an FCFS (first come, first served) job queue.
+type fcfsJobQueue[Job, Properties any] []Job
+
+func (jq *fcfsJobQueue[Job, Properties]) Len() int {
+	return len(*jq)
+}
+
+func (jq *fcfsJobQueue[Job, Properties]) Enqueue(metaJob ...*MetaJob[Job, Properties]) {
+	if len(metaJob) == 0 {
+		return
+	}
+	i := len(*jq)
+	*jq = append(*jq, make([]Job, len(metaJob))...)
+	for _, mj := range metaJob {
+		(*jq)[i], i = mj.Job, i+1
+	}
+}
+
+func (jq *fcfsJobQueue[Job, Properties]) Dequeue() Job {
+	if len(*jq) == 0 {
+		panic(errors.AutoMsg(emptyQueuePanicMessage))
+	}
+	var job Job
+	*jq, (*jq)[0], job = (*jq)[1:], job, (*jq)[0] // where (*jq)[0] = job is to avoid memory leak
+	return job
 }

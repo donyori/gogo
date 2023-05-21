@@ -23,6 +23,8 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
+// emptyQueuePanicMessage is the panic message
+// to indicate that the job queue is empty.
 const emptyQueuePanicMessage = "job queue is empty"
 
 // fcfsJobQueueMaker is a maker for creating job queues with

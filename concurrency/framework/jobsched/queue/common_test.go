@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/donyori/gogo/concurrency/framework/jobsched"
+	"github.com/donyori/gogo/concurrency/framework/jobsched/queue"
 )
 
 // The number of jobs in metaJobs.
@@ -194,5 +195,5 @@ func gotWrong(got []int, want [][]int) bool {
 
 func isDequeuePanicMessage(err any) bool {
 	msg, ok := err.(string)
-	return ok && strings.HasSuffix(msg, "job queue is empty")
+	return ok && strings.HasSuffix(msg, queue.EmptyQueuePanicMessage)
 }
