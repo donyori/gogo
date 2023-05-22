@@ -26,14 +26,16 @@ import (
 	"github.com/donyori/gogo/concurrency"
 )
 
-type one int32
+type one struct {
+	v atomic.Int32
+}
 
 func (o *one) Increase() {
-	atomic.AddInt32((*int32)(o), 1)
+	o.v.Add(1)
 }
 
 func (o *one) Load() int32 {
-	return atomic.LoadInt32((*int32)(o))
+	return o.v.Load()
 }
 
 func TestOnceIndicator_Do_Once(t *testing.T) {

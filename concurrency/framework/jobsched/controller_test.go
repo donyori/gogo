@@ -34,10 +34,10 @@ func TestNew_FeedbackChanBufSize(t *testing.T) {
 	const NumJob = 16
 	for bufSize := -2; bufSize <= NumJob+1; bufSize++ {
 		t.Run(fmt.Sprintf("bufSize=%d", bufSize), func(t *testing.T) {
-			var x int32
+			var x atomic.Int32
 			ctrl := jobsched.New(func(job int, quitDevice framework.QuitDevice) (
 				newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
-				atomic.AddInt32(&x, 1)
+				x.Add(1)
 				return nil, 1
 			}, &jobsched.Options[int, jobsched.NoProperty, int]{
 				NumWorker:           4,
@@ -49,7 +49,7 @@ func TestNew_FeedbackChanBufSize(t *testing.T) {
 			}()
 			go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, NumJob)
 			ctrl.Run()
-			if gotX := atomic.LoadInt32(&x); gotX != NumJob {
+			if gotX := x.Load(); gotX != NumJob {
 				t.Errorf("got x %d; want %d", gotX, NumJob)
 			}
 			if prs := ctrl.PanicRecords(); len(prs) > 0 {
@@ -62,19 +62,19 @@ func TestNew_FeedbackChanBufSize(t *testing.T) {
 func TestRun_Panic(t *testing.T) {
 	const PanicMsg = "test panic"
 	const NumWorker = 3
-	var x int32
+	var x atomic.Int32
 	var wg sync.WaitGroup
 	wg.Add(NumWorker)
 	prs := jobsched.Run(func(job int, quitDevice framework.QuitDevice) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback jobsched.NoFeedback) {
-		atomic.AddInt32(&x, 1)
+		x.Add(1)
 		wg.Done()
 		wg.Wait()
 		panic(PanicMsg)
 	}, &jobsched.Options[int, jobsched.NoProperty, jobsched.NoFeedback]{
 		NumWorker: NumWorker,
 	}, make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumWorker)...)
-	if gotX := atomic.LoadInt32(&x); gotX != NumWorker {
+	if gotX := x.Load(); gotX != NumWorker {
 		t.Errorf("got x %d; want %d", gotX, NumWorker)
 	}
 	if len(prs) != NumWorker {
@@ -104,10 +104,10 @@ func TestController_Wait_BeforeLaunch(t *testing.T) {
 
 func TestController_Input_BeforeLaunch(t *testing.T) {
 	const NumJob = 3
-	var x int32
+	var x atomic.Int32
 	ctrl := jobsched.New(func(job int, quitDevice framework.QuitDevice) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
-		atomic.AddInt32(&x, 1)
+		x.Add(1)
 		return nil, 1
 	}, nil)
 	feedbackRecvDoneC := make(chan struct{})
@@ -120,7 +120,7 @@ func TestController_Input_BeforeLaunch(t *testing.T) {
 		t.Fatalf("before calling Launch, got %d; want %d", gotInput, NumJob)
 	}
 	ctrl.Run()
-	if gotX := atomic.LoadInt32(&x); gotX != NumJob {
+	if gotX := x.Load(); gotX != NumJob {
 		t.Errorf("got x %d; want %d", gotX, NumJob)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
@@ -133,10 +133,10 @@ func TestController_Input_BeforeLaunch_Concurrency(t *testing.T) {
 	const NumJobPerInput = 10
 	const WantX = NumJobPerInput * MaxJob * (1 + MaxJob) / 2
 	const WantFeedbackSum = NumJobPerInput * MaxJob
-	var x int32
+	var x atomic.Int32
 	ctrl := jobsched.New(func(job int, quitDevice framework.QuitDevice) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
-		atomic.AddInt32(&x, int32(job))
+		x.Add(int32(job))
 		return nil, 1
 	}, &jobsched.Options[int, jobsched.NoProperty, int]{
 		NumWorker: 4,
@@ -164,7 +164,7 @@ func TestController_Input_BeforeLaunch_Concurrency(t *testing.T) {
 	}
 	wg.Wait()
 	ctrl.Run()
-	if gotX := atomic.LoadInt32(&x); gotX != WantX {
+	if gotX := x.Load(); gotX != WantX {
 		t.Errorf("got x %d; want %d", gotX, WantX)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
@@ -174,10 +174,10 @@ func TestController_Input_BeforeLaunch_Concurrency(t *testing.T) {
 
 func TestController_Input_DuringLaunch(t *testing.T) {
 	const NumJob = 3
-	var x int32
+	var x atomic.Int32
 	ctrl := jobsched.New(func(job int, quitDevice framework.QuitDevice) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
-		atomic.AddInt32(&x, 1)
+		x.Add(1)
 		return nil, 1
 	}, nil)
 	feedbackRecvDoneC := make(chan struct{})
@@ -196,7 +196,7 @@ func TestController_Input_DuringLaunch(t *testing.T) {
 	}
 	<-lnchDoneC
 	ctrl.Wait()
-	if gotX := atomic.LoadInt32(&x); gotX != NumJob {
+	if gotX := x.Load(); gotX != NumJob {
 		t.Errorf("got x %d; want %d", gotX, NumJob)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
@@ -209,10 +209,10 @@ func TestController_Input_DuringLaunch_Concurrency(t *testing.T) {
 	const NumJobPerInput = 10
 	const WantX = NumJobPerInput * MaxJob * (1 + MaxJob) / 2
 	const WantFeedbackSum = NumJobPerInput * MaxJob
-	var x int32
+	var x atomic.Int32
 	ctrl := jobsched.New(func(job int, quitDevice framework.QuitDevice) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
-		atomic.AddInt32(&x, int32(job))
+		x.Add(int32(job))
 		return nil, 1
 	}, &jobsched.Options[int, jobsched.NoProperty, int]{
 		NumWorker: 4,
@@ -246,7 +246,7 @@ func TestController_Input_DuringLaunch_Concurrency(t *testing.T) {
 	<-lnchDoneC
 	wg.Wait()
 	ctrl.Wait()
-	if gotX := atomic.LoadInt32(&x); gotX != WantX {
+	if gotX := x.Load(); gotX != WantX {
 		t.Errorf("got x %d; want %d", gotX, WantX)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
@@ -256,10 +256,10 @@ func TestController_Input_DuringLaunch_Concurrency(t *testing.T) {
 
 func TestController_Input_AfterLaunch(t *testing.T) {
 	const NumJob = 3
-	var x int32
+	var x atomic.Int32
 	ctrl := jobsched.New(func(job int, quitDevice framework.QuitDevice) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
-		atomic.AddInt32(&x, 1)
+		x.Add(1)
 		return nil, 1
 	}, nil)
 	feedbackRecvDoneC := make(chan struct{})
@@ -273,7 +273,7 @@ func TestController_Input_AfterLaunch(t *testing.T) {
 		t.Fatalf("after calling Launch, got %d; want %d", gotInput, NumJob)
 	}
 	ctrl.Wait()
-	if gotX := atomic.LoadInt32(&x); gotX != NumJob {
+	if gotX := x.Load(); gotX != NumJob {
 		t.Errorf("got x %d; want %d", gotX, NumJob)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
@@ -286,10 +286,10 @@ func TestController_Input_AfterLaunch_Concurrency(t *testing.T) {
 	const NumJobPerInput = 10
 	const WantX = NumJobPerInput * MaxJob * (1 + MaxJob) / 2
 	const WantFeedbackSum = NumJobPerInput * MaxJob
-	var x int32
+	var x atomic.Int32
 	ctrl := jobsched.New(func(job int, quitDevice framework.QuitDevice) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
-		atomic.AddInt32(&x, int32(job))
+		x.Add(int32(job))
 		return nil, 1
 	}, &jobsched.Options[int, jobsched.NoProperty, int]{
 		NumWorker: 4,
@@ -318,7 +318,7 @@ func TestController_Input_AfterLaunch_Concurrency(t *testing.T) {
 	}
 	wg.Wait()
 	ctrl.Wait()
-	if gotX := atomic.LoadInt32(&x); gotX != WantX {
+	if gotX := x.Load(); gotX != WantX {
 		t.Errorf("got x %d; want %d", gotX, WantX)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
@@ -327,11 +327,11 @@ func TestController_Input_AfterLaunch_Concurrency(t *testing.T) {
 }
 
 func TestController_Input_DuringWaiting(t *testing.T) {
-	var x int32
+	var x atomic.Int32
 	handlerPauseC := make(chan struct{})
 	ctrl := jobsched.New(func(job int, quitDevice framework.QuitDevice) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
-		atomic.AddInt32(&x, 1)
+		x.Add(1)
 		<-handlerPauseC
 		return nil, 1
 	}, nil)
@@ -353,7 +353,7 @@ func TestController_Input_DuringWaiting(t *testing.T) {
 		t.Fatalf("during waiting, got %d; want 0", gotInput)
 	}
 	close(handlerPauseC)
-	if gotX := atomic.LoadInt32(&x); gotX != 0 {
+	if gotX := x.Load(); gotX != 0 {
 		t.Errorf("got x %d; want 0", gotX)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
@@ -362,10 +362,10 @@ func TestController_Input_DuringWaiting(t *testing.T) {
 }
 
 func TestController_Input_AfterWait(t *testing.T) {
-	var x int32
+	var x atomic.Int32
 	ctrl := jobsched.New(func(job int, quitDevice framework.QuitDevice) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
-		atomic.AddInt32(&x, 1)
+		x.Add(1)
 		return nil, 1
 	}, nil)
 	feedbackRecvDoneC := make(chan struct{})
@@ -378,7 +378,7 @@ func TestController_Input_AfterWait(t *testing.T) {
 	if gotInput != 0 {
 		t.Fatalf("after calling Wait, got %d; want 0", gotInput)
 	}
-	if gotX := atomic.LoadInt32(&x); gotX != 0 {
+	if gotX := x.Load(); gotX != 0 {
 		t.Errorf("got x %d; want 0", gotX)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
@@ -388,10 +388,10 @@ func TestController_Input_AfterWait(t *testing.T) {
 
 func TestController_Input_AfterIneffectiveWait(t *testing.T) {
 	const NumJob = 3
-	var x int32
+	var x atomic.Int32
 	ctrl := jobsched.New(func(job int, quitDevice framework.QuitDevice) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
-		atomic.AddInt32(&x, 1)
+		x.Add(1)
 		return nil, 1
 	}, nil)
 	feedbackRecvDoneC := make(chan struct{})
@@ -408,7 +408,7 @@ func TestController_Input_AfterIneffectiveWait(t *testing.T) {
 			gotInput, NumJob)
 	}
 	ctrl.Run()
-	if gotX := atomic.LoadInt32(&x); gotX != NumJob {
+	if gotX := x.Load(); gotX != NumJob {
 		t.Errorf("got x %d; want %d", gotX, NumJob)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
@@ -418,11 +418,11 @@ func TestController_Input_AfterIneffectiveWait(t *testing.T) {
 
 func TestController_NoFeedback(t *testing.T) {
 	const NumJob = 6
-	var x int32
+	var x atomic.Int32
 	ctrl := jobsched.New(
 		func(job int, quitDevice framework.QuitDevice) (
 			newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback jobsched.NoFeedback) {
-			atomic.AddInt32(&x, 1)
+			x.Add(1)
 			return
 		},
 		&jobsched.Options[int, jobsched.NoProperty, jobsched.NoFeedback]{
@@ -434,7 +434,7 @@ func TestController_NoFeedback(t *testing.T) {
 		t.Error("got non-nil feedback channel; want nil")
 	}
 	ctrl.Run()
-	if gotX := atomic.LoadInt32(&x); gotX != NumJob {
+	if gotX := x.Load(); gotX != NumJob {
 		t.Errorf("got x %d; want %d", gotX, NumJob)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
@@ -444,22 +444,22 @@ func TestController_NoFeedback(t *testing.T) {
 
 func TestController_Setup(t *testing.T) {
 	const NumWorker = 3
-	var setupCalled [NumWorker]bool
+	var setupCounter [NumWorker]atomic.Int32
 	prs := jobsched.Run(func(job int, quitDevice framework.QuitDevice) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback jobsched.NoFeedback) {
 		return // do nothing
 	}, &jobsched.Options[int, jobsched.NoProperty, jobsched.NoFeedback]{
 		NumWorker: NumWorker,
 		Setup: func(ctrl jobsched.Controller[int, jobsched.NoProperty, jobsched.NoFeedback], rank int) {
-			setupCalled[rank] = true
+			setupCounter[rank].Add(1)
 		},
-	})
+	}, make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumWorker*2)...)
 	if len(prs) > 0 {
 		t.Errorf("panic %q", prs)
 	}
-	for rank := range setupCalled {
-		if !setupCalled[rank] {
-			t.Errorf("worker %d did not call the setup function", rank)
+	for rank := range setupCounter {
+		if gotCtr := setupCounter[rank].Load(); gotCtr != 1 {
+			t.Errorf("got setupCounter[%d] %d; want 1", rank, gotCtr)
 		}
 	}
 }
@@ -467,23 +467,23 @@ func TestController_Setup(t *testing.T) {
 func TestController_Setup_WorkerPanic(t *testing.T) {
 	const PanicMsg = "test panic"
 	const NumWorker = 3
-	var setupCalled [NumWorker]bool
+	var setupCounter [NumWorker]atomic.Int32
 	var wg sync.WaitGroup
 	wg.Add(NumWorker)
 	prs := jobsched.Run(func(job int, quitDevice framework.QuitDevice) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback jobsched.NoFeedback) {
+		wg.Done()
 		wg.Wait()
 		panic(PanicMsg)
 	}, &jobsched.Options[int, jobsched.NoProperty, jobsched.NoFeedback]{
 		NumWorker: NumWorker,
 		Setup: func(ctrl jobsched.Controller[int, jobsched.NoProperty, jobsched.NoFeedback], rank int) {
-			setupCalled[rank] = true
-			wg.Done()
+			setupCounter[rank].Add(1)
 		},
-	}, make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumWorker)...)
-	for rank := range setupCalled {
-		if !setupCalled[rank] {
-			t.Errorf("worker %d did not call the setup function", rank)
+	}, make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumWorker*2)...)
+	for rank := range setupCounter {
+		if gotCtr := setupCounter[rank].Load(); gotCtr != 1 {
+			t.Errorf("got setupCounter[%d] %d; want 1", rank, gotCtr)
 		}
 	}
 	if len(prs) != NumWorker {
@@ -503,22 +503,22 @@ func TestController_Setup_WorkerPanic(t *testing.T) {
 
 func TestController_Cleanup(t *testing.T) {
 	const NumWorker = 3
-	var cleanupCalled [NumWorker]bool
+	var cleanupCounter [NumWorker]atomic.Int32
 	prs := jobsched.Run(func(job int, quitDevice framework.QuitDevice) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback jobsched.NoFeedback) {
 		return // do nothing
 	}, &jobsched.Options[int, jobsched.NoProperty, jobsched.NoFeedback]{
 		NumWorker: NumWorker,
 		Cleanup: func(ctrl jobsched.Controller[int, jobsched.NoProperty, jobsched.NoFeedback], rank int) {
-			cleanupCalled[rank] = true
+			cleanupCounter[rank].Add(1)
 		},
-	})
+	}, make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumWorker*2)...)
 	if len(prs) > 0 {
 		t.Errorf("panic %q", prs)
 	}
-	for rank := range cleanupCalled {
-		if !cleanupCalled[rank] {
-			t.Errorf("worker %d did not call the cleanup function", rank)
+	for rank := range cleanupCounter {
+		if gotCtr := cleanupCounter[rank].Load(); gotCtr != 1 {
+			t.Errorf("got cleanupCounter[%d] %d; want 1", rank, gotCtr)
 		}
 	}
 }
@@ -526,7 +526,7 @@ func TestController_Cleanup(t *testing.T) {
 func TestController_Cleanup_WorkerPanic(t *testing.T) {
 	const PanicMsg = "test panic"
 	const NumWorker = 3
-	var cleanupCalled [NumWorker]bool
+	var cleanupCounter [NumWorker]atomic.Int32
 	var wg sync.WaitGroup
 	wg.Add(NumWorker)
 	prs := jobsched.Run(func(job int, quitDevice framework.QuitDevice) (
@@ -537,12 +537,12 @@ func TestController_Cleanup_WorkerPanic(t *testing.T) {
 	}, &jobsched.Options[int, jobsched.NoProperty, jobsched.NoFeedback]{
 		NumWorker: NumWorker,
 		Cleanup: func(ctrl jobsched.Controller[int, jobsched.NoProperty, jobsched.NoFeedback], rank int) {
-			cleanupCalled[rank] = true
+			cleanupCounter[rank].Add(1)
 		},
-	}, make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumWorker)...)
-	for rank := range cleanupCalled {
-		if !cleanupCalled[rank] {
-			t.Errorf("worker %d did not call the cleanup function", rank)
+	}, make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumWorker*2)...)
+	for rank := range cleanupCounter {
+		if gotCtr := cleanupCounter[rank].Load(); gotCtr != 1 {
+			t.Errorf("got cleanupCounter[%d] %d; want 1", rank, gotCtr)
 		}
 	}
 	if len(prs) != NumWorker {
@@ -563,7 +563,7 @@ func TestController_Cleanup_WorkerPanic(t *testing.T) {
 func TestController_Cleanup_SetupPanic(t *testing.T) {
 	const PanicMsg = "test panic"
 	const NumWorker = 3
-	var cleanupCalled [NumWorker]bool
+	var cleanupCounter [NumWorker]atomic.Int32
 	var wg sync.WaitGroup
 	wg.Add(NumWorker)
 	prs := jobsched.Run(func(job int, quitDevice framework.QuitDevice) (
@@ -577,12 +577,12 @@ func TestController_Cleanup_SetupPanic(t *testing.T) {
 			panic(PanicMsg)
 		},
 		Cleanup: func(ctrl jobsched.Controller[int, jobsched.NoProperty, jobsched.NoFeedback], rank int) {
-			cleanupCalled[rank] = true
+			cleanupCounter[rank].Add(1)
 		},
-	}, make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumWorker)...)
-	for rank := range cleanupCalled {
-		if cleanupCalled[rank] {
-			t.Errorf("worker %d called the cleanup function", rank)
+	}, make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumWorker*2)...)
+	for rank := range cleanupCounter {
+		if gotCtr := cleanupCounter[rank].Load(); gotCtr != 0 {
+			t.Errorf("got cleanupCounter[%d] %d; want 0", rank, gotCtr)
 		}
 	}
 	if len(prs) != NumWorker {
@@ -602,28 +602,28 @@ func TestController_Cleanup_SetupPanic(t *testing.T) {
 
 func TestController_SetupAndCleanup(t *testing.T) {
 	const NumWorker = 3
-	var setupCalled, cleanupCalled [NumWorker]bool
+	var setupCounter, cleanupCounter [NumWorker]atomic.Int32
 	prs := jobsched.Run(func(job int, quitDevice framework.QuitDevice) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback jobsched.NoFeedback) {
 		return // do nothing
 	}, &jobsched.Options[int, jobsched.NoProperty, jobsched.NoFeedback]{
 		NumWorker: NumWorker,
 		Setup: func(ctrl jobsched.Controller[int, jobsched.NoProperty, jobsched.NoFeedback], rank int) {
-			setupCalled[rank] = true
+			setupCounter[rank].Add(1)
 		},
 		Cleanup: func(ctrl jobsched.Controller[int, jobsched.NoProperty, jobsched.NoFeedback], rank int) {
-			cleanupCalled[rank] = true
+			cleanupCounter[rank].Add(1)
 		},
-	})
+	}, make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumWorker*2)...)
 	if len(prs) > 0 {
 		t.Errorf("panic %q", prs)
 	}
 	for rank := 0; rank < NumWorker; rank++ {
-		if !setupCalled[rank] {
-			t.Errorf("worker %d did not call the setup function", rank)
+		if gotCtr := setupCounter[rank].Load(); gotCtr != 1 {
+			t.Errorf("got setupCounter[%d] %d; want 1", rank, gotCtr)
 		}
-		if !cleanupCalled[rank] {
-			t.Errorf("worker %d did not call the cleanup function", rank)
+		if gotCtr := cleanupCounter[rank].Load(); gotCtr != 1 {
+			t.Errorf("got cleanupCounter[%d] %d; want 1", rank, gotCtr)
 		}
 	}
 }
