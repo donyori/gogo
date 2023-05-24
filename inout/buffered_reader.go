@@ -32,7 +32,9 @@ import (
 type BufferedReader interface {
 	io.Reader
 	io.ByteScanner
+	ByteConsumer
 	io.RuneScanner
+	RuneConsumer
 	io.WriterTo
 	LineReader
 	EntireLineReader
@@ -133,6 +135,33 @@ func (rbr *resettableBufferedReader) UnreadByte() error {
 	return errors.AutoWrap(rbr.br.UnreadByte())
 }
 
+func (rbr *resettableBufferedReader) ConsumeByte(target byte, n int64) (
+	consumed int64, err error) {
+	consumed, err = rbr.ConsumeByteFunc(func(c byte) bool {
+		return c == target
+	}, n)
+	return consumed, errors.AutoWrap(err)
+}
+
+func (rbr *resettableBufferedReader) ConsumeByteFunc(
+	f func(c byte) bool, n int64) (consumed int64, err error) {
+	for n < 0 || consumed < n {
+		c, err := rbr.br.ReadByte()
+		if err != nil {
+			return consumed, errors.AutoWrap(err)
+		} else if !f(c) {
+			err = rbr.br.UnreadByte()
+			if err != nil {
+				// Fail to put the byte back. The byte has been consumed.
+				consumed++
+			}
+			return consumed, errors.AutoWrap(err)
+		}
+		consumed++
+	}
+	return
+}
+
 func (rbr *resettableBufferedReader) ReadRune() (r rune, size int, err error) {
 	r, size, err = rbr.br.ReadRune()
 	return r, size, errors.AutoWrap(err)
@@ -140,6 +169,33 @@ func (rbr *resettableBufferedReader) ReadRune() (r rune, size int, err error) {
 
 func (rbr *resettableBufferedReader) UnreadRune() error {
 	return errors.AutoWrap(rbr.br.UnreadRune())
+}
+
+func (rbr *resettableBufferedReader) ConsumeRune(target rune, n int64) (
+	consumed int64, err error) {
+	consumed, err = rbr.ConsumeRuneFunc(func(r rune, size int) bool {
+		return r == target
+	}, n)
+	return consumed, errors.AutoWrap(err)
+}
+
+func (rbr *resettableBufferedReader) ConsumeRuneFunc(
+	f func(r rune, size int) bool, n int64) (consumed int64, err error) {
+	for n < 0 || consumed < n {
+		r, size, err := rbr.br.ReadRune()
+		if err != nil {
+			return consumed, errors.AutoWrap(err)
+		} else if !f(r, size) {
+			err = rbr.br.UnreadRune()
+			if err != nil {
+				// Fail to put the rune back. The rune has been consumed.
+				consumed++
+			}
+			return consumed, errors.AutoWrap(err)
+		}
+		consumed++
+	}
+	return
 }
 
 func (rbr *resettableBufferedReader) WriteTo(w io.Writer) (n int64, err error) {

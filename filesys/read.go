@@ -453,6 +453,24 @@ func (fr *reader) UnreadByte() error {
 	return errors.AutoWrap(fr.br.UnreadByte())
 }
 
+func (fr *reader) ConsumeByte(target byte, n int64) (
+	consumed int64, err error) {
+	if fr.err != nil {
+		return 0, errors.AutoWrap(fr.err)
+	}
+	consumed, err = fr.br.ConsumeByte(target, n)
+	return consumed, errors.AutoWrap(err)
+}
+
+func (fr *reader) ConsumeByteFunc(f func(c byte) bool, n int64) (
+	consumed int64, err error) {
+	if fr.err != nil {
+		return 0, errors.AutoWrap(fr.err)
+	}
+	consumed, err = fr.br.ConsumeByteFunc(f, n)
+	return consumed, errors.AutoWrap(err)
+}
+
 func (fr *reader) ReadRune() (r rune, size int, err error) {
 	if fr.err != nil {
 		return 0, 0, errors.AutoWrap(fr.err)
@@ -466,6 +484,24 @@ func (fr *reader) UnreadRune() error {
 		return errors.AutoWrap(fr.err)
 	}
 	return errors.AutoWrap(fr.br.UnreadRune())
+}
+
+func (fr *reader) ConsumeRune(target rune, n int64) (
+	consumed int64, err error) {
+	if fr.err != nil {
+		return 0, errors.AutoWrap(fr.err)
+	}
+	consumed, err = fr.br.ConsumeRune(target, n)
+	return consumed, errors.AutoWrap(err)
+}
+
+func (fr *reader) ConsumeRuneFunc(f func(r rune, size int) bool, n int64) (
+	consumed int64, err error) {
+	if fr.err != nil {
+		return 0, errors.AutoWrap(fr.err)
+	}
+	consumed, err = fr.br.ConsumeRuneFunc(f, n)
+	return consumed, errors.AutoWrap(err)
 }
 
 func (fr *reader) WriteTo(w io.Writer) (n int64, err error) {

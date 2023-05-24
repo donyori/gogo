@@ -46,9 +46,9 @@ see the [GitHub documentation](https://docs.github.com/en/repositories/configuri
 
 ## License
 
-The GNU Affero General Public License 3.0 (AGPL-3.0) - [Yuan Gao](https://github.com/donyori/).
-Please have a look at the [LICENSE](LICENSE).
+The GNU Affero General Public License 3.0 (AGPL-3.0) - [Yuan Gao](https://github.com/donyori "donyori (Yuan Gao)").
+Please have a look at the [LICENSE](LICENSE "GNU Affero General Public License v3.0").
 
 ## Contact
 
-You can contact me by email: [<donyoridoyodoyo@outlook.com>](mailto:donyoridoyodoyo@outlook.com).
+You can contact me by email: [\<donyoridoyodoyo@outlook.com\>](mailto:donyoridoyodoyo@outlook.com "mailto:donyoridoyodoyo@outlook.com").
