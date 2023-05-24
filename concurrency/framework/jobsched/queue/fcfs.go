@@ -23,6 +23,12 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
+// fcfsJobQueue is copied to
+// "github.com/donyori/gogo/concurrency/framework/jobsched/job_queue.go"
+// to avoid cycle import.
+//
+// Remember to update the copy when updating fcfsJobQueue.
+
 // emptyQueuePanicMessage is the panic message
 // to indicate that the job queue is empty.
 const emptyQueuePanicMessage = "job queue is empty"
