@@ -92,11 +92,12 @@ var noFeedbackType = reflect.TypeOf(NoFeedback{})
 // The third type parameter Feedback is the type of feedback on the jobs,
 // which is collected through a dedicated channel.
 //
-// The first parameter is the job to be processed.
-//
-// The second parameter is a device to acquire the channel for the quit signal,
+// The first parameter is a device to acquire the channel for the quit signal,
 // detect the quit signal, and broadcast a quit signal to interrupt
 // all job processors.
+// The second parameter is the rank of the worker goroutine
+// (from 0 to ctrl.NumGoroutine()-1) to identify the goroutine uniquely.
+// The third parameter is the job to be processed.
 //
 // It returns new jobs generated during or after processing
 // the current job, called newJobs.
@@ -114,7 +115,7 @@ var noFeedbackType = reflect.TypeOf(NoFeedback{})
 // the framework skips sending feedback and sets that channel to nil,
 // and the client should not listen to that channel.
 type JobHandler[Job, Properties, Feedback any] func(
-	job Job, quitDevice framework.QuitDevice,
+	quitDevice framework.QuitDevice, rank int, job Job,
 ) (newJobs []*MetaJob[Job, Properties], feedback Feedback)
 
 // Options are options for creating Controller.
@@ -386,7 +387,7 @@ func (ctrl *controller[Job, Properties, Feedback]) workerProc(rank int) {
 			if !ok {
 				return
 			}
-			mjs, fb = ctrl.h(job, ctrl.qd)
+			mjs, fb = ctrl.h(ctrl.qd, rank, job)
 			mjs = copyMetaJobs(mjs)
 		}
 		if ctrl.fc != nil {
