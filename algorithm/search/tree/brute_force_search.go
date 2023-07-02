@@ -102,11 +102,12 @@ type nodeDepth[Node any] struct {
 // It also returns an indicator found to report whether the node has been found.
 //
 // initArgs are the arguments to initialize itf.
-func DFS[Node any](itf AccessNode[Node], initArgs ...any) (nodeFound Node, found bool) {
+func DFS[Node any](itf AccessNode[Node], initArgs ...any) (
+	nodeFound Node, found bool) {
 	itf.Init(initArgs...)
-	stack, idx := []nodeDepth[Node]{{node: itf.Root()}}, 0 // Neither idx nor len(stack) is the depth.
-	for idx >= 0 {
-		top := stack[idx]
+	stack := []nodeDepth[Node]{{node: itf.Root()}} // len(stack) is not the depth
+	for len(stack) > 0 {
+		top := stack[len(stack)-1]
 		r, cont := itf.AccessNode(top.node, top.depth)
 		if r {
 			return top.node, true
@@ -119,16 +120,16 @@ func DFS[Node any](itf AccessNode[Node], initArgs ...any) (nodeFound Node, found
 		//  3. Push the first child of the current node to the stack if exists.
 		ns, ok := itf.NextSibling(top.node)
 		if ok {
-			stack[idx].node = ns // Just update stack[idx].node.
+			stack[len(stack)-1].node = ns // just update stack[len(stack)-1].node
 		} else {
-			stack, idx = stack[:idx], idx-1
+			stack = stack[:len(stack)-1]
 		}
 		fc, ok := itf.FirstChild(top.node)
 		if ok {
-			stack, idx = append(
-				stack,
-				nodeDepth[Node]{fc, top.depth + 1},
-			), idx+1
+			stack = append(stack, nodeDepth[Node]{
+				node:  fc,
+				depth: top.depth + 1,
+			})
 		}
 	}
 	return
@@ -143,9 +144,9 @@ func DFSPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 	itf.Init(initArgs...)
 	// It is similar to function DFS,
 	// except that the item of the stack contains the Path instead of the node.
-	stack, idx := []*pathlist.Path[Node]{{E: itf.Root()}}, 0
-	for idx >= 0 {
-		top := stack[idx]
+	stack := []*pathlist.Path[Node]{{E: itf.Root()}}
+	for len(stack) > 0 {
+		top := stack[len(stack)-1]
 		pathList := top.ToList()
 		r, cont := itf.AccessPath(pathList)
 		if r {
@@ -155,15 +156,18 @@ func DFSPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 		}
 		ns, ok := itf.NextSibling(top.E)
 		if ok {
-			// Just update stack[idx] to a new Path.
-			// Do not modify stack[idx]! Create a new Path.
-			stack[idx] = &pathlist.Path[Node]{E: ns, P: top.P}
+			// Just update stack[len(stack)-1] to a new Path.
+			// Do not modify stack[len(stack)-1]! Create a new Path.
+			stack[len(stack)-1] = &pathlist.Path[Node]{E: ns, P: top.P}
 		} else {
-			stack, idx = stack[:idx], idx-1
+			stack = stack[:len(stack)-1]
 		}
 		fc, ok := itf.FirstChild(top.E)
 		if ok {
-			stack, idx = append(stack, &pathlist.Path[Node]{E: fc, P: top}), idx+1
+			stack = append(stack, &pathlist.Path[Node]{
+				E: fc,
+				P: top,
+			})
 		}
 	}
 	return nil
@@ -175,9 +179,10 @@ func DFSPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 // It also returns an indicator found to report whether the node has been found.
 //
 // initArgs are the arguments to initialize itf.
-func BFS[Node any](itf AccessNode[Node], initArgs ...any) (nodeFound Node, found bool) {
+func BFS[Node any](itf AccessNode[Node], initArgs ...any) (
+	nodeFound Node, found bool) {
 	itf.Init(initArgs...)
-	queue := []nodeDepth[Node]{{node: itf.Root()}} // A queue for the first child of each node.
+	queue := []nodeDepth[Node]{{node: itf.Root()}} // a queue for the first child of each node
 	for len(queue) > 0 {
 		head := queue[0]
 		queue = queue[1:]
@@ -188,7 +193,10 @@ func BFS[Node any](itf AccessNode[Node], initArgs ...any) (nodeFound Node, found
 			} else if !cont {
 				return
 			} else if fc, ok := itf.FirstChild(node); ok {
-				queue = append(queue, nodeDepth[Node]{fc, head.depth + 1})
+				queue = append(queue, nodeDepth[Node]{
+					node:  fc,
+					depth: head.depth + 1,
+				})
 			}
 		}
 	}
@@ -209,7 +217,8 @@ func BFSPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 		head := queue[0]
 		queue = queue[1:]
 		for node, ok := head.E, true; ok; node, ok = itf.NextSibling(node) {
-			// The path to head (in the first loop) or one of its siblings (in other loops).
+			// The path to head (in the first loop)
+			// or one of its siblings (in other loops).
 			path := &pathlist.Path[Node]{E: node, P: head.P}
 			pathList := path.ToList()
 			r, cont := itf.AccessPath(pathList)
@@ -240,7 +249,8 @@ func BFSPath[Node any](itf AccessPath[Node], initArgs ...any) []Node {
 // The indicator more makes sense only when the node is not found.
 // When more is false, all the nodes must have been discovered;
 // when more is true, there must be at least one undiscovered node.
-func DLS[Node any](itf AccessNode[Node], limit int, initArgs ...any) (nodeFound Node, found, more bool) {
+func DLS[Node any](itf AccessNode[Node], limit int, initArgs ...any) (
+	nodeFound Node, found, more bool) {
 	itf.Init(initArgs...)
 	nodeFound, found, more, _ = dls(itf, itf.Root(), limit)
 	return
@@ -256,17 +266,18 @@ func DLS[Node any](itf AccessNode[Node], limit int, initArgs ...any) (nodeFound 
 // It returns one more indicator quit to report whether
 // itf.AccessNode asked to stop the search
 // (i.e., set its return value cont to false).
-func dls[Node any](itf AccessNode[Node], root Node, limit int) (nodeFound Node, found, more, quit bool) {
+func dls[Node any](itf AccessNode[Node], root Node, limit int) (
+	nodeFound Node, found, more, quit bool) {
 	if limit < 0 {
-		more = true // There must be an undiscovered node because of the depth limit: the root.
+		more = true // there must be an undiscovered node because of the depth limit: the root
 		return
 	}
 	// It is similar to function DFS,
 	// except that it examines the depth before pushing a new item to the stack
 	// to guarantee that the depth does not exceed the limit.
-	stack, idx := []nodeDepth[Node]{{node: root}}, 0 // Neither idx nor len(stack) is the depth.
-	for idx >= 0 {
-		top := stack[idx]
+	stack := []nodeDepth[Node]{{node: root}} // len(stack) is not the depth
+	for len(stack) > 0 {
+		top := stack[len(stack)-1]
 		r, cont := itf.AccessNode(top.node, top.depth)
 		if r {
 			nodeFound, found = top.node, true
@@ -277,18 +288,18 @@ func dls[Node any](itf AccessNode[Node], root Node, limit int) (nodeFound Node, 
 		}
 		ns, ok := itf.NextSibling(top.node)
 		if ok {
-			stack[idx].node = ns // Just update stack[idx].node.
+			stack[len(stack)-1].node = ns // just update stack[len(stack)-1].node
 		} else {
-			stack, idx = stack[:idx], idx-1
+			stack = stack[:len(stack)-1]
 		}
 		fc, ok := itf.FirstChild(top.node)
 		if ok {
 			if top.depth < limit {
 				// If the depth does not exceed the limit, push a new item.
-				stack, idx = append(
-					stack,
-					nodeDepth[Node]{fc, top.depth + 1},
-				), idx+1
+				stack = append(stack, nodeDepth[Node]{
+					node:  fc,
+					depth: top.depth + 1,
+				})
 			} else {
 				// If the depth of the child exceeds the limit,
 				// set more to true.
@@ -304,7 +315,8 @@ func dls[Node any](itf AccessNode[Node], root Node, limit int) (nodeFound Node, 
 // instead of only the node.
 //
 // It returns nil for the path if the node is not found.
-func DLSPath[Node any](itf AccessPath[Node], limit int, initArgs ...any) (pathFound []Node, more bool) {
+func DLSPath[Node any](itf AccessPath[Node], limit int, initArgs ...any) (
+	pathFound []Node, more bool) {
 	itf.Init(initArgs...)
 	pathFound, more, _ = dlsPath(itf, itf.Root(), limit)
 	return
@@ -320,16 +332,17 @@ func DLSPath[Node any](itf AccessPath[Node], limit int, initArgs ...any) (pathFo
 // It returns one more indicator quit to report whether
 // itf.AccessPath asked to stop the search
 // (i.e., set its return value cont to false).
-func dlsPath[Node any](itf AccessPath[Node], root Node, limit int) (pathFound []Node, more, quit bool) {
+func dlsPath[Node any](itf AccessPath[Node], root Node, limit int) (
+	pathFound []Node, more, quit bool) {
 	if limit < 0 {
-		more = true // There must be an undiscovered node because of the depth limit: the root.
+		more = true // there must be an undiscovered node because of the depth limit: the root
 		return
 	}
 	// It is similar to function dls,
 	// except that the item of the stack contains the Path instead of the node.
-	stack, idx := []*pathlist.Path[Node]{{E: root}}, 0
-	for idx >= 0 {
-		top := stack[idx]
+	stack := []*pathlist.Path[Node]{{E: root}}
+	for len(stack) > 0 {
+		top := stack[len(stack)-1]
 		pathList := top.ToList()
 		r, cont := itf.AccessPath(pathList)
 		if r {
@@ -341,16 +354,19 @@ func dlsPath[Node any](itf AccessPath[Node], root Node, limit int) (pathFound []
 		}
 		ns, ok := itf.NextSibling(top.E)
 		if ok {
-			// Just update stack[idx] to a new Path.
-			// Do not modify stack[idx]! Create a new Path.
-			stack[idx] = &pathlist.Path[Node]{E: ns, P: top.P}
+			// Just update stack[len(stack)-1] to a new Path.
+			// Do not modify stack[len(stack)-1]! Create a new Path.
+			stack[len(stack)-1] = &pathlist.Path[Node]{E: ns, P: top.P}
 		} else {
-			stack, idx = stack[:idx], idx-1
+			stack = stack[:len(stack)-1]
 		}
 		fc, ok := itf.FirstChild(top.E)
 		if ok {
 			if len(pathList) <= limit {
-				stack, idx = append(stack, &pathlist.Path[Node]{E: fc, P: top}), idx+1
+				stack = append(stack, &pathlist.Path[Node]{
+					E: fc,
+					P: top,
+				})
 			} else {
 				more = true
 			}
@@ -384,7 +400,11 @@ func dlsPath[Node any](itf AccessPath[Node], root Node, limit int) (pathFound []
 //	func (m MyInterface) ResetSearchState() {
 //		// Reset your search state.
 //	}
-func IDS[Node any](itf AccessNode[Node], initLimit int, initArgs ...any) (nodeFound Node, found bool) {
+func IDS[Node any](
+	itf AccessNode[Node],
+	initLimit int,
+	initArgs ...any,
+) (nodeFound Node, found bool) {
 	itf.Init(initArgs...)
 	root := itf.Root()
 	resetter, resettable := (any)(itf).(interface{ ResetSearchState() })
@@ -392,7 +412,7 @@ func IDS[Node any](itf AccessNode[Node], initLimit int, initArgs ...any) (nodeFo
 	if limit < 1 {
 		limit = 1
 	}
-	for { // The loop ends when the node is found, more is false, or quit is true.
+	for { // the loop ends when the node is found, more is false, or quit is true
 		node, r, more, quit := dls(itf, root, limit)
 		switch {
 		case r:
@@ -426,7 +446,11 @@ func IDS[Node any](itf AccessNode[Node], initLimit int, initArgs ...any) (nodeFo
 //	func (m MyInterface) ResetSearchState() {
 //		// Reset your search state.
 //	}
-func IDSPath[Node any](itf AccessPath[Node], initLimit int, initArgs ...any) []Node {
+func IDSPath[Node any](
+	itf AccessPath[Node],
+	initLimit int,
+	initArgs ...any,
+) []Node {
 	itf.Init(initArgs...)
 	root := itf.Root()
 	resetter, resettable := (any)(itf).(interface{ ResetSearchState() })
@@ -434,7 +458,7 @@ func IDSPath[Node any](itf AccessPath[Node], initLimit int, initArgs ...any) []N
 	if limit < 1 {
 		limit = 1
 	}
-	for { // The loop ends when the node is found, more is false, or quit is true.
+	for { // the loop ends when the node is found, more is false, or quit is true
 		path, more, quit := dlsPath(itf, root, limit)
 		switch {
 		case path != nil:

@@ -20,7 +20,7 @@ package graphv
 
 import "github.com/donyori/gogo/algorithm/search/internal/pathlist"
 
-// Common is the interface common to AccessNode and AccessPath.
+// Common is the interface common to AccessVertex and AccessPath.
 // It represents a graph used in the graph search algorithm,
 // where only the vertices are concerned.
 //
@@ -124,11 +124,12 @@ type adjListDepth[Vertex any] struct {
 // whether the vertex has been found.
 //
 // initArgs are the arguments to initialize itf.
-func DFS[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (vertexFound Vertex, found bool) {
+func DFS[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (
+	vertexFound Vertex, found bool) {
 	itf.Init(initArgs...)
-	stack, idx := []adjListDepth[Vertex]{{adjacency: []Vertex{itf.Root()}}}, 0 // Neither idx nor len(stack) is the depth.
-	for idx >= 0 {
-		adj, i := stack[idx].adjacency, 0
+	stack := []adjListDepth[Vertex]{{adjacency: []Vertex{itf.Root()}}} // len(stack) is not the depth
+	for len(stack) > 0 {
+		adj, i := stack[len(stack)-1].adjacency, 0
 		// Skip discovered vertices.
 		for i < len(adj) && itf.Discovered(adj[i]) {
 			i++
@@ -136,11 +137,11 @@ func DFS[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (vertexFound Ver
 		if i >= len(adj) {
 			// If all vertices in this adjacency list have been discovered,
 			// pop this adjacency list from the stack and go to the next loop.
-			stack, idx = stack[:idx], idx-1
+			stack = stack[:len(stack)-1]
 			continue
 		}
 		v, adj := adj[i], adj[1+i:]
-		depth := stack[idx].depth
+		depth := stack[len(stack)-1].depth
 		r, cont := itf.AccessVertex(v, depth)
 		switch {
 		case r:
@@ -153,15 +154,15 @@ func DFS[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (vertexFound Ver
 		//  2. Push the updated adjacency list (adj) to the stack if it is nonempty;
 		//  3. Push the adjacency list of the current vertex (vAdj) to the stack if it is nonempty.
 		case len(adj) > 0:
-			stack[idx].adjacency = adj // Just update stack[idx].adjacency.
+			stack[len(stack)-1].adjacency = adj // just update stack[len(stack)-1].adjacency
 		default:
-			stack, idx = stack[:idx], idx-1
+			stack = stack[:len(stack)-1]
 		}
 		if vAdj := itf.Adjacency(v); len(vAdj) > 0 {
-			stack, idx = append(
-				stack,
-				adjListDepth[Vertex]{vAdj, depth + 1},
-			), idx+1
+			stack = append(stack, adjListDepth[Vertex]{
+				adjacency: vAdj,
+				depth:     depth + 1,
+			})
 		}
 	}
 	return
@@ -177,14 +178,14 @@ func DFSPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 	// It is similar to function DFS,
 	// except that the item of the stack contains the list of Path
 	// instead of the adjacency list.
-	stack, idx := [][]*pathlist.Path[Vertex]{{{E: itf.Root()}}}, 0
-	for idx >= 0 {
-		pl, i := stack[idx], 0
+	stack := [][]*pathlist.Path[Vertex]{{{E: itf.Root()}}}
+	for len(stack) > 0 {
+		pl, i := stack[len(stack)-1], 0
 		for i < len(pl) && itf.Discovered(pl[i].E) {
 			i++
 		}
 		if i >= len(pl) {
-			stack, idx = stack[:idx], idx-1
+			stack = stack[:len(stack)-1]
 			continue
 		}
 		p, pl := pl[i], pl[1+i:]
@@ -196,16 +197,16 @@ func DFSPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 		case !cont:
 			return nil
 		case len(pl) > 0:
-			stack[idx] = pl
+			stack[len(stack)-1] = pl
 		default:
-			stack, idx = stack[:idx], idx-1
+			stack = stack[:len(stack)-1]
 		}
 		if vAdj := itf.Adjacency(p.E); len(vAdj) > 0 {
 			vAdjPathList := make([]*pathlist.Path[Vertex], len(vAdj))
 			for i := range vAdj {
 				vAdjPathList[i] = &pathlist.Path[Vertex]{E: vAdj[i], P: p}
 			}
-			stack, idx = append(stack, vAdjPathList), idx+1
+			stack = append(stack, vAdjPathList)
 		}
 	}
 	return nil
@@ -218,7 +219,8 @@ func DFSPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 // whether the vertex has been found.
 //
 // initArgs are the arguments to initialize itf.
-func BFS[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (vertexFound Vertex, found bool) {
+func BFS[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (
+	vertexFound Vertex, found bool) {
 	itf.Init(initArgs...)
 	queue := []adjListDepth[Vertex]{{adjacency: []Vertex{itf.Root()}}}
 	for len(queue) > 0 {
@@ -232,10 +234,10 @@ func BFS[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (vertexFound Ver
 				} else if !cont {
 					return
 				} else if vAdj := itf.Adjacency(vertex); len(vAdj) > 0 {
-					queue = append(
-						queue,
-						adjListDepth[Vertex]{vAdj, head.depth + 1},
-					)
+					queue = append(queue, adjListDepth[Vertex]{
+						adjacency: vAdj,
+						depth:     head.depth + 1,
+					})
 				}
 			}
 		}
@@ -268,7 +270,10 @@ func BFSPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 				} else if vAdj := itf.Adjacency(p.E); len(vAdj) > 0 {
 					vAdjPathList := make([]*pathlist.Path[Vertex], len(vAdj))
 					for i := range vAdj {
-						vAdjPathList[i] = &pathlist.Path[Vertex]{E: vAdj[i], P: p}
+						vAdjPathList[i] = &pathlist.Path[Vertex]{
+							E: vAdj[i],
+							P: p,
+						}
 					}
 					queue = append(queue, vAdjPathList)
 				}
@@ -295,7 +300,8 @@ func BFSPath[Vertex any](itf AccessPath[Vertex], initArgs ...any) []Vertex {
 // However, when more is true, it does not guarantee that
 // there must be an undiscovered vertex,
 // because the vertex may be discovered in another search path.
-func DLS[Vertex any](itf AccessVertex[Vertex], limit int, initArgs ...any) (vertexFound Vertex, found, more bool) {
+func DLS[Vertex any](itf AccessVertex[Vertex], limit int, initArgs ...any) (
+	vertexFound Vertex, found, more bool) {
 	itf.Init(initArgs...)
 	vertexFound, found, more, _ = dls(itf, itf.Root(), limit)
 	return
@@ -311,26 +317,27 @@ func DLS[Vertex any](itf AccessVertex[Vertex], limit int, initArgs ...any) (vert
 // It returns one more indicator quit to report whether
 // itf.AccessVertex asked to stop the search
 // (i.e., set its return value cont to false).
-func dls[Vertex any](itf AccessVertex[Vertex], root Vertex, limit int) (vertexFound Vertex, found, more, quit bool) {
+func dls[Vertex any](itf AccessVertex[Vertex], root Vertex, limit int) (
+	vertexFound Vertex, found, more, quit bool) {
 	if limit < 0 {
-		more = true // There must be an undiscovered vertex because of the depth limit: the root.
+		more = true // there must be an undiscovered vertex because of the depth limit: the root
 		return
 	}
 	// It is similar to function DFS,
 	// except that it examines the depth before pushing a new item to the stack
 	// to guarantee that the depth does not exceed the limit.
-	stack, idx := []adjListDepth[Vertex]{{adjacency: []Vertex{root}}}, 0 // Neither idx nor len(stack) is the depth.
-	for idx >= 0 {
-		adj, i := stack[idx].adjacency, 0
+	stack := []adjListDepth[Vertex]{{adjacency: []Vertex{root}}} // len(stack) is not the depth
+	for len(stack) > 0 {
+		adj, i := stack[len(stack)-1].adjacency, 0
 		for i < len(adj) && itf.Discovered(adj[i]) {
 			i++
 		}
 		if i >= len(adj) {
-			stack, idx = stack[:idx], idx-1
+			stack = stack[:len(stack)-1]
 			continue
 		}
 		v, adj := adj[i], adj[1+i:]
-		depth := stack[idx].depth
+		depth := stack[len(stack)-1].depth
 		r, cont := itf.AccessVertex(v, depth)
 		switch {
 		case r:
@@ -340,17 +347,17 @@ func dls[Vertex any](itf AccessVertex[Vertex], root Vertex, limit int) (vertexFo
 			quit = true
 			return
 		case len(adj) > 0:
-			stack[idx].adjacency = adj // Just update stack[idx].adjacency.
+			stack[len(stack)-1].adjacency = adj // just update stack[len(stack)-1].adjacency
 		default:
-			stack, idx = stack[:idx], idx-1
+			stack = stack[:len(stack)-1]
 		}
 		if vAdj := itf.Adjacency(v); len(vAdj) > 0 {
 			if depth < limit {
 				// If the depth is less than the limit, push a new item.
-				stack, idx = append(
-					stack,
-					adjListDepth[Vertex]{vAdj, depth + 1},
-				), idx+1
+				stack = append(stack, adjListDepth[Vertex]{
+					adjacency: vAdj,
+					depth:     depth + 1,
+				})
 			} else if !more {
 				// If the depth reaches the limit,
 				// examine whether there is any more undiscovered vertex
@@ -372,7 +379,8 @@ func dls[Vertex any](itf AccessVertex[Vertex], root Vertex, limit int) (vertexFo
 // instead of only the vertex.
 //
 // It returns nil for the path if the vertex is not found.
-func DLSPath[Vertex any](itf AccessPath[Vertex], limit int, initArgs ...any) (pathFound []Vertex, more bool) {
+func DLSPath[Vertex any](itf AccessPath[Vertex], limit int, initArgs ...any) (
+	pathFound []Vertex, more bool) {
 	itf.Init(initArgs...)
 	pathFound, more, _ = dlsPath(itf, itf.Root(), limit)
 	return
@@ -388,22 +396,23 @@ func DLSPath[Vertex any](itf AccessPath[Vertex], limit int, initArgs ...any) (pa
 // It returns one more indicator quit to report whether
 // itf.AccessPath asked to stop the search
 // (i.e., set its return value cont to false).
-func dlsPath[Vertex any](itf AccessPath[Vertex], root Vertex, limit int) (pathFound []Vertex, more, quit bool) {
+func dlsPath[Vertex any](itf AccessPath[Vertex], root Vertex, limit int) (
+	pathFound []Vertex, more, quit bool) {
 	if limit < 0 {
-		more = true // There must be an undiscovered vertex because of the depth limit: the root.
+		more = true // there must be an undiscovered vertex because of the depth limit: the root
 		return
 	}
 	// It is similar to function dls,
 	// except that the item of the stack contains the list of Path
 	// instead of the adjacency list.
-	stack, idx := [][]*pathlist.Path[Vertex]{{{E: root}}}, 0
-	for idx >= 0 {
-		pl, i := stack[idx], 0
+	stack := [][]*pathlist.Path[Vertex]{{{E: root}}}
+	for len(stack) > 0 {
+		pl, i := stack[len(stack)-1], 0
 		for i < len(pl) && itf.Discovered(pl[i].E) {
 			i++
 		}
 		if i >= len(pl) {
-			stack, idx = stack[:idx], idx-1
+			stack = stack[:len(stack)-1]
 			continue
 		}
 		p, pl := pl[i], pl[1+i:]
@@ -417,9 +426,9 @@ func dlsPath[Vertex any](itf AccessPath[Vertex], root Vertex, limit int) (pathFo
 			quit = true
 			return
 		case len(pl) > 0:
-			stack[idx] = pl
+			stack[len(stack)-1] = pl
 		default:
-			stack, idx = stack[:idx], idx-1
+			stack = stack[:len(stack)-1]
 		}
 		if vAdj := itf.Adjacency(p.E); len(vAdj) > 0 {
 			if len(pathList) <= limit {
@@ -427,7 +436,7 @@ func dlsPath[Vertex any](itf AccessPath[Vertex], root Vertex, limit int) (pathFo
 				for i := range vAdj {
 					vAdjPathList[i] = &pathlist.Path[Vertex]{E: vAdj[i], P: p}
 				}
-				stack, idx = append(stack, vAdjPathList), idx+1
+				stack = append(stack, vAdjPathList)
 			} else if !more {
 				for _, v := range vAdj {
 					if !itf.Discovered(v) {
@@ -484,13 +493,17 @@ type IDSAccessPath[Vertex any] interface {
 // If initLimit < 1, the depth limit in the first iteration is 1.
 //
 // initArgs are the arguments to initialize itf.
-func IDS[Vertex any](itf IDSAccessVertex[Vertex], initLimit int, initArgs ...any) (vertexFound Vertex, found bool) {
+func IDS[Vertex any](
+	itf IDSAccessVertex[Vertex],
+	initLimit int,
+	initArgs ...any,
+) (vertexFound Vertex, found bool) {
 	itf.Init(initArgs...)
 	root, limit := itf.Root(), initLimit
 	if limit < 1 {
 		limit = 1
 	}
-	for { // The loop ends when the vertex is found, more is false, or quit is true.
+	for { // the loop ends when the vertex is found, more is false, or quit is true
 		vertex, r, more, quit := dls[Vertex](itf, root, limit)
 		if r {
 			return vertex, true
@@ -507,13 +520,17 @@ func IDS[Vertex any](itf IDSAccessVertex[Vertex], initLimit int, initArgs ...any
 // instead of only the vertex.
 //
 // It returns nil if the vertex is not found.
-func IDSPath[Vertex any](itf IDSAccessPath[Vertex], initLimit int, initArgs ...any) []Vertex {
+func IDSPath[Vertex any](
+	itf IDSAccessPath[Vertex],
+	initLimit int,
+	initArgs ...any,
+) []Vertex {
 	itf.Init(initArgs...)
 	root, limit := itf.Root(), initLimit
 	if limit < 1 {
 		limit = 1
 	}
-	for { // The loop ends when the vertex is found, more is false, or quit is true.
+	for { // the loop ends when the vertex is found, more is false, or quit is true
 		path, more, quit := dlsPath[Vertex](itf, root, limit)
 		if path != nil {
 			return path
