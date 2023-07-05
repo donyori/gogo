@@ -46,7 +46,7 @@ func (g *graphImpl) Init(args ...any) {
 			g.Goal, g.GoalValid = goal, true
 		}
 	}
-	g.AccessHistory = g.AccessHistory[:0] // Reuse the underlying array.
+	g.AccessHistory = g.AccessHistory[:0] // reuse the underlying array
 	g.head = 0
 }
 
@@ -62,7 +62,7 @@ func (g *graphImpl) Adjacency(vertex int) []int {
 	if len(list) == 0 {
 		return nil
 	}
-	return append(list[:0:0], list...) // Return a copy of list.
+	return append(list[:0:0], list...) // return a copy of list
 }
 
 // Discovered reports whether the specified vertex
@@ -352,9 +352,9 @@ func testBruteForceSearch(t *testing.T, name string) {
 			for i < len(ordering) && ordering[i] != goal {
 				i++
 			}
-			var wantVertex int // The vertex expected to be found.
-			var wantFound bool // Expected found value.
-			wantHx := ordering // Expected history.
+			var wantVertex int // the vertex expected to be found
+			var wantFound bool // expected found value
+			wantHx := ordering // expected history
 			if i < len(ordering) {
 				wantVertex, wantFound, wantHx = goal, true, wantHx[:1+i]
 			}
@@ -368,7 +368,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 	// Non-existent nodes:
 	for _, goal := range []any{nil, -1, len(undirectedGraphData), 1.2} {
 		t.Run(fmt.Sprintf("goal=%v", goal), func(t *testing.T) {
-			wantHx := ordering // Expected history.
+			wantHx := ordering // expected history
 			if len(wantHx) > 1 {
 				if _, ok := goal.(int); !ok {
 					wantHx = wantHx[:1]
@@ -462,7 +462,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 			for i < len(ordering) && ordering[i] != goal {
 				i++
 			}
-			wantHx := ordering // Expected history.
+			wantHx := ordering // expected history
 			if i < len(ordering) {
 				wantHx = wantHx[:1+i]
 			}
@@ -472,7 +472,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 	// Non-existent nodes:
 	for _, goal := range []any{nil, -1, len(undirectedGraphData), 1.2} {
 		t.Run(fmt.Sprintf("goal=%v", goal), func(t *testing.T) {
-			wantHx := ordering // Expected history.
+			wantHx := ordering // expected history
 			goalVertex := -1
 			if g, ok := goal.(int); ok {
 				goalVertex = g

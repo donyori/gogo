@@ -113,7 +113,7 @@ func TestMutex_Fairness(t *testing.T) {
 	// a test of sync.Mutex, in the file sync/mutex_test.go.
 	m := concurrency.NewMutex()
 	stopC := make(chan struct{})
-	sc := stopC // A copy of stopC, for closing stopC.
+	sc := stopC // a copy of stopC, for closing stopC
 	defer func() {
 		if sc != nil {
 			close(sc)

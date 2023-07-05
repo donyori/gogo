@@ -41,7 +41,7 @@ func (t *treeImpl) Init(args ...any) {
 			t.Goal, t.GoalValid = goal, true
 		}
 	}
-	t.AccessHistory = t.AccessHistory[:0] // Reuse the underlying array.
+	t.AccessHistory = t.AccessHistory[:0] // reuse the underlying array
 }
 
 func (t *treeImpl) Root() int {
@@ -305,9 +305,9 @@ func testBruteForceSearch(t *testing.T, name string) {
 			for i < len(ordering) && ordering[i] != goal {
 				i++
 			}
-			var wantNode int   // The node expected to be found.
-			var wantFound bool // Expected found value.
-			wantHx := ordering // Expected history.
+			var wantNode int   // the node expected to be found
+			var wantFound bool // expected found value
+			wantHx := ordering // expected history
 			if i < len(ordering) {
 				wantNode, wantFound, wantHx = goal, true, wantHx[:1+i]
 			}
@@ -321,7 +321,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 	// Non-existent nodes:
 	for _, goal := range []any{nil, -1, len(treeData), 1.2} {
 		t.Run(fmt.Sprintf("goal=%v", goal), func(t *testing.T) {
-			wantHx := ordering // Expected history.
+			wantHx := ordering // expected history
 			if len(wantHx) > 1 {
 				if _, ok := goal.(int); !ok {
 					wantHx = wantHx[:1]
@@ -417,7 +417,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 			for i < len(ordering) && ordering[i] != goal {
 				i++
 			}
-			wantHx := ordering // Expected history.
+			wantHx := ordering // expected history
 			if i < len(ordering) {
 				wantHx = wantHx[:1+i]
 			}
@@ -427,7 +427,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 	// Non-existent nodes:
 	for _, goal := range []any{nil, -1, len(treeData), 1.2} {
 		t.Run(fmt.Sprintf("goal=%v", goal), func(t *testing.T) {
-			wantHx := ordering // Expected history.
+			wantHx := ordering // expected history
 			goalNode := -1
 			if g, ok := goal.(int); ok {
 				goalNode = g

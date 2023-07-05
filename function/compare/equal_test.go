@@ -146,47 +146,47 @@ var (
 
 func init() {
 	intsEqPairs, intsNeqPairs = mkEqNeqPairs([][][]int{
-		{nil, {}},         // Empty.
-		{{1, 2, 3, 4}},    // Even length - 1.
-		{{1, 2, 2, 4}},    // Even length - 2.
-		{{1, 2, 3, 4, 5}}, // Odd length - 1.
-		{{1, 2, 2, 4, 5}}, // Odd length - 2.
+		{nil, {}},         // empty
+		{{1, 2, 3, 4}},    // even length - 1
+		{{1, 2, 2, 4}},    // even length - 2
+		{{1, 2, 3, 4, 5}}, // odd length - 1
+		{{1, 2, 2, 4, 5}}, // odd length - 2
 	}, 0, 0)
 	float64sEqPairs, float64sNeqPairs = mkEqNeqPairs([][][]float64{
-		{nil, {}},                       // Empty.
-		{{1., math.Inf(1), 3., 4.}},     // Even length - 1.
-		{{1., math.Inf(1), 2., 4.}},     // Even length - 2.
-		{{1., math.Inf(1), 3., 4., 5.}}, // Odd length - 1.
-		{{1., math.Inf(1), 2., 4., 5.}}, // Odd length - 2.
+		{nil, {}},                       // empty
+		{{1., math.Inf(1), 3., 4.}},     // even length - 1
+		{{1., math.Inf(1), 2., 4.}},     // even length - 2
+		{{1., math.Inf(1), 3., 4., 5.}}, // odd length - 1
+		{{1., math.Inf(1), 2., 4., 5.}}, // odd length - 2
 	}, 0, 0)
 	float64sWithNaNEqPairs, float64sWithNaNNeqPairs = mkEqNeqPairs([][][]float64{
-		{nil, {}},                                                      // Empty.
-		{{1., math.Inf(1), 3., 4.}},                                    // Even length - 1.
-		{{1., math.Inf(1), 2., 4.}},                                    // Even length - 2.
-		{{1., math.Inf(1), 3., math.NaN()}},                            // Even length - 3.
-		{{math.NaN(), math.NaN(), math.NaN(), math.NaN()}},             // Even length - 4.
-		{{1., math.Inf(1), 3., 4., 5.}},                                // Odd length - 1.
-		{{1., math.Inf(1), 2., 4., 5.}},                                // Odd length - 2.
-		{{1., math.Inf(1), 3., math.NaN(), 5.}},                        // Odd length - 3.
-		{{math.NaN(), math.NaN(), math.NaN(), math.NaN(), math.NaN()}}, // Odd length - 4.
+		{nil, {}},                                                      // empty
+		{{1., math.Inf(1), 3., 4.}},                                    // even length - 1
+		{{1., math.Inf(1), 2., 4.}},                                    // even length - 2
+		{{1., math.Inf(1), 3., math.NaN()}},                            // even length - 3
+		{{math.NaN(), math.NaN(), math.NaN(), math.NaN()}},             // even length - 4
+		{{1., math.Inf(1), 3., 4., 5.}},                                // odd length - 1
+		{{1., math.Inf(1), 2., 4., 5.}},                                // odd length - 2
+		{{1., math.Inf(1), 3., math.NaN(), 5.}},                        // odd length - 3
+		{{math.NaN(), math.NaN(), math.NaN(), math.NaN(), math.NaN()}}, // odd length - 4
 	}, 0, 0)
 	stringsEqPairs, stringsNeqPairs = mkEqNeqPairs([][][]string{
-		{nil, {}},                   // Empty.
-		{{"1", "2", "3", "4"}},      // Even length - 1.
-		{{"1", "2", "2", "4"}},      // Even length - 2.
-		{{"1", "2", "3", "4", "5"}}, // Odd length - 1.
-		{{"1", "2", "2", "4", "5"}}, // Odd length - 2.
+		{nil, {}},                   // empty
+		{{"1", "2", "3", "4"}},      // even length - 1
+		{{"1", "2", "2", "4"}},      // even length - 2
+		{{"1", "2", "3", "4", "5"}}, // odd length - 1
+		{{"1", "2", "2", "4", "5"}}, // odd length - 2
 	}, 0, 0)
 	anySliceEqPairs, anySliceNeqPairs = mkEqNeqPairs([][][]any{
-		{nil, {}},              // Empty.
-		{{1, 2, 3, 4}},         // Even length - 1.
-		{{1., 2., 3., 4.}},     // Even length - 2.
-		{{1, 2, 2, 4}},         // Even length - 3.
-		{{1., 2., 2., 4.}},     // Even length - 4.
-		{{1, 2, 3, 4, 5}},      // Odd length - 1.
-		{{1., 2., 3., 4., 5.}}, // Odd length - 2.
-		{{1, 2, 2, 4, 5}},      // Odd length - 3.
-		{{1., 2., 2., 4., 5.}}, // Odd length - 4.
+		{nil, {}},              // empty
+		{{1, 2, 3, 4}},         // even length - 1
+		{{1., 2., 3., 4.}},     // even length - 2
+		{{1, 2, 2, 4}},         // even length - 3
+		{{1., 2., 2., 4.}},     // even length - 4
+		{{1, 2, 3, 4, 5}},      // odd length - 1
+		{{1., 2., 3., 4., 5.}}, // odd length - 2
+		{{1, 2, 2, 4, 5}},      // odd length - 3
+		{{1., 2., 2., 4., 5.}}, // odd length - 4
 	}, 1, 3)
 	anySliceEqPairs = append(anySliceEqPairs, [2][]any{
 		{1, 2., '3', byte('4')},
@@ -271,16 +271,16 @@ func TestToSliceEqual_FloatEqual_Float64(t *testing.T) {
 			eqPairs, neqPairs = float64sWithNaNEqPairs, float64sWithNaNNeqPairs
 		} else {
 			eqPairs, neqPairs = mkEqNeqPairs([][][]float64{
-				{nil},                               // Nil.
-				{{}},                                // Empty.
-				{{1., math.Inf(1), 3., 4.}},         // Even length - 1.
-				{{1., math.Inf(1), 2., 4.}},         // Even length - 2.
-				{{1., math.Inf(1), 3., math.NaN()}}, // Even length - 3.
-				{{math.NaN(), math.NaN(), math.NaN(), math.NaN()}},             // Even length - 4.
-				{{1., math.Inf(1), 3., 4., 5.}},                                // Odd length - 1.
-				{{1., math.Inf(1), 2., 4., 5.}},                                // Odd length - 2.
-				{{1., math.Inf(1), 3., math.NaN(), 5.}},                        // Odd length - 3.
-				{{math.NaN(), math.NaN(), math.NaN(), math.NaN(), math.NaN()}}, // Odd length - 4.
+				{nil},                               // nil
+				{{}},                                // empty
+				{{1., math.Inf(1), 3., 4.}},         // even length - 1
+				{{1., math.Inf(1), 2., 4.}},         // even length - 2
+				{{1., math.Inf(1), 3., math.NaN()}}, // even length - 3
+				{{math.NaN(), math.NaN(), math.NaN(), math.NaN()}},             // even length - 4
+				{{1., math.Inf(1), 3., 4., 5.}},                                // odd length - 1
+				{{1., math.Inf(1), 2., 4., 5.}},                                // odd length - 2
+				{{1., math.Inf(1), 3., math.NaN(), 5.}},                        // odd length - 3
+				{{math.NaN(), math.NaN(), math.NaN(), math.NaN(), math.NaN()}}, // odd length - 4
 			}, 0, 0)
 		}
 		subtestPairs(t, fmt.Sprintf("nilEqualToEmpty=%t", nilEqToEmpty), toSlice, eqPairs, neqPairs)
@@ -295,12 +295,12 @@ func TestToSliceEqual_NilEf_Float64(t *testing.T) {
 			eqPairs, neqPairs = float64sEqPairs, float64sNeqPairs
 		} else {
 			eqPairs, neqPairs = mkEqNeqPairs([][][]float64{
-				{nil},                           // Nil.
-				{{}},                            // Empty.
-				{{1., math.Inf(1), 3., 4.}},     // Even length - 1.
-				{{1., math.Inf(1), 2., 4.}},     // Even length - 2.
-				{{1., math.Inf(1), 3., 4., 5.}}, // Odd length - 1.
-				{{1., math.Inf(1), 2., 4., 5.}}, // Odd length - 2.
+				{nil},                           // nil
+				{{}},                            // empty
+				{{1., math.Inf(1), 3., 4.}},     // even length - 1
+				{{1., math.Inf(1), 2., 4.}},     // even length - 2
+				{{1., math.Inf(1), 3., 4., 5.}}, // odd length - 1
+				{{1., math.Inf(1), 2., 4., 5.}}, // odd length - 2
 			}, 0, 0)
 		}
 		subtestPairs(t, fmt.Sprintf("nilEqualToEmpty=%t", nilEqToEmpty), toSlice, eqPairs, neqPairs)

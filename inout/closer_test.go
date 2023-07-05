@@ -35,7 +35,7 @@ type testCloser struct {
 
 func (tc *testCloser) Close() error {
 	if tc.closed {
-		msg := "call testCloser.Close again" // Don't use *ClosedError here.
+		msg := "call testCloser.Close again" // don't use *ClosedError here
 		tc.tb.Error(msg)
 		return errors.AutoNew(msg)
 	}

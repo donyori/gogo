@@ -185,9 +185,9 @@ func (ctrl *controller[Message]) Wait() int {
 		return -1
 	}
 	defer func() {
-		ctrl.qd.Quit() // For cleanup possible daemon goroutines that wait for a quit signal to exit.
+		ctrl.qd.Quit() // for cleanup possible daemon goroutines that wait for a quit signal to exit
 		if ctrl.cdOi.Test() {
-			<-ctrl.cdFinC // Wait for the channel dispatcher to finish.
+			<-ctrl.cdFinC // wait for the channel dispatcher to finish
 		}
 	}()
 	ctrl.wg.Wait()

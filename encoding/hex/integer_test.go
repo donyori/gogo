@@ -38,7 +38,7 @@ func encodeInt64Baseline(dst []byte, x int64, upper bool, digits int) int {
 	if digits > 0 {
 		width := digits
 		if x < 0 {
-			width++ // Increase one for the negative sign.
+			width++ // increase one for the negative sign
 		}
 		layout += "0" + strconv.Itoa(width)
 	}
@@ -64,7 +64,7 @@ func encodeInt64ToStringBaseline(x int64, upper bool, digits int) string {
 	if digits > 0 {
 		width := digits
 		if x < 0 {
-			width++ // Increase one for the negative sign.
+			width++ // increase one for the negative sign
 		}
 		layout += "0" + strconv.Itoa(width)
 	}
@@ -83,7 +83,7 @@ func encodeInt64ToBaseline(w io.Writer, x int64, upper bool, digits int) (writte
 	if digits > 0 {
 		width := digits
 		if x < 0 {
-			width++ // Increase one for the negative sign.
+			width++ // increase one for the negative sign
 		}
 		layout += "0" + strconv.Itoa(width)
 	}

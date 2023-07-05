@@ -214,7 +214,7 @@ func (b *broadcaster[Message]) Unsubscribe(c <-chan Message) []Message {
 			unlocked = false
 		case msg, ok := <-inC:
 			if !ok {
-				inC = nil // Disable the channel.
+				inC = nil // disable the channel
 				break
 			}
 			r = append(r, msg)

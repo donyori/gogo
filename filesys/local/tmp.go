@@ -130,12 +130,12 @@ func TmpDir(dir, prefix, suffix string, perm fs.FileMode) (name string, err erro
 func checkTmpPrefixAndSuffix(prefix, suffix string) error {
 	for i := 0; i < len(prefix); i++ {
 		if os.IsPathSeparator(prefix[i]) {
-			return ErrContainsPathSeparator // Don't wrap the error here.
+			return ErrContainsPathSeparator // don't wrap the error here
 		}
 	}
 	for i := 0; i < len(suffix); i++ {
 		if os.IsPathSeparator(suffix[i]) {
-			return ErrContainsPathSeparator // Don't wrap the error here.
+			return ErrContainsPathSeparator // don't wrap the error here
 		}
 	}
 	return nil

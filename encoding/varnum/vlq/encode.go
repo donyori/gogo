@@ -34,7 +34,8 @@ import (
 //
 // They satisfy:
 //   - If u < minUint64s[0], then Uint64EncodedLen(u) = 1;
-//   - If minUint64s[i] <= u < minUint64s[i+1] (i=0,1,...,7), then Uint64EncodedLen(u) = i+2;
+//   - If minUint64s[i] <= u < minUint64s[i+1] (i=0,1,...,7),
+//     then Uint64EncodedLen(u) = i+2;
 //   - If u >= minUint64s[8], then Uint64EncodedLen(u) = 10.
 var minUint64s = [...]uint64{
 	0x80, 0x4080, 0x204080, 0x10204080, 0x810204080,
@@ -66,7 +67,8 @@ func Uint64EncodedLen(u uint64) int {
 // exactly Uint64EncodedLen(u).
 func EncodeUint64(dst []byte, u uint64) int {
 	if reqLen := Uint64EncodedLen(u); reqLen > len(dst) {
-		panic(errors.AutoMsg(fmt.Sprintf("dst is too small, length: %d, required: %d", len(dst), reqLen)))
+		panic(errors.AutoMsg(fmt.Sprintf(
+			"dst is too small, length: %d, required: %d", len(dst), reqLen)))
 	}
 	return encodeUint64(dst, u)
 }
@@ -90,7 +92,8 @@ func Int64EncodedLen(i int64) int {
 func EncodeInt64(dst []byte, i int64) int {
 	u := uintconv.FromInt64Zigzag(i)
 	if reqLen := Uint64EncodedLen(u); reqLen > len(dst) {
-		panic(errors.AutoMsg(fmt.Sprintf("dst is too small, length: %d, required: %d", len(dst), reqLen)))
+		panic(errors.AutoMsg(fmt.Sprintf(
+			"dst is too small, length: %d, required: %d", len(dst), reqLen)))
 	}
 	return encodeUint64(dst, u)
 }
@@ -117,7 +120,8 @@ func Float64EncodedLen(f float64) int {
 func EncodeFloat64(dst []byte, f float64) int {
 	u := uintconv.FromFloat64ByteReversal(f)
 	if reqLen := Uint64EncodedLen(u); reqLen > len(dst) {
-		panic(errors.AutoMsg(fmt.Sprintf("dst is too small, length: %d, required: %d", len(dst), reqLen)))
+		panic(errors.AutoMsg(fmt.Sprintf(
+			"dst is too small, length: %d, required: %d", len(dst), reqLen)))
 	}
 	return encodeUint64(dst, u)
 }
@@ -152,7 +156,7 @@ func encodeUint64(dst []byte, u uint64) int {
 	buf[0] = byte(u & 0x7F)
 	t, n := u>>7, 1
 	for t != 0 {
-		t-- // Remove the prepending redundancy in typical VLQ.
+		t-- // remove the prepending redundancy in typical VLQ
 		buf[n], n, t = byte(t&0x7F|0x80), n+1, t>>7
 	}
 	for i := 0; i < n; i++ {

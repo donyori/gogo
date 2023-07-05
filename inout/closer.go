@@ -85,7 +85,7 @@ func (nec *noErrorCloser) Close() error {
 	if err == nil {
 		nec.closed = true
 	}
-	return err // Don't wrap the error.
+	return err // don't wrap the error
 }
 
 func (nec *noErrorCloser) Closed() bool {
@@ -147,7 +147,7 @@ func (ec *errorCloser) Close() error {
 	if err == nil {
 		ec.closed = true
 	}
-	return err // Don't wrap the error.
+	return err // don't wrap the error
 }
 
 func (ec *errorCloser) Closed() bool {
@@ -254,7 +254,7 @@ func (mc *multiCloser) Close() error {
 		for mc.idx > 0 {
 			err := mc.cs[mc.idx-1].Close()
 			if err != nil {
-				return err // Don't wrap the error.
+				return err // don't wrap the error
 			}
 			mc.cm[mc.cs[mc.idx-1]] = true
 			mc.idx--
@@ -275,7 +275,7 @@ func (mc *multiCloser) Close() error {
 			}
 		}
 	}
-	return el.ToError() // Don't wrap the error.
+	return el.ToError() // don't wrap the error
 }
 
 func (mc *multiCloser) Closed() bool {

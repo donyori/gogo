@@ -144,9 +144,9 @@ func uint64EncodedLenBinarySearch(u uint64) int {
 	for low < high {
 		mid := (low + high) / 2
 		if vlq.MinUint64s[mid] < u {
-			low = mid + 1 // Preserve: minUint64s[low-1] < u
+			low = mid + 1 // preserve: minUint64s[low-1] < u
 		} else if vlq.MinUint64s[mid] > u {
-			high = mid // Preserve: minUint64s[high] > u
+			high = mid // preserve: minUint64s[high] > u
 		} else {
 			return mid + 2
 		}

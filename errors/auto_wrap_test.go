@@ -155,7 +155,7 @@ func TestAutoWrapSkip(t *testing.T) {
 			errName = strconv.QuoteToASCII(tc.err.Error())
 		}
 		t.Run(fmt.Sprintf("case %d?err=%s&skip=%d", i, errName, tc.skip), func(t *testing.T) {
-			func() { // Use an inner function to test the "skip".
+			func() { // use an inner function to test the "skip"
 				got := errors.AutoWrapSkip(tc.err, tc.skip)
 				if (got == tc.err) != tc.equal {
 					if tc.equal {
@@ -281,7 +281,7 @@ func TestAutoWrapCustom(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("case %d?err=%s&ms=%s(%[3]d)&skip=%d&hasExcl=%t", i, errName, tc.ms, tc.skip, tc.excl != nil),
 			func(t *testing.T) {
-				func() { // Use an inner function to test the "skip".
+				func() { // use an inner function to test the "skip"
 					got := errors.AutoWrapCustom(tc.err, tc.ms, tc.skip, tc.excl)
 					if (got == tc.err) != tc.equal {
 						if tc.equal {

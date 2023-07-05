@@ -52,7 +52,8 @@ func TestBroadcaster_Broadcast(t *testing.T) {
 	var delayDurations [NumGoroutine][NumMessage - 1]time.Duration
 	for i := 0; i < NumGoroutine; i++ {
 		for k := 0; k < NumMessage-1; k++ {
-			delayDurations[i][k] = time.Microsecond * time.Duration(random.Intn(NumGoroutine))
+			delayDurations[i][k] = time.Microsecond * time.Duration(
+				random.Intn(NumGoroutine))
 		}
 	}
 
@@ -66,7 +67,9 @@ func TestBroadcaster_Broadcast(t *testing.T) {
 			barriers[idx].Done()
 			for msg := range c {
 				if idx >= NumMessage {
-					panic(fmt.Sprintf("goroutine %d, got messages more than %d", rank, NumMessage))
+					panic(fmt.Sprintf(
+						"goroutine %d, got messages more than %d",
+						rank, NumMessage))
 				}
 				recv[idx] = msg
 				idx++
@@ -85,7 +88,7 @@ func TestBroadcaster_Broadcast(t *testing.T) {
 			}
 		}(i)
 	}
-	barriers[0].Wait() // Ensure that all subscribers have entered the for loop.
+	barriers[0].Wait() // ensure that all subscribers have entered the for loop
 	for _, msg := range data {
 		bcast.Broadcast(msg)
 	}
