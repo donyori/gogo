@@ -41,7 +41,10 @@ import (
 // The key of the map is the ID of the custom group.
 // The value of the map is the corresponding communicator for this goroutine.
 // If there is no custom group, commMap is nil.
-type BusinessFunc[Message any] func(world Communicator[Message], commMap map[string]Communicator[Message])
+type BusinessFunc[Message any] func(
+	world Communicator[Message],
+	commMap map[string]Communicator[Message],
+)
 
 // groupIDPattern is a regular expression pattern for verifying group ID.
 var groupIDPattern = regexp.MustCompile(`[a-z0-9][a-z0-9_]*`)
@@ -69,7 +72,11 @@ var groupIDPattern = regexp.MustCompile(`[a-z0-9][a-z0-9_]*`)
 // in the list.
 // The client can get the communicators of custom groups via argument commMap
 // of the business function biz.
-func New[Message any](n int, biz BusinessFunc[Message], groupMap map[string][]int) framework.Controller {
+func New[Message any](
+	n int,
+	biz BusinessFunc[Message],
+	groupMap map[string][]int,
+) framework.Controller {
 	if biz == nil {
 		panic(errors.AutoMsg("biz is nil"))
 	} else if n <= 0 {
@@ -121,7 +128,11 @@ func New[Message any](n int, biz BusinessFunc[Message], groupMap map[string][]in
 // It returns the panic records of the Controller.
 //
 // The parameters are the same as those of function New.
-func Run[Message any](n int, biz BusinessFunc[Message], groupMap map[string][]int) []framework.PanicRecord {
+func Run[Message any](
+	n int,
+	biz BusinessFunc[Message],
+	groupMap map[string][]int,
+) []framework.PanicRecord {
 	ctrl := New(n, biz, groupMap)
 	ctrl.Run()
 	return ctrl.PanicRecords()

@@ -64,7 +64,8 @@ func (jq *fcfsJobQueue[Job, Properties]) Len() int {
 	return len(*jq)
 }
 
-func (jq *fcfsJobQueue[Job, Properties]) Enqueue(metaJob ...*jobsched.MetaJob[Job, Properties]) {
+func (jq *fcfsJobQueue[Job, Properties]) Enqueue(
+	metaJob ...*jobsched.MetaJob[Job, Properties]) {
 	if len(metaJob) == 0 {
 		return
 	}

@@ -176,7 +176,8 @@ type Communicator[Message any] interface {
 	//
 	// It returns the received message and an indicator ok.
 	// ok is false if and only if a quit signal is detected.
-	Scatter(root int, x sequence.Sequence[Message]) (msg array.Array[Message], ok bool)
+	Scatter(root int, x sequence.Sequence[Message]) (
+		msg array.Array[Message], ok bool)
 
 	// Gather collects messages from all goroutines (including the root)
 	// in this group to the root.
@@ -227,7 +228,10 @@ type sndrMsgRxc[Message any] struct {
 
 // newCommunicator creates a new communicator.
 // Only for function newContext.
-func newCommunicator[Message any](ctx *context[Message], rank int) *communicator[Message] {
+func newCommunicator[Message any](
+	ctx *context[Message],
+	rank int,
+) *communicator[Message] {
 	comm := &communicator[Message]{
 		ctx:  ctx,
 		bcdc: make(chan chan Message, 1),
@@ -480,7 +484,8 @@ func (comm *communicator[Message]) Barrier() bool {
 	return true
 }
 
-func (comm *communicator[Message]) Broadcast(root int, x Message) (msg Message, ok bool) {
+func (comm *communicator[Message]) Broadcast(root int, x Message) (
+	msg Message, ok bool) {
 	if comm.checkRootAndN(root) {
 		// No other goroutines in this group.
 		ok = !comm.ctx.ctrl.qd.IsQuit()
@@ -530,7 +535,10 @@ func (comm *communicator[Message]) Broadcast(root int, x Message) (msg Message, 
 	return msg, true
 }
 
-func (comm *communicator[Message]) Scatter(root int, x sequence.Sequence[Message]) (msg array.Array[Message], ok bool) {
+func (comm *communicator[Message]) Scatter(
+	root int,
+	x sequence.Sequence[Message],
+) (msg array.Array[Message], ok bool) {
 	if comm.checkRootAndN(root) {
 		// No other goroutines in this group.
 		ok = !comm.ctx.ctrl.qd.IsQuit()
@@ -618,7 +626,8 @@ func (comm *communicator[Message]) Scatter(root int, x sequence.Sequence[Message
 	return msg, true
 }
 
-func (comm *communicator[Message]) Gather(root int, msg Message) (x []Message, ok bool) {
+func (comm *communicator[Message]) Gather(root int, msg Message) (
+	x []Message, ok bool) {
 	if comm.checkRootAndN(root) {
 		// No other goroutines in this group.
 		ok = !comm.ctx.ctrl.qd.IsQuit()

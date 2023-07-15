@@ -137,7 +137,8 @@ type jobPriorityQueueMaker[Job, Properties any] struct {
 //
 // NewJobPriorityQueueMaker panics if lessFn is nil.
 func NewJobPriorityQueueMaker[Job, Properties any](
-	lessFn compare.LessFunc[*jobsched.MetaJob[Job, Properties]]) jobsched.JobQueueMaker[Job, Properties] {
+	lessFn compare.LessFunc[*jobsched.MetaJob[Job, Properties]],
+) jobsched.JobQueueMaker[Job, Properties] {
 	if lessFn == nil {
 		panic(errors.AutoMsg("lessFn is nil"))
 	}
@@ -164,7 +165,8 @@ func (jq *priorityJobQueue[Job, Properties]) Len() int {
 	return jq.pq.Len()
 }
 
-func (jq *priorityJobQueue[Job, Properties]) Enqueue(metaJob ...*jobsched.MetaJob[Job, Properties]) {
+func (jq *priorityJobQueue[Job, Properties]) Enqueue(
+	metaJob ...*jobsched.MetaJob[Job, Properties]) {
 	if len(metaJob) == 0 {
 		return
 	}

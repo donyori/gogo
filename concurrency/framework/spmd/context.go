@@ -61,7 +61,11 @@ type context[Message any] struct {
 // worldRanks is non-nil and non-empty,
 // has no duplicates and no out-of-range items,
 // and cannot be modified by others (such as the caller of function New).
-func newContext[Message any](ctrl *controller[Message], id string, worldRanks []int) *context[Message] {
+func newContext[Message any](
+	ctrl *controller[Message],
+	id string,
+	worldRanks []int,
+) *context[Message] {
 	n := len(worldRanks)
 	ctx := &context[Message]{
 		id:         id,

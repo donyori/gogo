@@ -64,7 +64,10 @@ func newChanDispr[Message any]() *chanDispr[Message] {
 // finChan is a channel to broadcast a finish signal by closing the channel.
 // It is closed at the end of this function.
 // finChan is ignored if it is nil.
-func (cd *chanDispr[Message]) Run(quitDevice framework.QuitDevice, finChan chan<- struct{}) {
+func (cd *chanDispr[Message]) Run(
+	quitDevice framework.QuitDevice,
+	finChan chan<- struct{},
+) {
 	if finChan != nil {
 		defer close(finChan)
 	}
@@ -97,7 +100,10 @@ func (cd *chanDispr[Message]) Run(quitDevice framework.QuitDevice, finChan chan<
 //
 // It returns an indicator, which is true if and only if
 // a quit signal is detected.
-func (cd *chanDispr[Message]) handleBcast(quitChan <-chan struct{}, qry *chanDispQry[Message]) bool {
+func (cd *chanDispr[Message]) handleBcast(
+	quitChan <-chan struct{},
+	qry *chanDispQry[Message],
+) bool {
 	ctx := qry.comm.ctx
 	if ctx.bcastMap == nil {
 		ctx.bcastMap = make(map[int64]*bcastChanCtr[Message])
@@ -134,7 +140,10 @@ func (cd *chanDispr[Message]) handleBcast(quitChan <-chan struct{}, qry *chanDis
 //
 // It returns an indicator, which is true if and only if
 // a quit signal is detected.
-func (cd *chanDispr[Message]) handleScatter(quitChan <-chan struct{}, qry *chanDispQry[Message]) bool {
+func (cd *chanDispr[Message]) handleScatter(
+	quitChan <-chan struct{},
+	qry *chanDispQry[Message],
+) bool {
 	ctx := qry.comm.ctx
 	if ctx.scatterMap == nil {
 		ctx.scatterMap = make(map[int64]*scatterChanCtr[Message])
@@ -174,7 +183,10 @@ func (cd *chanDispr[Message]) handleScatter(quitChan <-chan struct{}, qry *chanD
 //
 // It returns an indicator, which is true if and only if
 // a quit signal is detected.
-func (cd *chanDispr[Message]) handleGather(quitChan <-chan struct{}, qry *chanDispQry[Message]) bool {
+func (cd *chanDispr[Message]) handleGather(
+	quitChan <-chan struct{},
+	qry *chanDispQry[Message],
+) bool {
 	ctx := qry.comm.ctx
 	if ctx.gatherMap == nil {
 		ctx.gatherMap = make(map[int64]*gatherChanCtr[Message])

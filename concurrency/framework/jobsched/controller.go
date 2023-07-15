@@ -115,7 +115,9 @@ var noFeedbackType = reflect.TypeOf(NoFeedback{})
 // the framework skips sending feedback and sets that channel to nil,
 // and the client should not listen to that channel.
 type JobHandler[Job, Properties, Feedback any] func(
-	quitDevice framework.QuitDevice, rank int, job Job,
+	quitDevice framework.QuitDevice,
+	rank int,
+	job Job,
 ) (newJobs []*MetaJob[Job, Properties], feedback Feedback)
 
 // Options are options for creating Controller.
@@ -230,12 +232,69 @@ func New[Job, Properties, Feedback any](
 	return ctrl
 }
 
-// Run creates a Controller[Job, Properties, NoFeedback]
+// Run creates a Controller with specified arguments, and then runs it.
+//
+// feedbackHandler is a function to handle the feedback from the job handler.
+// It is called in a separate goroutine
+// when the type of feedback is not NoFeedback.
+// If feedbackHandler is nil, the feedback is discarded silently.
+// If feedbackHandler panics, the method Quit of the Controller is called
+// and the panic information is returned by Run,
+// as a github.com/donyori/gogo/concurrency/framework.PanicRecord.
+//
+// Other parameters are the same as those of function New.
+//
+// Run returns the panic records of the Controller,
+// appended with the panic record caused by feedbackHandler (if any).
+func Run[Job, Properties, Feedback any](
+	jobHandler JobHandler[Job, Properties, Feedback],
+	feedbackHandler func(feedbackChan <-chan Feedback),
+	opts *Options[Job, Properties, Feedback],
+	metaJob ...*MetaJob[Job, Properties],
+) []framework.PanicRecord {
+	ctrl := New(jobHandler, opts, metaJob...)
+	fc := ctrl.FeedbackChan()
+	doneC := make(chan struct{})
+	var feedbackHandlerPanic *framework.PanicRecord
+	if fc != nil {
+		if feedbackHandler == nil {
+			feedbackHandler = discardFeedback[Feedback]
+		}
+		go func(
+			doneC chan<- struct{},
+			f func(feedbackChan <-chan Feedback),
+			fc <-chan Feedback,
+		) {
+			defer close(doneC)
+			defer func() {
+				if e := recover(); e != nil {
+					ctrl.Quit()
+					feedbackHandlerPanic = &framework.PanicRecord{
+						Name:    "feedback handler",
+						Content: e,
+					}
+				}
+			}()
+			f(fc)
+		}(doneC, feedbackHandler, fc)
+	} else {
+		close(doneC)
+	}
+	ctrl.Run()
+	<-doneC
+	prs := ctrl.PanicRecords()
+	if feedbackHandlerPanic != nil {
+		prs = append(prs, *feedbackHandlerPanic)
+	}
+	return prs
+}
+
+// RunWithoutFeedback creates a Controller[Job, Properties, NoFeedback]
 // with specified arguments, and then runs it.
 // It returns the panic records of the Controller.
 //
 // The parameters are the same as those of function New.
-func Run[Job, Properties any](
+func RunWithoutFeedback[Job, Properties any](
 	handler JobHandler[Job, Properties, NoFeedback],
 	opts *Options[Job, Properties, NoFeedback],
 	metaJob ...*MetaJob[Job, Properties],
@@ -492,4 +551,15 @@ func copyMetaJobs[Job, Properties any](metaJobs []*MetaJob[Job, Properties]) []*
 		mjs = append(mjs, newMj)
 	}
 	return mjs
+}
+
+// discardFeedback receives and discards everything from
+// the specified feedback channel until the channel is closed.
+//
+// If the channel is nil, discardFeedback does nothing.
+func discardFeedback[Feedback any](feedbackChan <-chan Feedback) {
+	if feedbackChan != nil {
+		for range feedbackChan {
+		}
+	}
 }
