@@ -36,22 +36,21 @@ func TestNew_FeedbackChanBufSize(t *testing.T) {
 	for bufSize := -2; bufSize <= NumJob+1; bufSize++ {
 		t.Run(fmt.Sprintf("bufSize=%d", bufSize), func(t *testing.T) {
 			var x atomic.Int32
+			var feedbackSum int
 			ctrl := jobsched.New(func(quitDevice framework.QuitDevice, rank, job int) (
 				newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 				x.Add(1)
 				return nil, 1
-			}, &jobsched.Options[int, jobsched.NoProperty, int]{
+			}, getSumFeedbackHandler(&feedbackSum), &jobsched.Options[int, jobsched.NoProperty, int]{
 				NumWorker:           4,
 				FeedbackChanBufSize: bufSize,
 			}, make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumJob)...)
-			feedbackRecvDoneC := make(chan struct{})
-			defer func() {
-				<-feedbackRecvDoneC
-			}()
-			go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, NumJob)
 			ctrl.Run()
 			if gotX := x.Load(); gotX != NumJob {
 				t.Errorf("got x %d; want %d", gotX, NumJob)
+			}
+			if feedbackSum != NumJob {
+				t.Errorf("got sum of feedback %d; want %d", feedbackSum, NumJob)
 			}
 			if prs := ctrl.PanicRecords(); len(prs) > 0 {
 				t.Errorf("panic %q", prs)
@@ -85,7 +84,7 @@ func TestRun_FeedbackHandlerPanic(t *testing.T) {
 	prs := jobsched.Run(func(quitDevice framework.QuitDevice, rank, job int) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		return // do nothing
-	}, func(feedbackChan <-chan int) {
+	}, func(quitDevice framework.QuitDevice, feedback int) {
 		panic(PanicMsg)
 	}, &jobsched.Options[int, jobsched.NoProperty, int]{
 		NumWorker: NumWorker,
@@ -107,30 +106,35 @@ func TestRun_Panic(t *testing.T) {
 	const PanicMsg = "test panic"
 	const NumWorker = 3
 	var x atomic.Int32
+	var wg sync.WaitGroup
+	wg.Add(NumWorker)
 	prs := jobsched.Run(func(quitDevice framework.QuitDevice, rank, job int) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
-		// Job handler should not be called
-		// since the feedback handler is called before it
-		// and the feedback handler panics.
 		x.Add(1)
+		wg.Done()
+		wg.Wait() // block the worker to ensure that each worker is ready to panic
 		panic(PanicMsg)
-	}, func(feedbackChan <-chan int) {
+	}, func(quitDevice framework.QuitDevice, feedback int) {
+		// Feedback handler should not be called
+		// since the job handlers panic and return no feedback.
 		panic(PanicMsg)
 	}, &jobsched.Options[int, jobsched.NoProperty, int]{
 		NumWorker: NumWorker,
 	}, make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumWorker*2)...)
-	if gotX := x.Load(); gotX != 0 {
-		t.Errorf("got x %d; want 0", gotX)
+	if gotX := x.Load(); gotX != NumWorker {
+		t.Errorf("got x %d; want %d", gotX, NumWorker)
 	}
-	switch {
-	case len(prs) != 1:
-		t.Errorf("got len(prs) %d; want 1", len(prs))
-	case prs[0].Name != "feedback handler":
-		t.Error(prs[0])
-	default:
-		msg, ok := prs[0].Content.(string)
-		if !ok || msg != PanicMsg {
-			t.Error(prs[0])
+	if len(prs) != NumWorker {
+		t.Errorf("got len(prs) %d; want %d", len(prs), NumWorker)
+	}
+	for _, pr := range prs {
+		if !strings.HasPrefix(pr.Name, "worker ") {
+			t.Error(pr)
+		} else {
+			msg, ok := pr.Content.(string)
+			if !ok || msg != PanicMsg {
+				t.Error(pr)
+			}
 		}
 	}
 }
@@ -149,7 +153,7 @@ func TestRunWithoutFeedback_Panic(t *testing.T) {
 		panic(PanicMsg)
 	}, &jobsched.Options[int, jobsched.NoProperty, jobsched.NoFeedback]{
 		NumWorker: NumWorker,
-	}, make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumWorker)...)
+	}, make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumWorker*2)...)
 	if gotX := x.Load(); gotX != NumWorker {
 		t.Errorf("got x %d; want %d", gotX, NumWorker)
 	}
@@ -172,7 +176,7 @@ func TestController_Wait_BeforeLaunch(t *testing.T) {
 	ctrl := jobsched.New(func(quitDevice framework.QuitDevice, rank, job int) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		return // do nothing
-	}, nil)
+	}, nil, nil)
 	if got := ctrl.Wait(); got != -1 {
 		t.Errorf("got %d; want -1", got)
 	}
@@ -181,16 +185,12 @@ func TestController_Wait_BeforeLaunch(t *testing.T) {
 func TestController_Input_BeforeLaunch(t *testing.T) {
 	const NumJob = 3
 	var x atomic.Int32
+	var feedbackSum int
 	ctrl := jobsched.New(func(quitDevice framework.QuitDevice, rank, job int) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		x.Add(1)
 		return nil, 1
-	}, nil)
-	feedbackRecvDoneC := make(chan struct{})
-	defer func() {
-		<-feedbackRecvDoneC
-	}()
-	go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, NumJob)
+	}, getSumFeedbackHandler(&feedbackSum), nil)
 	gotInput := ctrl.Input(make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumJob)...)
 	if gotInput != NumJob {
 		t.Fatalf("before calling Launch, got %d; want %d", gotInput, NumJob)
@@ -198,6 +198,9 @@ func TestController_Input_BeforeLaunch(t *testing.T) {
 	ctrl.Run()
 	if gotX := x.Load(); gotX != NumJob {
 		t.Errorf("got x %d; want %d", gotX, NumJob)
+	}
+	if feedbackSum != NumJob {
+		t.Errorf("got sum of feedback %d; want %d", feedbackSum, NumJob)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
@@ -210,18 +213,14 @@ func TestController_Input_BeforeLaunch_Concurrency(t *testing.T) {
 	const WantX = NumJobPerInput * MaxJob * (1 + MaxJob) / 2
 	const WantFeedbackSum = NumJobPerInput * MaxJob
 	var x atomic.Int32
+	var feedbackSum int
 	ctrl := jobsched.New(func(quitDevice framework.QuitDevice, rank, job int) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		x.Add(int32(job))
 		return nil, 1
-	}, &jobsched.Options[int, jobsched.NoProperty, int]{
+	}, getSumFeedbackHandler(&feedbackSum), &jobsched.Options[int, jobsched.NoProperty, int]{
 		NumWorker: 4,
 	})
-	feedbackRecvDoneC := make(chan struct{})
-	defer func() {
-		<-feedbackRecvDoneC
-	}()
-	go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, WantFeedbackSum)
 	var wg sync.WaitGroup
 	wg.Add(MaxJob)
 	for job := 1; job <= MaxJob; job++ {
@@ -243,6 +242,10 @@ func TestController_Input_BeforeLaunch_Concurrency(t *testing.T) {
 	if gotX := x.Load(); gotX != WantX {
 		t.Errorf("got x %d; want %d", gotX, WantX)
 	}
+	if feedbackSum != WantFeedbackSum {
+		t.Errorf("got sum of feedback %d; want %d",
+			feedbackSum, WantFeedbackSum)
+	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
 	}
@@ -251,16 +254,12 @@ func TestController_Input_BeforeLaunch_Concurrency(t *testing.T) {
 func TestController_Input_DuringLaunch(t *testing.T) {
 	const NumJob = 3
 	var x atomic.Int32
+	var feedbackSum int
 	ctrl := jobsched.New(func(quitDevice framework.QuitDevice, rank, job int) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		x.Add(1)
 		return nil, 1
-	}, nil)
-	feedbackRecvDoneC := make(chan struct{})
-	defer func() {
-		<-feedbackRecvDoneC
-	}()
-	go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, NumJob)
+	}, getSumFeedbackHandler(&feedbackSum), nil)
 	lnchDoneC := make(chan struct{})
 	go func() {
 		ctrl.Launch()
@@ -275,6 +274,9 @@ func TestController_Input_DuringLaunch(t *testing.T) {
 	if gotX := x.Load(); gotX != NumJob {
 		t.Errorf("got x %d; want %d", gotX, NumJob)
 	}
+	if feedbackSum != NumJob {
+		t.Errorf("got sum of feedback %d; want %d", feedbackSum, NumJob)
+	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
 	}
@@ -286,18 +288,14 @@ func TestController_Input_DuringLaunch_Concurrency(t *testing.T) {
 	const WantX = NumJobPerInput * MaxJob * (1 + MaxJob) / 2
 	const WantFeedbackSum = NumJobPerInput * MaxJob
 	var x atomic.Int32
+	var feedbackSum int
 	ctrl := jobsched.New(func(quitDevice framework.QuitDevice, rank, job int) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		x.Add(int32(job))
 		return nil, 1
-	}, &jobsched.Options[int, jobsched.NoProperty, int]{
+	}, getSumFeedbackHandler(&feedbackSum), &jobsched.Options[int, jobsched.NoProperty, int]{
 		NumWorker: 4,
 	})
-	feedbackRecvDoneC := make(chan struct{})
-	defer func() {
-		<-feedbackRecvDoneC
-	}()
-	go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, WantFeedbackSum)
 	lnchDoneC := make(chan struct{})
 	var wg sync.WaitGroup
 	wg.Add(MaxJob)
@@ -325,6 +323,10 @@ func TestController_Input_DuringLaunch_Concurrency(t *testing.T) {
 	if gotX := x.Load(); gotX != WantX {
 		t.Errorf("got x %d; want %d", gotX, WantX)
 	}
+	if feedbackSum != WantFeedbackSum {
+		t.Errorf("got sum of feedback %d; want %d",
+			feedbackSum, WantFeedbackSum)
+	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
 	}
@@ -333,16 +335,12 @@ func TestController_Input_DuringLaunch_Concurrency(t *testing.T) {
 func TestController_Input_AfterLaunch(t *testing.T) {
 	const NumJob = 3
 	var x atomic.Int32
+	var feedbackSum int
 	ctrl := jobsched.New(func(quitDevice framework.QuitDevice, rank, job int) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		x.Add(1)
 		return nil, 1
-	}, nil)
-	feedbackRecvDoneC := make(chan struct{})
-	defer func() {
-		<-feedbackRecvDoneC
-	}()
-	go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, NumJob)
+	}, getSumFeedbackHandler(&feedbackSum), nil)
 	ctrl.Launch()
 	gotInput := ctrl.Input(make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumJob)...)
 	if gotInput != NumJob {
@@ -351,6 +349,9 @@ func TestController_Input_AfterLaunch(t *testing.T) {
 	ctrl.Wait()
 	if gotX := x.Load(); gotX != NumJob {
 		t.Errorf("got x %d; want %d", gotX, NumJob)
+	}
+	if feedbackSum != NumJob {
+		t.Errorf("got sum of feedback %d; want %d", feedbackSum, NumJob)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
@@ -363,18 +364,14 @@ func TestController_Input_AfterLaunch_Concurrency(t *testing.T) {
 	const WantX = NumJobPerInput * MaxJob * (1 + MaxJob) / 2
 	const WantFeedbackSum = NumJobPerInput * MaxJob
 	var x atomic.Int32
+	var feedbackSum int
 	ctrl := jobsched.New(func(quitDevice framework.QuitDevice, rank, job int) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		x.Add(int32(job))
 		return nil, 1
-	}, &jobsched.Options[int, jobsched.NoProperty, int]{
+	}, getSumFeedbackHandler(&feedbackSum), &jobsched.Options[int, jobsched.NoProperty, int]{
 		NumWorker: 4,
 	})
-	feedbackRecvDoneC := make(chan struct{})
-	defer func() {
-		<-feedbackRecvDoneC
-	}()
-	go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, WantFeedbackSum)
 	ctrl.Launch()
 	var wg sync.WaitGroup
 	wg.Add(MaxJob)
@@ -397,6 +394,10 @@ func TestController_Input_AfterLaunch_Concurrency(t *testing.T) {
 	if gotX := x.Load(); gotX != WantX {
 		t.Errorf("got x %d; want %d", gotX, WantX)
 	}
+	if feedbackSum != WantFeedbackSum {
+		t.Errorf("got sum of feedback %d; want %d",
+			feedbackSum, WantFeedbackSum)
+	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
 	}
@@ -404,18 +405,14 @@ func TestController_Input_AfterLaunch_Concurrency(t *testing.T) {
 
 func TestController_Input_DuringWaiting(t *testing.T) {
 	var x atomic.Int32
+	var feedbackSum int
 	handlerPauseC := make(chan struct{})
 	ctrl := jobsched.New(func(quitDevice framework.QuitDevice, rank, job int) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		x.Add(1)
 		<-handlerPauseC
 		return nil, 1
-	}, nil)
-	feedbackRecvDoneC := make(chan struct{})
-	defer func() {
-		<-feedbackRecvDoneC
-	}()
-	go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, 0)
+	}, getSumFeedbackHandler(&feedbackSum), nil)
 	ctrl.Launch()
 	waitStartC := make(chan struct{})
 	go func() {
@@ -432,6 +429,9 @@ func TestController_Input_DuringWaiting(t *testing.T) {
 	if gotX := x.Load(); gotX != 0 {
 		t.Errorf("got x %d; want 0", gotX)
 	}
+	if feedbackSum != 0 {
+		t.Errorf("got sum of feedback %d; want 0", feedbackSum)
+	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
 	}
@@ -439,16 +439,12 @@ func TestController_Input_DuringWaiting(t *testing.T) {
 
 func TestController_Input_AfterWait(t *testing.T) {
 	var x atomic.Int32
+	var feedbackSum int
 	ctrl := jobsched.New(func(quitDevice framework.QuitDevice, rank, job int) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		x.Add(1)
 		return nil, 1
-	}, nil)
-	feedbackRecvDoneC := make(chan struct{})
-	defer func() {
-		<-feedbackRecvDoneC
-	}()
-	go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, 0)
+	}, getSumFeedbackHandler(&feedbackSum), nil)
 	ctrl.Run()
 	gotInput := ctrl.Input(make([]*jobsched.MetaJob[int, jobsched.NoProperty], 3)...)
 	if gotInput != 0 {
@@ -456,6 +452,9 @@ func TestController_Input_AfterWait(t *testing.T) {
 	}
 	if gotX := x.Load(); gotX != 0 {
 		t.Errorf("got x %d; want 0", gotX)
+	}
+	if feedbackSum != 0 {
+		t.Errorf("got sum of feedback %d; want 0", feedbackSum)
 	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
@@ -465,16 +464,12 @@ func TestController_Input_AfterWait(t *testing.T) {
 func TestController_Input_AfterIneffectiveWait(t *testing.T) {
 	const NumJob = 3
 	var x atomic.Int32
+	var feedbackSum int
 	ctrl := jobsched.New(func(quitDevice framework.QuitDevice, rank, job int) (
 		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback int) {
 		x.Add(1)
 		return nil, 1
-	}, nil)
-	feedbackRecvDoneC := make(chan struct{})
-	defer func() {
-		<-feedbackRecvDoneC
-	}()
-	go receiveIntFeedbackAndTestSum(t, ctrl, feedbackRecvDoneC, NumJob)
+	}, getSumFeedbackHandler(&feedbackSum), nil)
 	if gotWait := ctrl.Wait(); gotWait != -1 {
 		t.Errorf("got %d on ineffective call to Wait; want -1", gotWait)
 	}
@@ -487,6 +482,9 @@ func TestController_Input_AfterIneffectiveWait(t *testing.T) {
 	if gotX := x.Load(); gotX != NumJob {
 		t.Errorf("got x %d; want %d", gotX, NumJob)
 	}
+	if feedbackSum != NumJob {
+		t.Errorf("got sum of feedback %d; want %d", feedbackSum, NumJob)
+	}
 	if prs := ctrl.PanicRecords(); len(prs) > 0 {
 		t.Errorf("panic %q", prs)
 	}
@@ -495,7 +493,7 @@ func TestController_Input_AfterIneffectiveWait(t *testing.T) {
 func TestController_NoFeedback(t *testing.T) {
 	const NumJob = 6
 	var x atomic.Int32
-	ctrl := jobsched.New(
+	ctrl := jobsched.NewWithoutFeedback(
 		func(quitDevice framework.QuitDevice, rank, job int) (
 			newJobs []*jobsched.MetaJob[int, jobsched.NoProperty], feedback jobsched.NoFeedback) {
 			x.Add(1)
@@ -506,9 +504,6 @@ func TestController_NoFeedback(t *testing.T) {
 		},
 		make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumJob)..., // 2 workers and 6 jobs to test blocking
 	)
-	if gotFC := ctrl.FeedbackChan(); gotFC != nil {
-		t.Error("got non-nil feedback channel; want nil")
-	}
 	ctrl.Run()
 	if gotX := x.Load(); gotX != NumJob {
 		t.Errorf("got x %d; want %d", gotX, NumJob)
@@ -709,7 +704,10 @@ func TestController_JobHandlerRankUnique(t *testing.T) {
 		t.Run(fmt.Sprintf("n=%d", n), func(t *testing.T) {
 			numWorker := n
 			if numWorker <= 0 {
-				numWorker = runtime.NumCPU()
+				numWorker = runtime.NumCPU() - 2
+				if numWorker < 1 {
+					numWorker = 1
+				}
 			}
 			counter := make([]atomic.Int32, numWorker)
 			var wg sync.WaitGroup
@@ -735,28 +733,16 @@ func TestController_JobHandlerRankUnique(t *testing.T) {
 	}
 }
 
-// receiveIntFeedbackAndTestSum receives feedback (of type int)
-// from ctrl.FeedbackChan(), calculates the sum,
-// and compares the result with wantSum.
-// If ctrl.FeedbackChan returns nil or the sum is not equal to wantSum,
-// it reports the error message using t.Error and t.Errorf.
-func receiveIntFeedbackAndTestSum[Job, Properties any](
-	t *testing.T,
-	ctrl jobsched.Controller[Job, Properties, int],
-	doneChan chan<- struct{},
-	wantSum int,
-) {
-	defer close(doneChan)
-	fc := ctrl.FeedbackChan()
-	if fc == nil {
-		t.Error("got nil feedback channel")
-		return
+// getSumFeedbackHandler returns a
+// github.com/donyori/gogo/concurrency/framework/jobsched.FeedbackHandler[int]
+// that adds the feedback (of type int) to *ptr.
+//
+// It returns nil if ptr is nil.
+func getSumFeedbackHandler(ptr *int) jobsched.FeedbackHandler[int] {
+	if ptr == nil {
+		return nil
 	}
-	var sum int
-	for feedback := range fc {
-		sum += feedback
-	}
-	if sum != wantSum {
-		t.Errorf("got sum of feedback %d; want %d", sum, wantSum)
+	return func(quitDevice framework.QuitDevice, feedback int) {
+		*ptr += feedback
 	}
 }

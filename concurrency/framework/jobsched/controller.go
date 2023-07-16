@@ -40,21 +40,9 @@ import (
 // The second type parameter Properties is the type of custom properties
 // in the meta information of jobs.
 // The third type parameter Feedback is the type of feedback on the jobs,
-// which is collected through a dedicated channel returned by FeedbackChan.
+// which is collected and handled in a dedicated goroutine.
 type Controller[Job, Properties, Feedback any] interface {
 	framework.Controller
-
-	// FeedbackChan returns the channel for feedback on jobs.
-	//
-	// The channel is closed when all jobs are finished or quit.
-	// The client is responsible for receiving feedback from the channel
-	// in time to avoid blocking the framework.
-	//
-	// FeedbackChan returns nil if and only if
-	// the type of feedback is NoFeedback.
-	// In this case, the framework skips sending feedback
-	// and the client should not listen to the channel.
-	FeedbackChan() <-chan Feedback
 
 	// Input enables the client to input new jobs.
 	//
@@ -77,8 +65,7 @@ type Controller[Job, Properties, Feedback any] interface {
 
 // NoFeedback is a special case of feedback type
 // to indicate that the job handler has no feedback.
-// In this case, the method FeedbackChan of Controller returns nil,
-// and the framework skips sending feedback.
+// In this case, the framework skips the feedback handler.
 type NoFeedback struct{}
 
 // noFeedbackType is the reflect.Type of NoFeedback.
@@ -90,7 +77,7 @@ var noFeedbackType = reflect.TypeOf(NoFeedback{})
 // The second type parameter Properties is the type of custom properties
 // in the meta information of jobs.
 // The third type parameter Feedback is the type of feedback on the jobs,
-// which is collected through a dedicated channel.
+// which is collected and handled in a dedicated goroutine.
 //
 // The first parameter is a device to acquire the channel for the quit signal,
 // detect the quit signal, and broadcast a quit signal to interrupt
@@ -108,22 +95,30 @@ var noFeedbackType = reflect.TypeOf(NoFeedback{})
 // this field is set to time.Now() by the framework.
 //
 // In addition, it also returns feedback on this job,
-// which is sent to a dedicated channel by the framework.
-// The client is responsible for receiving feedback from that channel
-// in time to avoid blocking the framework.
+// which is collected and handled in a dedicated goroutine.
 // In particular, if the type of feedback is NoFeedback,
-// the framework skips sending feedback and sets that channel to nil,
-// and the client should not listen to that channel.
+// the framework skips the feedback handler.
 type JobHandler[Job, Properties, Feedback any] func(
 	quitDevice framework.QuitDevice,
 	rank int,
 	job Job,
 ) (newJobs []*MetaJob[Job, Properties], feedback Feedback)
 
+// FeedbackHandler is a function to process feedback.
+//
+// The first parameter is a device to acquire the channel for the quit signal,
+// detect the quit signal, and broadcast a quit signal to interrupt
+// all job processors.
+// The second parameter is the feedback to be processed.
+type FeedbackHandler[Feedback any] func(
+	quitDevice framework.QuitDevice,
+	feedback Feedback,
+)
+
 // Options are options for creating Controller.
 type Options[Job, Properties, Feedback any] struct {
 	// The number of worker goroutines to process jobs.
-	// Non-positive values for using runtime.NumCPU().
+	// Non-positive values for using max(1, runtime.NumCPU()-2).
 	NumWorker int
 
 	// The maker to create a new job queue.
@@ -172,10 +167,15 @@ type Options[Job, Properties, Feedback any] struct {
 // The second type parameter Properties is the type of custom properties
 // in the meta information of jobs.
 // The third type parameter Feedback is the type of feedback on the jobs,
-// which is collected through a dedicated channel.
+// which is collected and handled in a dedicated goroutine.
 //
-// handler is the job handler.
-// New panics if handler is nil.
+// jobHandler is the job handler.
+// New panics if jobHandler is nil.
+//
+// feedbackHandler is the feedback handler.
+// If feedbackHandler is nil, all feedback is discarded silently.
+// If the type of feedback is NoFeedback,
+// the framework never calls feedbackHandler.
 //
 // If opts are nil, a zero-value Options is used.
 //
@@ -186,18 +186,22 @@ type Options[Job, Properties, Feedback any] struct {
 // If an item in metaJob has the field Meta.CreationTime with a zero value,
 // this field is set to time.Now() by the framework.
 func New[Job, Properties, Feedback any](
-	handler JobHandler[Job, Properties, Feedback],
+	jobHandler JobHandler[Job, Properties, Feedback],
+	feedbackHandler FeedbackHandler[Feedback],
 	opts *Options[Job, Properties, Feedback],
 	metaJob ...*MetaJob[Job, Properties],
 ) Controller[Job, Properties, Feedback] {
-	if handler == nil {
-		panic(errors.AutoMsg("handler is nil"))
+	if jobHandler == nil {
+		panic(errors.AutoMsg("job handler is nil"))
 	} else if opts == nil {
 		opts = new(Options[Job, Properties, Feedback])
 	}
 	n := opts.NumWorker
 	if n <= 0 {
-		n = runtime.NumCPU()
+		n = runtime.NumCPU() - 2
+		if n < 1 {
+			n = 1
+		}
 	}
 	var jq JobQueue[Job, Properties]
 	if opts.JobQueueMaker != nil {
@@ -210,7 +214,8 @@ func New[Job, Properties, Feedback any](
 	}
 	ctrl := &controller[Job, Properties, Feedback]{
 		n:       n,
-		h:       handler,
+		jh:      jobHandler,
+		fh:      feedbackHandler,
 		qd:      quitdevice.NewQuitDevice(),
 		jq:      jq,
 		ic:      make(chan []*MetaJob[Job, Properties]),
@@ -228,97 +233,74 @@ func New[Job, Properties, Feedback any](
 			bufSize = 0
 		}
 		ctrl.fc = make(chan Feedback, bufSize)
+		ctrl.fhdc = make(chan struct{})
 	}
 	return ctrl
 }
 
+// NewWithoutFeedback is like New but sets the type of feedback to NoFeedback.
+//
+// The parameters are similar to those of function New,
+// except that NewWithoutFeedback does not require feedbackHandler.
+//
+// It is equivalent to
+// New[Job, Properties, NoFeedback](jobHandler, nil, opts, metaJob...).
+func NewWithoutFeedback[Job, Properties any](
+	jobHandler JobHandler[Job, Properties, NoFeedback],
+	opts *Options[Job, Properties, NoFeedback],
+	metaJob ...*MetaJob[Job, Properties],
+) Controller[Job, Properties, NoFeedback] {
+	return New(jobHandler, nil, opts, metaJob...)
+}
+
 // Run creates a Controller with specified arguments, and then runs it.
+// It returns the panic records of the Controller.
 //
-// feedbackHandler is a function to handle the feedback from the job handler.
-// It is called in a separate goroutine
-// when the type of feedback is not NoFeedback.
-// If feedbackHandler is nil, the feedback is discarded silently.
-// If feedbackHandler panics, the method Quit of the Controller is called
-// and the panic information is returned by Run,
-// as a github.com/donyori/gogo/concurrency/framework.PanicRecord.
-//
-// Other parameters are the same as those of function New.
-//
-// Run returns the panic records of the Controller,
-// appended with the panic record caused by feedbackHandler (if any).
+// The parameters are the same as those of function New.
 func Run[Job, Properties, Feedback any](
 	jobHandler JobHandler[Job, Properties, Feedback],
-	feedbackHandler func(feedbackChan <-chan Feedback),
+	feedbackHandler FeedbackHandler[Feedback],
 	opts *Options[Job, Properties, Feedback],
 	metaJob ...*MetaJob[Job, Properties],
 ) []framework.PanicRecord {
-	ctrl := New(jobHandler, opts, metaJob...)
-	fc := ctrl.FeedbackChan()
-	doneC := make(chan struct{})
-	var feedbackHandlerPanic *framework.PanicRecord
-	if fc != nil {
-		if feedbackHandler == nil {
-			feedbackHandler = discardFeedback[Feedback]
-		}
-		go func(
-			doneC chan<- struct{},
-			f func(feedbackChan <-chan Feedback),
-			fc <-chan Feedback,
-		) {
-			defer close(doneC)
-			defer func() {
-				if e := recover(); e != nil {
-					ctrl.Quit()
-					feedbackHandlerPanic = &framework.PanicRecord{
-						Name:    "feedback handler",
-						Content: e,
-					}
-				}
-			}()
-			f(fc)
-		}(doneC, feedbackHandler, fc)
-	} else {
-		close(doneC)
-	}
+	ctrl := New(jobHandler, feedbackHandler, opts, metaJob...)
 	ctrl.Run()
-	<-doneC
-	prs := ctrl.PanicRecords()
-	if feedbackHandlerPanic != nil {
-		prs = append(prs, *feedbackHandlerPanic)
-	}
-	return prs
+	return ctrl.PanicRecords()
 }
 
 // RunWithoutFeedback creates a Controller[Job, Properties, NoFeedback]
 // with specified arguments, and then runs it.
 // It returns the panic records of the Controller.
 //
-// The parameters are the same as those of function New.
+// The parameters are the same as those of function NewWithoutFeedback.
+//
+// It is equivalent to
+// Run[Job, Properties, NoFeedback](jobHandler, nil, opts, metaJob...).
 func RunWithoutFeedback[Job, Properties any](
-	handler JobHandler[Job, Properties, NoFeedback],
+	jobHandler JobHandler[Job, Properties, NoFeedback],
 	opts *Options[Job, Properties, NoFeedback],
 	metaJob ...*MetaJob[Job, Properties],
 ) []framework.PanicRecord {
-	ctrl := New(handler, opts, metaJob...)
-	ctrl.Run()
-	return ctrl.PanicRecords()
+	return Run[Job, Properties, NoFeedback](jobHandler, nil, opts, metaJob...)
 }
 
 // controller is an implementation of interface Controller.
 type controller[Job, Properties, Feedback any] struct {
-	n int                                   // The number of worker goroutines to process jobs.
-	h JobHandler[Job, Properties, Feedback] // Job handler.
+	n  int                                   // The number of worker goroutines to process jobs.
+	jh JobHandler[Job, Properties, Feedback] // Job handler.
+	fh FeedbackHandler[Feedback]             // Feedback handler.
 
 	qd framework.QuitDevice      // Quit device.
 	jq JobQueue[Job, Properties] // Job queue.
 
-	ic  chan []*MetaJob[Job, Properties] // Input channel, to input jobs from the client.
-	eqc chan []*MetaJob[Job, Properties] // Enqueue channel, to input jobs from workers.
-	dqc chan Job                         // Dequeue channel, to dispatch jobs to workers.
-	fc  chan Feedback                    // Feedback channel, to collect feedback on jobs.
+	ic   chan []*MetaJob[Job, Properties] // Input channel, to input jobs from the client.
+	eqc  chan []*MetaJob[Job, Properties] // Enqueue channel, to input jobs from workers.
+	dqc  chan Job                         // Dequeue channel, to dispatch jobs to workers.
+	fc   chan Feedback                    // Feedback channel, to collect feedback on jobs.
+	fhdc chan struct{}                    // Feedback handler done channel, to broadcast a signal when the feedback handler is finished.
 
 	pr   framework.PanicRecords    // Panic records.
-	wg   sync.WaitGroup            // Wait group for the main process.
+	wg   sync.WaitGroup            // Wait group for the workers and the job allocator, not for the feedback handler.
 	loi  concurrency.OnceIndicator // For launching the framework.
 	wsoi concurrency.OnceIndicator // For indicating the start of the first effective call to the method Wait.
 	// Lock to avoid the race condition on jq
@@ -349,9 +331,37 @@ func (ctrl *controller[Job, Properties, Feedback]) Launch() {
 		defer ctrl.m.Unlock()
 		ctrl.lsi = true
 
-		ctrl.wg.Add(ctrl.n + 1) // n workers + 1 allocator
+		ctrl.wg.Add(ctrl.n + 1) // n workers + 1 job allocator
+		if ctrl.fc != nil {
+			go func() { // goroutine for feedback handler
+				defer close(ctrl.fhdc)
+				defer func() {
+					if e := recover(); e != nil {
+						ctrl.qd.Quit()
+						ctrl.pr.Append(framework.PanicRecord{
+							Name:    "feedback handler",
+							Content: e,
+						})
+					}
+				}()
+				ctrl.feedbackHandlerProc()
+			}()
+			go func() { // goroutine for closing feedback channel
+				defer close(ctrl.fc)
+				defer func() {
+					if e := recover(); e != nil {
+						ctrl.qd.Quit()
+						ctrl.pr.Append(framework.PanicRecord{
+							Name:    "feedback channel closer",
+							Content: e,
+						})
+					}
+				}()
+				ctrl.wg.Wait()
+			}()
+		}
 		for i := 0; i < ctrl.n; i++ {
-			go func(rank int) {
+			go func(rank int) { // goroutine for worker
 				defer ctrl.wg.Done()
 				defer func() {
 					if e := recover(); e != nil {
@@ -365,18 +375,18 @@ func (ctrl *controller[Job, Properties, Feedback]) Launch() {
 				ctrl.workerProc(rank)
 			}(i)
 		}
-		go func() {
+		go func() { // goroutine for job allocator
 			defer ctrl.wg.Done()
 			defer func() {
 				if e := recover(); e != nil {
 					ctrl.qd.Quit()
 					ctrl.pr.Append(framework.PanicRecord{
-						Name:    "allocator",
+						Name:    "job allocator",
 						Content: e,
 					})
 				}
 			}()
-			ctrl.allocatorProc()
+			ctrl.jobAllocatorProc()
 		}()
 	})
 }
@@ -384,12 +394,13 @@ func (ctrl *controller[Job, Properties, Feedback]) Launch() {
 func (ctrl *controller[Job, Properties, Feedback]) Wait() int {
 	if !ctrl.loi.Test() {
 		return -1
-	} else if ctrl.fc != nil {
-		defer close(ctrl.fc) // close(ctrl.fc) should be after ctrl.qd.Quit(), so defer it first
 	}
 	defer ctrl.qd.Quit() // for cleanup possible daemon goroutines that wait for a quit signal to exit
 	ctrl.wsoi.Do(nil)
 	ctrl.wg.Wait()
+	if ctrl.fhdc != nil {
+		<-ctrl.fhdc
+	}
 	return ctrl.pr.Len()
 }
 
@@ -406,11 +417,8 @@ func (ctrl *controller[Job, Properties, Feedback]) PanicRecords() []framework.Pa
 	return ctrl.pr.List()
 }
 
-func (ctrl *controller[Job, Properties, Feedback]) FeedbackChan() <-chan Feedback {
-	return ctrl.fc
-}
-
-func (ctrl *controller[Job, Properties, Feedback]) Input(metaJob ...*MetaJob[Job, Properties]) int {
+func (ctrl *controller[Job, Properties, Feedback]) Input(
+	metaJob ...*MetaJob[Job, Properties]) int {
 	if ctrl.wsoi.Test() {
 		return 0
 	}
@@ -426,8 +434,28 @@ func (ctrl *controller[Job, Properties, Feedback]) Input(metaJob ...*MetaJob[Job
 	}
 }
 
+// feedbackHandlerProc is the feedback handler main process,
+// without panic checking and close(ctrl.fhdc).
+func (ctrl *controller[Job, Properties, Feedback]) feedbackHandlerProc() {
+	// The feedback handler must handle all feedback
+	// returned by the job handlers.
+	// Therefore, this function does not listen to ctrl.qd.QuitChan().
+	switch {
+	case ctrl.fc == nil:
+		// This should never happen, but will act as a safeguard for later.
+		return
+	case ctrl.fh != nil:
+		for fb := range ctrl.fc {
+			ctrl.fh(ctrl.qd, fb)
+		}
+	default:
+		for range ctrl.fc {
+		}
+	}
+}
+
 // workerProc is the worker main process,
-// without panic checking and wg.Done().
+// without panic checking and ctrl.wg.Done().
 func (ctrl *controller[Job, Properties, Feedback]) workerProc(rank int) {
 	if ctrl.setup != nil {
 		ctrl.setup(ctrl, rank)
@@ -446,7 +474,7 @@ func (ctrl *controller[Job, Properties, Feedback]) workerProc(rank int) {
 			if !ok {
 				return
 			}
-			mjs, fb = ctrl.h(ctrl.qd, rank, job)
+			mjs, fb = ctrl.jh(ctrl.qd, rank, job)
 			mjs = copyMetaJobs(mjs)
 		}
 		if ctrl.fc != nil {
@@ -458,7 +486,7 @@ func (ctrl *controller[Job, Properties, Feedback]) workerProc(rank int) {
 			case ctrl.fc <- fb:
 			}
 		}
-		// Always send new jobs to the allocator,
+		// Always send new jobs to the job allocator,
 		// regardless of whether jobs are empty.
 		select {
 		case <-quitChan:
@@ -468,9 +496,9 @@ func (ctrl *controller[Job, Properties, Feedback]) workerProc(rank int) {
 	}
 }
 
-// allocatorProc is the allocator main process,
-// without panic checking and wg.Done().
-func (ctrl *controller[Job, Properties, Feedback]) allocatorProc() {
+// jobAllocatorProc is the job allocator main process,
+// without panic checking and ctrl.wg.Done().
+func (ctrl *controller[Job, Properties, Feedback]) jobAllocatorProc() {
 	defer close(ctrl.dqc)
 	var dqc chan<- Job // disable dqc at the beginning
 	var job Job
@@ -516,7 +544,8 @@ func (ctrl *controller[Job, Properties, Feedback]) allocatorProc() {
 //
 // It returns true if metaJobs are put into the job queue successfully.
 // When it returns false, the caller should then send metaJobs to ctrl.ic.
-func (ctrl *controller[Job, Properties, Feedback]) inputBeforeLaunch(metaJobs []*MetaJob[Job, Properties]) bool {
+func (ctrl *controller[Job, Properties, Feedback]) inputBeforeLaunch(
+	metaJobs []*MetaJob[Job, Properties]) bool {
 	ctrl.m.Lock()
 	defer ctrl.m.Unlock()
 	if ctrl.lsi {
@@ -531,7 +560,8 @@ func (ctrl *controller[Job, Properties, Feedback]) inputBeforeLaunch(metaJobs []
 // (with the field Job to its zero value, Meta.Priority to 0,
 // Meta.CreationTime to time.Now(), and Meta.Custom to its zero value),
 // and replaces the zero-value Meta.CreationTime field with time.Now().
-func copyMetaJobs[Job, Properties any](metaJobs []*MetaJob[Job, Properties]) []*MetaJob[Job, Properties] {
+func copyMetaJobs[Job, Properties any](
+	metaJobs []*MetaJob[Job, Properties]) []*MetaJob[Job, Properties] {
 	if metaJobs == nil {
 		return nil
 	}
@@ -551,15 +581,4 @@ func copyMetaJobs[Job, Properties any](metaJobs []*MetaJob[Job, Properties]) []*
 		mjs = append(mjs, newMj)
 	}
 	return mjs
-}
-
-// discardFeedback receives and discards everything from
-// the specified feedback channel until the channel is closed.
-//
-// If the channel is nil, discardFeedback does nothing.
-func discardFeedback[Feedback any](feedbackChan <-chan Feedback) {
-	if feedbackChan != nil {
-		for range feedbackChan {
-		}
-	}
 }

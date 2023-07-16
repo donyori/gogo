@@ -124,7 +124,7 @@ func New[Message any](
 	return ctrl
 }
 
-// Run creates a Controller with specified parameters, and then runs it.
+// Run creates a Controller with specified arguments, and then runs it.
 // It returns the panic records of the Controller.
 //
 // The parameters are the same as those of function New.

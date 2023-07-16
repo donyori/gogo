@@ -240,7 +240,7 @@ func EncodeInt64To(w io.Writer, x int64, upper bool, digits int) (written int, e
 }
 
 // encodeInt64 encodes x in hexadecimal representation into buf
-// with specified parameters.
+// with specified arguments.
 //
 // buf is the buffer obtained from int64BufferPool.
 // upper indicates whether to use uppercase in hexadecimal representation.
