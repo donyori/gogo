@@ -52,7 +52,7 @@ type OnceIndicator interface {
 	Test() bool
 }
 
-// NewOnceIndicator creates a new instance of OnceIndicator.
+// NewOnceIndicator creates a new OnceIndicator.
 func NewOnceIndicator() OnceIndicator {
 	firstC := make(chan struct{}, 1)
 	firstC <- struct{}{}

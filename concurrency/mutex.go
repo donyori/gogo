@@ -54,7 +54,7 @@ type Mutex interface {
 	Locked() bool
 }
 
-// NewMutex creates a new instance of Mutex.
+// NewMutex creates a new Mutex.
 func NewMutex() Mutex {
 	m := &mutex{make(chan struct{}, 1)}
 	m.c <- struct{}{}

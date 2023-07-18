@@ -89,7 +89,7 @@ type Broadcaster[Message any] interface {
 	Unsubscribe(c <-chan Message) []Message
 }
 
-// NewBroadcaster creates a new instance of interface Broadcaster.
+// NewBroadcaster creates a new Broadcaster.
 //
 // dfltBufSize is the default buffer size for the new broadcaster.
 // Non-positive values for no buffer.

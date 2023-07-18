@@ -86,6 +86,7 @@ func New[Message any](
 		qd:           quitdevice.NewQuitDevice(),
 		cd:           newChanDispr[Message](),
 		biz:          biz,
+		pr:           concurrency.NewRecorder[framework.PanicRecord](0),
 		lnchOi:       concurrency.NewOnceIndicator(),
 		cdOi:         concurrency.NewOnceIndicator(),
 		lnchCommMaps: make([]map[string]Communicator[Message], n),
@@ -144,12 +145,12 @@ type controller[Message any] struct {
 	world *context[Message]    // World context.
 	cd    *chanDispr[Message]  // Channel dispatcher.
 
-	biz    BusinessFunc[Message]     // Business function.
-	pr     framework.PanicRecords    // Panic records.
-	wg     sync.WaitGroup            // Wait group for the main process.
-	lnchOi concurrency.OnceIndicator // For launching the job.
-	cdOi   concurrency.OnceIndicator // For launching the channel dispatcher.
-	cdFinC chan struct{}             // Channel for the finish signal of the channel dispatcher.
+	biz    BusinessFunc[Message]                       // Business function.
+	pr     concurrency.Recorder[framework.PanicRecord] // Panic recorder.
+	wg     sync.WaitGroup                              // Wait group for the main process.
+	lnchOi concurrency.OnceIndicator                   // For launching the job.
+	cdOi   concurrency.OnceIndicator                   // For launching the channel dispatcher.
+	cdFinC chan struct{}                               // Channel for the finish signal of the channel dispatcher.
 
 	// List of commMap used by method Launch,
 	// will be nil after calling Launch.
@@ -178,7 +179,7 @@ func (ctrl *controller[Message]) Launch() {
 				defer func() {
 					if e := recover(); e != nil {
 						ctrl.qd.Quit()
-						ctrl.pr.Append(framework.PanicRecord{
+						ctrl.pr.Record(framework.PanicRecord{
 							Name:    strconv.Itoa(rank),
 							Content: e,
 						})
@@ -215,7 +216,7 @@ func (ctrl *controller[Message]) NumGoroutine() int {
 }
 
 func (ctrl *controller[Message]) PanicRecords() []framework.PanicRecord {
-	return ctrl.pr.List()
+	return ctrl.pr.All()
 }
 
 // launchChannelDispatcher launches a channel dispatcher in a daemon goroutine.
@@ -227,7 +228,7 @@ func (ctrl *controller[Message]) launchChannelDispatcher() {
 			defer func() {
 				if e := recover(); e != nil {
 					ctrl.qd.Quit()
-					ctrl.pr.Append(framework.PanicRecord{
+					ctrl.pr.Record(framework.PanicRecord{
 						Name:    "channel_dispatcher",
 						Content: e,
 					})

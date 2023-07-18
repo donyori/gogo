@@ -268,5 +268,7 @@ func FloatSliceEqualWithoutOrder[T constraints.Float](a, b []T) bool {
 			return false
 		}
 	}
+	// numNaN must be 0 here,
+	// because len(a) == len(b) and they have the same number of non-NaN items.
 	return true
 }

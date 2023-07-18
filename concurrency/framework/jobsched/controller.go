@@ -221,6 +221,7 @@ func New[Job, Properties, Feedback any](
 		ic:      make(chan []*MetaJob[Job, Properties]),
 		eqc:     make(chan []*MetaJob[Job, Properties]),
 		dqc:     make(chan Job),
+		pr:      concurrency.NewRecorder[framework.PanicRecord](0),
 		loi:     concurrency.NewOnceIndicator(),
 		wsoi:    concurrency.NewOnceIndicator(),
 		setup:   opts.Setup,
@@ -299,10 +300,10 @@ type controller[Job, Properties, Feedback any] struct {
 	fc   chan Feedback                    // Feedback channel, to collect feedback on jobs.
 	fhdc chan struct{}                    // Feedback handler done channel, to broadcast a signal when the feedback handler is finished.
 
-	pr   framework.PanicRecords    // Panic records.
-	wg   sync.WaitGroup            // Wait group for the workers and the job allocator, not for the feedback handler.
-	loi  concurrency.OnceIndicator // For launching the framework.
-	wsoi concurrency.OnceIndicator // For indicating the start of the first effective call to the method Wait.
+	pr   concurrency.Recorder[framework.PanicRecord] // Panic recorder.
+	wg   sync.WaitGroup                              // Wait group for the workers and the job allocator, not for the feedback handler.
+	loi  concurrency.OnceIndicator                   // For launching the framework.
+	wsoi concurrency.OnceIndicator                   // For indicating the start of the first effective call to the method Wait.
 	// Lock to avoid the race condition on jq
 	// when calling Launch and Input at the same time
 	// or calling Input simultaneously.
@@ -338,7 +339,7 @@ func (ctrl *controller[Job, Properties, Feedback]) Launch() {
 				defer func() {
 					if e := recover(); e != nil {
 						ctrl.qd.Quit()
-						ctrl.pr.Append(framework.PanicRecord{
+						ctrl.pr.Record(framework.PanicRecord{
 							Name:    "feedback handler",
 							Content: e,
 						})
@@ -351,7 +352,7 @@ func (ctrl *controller[Job, Properties, Feedback]) Launch() {
 				defer func() {
 					if e := recover(); e != nil {
 						ctrl.qd.Quit()
-						ctrl.pr.Append(framework.PanicRecord{
+						ctrl.pr.Record(framework.PanicRecord{
 							Name:    "feedback channel closer",
 							Content: e,
 						})
@@ -366,7 +367,7 @@ func (ctrl *controller[Job, Properties, Feedback]) Launch() {
 				defer func() {
 					if e := recover(); e != nil {
 						ctrl.qd.Quit()
-						ctrl.pr.Append(framework.PanicRecord{
+						ctrl.pr.Record(framework.PanicRecord{
 							Name:    "worker " + strconv.Itoa(rank),
 							Content: e,
 						})
@@ -380,7 +381,7 @@ func (ctrl *controller[Job, Properties, Feedback]) Launch() {
 			defer func() {
 				if e := recover(); e != nil {
 					ctrl.qd.Quit()
-					ctrl.pr.Append(framework.PanicRecord{
+					ctrl.pr.Record(framework.PanicRecord{
 						Name:    "job allocator",
 						Content: e,
 					})
@@ -414,7 +415,7 @@ func (ctrl *controller[Job, Properties, Feedback]) NumGoroutine() int {
 }
 
 func (ctrl *controller[Job, Properties, Feedback]) PanicRecords() []framework.PanicRecord {
-	return ctrl.pr.List()
+	return ctrl.pr.All()
 }
 
 func (ctrl *controller[Job, Properties, Feedback]) Input(
