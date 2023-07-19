@@ -31,6 +31,10 @@ func TestRecorder(t *testing.T) {
 	if rec == nil {
 		t.Fatal("got nil Recorder")
 	}
+	r := rec.Reader()
+	if _, ok := any(r).(concurrency.Recorder[int]); ok {
+		t.Error("the RecordReader can be converted to a Recorder")
+	}
 
 	data := [][]int{
 		nil,
@@ -69,15 +73,15 @@ func TestRecorder(t *testing.T) {
 		go func(rank int) {
 			defer wg.Done()
 
-			if got := rec.Len(); got != 0 {
+			if got := r.Len(); got != 0 {
 				t.Errorf("reader %d, initially - got Len %d; want 0",
 					rank, got)
 			}
-			if gotX, gotOK := rec.Last(); gotX != 0 || gotOK {
+			if gotX, gotOK := r.Last(); gotX != 0 || gotOK {
 				t.Errorf("reader %d, initially - got Last (%d, %t); want (0, false)",
 					rank, gotX, gotOK)
 			}
-			if got := rec.All(); got != nil {
+			if got := r.All(); got != nil {
 				t.Errorf("reader %d, initially - got All %v; want <nil>",
 					rank, got)
 			}
@@ -100,16 +104,16 @@ func TestRecorder(t *testing.T) {
 					<-recordedCsList[k][round]
 				}
 
-				if got := rec.Len(); got != len(wantAll) {
+				if got := r.Len(); got != len(wantAll) {
 					t.Errorf("reader %d, round %d - got Len %d; want %d",
 						rank, round, got, len(wantAll))
 				}
-				if gotX, gotOK := rec.Last(); gotX != wantLastX ||
+				if gotX, gotOK := r.Last(); gotX != wantLastX ||
 					gotOK != wantLastOK {
 					t.Errorf("reader %d, round %d - got Last (%d, %t); want (%d, %t)",
 						rank, round, gotX, gotOK, wantLastX, wantLastOK)
 				}
-				if got := rec.All(); (got == nil) != (wantAll == nil) ||
+				if got := r.All(); (got == nil) != (wantAll == nil) ||
 					!compare.ComparableSliceEqual(got, wantAll) {
 					switch {
 					case got == nil:
@@ -142,4 +146,6 @@ func TestRecorder(t *testing.T) {
 			}
 		}(i)
 	}
+
+	wg.Wait()
 }

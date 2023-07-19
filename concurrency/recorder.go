@@ -20,13 +20,8 @@ package concurrency
 
 import "sync"
 
-// Recorder is a simple device to record messages.
-//
-// Recorder can be used to log information in some goroutines
-// and retrieve it in other goroutines later.
-//
-// Recorder does not allow removing messages recorded.
-type Recorder[Message any] interface {
+// RecordReader is a device to read messages recorded by a Recorder.
+type RecordReader[Message any] interface {
 	// Len returns the number of messages recorded.
 	Len() int
 
@@ -36,6 +31,24 @@ type Recorder[Message any] interface {
 
 	// All returns all messages in recording order.
 	All() []Message
+}
+
+// Recorder is a device to record messages.
+//
+// Recorder can be used to log information in some goroutines
+// and retrieve it in other goroutines later.
+//
+// Recorder does not allow removing messages recorded.
+type Recorder[Message any] interface {
+	RecordReader[Message]
+
+	// Reader returns a RecordReader that
+	// reads messages recorded by this recorder.
+	//
+	// The returned RecordReader should not be able to
+	// be converted to a Recorder and should not provide
+	// any way to record messages or obtain the Recorder.
+	Reader() RecordReader[Message]
 
 	// Record logs the messages into this recorder.
 	Record(x ...Message)
@@ -85,6 +98,10 @@ func (rec *recorder[Message]) All() []Message {
 	return ms
 }
 
+func (rec *recorder[Message]) Reader() RecordReader[Message] {
+	return &recordReader[Message]{rec: rec}
+}
+
 func (rec *recorder[Message]) Record(x ...Message) {
 	if len(x) == 0 {
 		return
@@ -92,4 +109,21 @@ func (rec *recorder[Message]) Record(x ...Message) {
 	rec.lock.Lock()
 	defer rec.lock.Unlock()
 	rec.msgList = append(rec.msgList, x...)
+}
+
+// recordReader is an implementation of interface RecordReader.
+type recordReader[Message any] struct {
+	rec *recorder[Message]
+}
+
+func (r *recordReader[Message]) Len() int {
+	return r.rec.Len()
+}
+
+func (r *recordReader[Message]) Last() (x Message, ok bool) {
+	return r.rec.Last()
+}
+
+func (r *recordReader[Message]) All() []Message {
+	return r.rec.All()
 }
