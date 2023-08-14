@@ -148,16 +148,16 @@ func TestPriorityQueue_Top(t *testing.T) {
 		if len(data) == 0 {
 			continue
 		}
-		min := data[0]
+		minX := data[0]
 		for i := 1; i < len(data); i++ {
-			if min > data[i] {
-				min = data[i]
+			if minX > data[i] {
+				minX = data[i]
 			}
 		}
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
 			pq := pqueue.New[int](IntLess, IntSDAPtr(&data))
-			if x := pq.Top(); x != min {
-				t.Errorf("got %d; want %d", x, min)
+			if x := pq.Top(); x != minX {
+				t.Errorf("got %d; want %d", x, minX)
 			}
 		})
 	}

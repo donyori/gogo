@@ -163,17 +163,17 @@ const MaxItem int = 3
 
 func init() {
 	// Check whether MaxItem is valid.
-	var max int
+	var maxX int
 	for _, ps := range dataList {
 		for _, data := range ps {
 			for _, x := range data {
-				if max < x {
-					max = x
+				if maxX < x {
+					maxX = x
 				}
 			}
 		}
 	}
-	if max != MaxItem {
+	if maxX != MaxItem {
 		panic("MaxItem needs to be updated")
 	}
 }
