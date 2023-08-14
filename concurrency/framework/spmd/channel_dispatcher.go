@@ -47,11 +47,14 @@ type chanDispr[Message any] struct {
 
 // newChanDispr creates a new channel dispatcher.
 // Only for function New.
-func newChanDispr[Message any]() *chanDispr[Message] {
+func newChanDispr[Message any](bufSize int) *chanDispr[Message] {
+	if bufSize < 0 {
+		bufSize = 0
+	}
 	return &chanDispr[Message]{
-		bcastChan:   make(chan *chanDispQry[Message]),
-		scatterChan: make(chan *chanDispQry[Message]),
-		gatherChan:  make(chan *chanDispQry[Message]),
+		bcastChan:   make(chan *chanDispQry[Message], bufSize),
+		scatterChan: make(chan *chanDispQry[Message], bufSize),
+		gatherChan:  make(chan *chanDispQry[Message], bufSize),
 	}
 }
 

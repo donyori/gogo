@@ -84,7 +84,7 @@ func New[Message any](
 	}
 	ctrl := &controller[Message]{
 		qd:           quitdevice.NewQuitDevice(),
-		cd:           newChanDispr[Message](),
+		cd:           newChanDispr[Message](n),
 		biz:          biz,
 		pr:           concurrency.NewRecorder[framework.PanicRecord](0),
 		lnchOi:       concurrency.NewOnceIndicator(),

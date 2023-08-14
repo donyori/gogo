@@ -241,10 +241,10 @@ func newCommunicator[Message any](
 		pcs:  make([]chan Message, len(ctx.worldRanks)-1),
 	}
 	if rank > 0 {
-		comm.bc = make(chan chan struct{})
+		comm.bc = make(chan chan struct{}, 1)
 	}
 	for i := range comm.pcs {
-		comm.pcs[i] = make(chan Message)
+		comm.pcs[i] = make(chan Message) // no buffer here because the point-to-point sending requires blocking
 	}
 	return comm
 }
@@ -305,7 +305,7 @@ func (comm *communicator[Message]) SendPublic(msg Message) int {
 	if len(comm.ctx.comms) == 1 {
 		panic(errors.AutoMsg("only one goroutine in this group"))
 	}
-	rxC := make(chan int)
+	rxC := make(chan int, 1)
 	m := &sndrMsgRxc[Message]{
 		sndrMsg: sndrMsg[Message]{
 			sndr: comm.rank,
@@ -351,7 +351,7 @@ func (comm *communicator[Message]) SendAny(msg Message) int {
 	if len(comm.ctx.comms) == 1 {
 		panic(errors.AutoMsg("only one goroutine in this group"))
 	}
-	rxC := make(chan int)
+	rxC := make(chan int, 1)
 	m := &sndrMsgRxc[Message]{
 		sndrMsg: sndrMsg[Message]{
 			sndr: comm.rank,

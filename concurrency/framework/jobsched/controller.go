@@ -218,9 +218,9 @@ func New[Job, Properties, Feedback any](
 		fh:      feedbackHandler,
 		qd:      quitdevice.NewQuitDevice(),
 		jq:      jq,
-		ic:      make(chan []*MetaJob[Job, Properties]),
-		eqc:     make(chan []*MetaJob[Job, Properties]),
-		dqc:     make(chan Job),
+		ic:      make(chan []*MetaJob[Job, Properties], 1),
+		eqc:     make(chan []*MetaJob[Job, Properties], n),
+		dqc:     make(chan Job, 1),
 		pr:      concurrency.NewRecorder[framework.PanicRecord](0),
 		loi:     concurrency.NewOnceIndicator(),
 		wsoi:    concurrency.NewOnceIndicator(),
@@ -509,7 +509,7 @@ func (ctrl *controller[Job, Properties, Feedback]) jobAllocatorProc() {
 	}
 	ctr := 1 // counter for available input sources. 1 at the beginning stands for the client
 	quitChan, wsoiC := ctrl.qd.QuitChan(), ctrl.wsoi.C()
-	for ctr > 0 || dqc != nil {
+	for ctr > 0 || len(ctrl.ic) > 0 || dqc != nil {
 		select {
 		case <-quitChan:
 			return
