@@ -22,11 +22,11 @@ import (
 	stderrors "errors"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"testing"
 
 	"github.com/donyori/gogo/errors"
-	"github.com/donyori/gogo/function/compare"
 )
 
 type testError struct {
@@ -457,7 +457,7 @@ func TestListFunctionNamesInAutoWrappedErrors(t *testing.T) {
 				}
 			case gotNames == nil:
 				t.Errorf("got names <nil>; want %v", tc.wantNames)
-			case !compare.ComparableSliceEqual(gotNames, tc.wantNames):
+			case !slices.Equal(gotNames, tc.wantNames):
 				t.Errorf("got names %v; want %v", gotNames, tc.wantNames)
 			}
 			if gotRoot != tc.wantRoot {

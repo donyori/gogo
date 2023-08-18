@@ -20,6 +20,7 @@ package topkbuf_test
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"testing"
 
@@ -210,7 +211,7 @@ func TestTopKBuffer_Drain(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k), func(t *testing.T) {
 			tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
-			if topK := tkb.Drain(); !compare.ComparableSliceEqual(topK, tc.want) {
+			if topK := tkb.Drain(); !slices.Equal(topK, tc.want) {
 				t.Errorf("got %v; want %v", topK, tc.want)
 			}
 		})
@@ -263,8 +264,9 @@ func kSuffixAndReverse[Item any](s []Item, k int) []Item {
 }
 
 // !!tkb may be modified in this function.
-func checkTopKBufferByDrain[Item comparable](t *testing.T, tkb topkbuf.TopKBuffer[Item], want []Item) {
-	if topK := tkb.Drain(); !compare.ComparableSliceEqual(topK, want) {
+func checkTopKBufferByDrain[Item comparable](
+	t *testing.T, tkb topkbuf.TopKBuffer[Item], want []Item) {
+	if topK := tkb.Drain(); !slices.Equal(topK, want) {
 		t.Errorf("tkb contains %v; want %v", topK, want)
 	}
 }

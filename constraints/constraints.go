@@ -182,3 +182,17 @@ type PredeclaredByteString interface {
 type ByteString interface {
 	~[]byte | ~string
 }
+
+// Slice is a constraint for slices.
+// It matches any type whose underlying type is []Elem,
+// where Elem can be any type.
+type Slice[Elem any] interface {
+	~[]Elem
+}
+
+// Map is a constraint for maps.
+// It matches any type whose underlying type is map[Key]Value,
+// where Key is a comparable type and Value can be any type.
+type Map[Key comparable, Value any] interface {
+	~map[Key]Value
+}

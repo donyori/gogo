@@ -25,25 +25,27 @@ import (
 )
 
 type (
-	myInt        int
-	myInt8       int8
-	myInt16      int16
-	myInt32      int32
-	myRune       rune
-	myInt64      int64
-	myUint       uint
-	myUint8      uint8
-	myByte       byte
-	myUint16     uint16
-	myUint32     uint32
-	myUint64     uint64
-	myUintptr    uintptr
-	myFloat32    float32
-	myFloat64    float64
-	myComplex64  complex64
-	myComplex128 complex128
-	myString     string
-	myByteSlice  []byte
+	myInt                 int
+	myInt8                int8
+	myInt16               int16
+	myInt32               int32
+	myRune                rune
+	myInt64               int64
+	myUint                uint
+	myUint8               uint8
+	myByte                byte
+	myUint16              uint16
+	myUint32              uint32
+	myUint64              uint64
+	myUintptr             uintptr
+	myFloat32             float32
+	myFloat64             float64
+	myComplex64           complex64
+	myComplex128          complex128
+	myString              string
+	myByteSlice           []byte
+	myIntSlice            []myInt
+	myStringToIntSliceMap map[myString]myIntSlice
 )
 
 var (
@@ -268,4 +270,77 @@ func concatBytes[T1, T2 constraints.ByteString](s1 T1, s2 T2) []byte {
 	n := copy(s, s1)
 	copy(s[n:], s2)
 	return s
+}
+
+func TestCompileSlice(t *testing.T) {
+	copySlice(ints)
+	copySlice(int8s)
+	copySlice(int16s)
+	copySlice(int32s)
+	copySlice(runes)
+	copySlice(int64s)
+	copySlice(uints)
+	copySlice(uint8s)
+	copySlice(bytes)
+	copySlice(uint16s)
+	copySlice(uint32s)
+	copySlice(uint64s)
+	copySlice(uintptrs)
+	copySlice(float32s)
+	copySlice(float64s)
+	copySlice(complex64s)
+	copySlice(complex128s)
+	copySlice(strings)
+
+	copySlice(myInts)
+	copySlice(myInt8s)
+	copySlice(myInt16s)
+	copySlice(myInt32s)
+	copySlice(myRunes)
+	copySlice(myInt64s)
+	copySlice(myUints)
+	copySlice(myUint8s)
+	copySlice(myBytes)
+	copySlice(myUint16s)
+	copySlice(myUint32s)
+	copySlice(myUint64s)
+	copySlice(myUintptrs)
+	copySlice(myFloat32s)
+	copySlice(myFloat64s)
+	copySlice(myComplex64s)
+	copySlice(myComplex128s)
+	copySlice(myStrings)
+
+	var s myIntSlice
+	copySlice(s)
+	var ss []myIntSlice
+	copySlice(ss)
+}
+
+func copySlice[S constraints.Slice[Elem], Elem any](s S) S {
+	if s == nil {
+		return nil
+	}
+	cp := make(S, len(s))
+	copy(cp, s)
+	return cp
+}
+
+func TestCompileMap(t *testing.T) {
+	var m1 map[string][]int
+	var m2 myStringToIntSliceMap
+
+	copyMap(m1)
+	copyMap(m2)
+}
+
+func copyMap[M constraints.Map[Key, Value], Key comparable, Value any](m M) M {
+	if m == nil {
+		return nil
+	}
+	cp := make(M, len(m))
+	for k, v := range m {
+		cp[k] = v
+	}
+	return cp
 }

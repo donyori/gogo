@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"hash"
 	"io/fs"
+	"slices"
 	"strings"
 	"testing"
 
@@ -63,7 +64,7 @@ func TestChecksum(t *testing.T) {
 					got, err := filesys.Checksum(file, false, upper, newHashes...)
 					if err != nil {
 						t.Error("checksum -", err)
-					} else if !compare.ComparableSliceEqual(got, want) {
+					} else if !slices.Equal(got, want) {
 						t.Errorf("got %v\nwant %v", got, want)
 					}
 				})
@@ -95,7 +96,7 @@ func TestChecksumFromFS(t *testing.T) {
 					got, err := filesys.ChecksumFromFS(testFS, filename, upper, newHashes...)
 					if err != nil {
 						t.Error("checksum -", err)
-					} else if !compare.ComparableSliceEqual(got, want) {
+					} else if !slices.Equal(got, want) {
 						t.Errorf("got %v\nwant %v", got, want)
 					}
 				})

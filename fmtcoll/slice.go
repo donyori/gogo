@@ -23,6 +23,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/donyori/gogo/constraints"
 	"github.com/donyori/gogo/container/sequence"
 	"github.com/donyori/gogo/errors"
 )
@@ -34,8 +35,8 @@ import (
 //
 // If format is nil, it uses default format options
 // as returned by NewDefaultSequenceFormat instead.
-func FormatSliceToString[Item any](s []Item, format *SequenceFormat[Item]) (
-	result string, err error) {
+func FormatSliceToString[S constraints.Slice[Item], Item any](
+	s S, format *SequenceFormat[Item]) (result string, err error) {
 	result, err = formatSequenceToString(
 		format,
 		reflect.TypeOf(s).String(),
@@ -54,7 +55,8 @@ func FormatSliceToString[Item any](s []Item, format *SequenceFormat[Item]) (
 
 // MustFormatSliceToString is like FormatSliceToString
 // but panics when encountering an error.
-func MustFormatSliceToString[Item any](s []Item, format *SequenceFormat[Item]) string {
+func MustFormatSliceToString[S constraints.Slice[Item], Item any](
+	s S, format *SequenceFormat[Item]) string {
 	result, err := FormatSliceToString(s, format)
 	if err != nil {
 		panic(errors.AutoWrap(err))

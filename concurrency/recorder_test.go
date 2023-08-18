@@ -19,11 +19,11 @@
 package concurrency_test
 
 import (
+	"slices"
 	"sync"
 	"testing"
 
 	"github.com/donyori/gogo/concurrency"
-	"github.com/donyori/gogo/function/compare"
 )
 
 func TestRecorder(t *testing.T) {
@@ -114,7 +114,7 @@ func TestRecorder(t *testing.T) {
 						rank, round, gotX, gotOK, wantLastX, wantLastOK)
 				}
 				if got := r.All(); (got == nil) != (wantAll == nil) ||
-					!compare.ComparableSliceEqual(got, wantAll) {
+					!slices.Equal(got, wantAll) {
 					switch {
 					case got == nil:
 						// wantAll is non-nil.

@@ -19,12 +19,12 @@
 package permutation_test
 
 import (
+	"slices"
 	"sort"
 	"testing"
 
 	"github.com/donyori/gogo/algorithm/permutation"
 	"github.com/donyori/gogo/fmtcoll"
-	"github.com/donyori/gogo/function/compare"
 )
 
 var dataList = [][][]int{
@@ -227,8 +227,5 @@ func dataToName(data []int) string {
 }
 
 func dataUnequal(a, b []int) bool {
-	if a == nil {
-		return b != nil
-	}
-	return b == nil || !compare.ComparableSliceEqual(a, b)
+	return (a == nil) != (b == nil) || !slices.Equal(a, b)
 }

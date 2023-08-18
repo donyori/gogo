@@ -20,6 +20,7 @@ package mapset_test
 
 import (
 	"fmt"
+	"maps"
 	"testing"
 
 	"github.com/donyori/gogo/container/sequence/array"
@@ -296,7 +297,7 @@ func TestMapSet_Add(t *testing.T) {
 		for _, x := range dataList {
 			testCases[idx].data = data
 			testCases[idx].x = x
-			want := copyMap(dataSetList[i])
+			want := maps.Clone(dataSetList[i])
 			for _, item := range x {
 				want[item] = true
 			}
@@ -326,7 +327,7 @@ func TestMapSet_Remove(t *testing.T) {
 		for _, x := range dataList {
 			testCases[idx].data = data
 			testCases[idx].x = x
-			want := copyMap(dataSetList[i])
+			want := maps.Clone(dataSetList[i])
 			for _, item := range x {
 				delete(want, item)
 			}
@@ -369,7 +370,7 @@ func TestMapSet_Union(t *testing.T) {
 		for _, s := range setList {
 			testCases[idx].data = data
 			testCases[idx].s = s
-			want := copyMap(dataSetList[i])
+			want := maps.Clone(dataSetList[i])
 			if s != nil {
 				s.Range(func(x int) (cont bool) {
 					want[x] = true
@@ -417,7 +418,7 @@ func TestMapSet_Intersect(t *testing.T) {
 			testCases[idx].s = s
 			var want map[int]bool
 			if s != nil {
-				want = copyMap(dataSetList[i])
+				want = maps.Clone(dataSetList[i])
 				for x := range want {
 					if !s.ContainsItem(x) {
 						delete(want, x)
@@ -465,7 +466,7 @@ func TestMapSet_Subtract(t *testing.T) {
 		for _, s := range setList {
 			testCases[idx].data = data
 			testCases[idx].s = s
-			want := copyMap(dataSetList[i])
+			want := maps.Clone(dataSetList[i])
 			if s != nil {
 				s.Range(func(x int) (cont bool) {
 					delete(want, x)
@@ -610,15 +611,4 @@ func setWrong(s set.Set[int], want map[int]bool) bool {
 		}
 	}
 	return false
-}
-
-func copyMap[K comparable, V any](m map[K]V) map[K]V {
-	if m == nil {
-		return nil
-	}
-	t := make(map[K]V, len(m))
-	for k, v := range m {
-		t[k] = v
-	}
-	return t
 }

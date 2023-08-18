@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/donyori/gogo/constraints"
 	"github.com/donyori/gogo/container/mapping"
 	"github.com/donyori/gogo/errors"
 )
@@ -35,9 +36,8 @@ import (
 //
 // If format is nil, it uses default format options
 // as returned by NewDefaultMapFormat instead.
-func FormatMapToString[Key comparable, Value any](
-	m map[Key]Value, format *MapFormat[Key, Value],
-) (result string, err error) {
+func FormatMapToString[M constraints.Map[Key, Value], Key comparable, Value any](
+	m M, format *MapFormat[Key, Value]) (result string, err error) {
 	result, err = formatMapToString(
 		format,
 		reflect.TypeOf(m).String(),
@@ -56,8 +56,8 @@ func FormatMapToString[Key comparable, Value any](
 
 // MustFormatMapToString is like FormatMapToString
 // but panics when encountering an error.
-func MustFormatMapToString[Key comparable, Value any](
-	m map[Key]Value, format *MapFormat[Key, Value]) string {
+func MustFormatMapToString[M constraints.Map[Key, Value], Key comparable, Value any](
+	m M, format *MapFormat[Key, Value]) string {
 	result, err := FormatMapToString(m, format)
 	if err != nil {
 		panic(errors.AutoWrap(err))

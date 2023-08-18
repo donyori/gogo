@@ -21,6 +21,7 @@ package array_test
 import (
 	"container/list"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -986,17 +987,11 @@ func copySda[Item any](data []Item) array.SliceDynamicArray[Item] {
 }
 
 func sliceUnequal[T comparable](a, b []T) bool {
-	if a == nil {
-		return b != nil
-	}
-	return b == nil || !compare.ComparableSliceEqual(a, b)
+	return (a == nil) != (b == nil) || !slices.Equal(a, b)
 }
 
 func sliceUnequalWithoutOrder[T comparable](a, b []T) bool {
-	if a == nil {
-		return b != nil
-	}
-	return b == nil || !compare.ComparableSliceEqualWithoutOrder(a, b)
+	return !compare.SliceEqualWithoutOrder(a, b)
 }
 
 // sequenceImpl is a linked list-based implementation of interface

@@ -34,13 +34,13 @@ func (ef EqualFunc[T]) Not() EqualFunc[T] {
 	}
 }
 
-// ComparableEqual is a generic function to test whether a == b.
+// Equal is a generic function to test whether a == b.
 //
 // The client can instantiate it to get an EqualFunc.
 //
 // For floating-point numbers, to consider NaN values equal to each other,
 // use function FloatEqual.
-func ComparableEqual[T comparable](a, b T) bool {
+func Equal[T comparable](a, b T) bool {
 	return a == b
 }
 
@@ -49,7 +49,7 @@ func ComparableEqual[T comparable](a, b T) bool {
 //
 // The client can instantiate it to get an EqualFunc.
 //
-// To just test whether a == b, use function ComparableEqual.
+// To just test whether a == b, use function Equal.
 func FloatEqual[T constraints.Float](a, b T) bool {
 	return a == b || a != a && b != b // "x != x" means that x is a NaN
 }
@@ -92,18 +92,21 @@ func anyEqual(a, b any) bool {
 	return reflect.TypeOf(a).Comparable() && a == b
 }
 
-// ComparableSliceEqual is a generic function to test whether
+// SliceEqual is a generic function to test whether
 // the specified slices have the same length and the items
 // with the same index are equal.
+// In particular, a nil slice and a non-nil empty slice are considered unequal.
 //
 // It uses the not equal operator (!=) to test the equality
 // of the slice items.
 //
 // The client can instantiate it to get an EqualFunc.
-func ComparableSliceEqual[T comparable](a, b []T) bool {
+func SliceEqual[S constraints.Slice[T], T comparable](a, b S) bool {
 	n := len(a)
 	if n != len(b) {
 		return false
+	} else if n == 0 {
+		return (a == nil) == (b == nil)
 	}
 	for i := 0; i < n; i++ {
 		if a[i] != b[i] {
@@ -116,15 +119,18 @@ func ComparableSliceEqual[T comparable](a, b []T) bool {
 // FloatSliceEqual is a generic function to test whether
 // the specified slices have the same length and the items
 // with the same index are equal.
+// In particular, a nil slice and a non-nil empty slice are considered unequal.
 //
 // Two items (floating-point numbers) a and b are considered equal
 // if a == b or both a and b are NaN.
 //
 // The client can instantiate it to get an EqualFunc.
-func FloatSliceEqual[T constraints.Float](a, b []T) bool {
+func FloatSliceEqual[S constraints.Slice[T], T constraints.Float](a, b S) bool {
 	n := len(a)
 	if n != len(b) {
 		return false
+	} else if n == 0 {
+		return (a == nil) == (b == nil)
 	}
 	for i := 0; i < n; i++ {
 		// "x == x" means that x is not a NaN.
@@ -138,15 +144,18 @@ func FloatSliceEqual[T constraints.Float](a, b []T) bool {
 // AnySliceEqual is a generic function to test whether
 // the specified slices have the same length and the items
 // with the same index are equal.
+// In particular, a nil slice and a non-nil empty slice are considered unequal.
 //
 // It uses the function AnyEqual to test the equality
 // of the slice items.
 //
 // The client can instantiate it to get an EqualFunc.
-func AnySliceEqual[T any](a, b []T) bool {
+func AnySliceEqual[S constraints.Slice[T], T any](a, b S) bool {
 	n := len(a)
 	if n != len(b) {
 		return false
+	} else if n == 0 {
+		return (a == nil) == (b == nil)
 	}
 	for i := 0; i < n; i++ {
 		if !AnyEqual(a[i], b[i]) {
@@ -156,22 +165,23 @@ func AnySliceEqual[T any](a, b []T) bool {
 	return true
 }
 
-// ToSliceEqual returns a function to test whether two slices of type []T,
-// a and b, have the same length and whether their items
-// with the same index are equal.
+// EqualToSliceEqual returns a function to test whether two slices of type S
+// (whose underlying type is []T), a and b, have the same length and
+// whether their items with the same index are equal.
 //
 // It uses ef to test the equality of the slice items.
 // If ef is nil, it uses AnyEqual instead.
 //
 // nilEqualToEmpty indicates whether to consider
-// nil slices equal to non-nil empty slices.
-func ToSliceEqual[T any](ef EqualFunc[T], nilEqualToEmpty bool) EqualFunc[[]T] {
+// a nil slice equal to a non-nil empty slices.
+func EqualToSliceEqual[S constraints.Slice[T], T any](
+	ef EqualFunc[T], nilEqualToEmpty bool) EqualFunc[S] {
 	if ef == nil {
 		ef = func(a, b T) bool {
 			return AnyEqual(a, b)
 		}
 	}
-	return func(a, b []T) bool {
+	return func(a, b S) bool {
 		n := len(a)
 		if n != len(b) {
 			return false
@@ -187,7 +197,7 @@ func ToSliceEqual[T any](ef EqualFunc[T], nilEqualToEmpty bool) EqualFunc[[]T] {
 	}
 }
 
-// ComparableSliceEqualWithoutOrder is a generic function to test whether
+// SliceEqualWithoutOrder is a generic function to test whether
 // the specified slices have the same length and items.
 // It compares the items of the slice regardless of their order.
 // For example, the following slices are equal to each other for this function:
@@ -197,17 +207,18 @@ func ToSliceEqual[T any](ef EqualFunc[T], nilEqualToEmpty bool) EqualFunc[[]T] {
 //	...
 //
 // because they all have two "0", one "1", and one "2".
+// In particular, a nil slice and a non-nil empty slice are considered unequal.
 //
 // It is useful when slices are treated as sets or multisets
 // rather than sequences.
 //
 // The client can instantiate it to get an EqualFunc.
-func ComparableSliceEqualWithoutOrder[T comparable](a, b []T) bool {
+func SliceEqualWithoutOrder[S constraints.Slice[T], T comparable](a, b S) bool {
 	n := len(a)
 	if n != len(b) {
 		return false
 	} else if n == 0 {
-		return true
+		return (a == nil) == (b == nil)
 	}
 	counter := make(map[T]int, n)
 	for _, x := range a {
@@ -228,17 +239,18 @@ func ComparableSliceEqualWithoutOrder[T comparable](a, b []T) bool {
 	return true
 }
 
-// FloatSliceEqualWithoutOrder is like ComparableSliceEqualWithoutOrder,
+// FloatSliceEqualWithoutOrder is like SliceEqualWithoutOrder,
 // but it considers two items (floating-point numbers) a and b equal
 // if a == b or both a and b are NaN.
 //
 // The client can instantiate it to get an EqualFunc.
-func FloatSliceEqualWithoutOrder[T constraints.Float](a, b []T) bool {
+func FloatSliceEqualWithoutOrder[S constraints.Slice[T], T constraints.Float](
+	a, b S) bool {
 	n := len(a)
 	if n != len(b) {
 		return false
 	} else if n == 0 {
-		return true
+		return (a == nil) == (b == nil)
 	}
 	counter, numNaN := make(map[T]int, n), 0
 	// "x == x" means that x is not a NaN.

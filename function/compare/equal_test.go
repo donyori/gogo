@@ -85,16 +85,16 @@ func TestEqualFunc_Not_AnyEqual(t *testing.T) {
 	})
 }
 
-func TestComparableEqual(t *testing.T) {
-	subtestComparableEqual(t, "type=int", []int{1, 2, 3})
-	subtestComparableEqual(t, "type=float64", []float64{
+func TestEqual(t *testing.T) {
+	subtestEqual(t, "type=int", []int{1, 2, 3})
+	subtestEqual(t, "type=float64", []float64{
 		1., 2., 3.,
 		0., math.SmallestNonzeroFloat64, math.MaxFloat64, math.Inf(1),
 		-math.SmallestNonzeroFloat64, -math.MaxFloat64, math.Inf(-1),
 	})
-	subtestComparableEqual(t, "type=string", []string{"1", "2", "3"})
+	subtestEqual(t, "type=string", []string{"1", "2", "3"})
 
-	subtestPairs(t, "type=float64&NaN", compare.ComparableEqual[float64], nil, [][2]float64{
+	subtestPairs(t, "type=float64&NaN", compare.Equal[float64], nil, [][2]float64{
 		{math.NaN(), math.NaN()},
 		{0., math.NaN()},
 		{math.NaN(), 0.},
@@ -105,13 +105,13 @@ func TestComparableEqual(t *testing.T) {
 	})
 }
 
-func subtestComparableEqual[T comparable](t *testing.T, name string, data []T) {
+func subtestEqual[T comparable](t *testing.T, name string, data []T) {
 	eqGroups := make([][]T, len(data))
 	for i := range eqGroups {
 		eqGroups[i] = []T{data[i]}
 	}
 	eqPairs, neqPairs := mkEqNeqPairs(eqGroups, 0, 0)
-	subtestPairs(t, name, compare.ComparableEqual[T], eqPairs, neqPairs)
+	subtestPairs(t, name, compare.Equal[T], eqPairs, neqPairs)
 }
 
 func TestFloatEqual(t *testing.T) {
@@ -146,24 +146,27 @@ var (
 
 func init() {
 	intsEqPairs, intsNeqPairs = mkEqNeqPairs([][][]int{
-		{nil, {}},         // empty
+		{nil},             // nil
+		{{}},              // empty
 		{{1, 2, 3, 4}},    // even length - 1
 		{{1, 2, 2, 4}},    // even length - 2
 		{{1, 2, 3, 4, 5}}, // odd length - 1
 		{{1, 2, 2, 4, 5}}, // odd length - 2
 	}, 0, 0)
 	float64sEqPairs, float64sNeqPairs = mkEqNeqPairs([][][]float64{
-		{nil, {}},                       // empty
+		{nil},                           // nil
+		{{}},                            // empty
 		{{1., math.Inf(1), 3., 4.}},     // even length - 1
 		{{1., math.Inf(1), 2., 4.}},     // even length - 2
 		{{1., math.Inf(1), 3., 4., 5.}}, // odd length - 1
 		{{1., math.Inf(1), 2., 4., 5.}}, // odd length - 2
 	}, 0, 0)
 	float64sWithNaNEqPairs, float64sWithNaNNeqPairs = mkEqNeqPairs([][][]float64{
-		{nil, {}},                                                      // empty
-		{{1., math.Inf(1), 3., 4.}},                                    // even length - 1
-		{{1., math.Inf(1), 2., 4.}},                                    // even length - 2
-		{{1., math.Inf(1), 3., math.NaN()}},                            // even length - 3
+		{nil},                               // nil
+		{{}},                                // empty
+		{{1., math.Inf(1), 3., 4.}},         // even length - 1
+		{{1., math.Inf(1), 2., 4.}},         // even length - 2
+		{{1., math.Inf(1), 3., math.NaN()}}, // even length - 3
 		{{math.NaN(), math.NaN(), math.NaN(), math.NaN()}},             // even length - 4
 		{{1., math.Inf(1), 3., 4., 5.}},                                // odd length - 1
 		{{1., math.Inf(1), 2., 4., 5.}},                                // odd length - 2
@@ -171,14 +174,16 @@ func init() {
 		{{math.NaN(), math.NaN(), math.NaN(), math.NaN(), math.NaN()}}, // odd length - 4
 	}, 0, 0)
 	stringsEqPairs, stringsNeqPairs = mkEqNeqPairs([][][]string{
-		{nil, {}},                   // empty
+		{nil},                       // nil
+		{{}},                        // empty
 		{{"1", "2", "3", "4"}},      // even length - 1
 		{{"1", "2", "2", "4"}},      // even length - 2
 		{{"1", "2", "3", "4", "5"}}, // odd length - 1
 		{{"1", "2", "2", "4", "5"}}, // odd length - 2
 	}, 0, 0)
 	anySliceEqPairs, anySliceNeqPairs = mkEqNeqPairs([][][]any{
-		{nil, {}},              // empty
+		{nil},                  // nil
+		{{}},                   // empty
 		{{1, 2, 3, 4}},         // even length - 1
 		{{1., 2., 3., 4.}},     // even length - 2
 		{{1, 2, 2, 4}},         // even length - 3
@@ -207,12 +212,12 @@ func init() {
 	})
 }
 
-func TestComparableSliceEqual(t *testing.T) {
-	subtestComparableSliceEqual(t, "type=[]int", intsEqPairs, intsNeqPairs)
-	subtestComparableSliceEqual(t, "type=[]float64", float64sEqPairs, float64sNeqPairs)
-	subtestComparableSliceEqual(t, "type=[]string", stringsEqPairs, stringsNeqPairs)
+func TestSliceEqual(t *testing.T) {
+	subtestSliceEqual(t, "type=[]int", intsEqPairs, intsNeqPairs)
+	subtestSliceEqual(t, "type=[]float64", float64sEqPairs, float64sNeqPairs)
+	subtestSliceEqual(t, "type=[]string", stringsEqPairs, stringsNeqPairs)
 
-	subtestComparableSliceEqual(t, "type=[]float64&NaN", nil, [][2][]float64{
+	subtestSliceEqual(t, "type=[]float64&NaN", nil, [][2][]float64{
 		{{math.NaN()}, {math.NaN()}},
 		{{math.NaN(), math.NaN()}, {math.NaN(), math.NaN()}},
 		{{1., 2., math.NaN()}, {1., 2., math.NaN()}},
@@ -221,14 +226,18 @@ func TestComparableSliceEqual(t *testing.T) {
 	})
 }
 
-func subtestComparableSliceEqual[T comparable](t *testing.T, name string, eqPairs, neqPairs [][2][]T) {
-	subtestPairs(t, name, compare.ComparableSliceEqual[T], eqPairs, neqPairs)
+func subtestSliceEqual[T comparable](
+	t *testing.T, name string, eqPairs, neqPairs [][2][]T) {
+	subtestPairs(t, name, compare.SliceEqual[[]T], eqPairs, neqPairs)
 }
 
 func TestFloatSliceEqual(t *testing.T) {
 	f32EqPairs := make([][2][]float32, len(float64sWithNaNEqPairs))
 	for i := range float64sWithNaNEqPairs {
 		for j := range float64sWithNaNEqPairs[i] {
+			if float64sWithNaNEqPairs[i][j] == nil {
+				continue
+			}
 			f32EqPairs[i][j] = make([]float32, len(float64sWithNaNEqPairs[i][j]))
 			for k := range float64sWithNaNEqPairs[i][j] {
 				f32EqPairs[i][j][k] = float32(float64sWithNaNEqPairs[i][j][k])
@@ -238,6 +247,9 @@ func TestFloatSliceEqual(t *testing.T) {
 	f32NeqPairs := make([][2][]float32, len(float64sWithNaNNeqPairs))
 	for i := range float64sWithNaNNeqPairs {
 		for j := range float64sWithNaNNeqPairs[i] {
+			if float64sWithNaNNeqPairs[i][j] == nil {
+				continue
+			}
 			f32NeqPairs[i][j] = make([]float32, len(float64sWithNaNNeqPairs[i][j]))
 			for k := range float64sWithNaNNeqPairs[i][j] {
 				f32NeqPairs[i][j][k] = float32(float64sWithNaNNeqPairs[i][j][k])
@@ -248,8 +260,9 @@ func TestFloatSliceEqual(t *testing.T) {
 	subtestFloatSliceEqual(t, "type=[]float64", float64sWithNaNEqPairs, float64sWithNaNNeqPairs)
 }
 
-func subtestFloatSliceEqual[T constraints.Float](t *testing.T, name string, eqPairs, neqPairs [][2][]T) {
-	subtestPairs(t, name, compare.FloatSliceEqual[T], eqPairs, neqPairs)
+func subtestFloatSliceEqual[T constraints.Float](
+	t *testing.T, name string, eqPairs, neqPairs [][2][]T) {
+	subtestPairs(t, name, compare.FloatSliceEqual[[]T], eqPairs, neqPairs)
 }
 
 func TestAnySliceEqual(t *testing.T) {
@@ -260,28 +273,28 @@ func TestAnySliceEqual(t *testing.T) {
 }
 
 func subtestAnySliceEqual[T any](t *testing.T, name string, eqPairs, neqPairs [][2][]T) {
-	subtestPairs(t, name, compare.AnySliceEqual[T], eqPairs, neqPairs)
+	subtestPairs(t, name, compare.AnySliceEqual[[]T], eqPairs, neqPairs)
 }
 
 func TestToSliceEqual_FloatEqual_Float64(t *testing.T) {
 	for _, nilEqToEmpty := range []bool{false, true} {
-		toSlice := compare.ToSliceEqual(compare.FloatEqual[float64], nilEqToEmpty)
+		toSlice := compare.EqualToSliceEqual[[]float64](
+			compare.FloatEqual[float64], nilEqToEmpty)
 		var eqPairs, neqPairs [][2][]float64
 		if nilEqToEmpty {
-			eqPairs, neqPairs = float64sWithNaNEqPairs, float64sWithNaNNeqPairs
-		} else {
 			eqPairs, neqPairs = mkEqNeqPairs([][][]float64{
-				{nil},                               // nil
-				{{}},                                // empty
-				{{1., math.Inf(1), 3., 4.}},         // even length - 1
-				{{1., math.Inf(1), 2., 4.}},         // even length - 2
-				{{1., math.Inf(1), 3., math.NaN()}}, // even length - 3
+				{nil, {}},                                                      // nil and empty
+				{{1., math.Inf(1), 3., 4.}},                                    // even length - 1
+				{{1., math.Inf(1), 2., 4.}},                                    // even length - 2
+				{{1., math.Inf(1), 3., math.NaN()}},                            // even length - 3
 				{{math.NaN(), math.NaN(), math.NaN(), math.NaN()}},             // even length - 4
 				{{1., math.Inf(1), 3., 4., 5.}},                                // odd length - 1
 				{{1., math.Inf(1), 2., 4., 5.}},                                // odd length - 2
 				{{1., math.Inf(1), 3., math.NaN(), 5.}},                        // odd length - 3
 				{{math.NaN(), math.NaN(), math.NaN(), math.NaN(), math.NaN()}}, // odd length - 4
 			}, 0, 0)
+		} else {
+			eqPairs, neqPairs = float64sWithNaNEqPairs, float64sWithNaNNeqPairs
 		}
 		subtestPairs(t, fmt.Sprintf("nilEqualToEmpty=%t", nilEqToEmpty), toSlice, eqPairs, neqPairs)
 	}
@@ -289,27 +302,27 @@ func TestToSliceEqual_FloatEqual_Float64(t *testing.T) {
 
 func TestToSliceEqual_NilEf_Float64(t *testing.T) {
 	for _, nilEqToEmpty := range []bool{false, true} {
-		toSlice := compare.ToSliceEqual[float64](nil, nilEqToEmpty)
+		toSlice := compare.EqualToSliceEqual[[]float64](nil, nilEqToEmpty)
 		var eqPairs, neqPairs [][2][]float64
 		if nilEqToEmpty {
-			eqPairs, neqPairs = float64sEqPairs, float64sNeqPairs
-		} else {
 			eqPairs, neqPairs = mkEqNeqPairs([][][]float64{
-				{nil},                           // nil
-				{{}},                            // empty
+				{nil, {}},                       // nil and empty
 				{{1., math.Inf(1), 3., 4.}},     // even length - 1
 				{{1., math.Inf(1), 2., 4.}},     // even length - 2
 				{{1., math.Inf(1), 3., 4., 5.}}, // odd length - 1
 				{{1., math.Inf(1), 2., 4., 5.}}, // odd length - 2
 			}, 0, 0)
+		} else {
+			eqPairs, neqPairs = float64sEqPairs, float64sNeqPairs
 		}
 		subtestPairs(t, fmt.Sprintf("nilEqualToEmpty=%t", nilEqToEmpty), toSlice, eqPairs, neqPairs)
 	}
 }
 
-func TestComparableSliceEqualWithoutOrder(t *testing.T) {
+func TestSliceEqualWithoutOrder(t *testing.T) {
 	intsEqWithoutOrderPairs, intsNeqWithoutOrderPairs := mkEqNeqPairs([][][]int{
-		{nil, {}},
+		{nil},
+		{{}},
 		{{1, 1}},
 		{{1, 2}, {2, 1}},
 		{{1, 1, 1}},
@@ -317,7 +330,8 @@ func TestComparableSliceEqualWithoutOrder(t *testing.T) {
 		{{1, 2, 2}, {2, 1, 2}, {2, 2, 1}},
 	}, 0, 0)
 	float64sEqWithoutOrderPairs, float64sNeqWithoutOrderPairs := mkEqNeqPairs([][][]float64{
-		{nil, {}},
+		{nil},
+		{{}},
 		{{1., 1.}},
 		{{1., 2.}, {2., 1.}},
 		{{1., 1., 1.}},
@@ -329,7 +343,8 @@ func TestComparableSliceEqualWithoutOrder(t *testing.T) {
 		},
 	}, 0, 0)
 	stringsEqWithoutOrderPairs, stringsNeqWithoutOrderPairs := mkEqNeqPairs([][][]string{
-		{nil, {}},
+		{nil},
+		{{}},
 		{{"1", "1"}},
 		{{"1", "2"}, {"2", "1"}},
 		{{"1", "1", "1"}},
@@ -337,11 +352,11 @@ func TestComparableSliceEqualWithoutOrder(t *testing.T) {
 		{{"1", "2", "2"}, {"2", "1", "2"}, {"2", "2", "1"}},
 	}, 0, 0)
 
-	subtestComparableSliceEqualWithoutOrder(t, "type=[]int", intsEqWithoutOrderPairs, intsNeqWithoutOrderPairs)
-	subtestComparableSliceEqualWithoutOrder(t, "type=[]float64", float64sEqWithoutOrderPairs, float64sNeqWithoutOrderPairs)
-	subtestComparableSliceEqualWithoutOrder(t, "type=[]string", stringsEqWithoutOrderPairs, stringsNeqWithoutOrderPairs)
+	subtestSliceEqualWithoutOrder(t, "type=[]int", intsEqWithoutOrderPairs, intsNeqWithoutOrderPairs)
+	subtestSliceEqualWithoutOrder(t, "type=[]float64", float64sEqWithoutOrderPairs, float64sNeqWithoutOrderPairs)
+	subtestSliceEqualWithoutOrder(t, "type=[]string", stringsEqWithoutOrderPairs, stringsNeqWithoutOrderPairs)
 
-	subtestComparableSliceEqualWithoutOrder(t, "type=[]float64", nil, [][2][]float64{
+	subtestSliceEqualWithoutOrder(t, "type=[]float64", nil, [][2][]float64{
 		{{math.NaN()}, {math.NaN()}},
 		{{math.NaN(), math.NaN()}, {math.NaN(), math.NaN()}},
 		{{1., 1., math.NaN()}, {1., 1., math.NaN()}},
@@ -353,13 +368,15 @@ func TestComparableSliceEqualWithoutOrder(t *testing.T) {
 	})
 }
 
-func subtestComparableSliceEqualWithoutOrder[T comparable](t *testing.T, name string, eqPairs, neqPairs [][2][]T) {
-	subtestPairs(t, name, compare.ComparableSliceEqualWithoutOrder[T], eqPairs, neqPairs)
+func subtestSliceEqualWithoutOrder[T comparable](
+	t *testing.T, name string, eqPairs, neqPairs [][2][]T) {
+	subtestPairs(t, name, compare.SliceEqualWithoutOrder[[]T], eqPairs, neqPairs)
 }
 
 func TestFloatSliceEqualWithoutOrder(t *testing.T) {
 	f64EqPairs, f64NeqPairs := mkEqNeqPairs([][][]float64{
-		{nil, {}},
+		{nil},
+		{{}},
 		{{1.}},
 		{{math.Inf(1)}},
 		{{math.NaN()}},
@@ -389,6 +406,9 @@ func TestFloatSliceEqualWithoutOrder(t *testing.T) {
 	f32EqPairs := make([][2][]float32, len(f64EqPairs))
 	for i := range f64EqPairs {
 		for j := range f64EqPairs[i] {
+			if f64EqPairs[i][j] == nil {
+				continue
+			}
 			f32EqPairs[i][j] = make([]float32, len(f64EqPairs[i][j]))
 			for k := range f64EqPairs[i][j] {
 				f32EqPairs[i][j][k] = float32(f64EqPairs[i][j][k])
@@ -398,6 +418,9 @@ func TestFloatSliceEqualWithoutOrder(t *testing.T) {
 	f32NeqPairs := make([][2][]float32, len(f64NeqPairs))
 	for i := range f64NeqPairs {
 		for j := range f64NeqPairs[i] {
+			if f64NeqPairs[i][j] == nil {
+				continue
+			}
 			f32NeqPairs[i][j] = make([]float32, len(f64NeqPairs[i][j]))
 			for k := range f64NeqPairs[i][j] {
 				f32NeqPairs[i][j][k] = float32(f64NeqPairs[i][j][k])
@@ -408,11 +431,13 @@ func TestFloatSliceEqualWithoutOrder(t *testing.T) {
 	subtestFloatSliceEqualWithoutOrder(t, "type=[]float64", f64EqPairs, f64NeqPairs)
 }
 
-func subtestFloatSliceEqualWithoutOrder[T constraints.Float](t *testing.T, name string, eqPairs, neqPairs [][2][]T) {
-	subtestPairs(t, name, compare.FloatSliceEqualWithoutOrder[T], eqPairs, neqPairs)
+func subtestFloatSliceEqualWithoutOrder[T constraints.Float](
+	t *testing.T, name string, eqPairs, neqPairs [][2][]T) {
+	subtestPairs(t, name, compare.FloatSliceEqualWithoutOrder[[]T], eqPairs, neqPairs)
 }
 
-func subtestPairs[T any](t *testing.T, name string, f compare.EqualFunc[T], eqPairs, neqPairs [][2]T) {
+func subtestPairs[T any](t *testing.T, name string, f compare.EqualFunc[T],
+	eqPairs, neqPairs [][2]T) {
 	t.Run(name, func(t *testing.T) {
 		for _, eqPair := range eqPairs {
 			a, b := eqPair[0], eqPair[1]
@@ -484,7 +509,8 @@ func reflectValueIsNil(v reflect.Value) bool {
 // neqExCap is the additional capacity of neqPairs.
 // These two parameters are useful to avoid unnecessary memory allocation
 // when the caller wants to append custom data to eqPairs and neqPairs.
-func mkEqNeqPairs[T any](eqGroups [][]T, eqExCap, neqExCap int) (eqPairs, neqPairs [][2]T) {
+func mkEqNeqPairs[T any](eqGroups [][]T, eqExCap, neqExCap int) (
+	eqPairs, neqPairs [][2]T) {
 	if eqExCap < 0 {
 		eqExCap = 0
 	}

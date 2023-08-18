@@ -21,6 +21,7 @@ package array_test
 import (
 	"fmt"
 	"math"
+	"slices"
 	"sort"
 	"testing"
 
@@ -68,11 +69,11 @@ func testAffectProvidedSlice[Item constraints.Real](t *testing.T,
 
 	// Operations on oda should affect slice.
 	oda.Cut(1, 3)
-	if !compare.ComparableSliceEqual(slice, afterCut) {
+	if !slices.Equal(slice, afterCut) {
 		t.Fatalf("after cutting, got %v; want %v", slice, afterCut)
 	}
 	oda.SetFront(5)
-	if !compare.ComparableSliceEqual(slice, afterSetFront) {
+	if !slices.Equal(slice, afterSetFront) {
 		t.Fatalf("after setting front, got %v; want %v", slice, afterSetFront)
 	}
 	oda.Clear()
@@ -83,7 +84,7 @@ func testAffectProvidedSlice[Item constraints.Real](t *testing.T,
 	// Operations on slice should also affect oda.
 	slice = []Item{1, 2}
 	oda.Push(3)
-	if !compare.ComparableSliceEqual(slice, afterPush) {
+	if !slices.Equal(slice, afterPush) {
 		t.Errorf("after reassigning slice and pushing, got %v; want %v", slice, afterPush)
 	}
 }

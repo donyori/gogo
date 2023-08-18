@@ -20,6 +20,7 @@ package mapping_test
 
 import (
 	"fmt"
+	"maps"
 	"testing"
 
 	"github.com/donyori/gogo/container/mapping"
@@ -96,7 +97,7 @@ func TestGoMap_Filter(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("filterIdx=%d", tc.filterIdx), func(t *testing.T) {
-			gm := SIGM(copyMap(data))
+			gm := SIGM(maps.Clone(data))
 			gm.Filter(filterList[tc.filterIdx])
 			if goMapWrong(&gm, tc.want) {
 				t.Errorf("got %s; want %s", mapToString(gm), mapToString(tc.want))
@@ -148,7 +149,7 @@ func TestGoMap_Get(t *testing.T) {
 	for _, tc := range testCases {
 		var gm *SIGM
 		if tc.data != nil {
-			m := copyMap(tc.data)
+			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		}
 		t.Run(fmt.Sprintf("gm=%s&key=%+q", gmPtrToName(gm), tc.k), func(t *testing.T) {
@@ -182,7 +183,7 @@ func TestGoMap_Set(t *testing.T) {
 	for _, tc := range testCases {
 		var gm *SIGM
 		if tc.data != nil {
-			m := copyMap(tc.data)
+			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		} else {
 			gm = new(SIGM)
@@ -229,7 +230,7 @@ func TestGoMap_GetAndSet(t *testing.T) {
 	for _, tc := range testCases {
 		var gm *SIGM
 		if tc.data != nil {
-			m := copyMap(tc.data)
+			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		} else {
 			gm = new(SIGM)
@@ -279,7 +280,7 @@ func TestGoMap_SetMap(t *testing.T) {
 	for _, tc := range testCases {
 		var gm *SIGM
 		if tc.data != nil {
-			m := copyMap(tc.data)
+			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		} else {
 			gm = new(SIGM)
@@ -348,7 +349,7 @@ func TestGoMap_GetAndSetMap(t *testing.T) {
 	for _, tc := range testCases {
 		var gm *SIGM
 		if tc.data != nil {
-			m := copyMap(tc.data)
+			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		} else {
 			gm = new(SIGM)
@@ -432,7 +433,7 @@ func TestGoMap_Remove(t *testing.T) {
 	for _, tc := range testCases {
 		var gm *SIGM
 		if tc.data != nil {
-			m := copyMap(tc.data)
+			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		}
 		t.Run(fmt.Sprintf("gm=%s&key=%s", gmPtrToName(gm), keysToName(tc.ks)), func(t *testing.T) {
@@ -469,7 +470,7 @@ func TestGoMap_GetAndRemove(t *testing.T) {
 	for _, tc := range testCases {
 		var gm *SIGM
 		if tc.data != nil {
-			m := copyMap(tc.data)
+			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		}
 		t.Run(fmt.Sprintf("gm=%s&key=%+q", gmPtrToName(gm), tc.k), func(t *testing.T) {
@@ -493,7 +494,7 @@ func TestGoMap_Clear(t *testing.T) {
 		{"A": 1, "B": 2, "C": 3},
 	}
 	for _, data := range dataList {
-		m := copyMap(data)
+		m := maps.Clone(data)
 		gm := (*SIGM)(&m)
 		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
 			gm.Clear()
@@ -545,33 +546,24 @@ func mapToString(m SIM) string {
 }
 
 func mapItfToString(m mapping.Map[string, int]) string {
-	if m == nil {
-		return fmt.Sprintf("(%T)<nil>", m)
-	}
-	t := make(SIM, m.Len())
-	m.Range(func(x mapping.Entry[string, int]) (cont bool) {
-		t[x.Key] = x.Value
-		return true
+	return fmtcoll.MustFormatGogoMapToString(m, &fmtcoll.MapFormat[string, int]{
+		CommonFormat: fmtcoll.CommonFormat{
+			Separator:   ",",
+			PrependType: true,
+		},
+		FormatKeyFn:   fmtcoll.FprintfToFormatFunc[string]("%+q"),
+		FormatValueFn: fmtcoll.FprintfToFormatFunc[int]("%d"),
+		KeyValueLess: func(key1, key2 string, value1, value2 int) bool {
+			if key1 != key2 {
+				return key1 < key2
+			}
+			return value1 < value2
+		},
 	})
-	return mapToString(t)
 }
 
 func mapWrong(m, want SIM) bool {
-	if m == nil {
-		return want != nil
-	} else if want == nil || len(m) != len(want) {
-		return true
-	}
-	for k, v := range m {
-		wantV, ok := want[k]
-		if ok {
-			ok = v == wantV
-		}
-		if !ok {
-			return true
-		}
-	}
-	return false
+	return (m == nil) != (want == nil) || !maps.Equal(m, want)
 }
 
 func goMapWrong(gm *SIGM, want SIM) bool {
@@ -597,15 +589,4 @@ func mapItfWrong(m mapping.Map[string, int], want SIM) bool {
 		return ok
 	})
 	return !ok
-}
-
-func copyMap[K comparable, V any](m map[K]V) map[K]V {
-	if m == nil {
-		return nil
-	}
-	t := make(map[K]V, len(m))
-	for k, v := range m {
-		t[k] = v
-	}
-	return t
 }

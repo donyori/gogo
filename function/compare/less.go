@@ -78,10 +78,6 @@ func OrderedLess[T constraints.Ordered](a, b T) bool {
 //
 // The client can instantiate it to get a LessFunc.
 func FloatLess[T constraints.Float](a, b T) bool {
-	return a < b || (isNaN(a) && !isNaN(b))
-}
-
-// isNaN is a generic variant of math.IsNaN.
-func isNaN[T constraints.Float](f T) bool {
-	return f != f
+	// "x == x" means that x is not a NaN.
+	return a < b || (a != a && b == b)
 }

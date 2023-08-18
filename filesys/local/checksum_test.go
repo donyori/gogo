@@ -27,12 +27,12 @@ import (
 	"hash"
 	"io/fs"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/donyori/gogo/filesys"
 	"github.com/donyori/gogo/filesys/local"
-	"github.com/donyori/gogo/function/compare"
 )
 
 func TestChecksum(t *testing.T) {
@@ -61,7 +61,7 @@ func TestChecksum(t *testing.T) {
 					got, err := local.Checksum(name, upper, newHashes...)
 					if err != nil {
 						t.Error("checksum -", err)
-					} else if !compare.ComparableSliceEqual(got, want) {
+					} else if !slices.Equal(got, want) {
 						t.Errorf("got %v\nwant %v", got, want)
 					}
 				})

@@ -21,7 +21,8 @@
 //
 // Currently, this package provides constraints for numeric types
 // (including signed and unsigned integers, floating-point numbers,
-// and complex numbers) and byte sequence types.
+// and complex numbers), byte sequence types
+// (including byte slices and strings), slices, and maps.
 //
 // These constraints are helpful to apply arithmetic operators and
 // comparison operators in generic code.
