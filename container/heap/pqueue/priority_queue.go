@@ -93,7 +93,10 @@ type priorityQueue[Item any] struct {
 // data is the initial items added to the queue.
 //
 // It panics if lessFn is nil.
-func New[Item any](lessFn compare.LessFunc[Item], data container.Container[Item]) PriorityQueue[Item] {
+func New[Item any](
+	lessFn compare.LessFunc[Item],
+	data container.Container[Item],
+) PriorityQueue[Item] {
 	if lessFn == nil {
 		panic(errors.AutoMsg("lessFn is nil"))
 	}

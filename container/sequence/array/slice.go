@@ -19,6 +19,9 @@
 package array
 
 import (
+	"fmt"
+	"slices"
+
 	"github.com/donyori/gogo/container/sequence"
 	"github.com/donyori/gogo/errors"
 )
@@ -101,9 +104,7 @@ func (sda *SliceDynamicArray[Item]) SetBack(x Item) {
 // Reverse turns items in the slice the other way round.
 func (sda *SliceDynamicArray[Item]) Reverse() {
 	if sda != nil {
-		for i, j := 0, len(*sda)-1; i < j; i, j = i+1, j-1 {
-			(*sda)[i], (*sda)[j] = (*sda)[j], (*sda)[i]
-		}
+		slices.Reverse(*sda)
 	}
 }
 
@@ -157,10 +158,7 @@ func (sda *SliceDynamicArray[Item]) Filter(filter func(x Item) (keep bool)) {
 	if n == len(*sda) {
 		return
 	}
-	for i := n; i < len(*sda); i++ {
-		var zero Item
-		(*sda)[i] = zero // avoid memory leak
-	}
+	clear((*sda)[n:]) // avoid memory leak
 	*sda = (*sda)[:n]
 }
 
@@ -190,8 +188,7 @@ func (sda *SliceDynamicArray[Item]) Pop() Item {
 	sda.checkNonEmpty()
 	back := len(*sda) - 1
 	x := (*sda)[back]
-	var zero Item
-	(*sda)[back] = zero // avoid memory leak
+	clear((*sda)[back:]) // avoid memory leak
 	*sda = (*sda)[:back]
 	return x
 }
@@ -228,10 +225,7 @@ func (sda *SliceDynamicArray[Item]) Truncate(i int) {
 	if sda == nil || i < 0 || i >= len(*sda) {
 		return
 	}
-	for j := i; j < len(*sda); j++ {
-		var zero Item
-		(*sda)[j] = zero // avoid memory leak
-	}
+	clear((*sda)[i:]) // avoid memory leak
 	*sda = (*sda)[:i]
 }
 
@@ -246,10 +240,7 @@ func (sda *SliceDynamicArray[Item]) Insert(i int, x Item) {
 		return
 	}
 	_ = (*sda)[i] // ensure i is valid
-	var zero Item
-	*sda = append(*sda, zero)
-	copy((*sda)[i+1:], (*sda)[i:])
-	(*sda)[i] = x
+	*sda = slices.Insert(*sda, i, x)
 }
 
 // Remove removes and returns the item with index i.
@@ -263,8 +254,7 @@ func (sda *SliceDynamicArray[Item]) Remove(i int) Item {
 	}
 	x := (*sda)[i]
 	copy((*sda)[i:], (*sda)[i+1:])
-	var zero Item
-	(*sda)[back] = zero // avoid memory leak
+	clear((*sda)[back:]) // avoid memory leak
 	*sda = (*sda)[:back]
 	return x
 }
@@ -280,8 +270,7 @@ func (sda *SliceDynamicArray[Item]) RemoveWithoutOrder(i int) Item {
 	if i != back {
 		(*sda)[i] = (*sda)[back]
 	}
-	var zero Item
-	(*sda)[back] = zero // avoid memory leak
+	clear((*sda)[back:]) // avoid memory leak
 	*sda = (*sda)[:back]
 	return x
 }
@@ -292,7 +281,8 @@ func (sda *SliceDynamicArray[Item]) RemoveWithoutOrder(i int) Item {
 //
 // s shouldn't be modified during calling this method,
 // otherwise, unknown error may occur.
-func (sda *SliceDynamicArray[Item]) InsertSequence(i int, s sequence.Sequence[Item]) {
+func (sda *SliceDynamicArray[Item]) InsertSequence(
+	i int, s sequence.Sequence[Item]) {
 	if sda == nil {
 		panic(errors.AutoMsg(nilSliceDynamicArrayPointerPanicMessage))
 	} else if i == len(*sda) {
@@ -305,6 +295,9 @@ func (sda *SliceDynamicArray[Item]) InsertSequence(i int, s sequence.Sequence[It
 	}
 	n := s.Len()
 	if n == 0 {
+		return
+	} else if sda2, ok := s.(*SliceDynamicArray[Item]); ok {
+		*sda = slices.Insert[SliceDynamicArray[Item], Item](*sda, i, *sda2...)
 		return
 	}
 	*sda = append(*sda, make([]Item, n)...)
@@ -330,10 +323,7 @@ func (sda *SliceDynamicArray[Item]) Cut(begin, end int) {
 		return
 	}
 	copy((*sda)[begin:], (*sda)[end:])
-	for i := len(*sda) - end + begin; i < len(*sda); i++ {
-		var zero Item
-		(*sda)[i] = zero // avoid memory leak
-	}
+	clear((*sda)[len(*sda)-end+begin:]) // avoid memory leak
 	*sda = (*sda)[:len(*sda)-end+begin]
 }
 
@@ -355,10 +345,7 @@ func (sda *SliceDynamicArray[Item]) CutWithoutOrder(begin, end int) {
 		copyIdx = end
 	}
 	copy((*sda)[begin:], (*sda)[copyIdx:])
-	for i := len(*sda) - end + begin; i < len(*sda); i++ {
-		var zero Item
-		(*sda)[i] = zero // avoid memory leak
-	}
+	clear((*sda)[len(*sda)-end+begin:]) // avoid memory leak
 	*sda = (*sda)[:len(*sda)-end+begin]
 }
 
@@ -368,27 +355,39 @@ func (sda *SliceDynamicArray[Item]) CutWithoutOrder(begin, end int) {
 func (sda *SliceDynamicArray[Item]) Extend(n int) {
 	if sda == nil {
 		panic(errors.AutoMsg(nilSliceDynamicArrayPointerPanicMessage))
+	} else if n < 0 {
+		panic(errors.AutoMsg(fmt.Sprintf("n is %d < 0", n)))
 	}
-	*sda = append(*sda, make([]Item, n)...)
+	i := len(*sda)
+	if i+n > cap(*sda) {
+		*sda = append(*sda, make([]Item, n)...)
+		return
+	}
+	*sda = (*sda)[:i+n]
+	clear((*sda)[i:])
 }
 
 // Expand inserts n zero-value items to the front of the item with index i.
 //
 // It panics if i is out of range, i.e., i < 0 or i > Len(), or n < 0.
 func (sda *SliceDynamicArray[Item]) Expand(i, n int) {
-	if sda == nil {
+	switch {
+	case sda == nil:
 		panic(errors.AutoMsg(nilSliceDynamicArrayPointerPanicMessage))
-	} else if i == len(*sda) {
+	case n < 0:
+		panic(errors.AutoMsg(fmt.Sprintf("n is %d < 0", n)))
+	case i == len(*sda):
 		sda.Extend(n)
 		return
 	}
 	_ = (*sda)[i] // ensure i is valid
-	*sda = append(*sda, make([]Item, n)...)
-	copy((*sda)[i+n:], (*sda)[i:])
-	for j := i; j < i+n; j++ {
-		var zero Item
-		(*sda)[j] = zero
+	if len(*sda)+n > cap(*sda) {
+		*sda = append(*sda, make([]Item, n)...)
+	} else {
+		*sda = (*sda)[:len(*sda)+n]
 	}
+	copy((*sda)[i+n:], (*sda)[i:])
+	clear((*sda)[i : i+n])
 }
 
 // Reserve requests that the capacity of the slice
