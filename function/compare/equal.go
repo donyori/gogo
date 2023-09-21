@@ -97,8 +97,7 @@ func anyEqual(a, b any) bool {
 // with the same index are equal.
 // In particular, a nil slice and a non-nil empty slice are considered unequal.
 //
-// It uses the not equal operator (!=) to test the equality
-// of the slice items.
+// It uses the not equal operator (!=) to test the equality of the slice items.
 //
 // The client can instantiate it to get an EqualFunc.
 func SliceEqual[S constraints.Slice[T], T comparable](a, b S) bool {
@@ -121,8 +120,8 @@ func SliceEqual[S constraints.Slice[T], T comparable](a, b S) bool {
 // with the same index are equal.
 // In particular, a nil slice and a non-nil empty slice are considered unequal.
 //
-// Two items (floating-point numbers) a and b are considered equal
-// if a == b or both a and b are NaN.
+// Two items (floating-point numbers) x and y are considered equal
+// if x == y or both x and y are NaN.
 //
 // The client can instantiate it to get an EqualFunc.
 func FloatSliceEqual[S constraints.Slice[T], T constraints.Float](a, b S) bool {
@@ -146,8 +145,7 @@ func FloatSliceEqual[S constraints.Slice[T], T constraints.Float](a, b S) bool {
 // with the same index are equal.
 // In particular, a nil slice and a non-nil empty slice are considered unequal.
 //
-// It uses the function AnyEqual to test the equality
-// of the slice items.
+// It uses the function AnyEqual to test the equality of the slice items.
 //
 // The client can instantiate it to get an EqualFunc.
 func AnySliceEqual[S constraints.Slice[T], T any](a, b S) bool {
@@ -173,7 +171,7 @@ func AnySliceEqual[S constraints.Slice[T], T any](a, b S) bool {
 // If ef is nil, it uses AnyEqual instead.
 //
 // nilEqualToEmpty indicates whether to consider
-// a nil slice equal to a non-nil empty slices.
+// a nil slice equal to a non-nil empty slice.
 func EqualToSliceEqual[S constraints.Slice[T], T any](
 	ef EqualFunc[T], nilEqualToEmpty bool) EqualFunc[S] {
 	if ef == nil {
@@ -185,8 +183,8 @@ func EqualToSliceEqual[S constraints.Slice[T], T any](
 		n := len(a)
 		if n != len(b) {
 			return false
-		} else if n == 0 && !nilEqualToEmpty {
-			return (a == nil) == (b == nil)
+		} else if n == 0 {
+			return nilEqualToEmpty || (a == nil) == (b == nil)
 		}
 		for i := 0; i < n; i++ {
 			if !ef(a[i], b[i]) {
@@ -240,8 +238,8 @@ func SliceEqualWithoutOrder[S constraints.Slice[T], T comparable](a, b S) bool {
 }
 
 // FloatSliceEqualWithoutOrder is like SliceEqualWithoutOrder,
-// but it considers two items (floating-point numbers) a and b equal
-// if a == b or both a and b are NaN.
+// but it considers two items (floating-point numbers) x and y equal
+// if x == y or both x and y are NaN.
 //
 // The client can instantiate it to get an EqualFunc.
 func FloatSliceEqualWithoutOrder[S constraints.Slice[T], T constraints.Float](
@@ -283,4 +281,113 @@ func FloatSliceEqualWithoutOrder[S constraints.Slice[T], T constraints.Float](
 	// numNaN must be 0 here,
 	// because len(a) == len(b) and they have the same number of non-NaN items.
 	return true
+}
+
+// MapEqual is a generic function to test whether
+// the specified maps have the same key-value pairs.
+// In particular, a nil map and a non-nil empty map are considered unequal.
+//
+// It uses the not equal operator (!=) to test the equality
+// of the map keys and values.
+//
+// The client can instantiate it to get an EqualFunc.
+func MapEqual[M constraints.Map[K, V], K, V comparable](a, b M) bool {
+	n := len(a)
+	if n != len(b) {
+		return false
+	} else if n == 0 {
+		return (a == nil) == (b == nil)
+	}
+	for k, v1 := range a {
+		v2, ok := b[k]
+		if !ok || v1 != v2 {
+			return false
+		}
+	}
+	return true
+}
+
+// FloatValueMapEqual is a generic function to test whether
+// the specified maps have the same key-value pairs.
+// In particular, a nil map and a non-nil empty map are considered unequal.
+//
+// Two map keys k1 and k2 are considered equal if k1 == k2.
+// Two map values v1 and v2 are considered equal
+// if v1 == v2 or both v1 and v2 are NaN.
+//
+// The client can instantiate it to get an EqualFunc.
+func FloatValueMapEqual[M constraints.Map[K, V],
+	K comparable, V constraints.Float](a, b M) bool {
+	n := len(a)
+	if n != len(b) {
+		return false
+	} else if n == 0 {
+		return (a == nil) == (b == nil)
+	}
+	for k, v1 := range a {
+		v2, ok := b[k]
+		// "x == x" means that x is not a NaN.
+		if !ok || v1 != v2 && (v1 == v1 || v2 == v2) {
+			return false
+		}
+	}
+	return true
+}
+
+// AnyValueMapEqual is a generic function to test whether
+// the specified maps have the same key-value pairs.
+// In particular, a nil map and a non-nil empty map are considered unequal.
+//
+// It uses the equal operator (==) to test the equality of the map keys
+// and the function AnyEqual to test the equality of the map values.
+//
+// The client can instantiate it to get an EqualFunc.
+func AnyValueMapEqual[M constraints.Map[K, V], K comparable, V any](
+	a, b M) bool {
+	n := len(a)
+	if n != len(b) {
+		return false
+	} else if n == 0 {
+		return (a == nil) == (b == nil)
+	}
+	for k, v1 := range a {
+		v2, ok := b[k]
+		if !ok || !AnyEqual(v1, v2) {
+			return false
+		}
+	}
+	return true
+}
+
+// ValueEqualToMapEqual returns a function to test whether two maps of type M
+// (whose underlying type is map[K]V), a and b, have the same key-value pairs.
+//
+// It uses the equal operator (==) to test the equality of the map keys
+// and ef to test the equality of the map values.
+// If ef is nil, it uses AnyEqual instead.
+//
+// nilEqualToEmpty indicates whether to consider
+// a nil map equal to a non-nil empty map.
+func ValueEqualToMapEqual[M constraints.Map[K, V], K comparable, V any](
+	ef EqualFunc[V], nilEqualToEmpty bool) EqualFunc[M] {
+	if ef == nil {
+		ef = func(a, b V) bool {
+			return AnyEqual(a, b)
+		}
+	}
+	return func(a, b M) bool {
+		n := len(a)
+		if n != len(b) {
+			return false
+		} else if n == 0 {
+			return nilEqualToEmpty || (a == nil) == (b == nil)
+		}
+		for k, v1 := range a {
+			v2, ok := b[k]
+			if !ok || !ef(v1, v2) {
+				return false
+			}
+		}
+		return true
+	}
 }
