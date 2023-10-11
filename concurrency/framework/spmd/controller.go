@@ -87,10 +87,10 @@ func New[Message any](
 		cd:           newChanDispr[Message](n),
 		biz:          biz,
 		pr:           concurrency.NewRecorder[framework.PanicRecord](0),
-		lnchOi:       concurrency.NewOnceIndicator(),
-		cdOi:         concurrency.NewOnceIndicator(),
 		lnchCommMaps: make([]map[string]Communicator[Message], n),
 	}
+	ctrl.lo = concurrency.NewOnce(ctrl.launchProc)
+	ctrl.lcdo = concurrency.NewOnce(ctrl.launchChannelDispatcherProc)
 	worldRanks := make([]int, n)
 	for i := range worldRanks {
 		worldRanks[i] = i
@@ -148,8 +148,8 @@ type controller[Message any] struct {
 	biz    BusinessFunc[Message]                       // Business function.
 	pr     concurrency.Recorder[framework.PanicRecord] // Panic recorder.
 	wg     sync.WaitGroup                              // Wait group for the main process.
-	lnchOi concurrency.OnceIndicator                   // For launching the job.
-	cdOi   concurrency.OnceIndicator                   // For launching the channel dispatcher.
+	lo     concurrency.Once                            // For launching the job.
+	lcdo   concurrency.Once                            // For launching the channel dispatcher.
 	cdFinC chan struct{}                               // Channel for the finish signal of the channel dispatcher.
 
 	// List of commMap used by method Launch,
@@ -170,35 +170,16 @@ func (ctrl *controller[Message]) Quit() {
 }
 
 func (ctrl *controller[Message]) Launch() {
-	ctrl.lnchOi.Do(func() {
-		n, commMaps := len(ctrl.world.comms), ctrl.lnchCommMaps
-		ctrl.wg.Add(n)
-		for i := 0; i < n; i++ {
-			go func(rank int) {
-				defer ctrl.wg.Done()
-				defer func() {
-					if e := recover(); e != nil {
-						ctrl.qd.Quit()
-						ctrl.pr.Record(framework.PanicRecord{
-							Name:    strconv.Itoa(rank),
-							Content: e,
-						})
-					}
-				}()
-				ctrl.biz(ctrl.world.comms[rank], commMaps[rank])
-			}(i)
-		}
-		ctrl.lnchCommMaps = nil
-	})
+	ctrl.lo.Do()
 }
 
 func (ctrl *controller[Message]) Wait() int {
-	if !ctrl.lnchOi.Test() {
+	if !ctrl.lo.Done() {
 		return -1
 	}
 	defer func() {
 		ctrl.qd.Quit() // for cleanup possible daemon goroutines that wait for a quit signal to exit
-		if ctrl.cdOi.Test() {
+		if ctrl.lcdo.Done() {
 			<-ctrl.cdFinC // wait for the channel dispatcher to finish
 		}
 	}()
@@ -219,22 +200,50 @@ func (ctrl *controller[Message]) PanicRecords() []framework.PanicRecord {
 	return ctrl.pr.All()
 }
 
-// launchChannelDispatcher launches a channel dispatcher in a daemon goroutine.
+// LaunchChannelDispatcher launches a channel dispatcher in a daemon goroutine.
 // This method takes effect only once.
-func (ctrl *controller[Message]) launchChannelDispatcher() {
-	ctrl.cdOi.Do(func() {
-		ctrl.cdFinC = make(chan struct{})
-		go func() {
+func (ctrl *controller[Message]) LaunchChannelDispatcher() {
+	ctrl.lcdo.Do()
+}
+
+// launchProc is the process of starting the job.
+// It is invoked by ctrl.lo.Do.
+func (ctrl *controller[Message]) launchProc() {
+	n, commMaps := len(ctrl.world.comms), ctrl.lnchCommMaps
+	ctrl.wg.Add(n)
+	for i := 0; i < n; i++ {
+		go func(rank int) {
+			defer ctrl.wg.Done()
 			defer func() {
 				if e := recover(); e != nil {
 					ctrl.qd.Quit()
 					ctrl.pr.Record(framework.PanicRecord{
-						Name:    "channel_dispatcher",
+						Name:    strconv.Itoa(rank),
 						Content: e,
 					})
 				}
 			}()
-			ctrl.cd.Run(ctrl.qd, ctrl.cdFinC)
+			ctrl.biz(ctrl.world.comms[rank], commMaps[rank])
+		}(i)
+	}
+	ctrl.lnchCommMaps = nil
+}
+
+// launchChannelDispatcherProc is the process of
+// launching a channel dispatcher in a daemon goroutine.
+// It is invoked by ctrl.lcdo.Do.
+func (ctrl *controller[Message]) launchChannelDispatcherProc() {
+	ctrl.cdFinC = make(chan struct{})
+	go func() {
+		defer func() {
+			if e := recover(); e != nil {
+				ctrl.qd.Quit()
+				ctrl.pr.Record(framework.PanicRecord{
+					Name:    "channel_dispatcher",
+					Content: e,
+				})
+			}
 		}()
-	})
+		ctrl.cd.Run(ctrl.qd, ctrl.cdFinC)
+	}()
 }

@@ -25,12 +25,12 @@ import (
 
 // QuitDevice is an implementation of interface framework.QuitDevice.
 type QuitDevice struct {
-	oi concurrency.OnceIndicator // QuitChan() ~ oi.C(), IsQuit() ~ oi.Test(), Quit() ~ oi.Do(nil)
+	o concurrency.Once // QuitChan() ~ o.C(), IsQuit() ~ o.Done(), Quit() ~ o.Do()
 }
 
 // NewQuitDevice creates a new quit device.
 func NewQuitDevice() *QuitDevice {
-	return &QuitDevice{oi: concurrency.NewOnceIndicator()}
+	return &QuitDevice{o: concurrency.NewOnce(nil)}
 }
 
 // QuitChan returns the channel for the quit signal.
@@ -40,7 +40,7 @@ func (qd *QuitDevice) QuitChan() <-chan struct{} {
 	if qd == nil {
 		panic(errors.AutoMsg("*QuitDevice is nil"))
 	}
-	return qd.oi.C()
+	return qd.o.C()
 }
 
 // IsQuit detects the quit signal on the quit channel.
@@ -49,7 +49,7 @@ func (qd *QuitDevice) IsQuit() bool {
 	if qd == nil {
 		panic(errors.AutoMsg("*QuitDevice is nil"))
 	}
-	return qd.oi.Test()
+	return qd.o.Done()
 }
 
 // Quit broadcasts a quit signal to quit the job.
@@ -59,5 +59,5 @@ func (qd *QuitDevice) Quit() {
 	if qd == nil {
 		panic(errors.AutoMsg("*QuitDevice is nil"))
 	}
-	qd.oi.Do(nil)
+	qd.o.Do()
 }

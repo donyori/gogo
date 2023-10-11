@@ -495,7 +495,7 @@ func (comm *communicator[Message]) Broadcast(root int, x Message) (
 		return
 	}
 
-	comm.ctx.ctrl.launchChannelDispatcher()
+	comm.ctx.ctrl.LaunchChannelDispatcher()
 	qry := &chanDispQry[Message]{
 		comm: comm,
 		ctr:  comm.bCtr,
@@ -554,7 +554,7 @@ func (comm *communicator[Message]) Scatter(
 		return
 	}
 
-	comm.ctx.ctrl.launchChannelDispatcher()
+	comm.ctx.ctrl.LaunchChannelDispatcher()
 	qry := &chanDispQry[Message]{
 		comm: comm,
 		ctr:  comm.sCtr,
@@ -637,7 +637,7 @@ func (comm *communicator[Message]) Gather(root int, msg Message) (
 		return
 	}
 
-	comm.ctx.ctrl.launchChannelDispatcher()
+	comm.ctx.ctrl.LaunchChannelDispatcher()
 	qry := &chanDispQry[Message]{
 		comm: comm,
 		ctr:  comm.gCtr,

@@ -79,7 +79,8 @@ type Broadcaster[Message any] interface {
 	// It panics if c is not gotten from the method Subscribe,
 	// or c has already unsubscribed, unless the broadcaster is closed.
 	// Note that this method may read messages from the channel c.
-	// Set c to a channel not assigned by this broadcaster may cause data loss.
+	// Setting c to a channel not assigned by this broadcaster
+	// may cause data loss.
 	//
 	// After calling Unsubscribe, the channel c is closed and drained
 	// by the broadcaster.
@@ -97,12 +98,13 @@ func NewBroadcaster[Message any](dfltBufSize int) Broadcaster[Message] {
 	if dfltBufSize < 0 {
 		dfltBufSize = 0
 	}
-	return &broadcaster[Message]{
+	b := &broadcaster[Message]{
 		cm:  make(map[<-chan Message]chan<- Message),
-		coi: NewOnceIndicator(),
 		m:   NewMutex(),
 		dbs: dfltBufSize,
 	}
+	b.co = NewOnce(b.closeProc)
+	return b
 }
 
 // broadcaster is an implementation of interface Broadcaster.
@@ -111,10 +113,10 @@ type broadcaster[Message any] struct {
 	// for sending messages to subscribers.
 	cm map[<-chan Message]chan<- Message
 
-	coi OnceIndicator // For closing the broadcaster.
-	m   Mutex         // Lock for the field cm.
-	bs  atomic.Int32  // Broadcast semaphore.
-	dbs int           // Default buffer size.
+	m   Mutex        // Lock for the field cm.
+	co  Once         // For closing the broadcaster.
+	bs  atomic.Int32 // Broadcast semaphore.
+	dbs int          // Default buffer size.
 }
 
 func (b *broadcaster[Message]) Closed() bool {
@@ -124,16 +126,16 @@ func (b *broadcaster[Message]) Closed() bool {
 		return false
 	}
 	// Acquire the lock first to avoid the case that the method Close
-	// is executing but not finished, and b.coi.Test() returns false.
+	// is executing but not finished, and b.co.Done() returns false.
 	b.m.Lock()
 	defer b.m.Unlock()
-	return b.coi.Test()
+	return b.co.Done()
 }
 
 func (b *broadcaster[Message]) Broadcast(x Message) {
 	b.m.Lock()
 	defer b.m.Unlock()
-	if b.coi.Test() {
+	if b.co.Done() {
 		panic(errors.AutoMsg("broadcaster is closed"))
 	}
 	b.bs.Add(1)
@@ -176,14 +178,7 @@ func (b *broadcaster[Message]) Broadcast(x Message) {
 }
 
 func (b *broadcaster[Message]) Close() {
-	b.coi.Do(func() {
-		b.m.Lock()
-		defer b.m.Unlock()
-		for _, c := range b.cm {
-			close(c)
-		}
-		b.cm = nil
-	})
+	b.co.Do()
 }
 
 func (b *broadcaster[Message]) Subscribe(bufSize int) <-chan Message {
@@ -192,15 +187,16 @@ func (b *broadcaster[Message]) Subscribe(bufSize int) <-chan Message {
 	}
 	b.m.Lock()
 	defer b.m.Unlock()
-	if b.coi.Test() {
+	if b.co.Done() {
 		return nil
 	}
 	c := make(chan Message, bufSize)
 
 	b.cm[c] = c
 	// If a compiler bug occurs on the above statement, try this:
-	//  var inC <-chan Message = c
-	//  b.cm[inC] = c
+	//
+	//	var inC <-chan Message = c
+	//	b.cm[inC] = c
 
 	return c
 }
@@ -221,7 +217,7 @@ func (b *broadcaster[Message]) Unsubscribe(c <-chan Message) []Message {
 		}
 	}
 	defer b.m.Unlock()
-	if b.coi.Test() {
+	if b.co.Done() {
 		return r
 	}
 	outC := b.cm[c]
@@ -234,4 +230,15 @@ func (b *broadcaster[Message]) Unsubscribe(c <-chan Message) []Message {
 		r = append(r, msg)
 	}
 	return r
+}
+
+// closeProc is the process of closing the broadcaster.
+// It is invoked by b.co.Do.
+func (b *broadcaster[Message]) closeProc() {
+	b.m.Lock()
+	defer b.m.Unlock()
+	for _, c := range b.cm {
+		close(c)
+	}
+	b.cm = nil
 }

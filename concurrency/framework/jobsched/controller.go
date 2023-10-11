@@ -222,11 +222,11 @@ func New[Job, Properties, Feedback any](
 		eqc:     make(chan []*MetaJob[Job, Properties], n),
 		dqc:     make(chan Job, 1),
 		pr:      concurrency.NewRecorder[framework.PanicRecord](0),
-		loi:     concurrency.NewOnceIndicator(),
-		wsoi:    concurrency.NewOnceIndicator(),
+		wso:     concurrency.NewOnce(nil),
 		setup:   opts.Setup,
 		cleanup: opts.Cleanup,
 	}
+	ctrl.lo = concurrency.NewOnce(ctrl.launchProc)
 	// Use reflect.TypeOf((*Feedback)(nil)).Elem() to work with interface types.
 	if reflect.TypeOf((*Feedback)(nil)).Elem() != noFeedbackType {
 		bufSize := opts.FeedbackChanBufSize
@@ -300,10 +300,10 @@ type controller[Job, Properties, Feedback any] struct {
 	fc   chan Feedback                    // Feedback channel, to collect feedback on jobs.
 	fhdc chan struct{}                    // Feedback handler done channel, to broadcast a signal when the feedback handler is finished.
 
-	pr   concurrency.Recorder[framework.PanicRecord] // Panic recorder.
-	wg   sync.WaitGroup                              // Wait group for the workers and the job allocator, not for the feedback handler.
-	loi  concurrency.OnceIndicator                   // For launching the framework.
-	wsoi concurrency.OnceIndicator                   // For indicating the start of the first effective call to the method Wait.
+	pr  concurrency.Recorder[framework.PanicRecord] // Panic recorder.
+	wg  sync.WaitGroup                              // Wait group for the workers and the job allocator, not for the feedback handler.
+	lo  concurrency.Once                            // For launching the framework.
+	wso concurrency.Once                            // For indicating the start of the first effective call to the method Wait.
 	// Lock to avoid the race condition on jq
 	// when calling Launch and Input at the same time
 	// or calling Input simultaneously.
@@ -327,77 +327,15 @@ func (ctrl *controller[Job, Properties, Feedback]) Quit() {
 }
 
 func (ctrl *controller[Job, Properties, Feedback]) Launch() {
-	ctrl.loi.Do(func() {
-		ctrl.m.Lock()
-		defer ctrl.m.Unlock()
-		ctrl.lsi = true
-
-		ctrl.wg.Add(ctrl.n + 1) // n workers + 1 job allocator
-		if ctrl.fc != nil {
-			go func() { // goroutine for feedback handler
-				defer close(ctrl.fhdc)
-				defer func() {
-					if e := recover(); e != nil {
-						ctrl.qd.Quit()
-						ctrl.pr.Record(framework.PanicRecord{
-							Name:    "feedback handler",
-							Content: e,
-						})
-					}
-				}()
-				ctrl.feedbackHandlerProc()
-			}()
-			go func() { // goroutine for closing feedback channel
-				defer close(ctrl.fc)
-				defer func() {
-					if e := recover(); e != nil {
-						ctrl.qd.Quit()
-						ctrl.pr.Record(framework.PanicRecord{
-							Name:    "feedback channel closer",
-							Content: e,
-						})
-					}
-				}()
-				ctrl.wg.Wait()
-			}()
-		}
-		for i := 0; i < ctrl.n; i++ {
-			go func(rank int) { // goroutine for worker
-				defer ctrl.wg.Done()
-				defer func() {
-					if e := recover(); e != nil {
-						ctrl.qd.Quit()
-						ctrl.pr.Record(framework.PanicRecord{
-							Name:    "worker " + strconv.Itoa(rank),
-							Content: e,
-						})
-					}
-				}()
-				ctrl.workerProc(rank)
-			}(i)
-		}
-		go func() { // goroutine for job allocator
-			defer ctrl.wg.Done()
-			defer func() {
-				if e := recover(); e != nil {
-					ctrl.qd.Quit()
-					ctrl.pr.Record(framework.PanicRecord{
-						Name:    "job allocator",
-						Content: e,
-					})
-				}
-			}()
-			ctrl.jobAllocatorProc()
-		}()
-	})
+	ctrl.lo.Do()
 }
 
 func (ctrl *controller[Job, Properties, Feedback]) Wait() int {
-	if !ctrl.loi.Test() {
+	if !ctrl.lo.Done() {
 		return -1
 	}
 	defer ctrl.qd.Quit() // for cleanup possible daemon goroutines that wait for a quit signal to exit
-	ctrl.wsoi.Do(nil)
+	ctrl.wso.Do()
 	ctrl.wg.Wait()
 	if ctrl.fhdc != nil {
 		<-ctrl.fhdc
@@ -420,11 +358,11 @@ func (ctrl *controller[Job, Properties, Feedback]) PanicRecords() []framework.Pa
 
 func (ctrl *controller[Job, Properties, Feedback]) Input(
 	metaJob ...*MetaJob[Job, Properties]) int {
-	if ctrl.wsoi.Test() {
+	if ctrl.wso.Done() {
 		return 0
 	}
 	mjs := copyMetaJobs(metaJob)
-	if !ctrl.loi.Test() && ctrl.inputBeforeLaunch(mjs) {
+	if !ctrl.lo.Done() && ctrl.inputBeforeLaunch(mjs) {
 		return len(mjs)
 	}
 	select {
@@ -433,6 +371,72 @@ func (ctrl *controller[Job, Properties, Feedback]) Input(
 	case ctrl.ic <- mjs:
 		return len(mjs)
 	}
+}
+
+// launchProc is the process of starting the job.
+// It is invoked by ctrl.lo.Do.
+func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
+	ctrl.m.Lock()
+	defer ctrl.m.Unlock()
+	ctrl.lsi = true
+
+	ctrl.wg.Add(ctrl.n + 1) // n workers + 1 job allocator
+	if ctrl.fc != nil {
+		go func() { // goroutine for feedback handler
+			defer close(ctrl.fhdc)
+			defer func() {
+				if e := recover(); e != nil {
+					ctrl.qd.Quit()
+					ctrl.pr.Record(framework.PanicRecord{
+						Name:    "feedback handler",
+						Content: e,
+					})
+				}
+			}()
+			ctrl.feedbackHandlerProc()
+		}()
+		go func() { // goroutine for closing feedback channel
+			defer close(ctrl.fc)
+			defer func() {
+				if e := recover(); e != nil {
+					ctrl.qd.Quit()
+					ctrl.pr.Record(framework.PanicRecord{
+						Name:    "feedback channel closer",
+						Content: e,
+					})
+				}
+			}()
+			ctrl.wg.Wait()
+		}()
+	}
+	for i := 0; i < ctrl.n; i++ {
+		go func(rank int) { // goroutine for worker
+			defer ctrl.wg.Done()
+			defer func() {
+				if e := recover(); e != nil {
+					ctrl.qd.Quit()
+					ctrl.pr.Record(framework.PanicRecord{
+						Name:    "worker " + strconv.Itoa(rank),
+						Content: e,
+					})
+				}
+			}()
+			ctrl.workerProc(rank)
+		}(i)
+	}
+	go func() { // goroutine for job allocator
+		defer ctrl.wg.Done()
+		defer func() {
+			if e := recover(); e != nil {
+				ctrl.qd.Quit()
+				ctrl.pr.Record(framework.PanicRecord{
+					Name:    "job allocator",
+					Content: e,
+				})
+			}
+		}()
+		ctrl.jobAllocatorProc()
+	}()
 }
 
 // feedbackHandlerProc is the feedback handler main process,
@@ -508,13 +512,13 @@ func (ctrl *controller[Job, Properties, Feedback]) jobAllocatorProc() {
 		dqc = ctrl.dqc // enable dqc
 	}
 	ctr := 1 // counter for available input sources. 1 at the beginning stands for the client
-	quitChan, wsoiC := ctrl.qd.QuitChan(), ctrl.wsoi.C()
+	quitChan, wsoC := ctrl.qd.QuitChan(), ctrl.wso.C()
 	for ctr > 0 || len(ctrl.ic) > 0 || dqc != nil {
 		select {
 		case <-quitChan:
 			return
-		case <-wsoiC:
-			wsoiC = nil // disable this channel to avoid receiving twice
+		case <-wsoC:
+			wsoC = nil // disable this channel to avoid receiving twice
 			ctr--
 		case mjs := <-ctrl.ic:
 			if len(mjs) > 0 {
