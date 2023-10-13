@@ -54,11 +54,11 @@ type Broadcaster[Message any] interface {
 	// All channels assigned by the broadcaster are closed to notify
 	// its subscribers that there are no more messages.
 	//
-	// After calling the method Close, all subsequent calls to
-	// the method Broadcast panic.
+	// After calling the method Close,
+	// all subsequent calls to the method Broadcast panic.
 	//
 	// This method can take effect only once for one instance.
-	// All calls after the first call perform nothing.
+	// After the first call, subsequent calls to Close do nothing.
 	//
 	// This method should only be used by the sender.
 	Close()

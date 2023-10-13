@@ -18,42 +18,30 @@
 
 package framework
 
-// QuitDevice is a device to acquire the channel for the quit signal,
-// detect the quit signal, and broadcast a quit signal to quit the job.
-type QuitDevice interface {
-	// QuitChan returns the channel for the quit signal.
-	// When the job is finished or quit, this channel is closed
-	// to broadcast the quit signal.
-	QuitChan() <-chan struct{}
+import "github.com/donyori/gogo/concurrency"
 
-	// IsQuit detects the quit signal on the quit channel.
-	// It returns true if a quit signal is detected, and false otherwise.
-	IsQuit() bool
-
-	// Quit broadcasts a quit signal to quit the job.
-	//
-	// This method will NOT wait until the job ends.
-	Quit()
-}
-
-// Controller is a device to launch, quit, and wait for the job.
+// Controller is a device to launch, cancel, and wait for the job.
 //
 // The use of all the frameworks under this package starts with creating
 // a controller through their own New function.
 type Controller interface {
-	QuitDevice
+	// Canceler returns a concurrency.Canceler for the job.
+	//
+	// Calls to Canceler always return the same non-nil value.
+	Canceler() concurrency.Canceler
 
 	// Launch starts the job.
 	//
-	// This method will NOT wait until the job ends.
+	// This method will not wait until the job ends.
 	// Use method Wait if you want to wait for that.
 	//
-	// Note that Launch can take effect only once.
+	// Note that Launch can take effect only once for one instance.
+	// After the first call, subsequent calls to Launch do nothing.
 	// To do the same job again, create a new Controller
 	// with the same parameters.
 	Launch()
 
-	// Wait waits for the job to finish or quit.
+	// Wait waits for the job to finish or cancel.
 	// It returns the number of panic goroutines.
 	//
 	// If the job is not launched, it does nothing and returns -1.

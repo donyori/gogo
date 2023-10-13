@@ -19,7 +19,7 @@
 package spmd
 
 import (
-	"github.com/donyori/gogo/concurrency/framework"
+	"github.com/donyori/gogo/concurrency"
 	"github.com/donyori/gogo/container/sequence/array"
 )
 
@@ -60,35 +60,34 @@ func newChanDispr[Message any](bufSize int) *chanDispr[Message] {
 
 // Run launches the channel dispatcher on current goroutine.
 //
-// quitDevice is the device to receive a quit signal.
-// It should be obtained from Controller.
-// The function panics if quitDevice is nil.
+// canceler is the canceler obtained from Controller.
+// The function panics if canceler is nil.
 //
 // finChan is a channel to broadcast a finish signal by closing the channel.
 // It is closed at the end of this function.
 // finChan is ignored if it is nil.
 func (cd *chanDispr[Message]) Run(
-	quitDevice framework.QuitDevice,
+	canceler concurrency.Canceler,
 	finChan chan<- struct{},
 ) {
 	if finChan != nil {
 		defer close(finChan)
 	}
-	quitChan := quitDevice.QuitChan()
+	cancelChan := canceler.C()
 	for {
 		select {
-		case <-quitChan:
+		case <-cancelChan:
 			return
 		case qry := <-cd.bcastChan:
-			if qry != nil && cd.handleBcast(quitChan, qry) {
+			if qry != nil && cd.handleBcast(cancelChan, qry) {
 				return
 			}
 		case qry := <-cd.scatterChan:
-			if qry != nil && cd.handleScatter(quitChan, qry) {
+			if qry != nil && cd.handleScatter(cancelChan, qry) {
 				return
 			}
 		case qry := <-cd.gatherChan:
-			if qry != nil && cd.handleGather(quitChan, qry) {
+			if qry != nil && cd.handleGather(cancelChan, qry) {
 				return
 			}
 		}
@@ -97,14 +96,14 @@ func (cd *chanDispr[Message]) Run(
 
 // handleBcast deals with a channel dispatcher query for Broadcast.
 //
-// quitChan is a channel to receive a quit signal.
-// It should be obtained from the quit device passed to the caller.
+// cancelChan is a channel to receive a cancellation signal.
+// It should be obtained from the canceler passed to the caller.
 // qry is the channel dispatcher query received from bcastChan.
 //
 // It returns an indicator, which is true if and only if
-// a quit signal is detected.
+// a cancellation signal is detected.
 func (cd *chanDispr[Message]) handleBcast(
-	quitChan <-chan struct{},
+	cancelChan <-chan struct{},
 	qry *chanDispQry[Message],
 ) bool {
 	ctx := qry.comm.ctx
@@ -128,7 +127,7 @@ func (cd *chanDispr[Message]) handleBcast(
 		ctx.bcastMap[qry.ctr] = cc
 	}
 	select {
-	case <-quitChan:
+	case <-cancelChan:
 		return true
 	case qry.comm.bcdc <- cc.c:
 		return false
@@ -137,14 +136,14 @@ func (cd *chanDispr[Message]) handleBcast(
 
 // handleScatter deals with a channel dispatcher query for Scatter.
 //
-// quitChan is a channel to receive a quit signal.
-// It should be obtained from the quit device passed to the caller.
+// cancelChan is a channel to receive a cancellation signal.
+// It should be obtained from the canceler passed to the caller.
 // qry is the channel dispatcher query received from scatterChan.
 //
 // It returns an indicator, which is true if and only if
-// a quit signal is detected.
+// a cancellation signal is detected.
 func (cd *chanDispr[Message]) handleScatter(
-	quitChan <-chan struct{},
+	cancelChan <-chan struct{},
 	qry *chanDispQry[Message],
 ) bool {
 	ctx := qry.comm.ctx
@@ -171,7 +170,7 @@ func (cd *chanDispr[Message]) handleScatter(
 		ctx.scatterMap[qry.ctr] = cc
 	}
 	select {
-	case <-quitChan:
+	case <-cancelChan:
 		return true
 	case qry.comm.scdc <- cc.cs:
 		return false
@@ -180,14 +179,14 @@ func (cd *chanDispr[Message]) handleScatter(
 
 // handleGather deals with a channel dispatcher query for Gather.
 //
-// quitChan is a channel to receive a quit signal.
-// It should be obtained from the quit device passed to the caller.
+// cancelChan is a channel to receive a cancellation signal.
+// It should be obtained from the canceler passed to the caller.
 // qry is the channel dispatcher query received from gatherChan.
 //
 // It returns an indicator, which is true if and only if
-// a quit signal is detected.
+// a cancellation signal is detected.
 func (cd *chanDispr[Message]) handleGather(
-	quitChan <-chan struct{},
+	cancelChan <-chan struct{},
 	qry *chanDispQry[Message],
 ) bool {
 	ctx := qry.comm.ctx
@@ -211,7 +210,7 @@ func (cd *chanDispr[Message]) handleGather(
 		ctx.gatherMap[qry.ctr] = cc
 	}
 	select {
-	case <-quitChan:
+	case <-cancelChan:
 		return true
 	case qry.comm.gcdc <- cc.c:
 		return false

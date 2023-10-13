@@ -27,7 +27,6 @@ import (
 
 	"github.com/donyori/gogo/concurrency"
 	"github.com/donyori/gogo/concurrency/framework"
-	"github.com/donyori/gogo/concurrency/framework/internal/quitdevice"
 	"github.com/donyori/gogo/container/sequence/array"
 	"github.com/donyori/gogo/errors"
 )
@@ -83,7 +82,7 @@ func New[Message any](
 		n = runtime.NumCPU()
 	}
 	ctrl := &controller[Message]{
-		qd:           quitdevice.NewQuitDevice(),
+		c:            concurrency.NewCanceler(),
 		cd:           newChanDispr[Message](n),
 		biz:          biz,
 		pr:           concurrency.NewRecorder[framework.PanicRecord](0),
@@ -141,7 +140,7 @@ func Run[Message any](
 
 // controller is an implementation of interface Controller.
 type controller[Message any] struct {
-	qd    framework.QuitDevice // Quit device.
+	c     concurrency.Canceler // Canceler.
 	world *context[Message]    // World context.
 	cd    *chanDispr[Message]  // Channel dispatcher.
 
@@ -157,16 +156,8 @@ type controller[Message any] struct {
 	lnchCommMaps []map[string]Communicator[Message]
 }
 
-func (ctrl *controller[Message]) QuitChan() <-chan struct{} {
-	return ctrl.qd.QuitChan()
-}
-
-func (ctrl *controller[Message]) IsQuit() bool {
-	return ctrl.qd.IsQuit()
-}
-
-func (ctrl *controller[Message]) Quit() {
-	ctrl.qd.Quit()
+func (ctrl *controller[Message]) Canceler() concurrency.Canceler {
+	return ctrl.c
 }
 
 func (ctrl *controller[Message]) Launch() {
@@ -178,7 +169,7 @@ func (ctrl *controller[Message]) Wait() int {
 		return -1
 	}
 	defer func() {
-		ctrl.qd.Quit() // for cleanup possible daemon goroutines that wait for a quit signal to exit
+		ctrl.c.Cancel() // for cleanup possible daemon goroutines that wait for a cancellation signal to exit
 		if ctrl.lcdo.Done() {
 			<-ctrl.cdFinC // wait for the channel dispatcher to finish
 		}
@@ -216,7 +207,7 @@ func (ctrl *controller[Message]) launchProc() {
 			defer ctrl.wg.Done()
 			defer func() {
 				if e := recover(); e != nil {
-					ctrl.qd.Quit()
+					ctrl.c.Cancel()
 					ctrl.pr.Record(framework.PanicRecord{
 						Name:    strconv.Itoa(rank),
 						Content: e,
@@ -237,13 +228,13 @@ func (ctrl *controller[Message]) launchChannelDispatcherProc() {
 	go func() {
 		defer func() {
 			if e := recover(); e != nil {
-				ctrl.qd.Quit()
+				ctrl.c.Cancel()
 				ctrl.pr.Record(framework.PanicRecord{
 					Name:    "channel_dispatcher",
 					Content: e,
 				})
 			}
 		}()
-		ctrl.cd.Run(ctrl.qd, ctrl.cdFinC)
+		ctrl.cd.Run(ctrl.c, ctrl.cdFinC)
 	}()
 }

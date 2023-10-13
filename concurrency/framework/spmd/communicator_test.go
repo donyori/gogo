@@ -107,7 +107,7 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 		if world.Rank() == 6 {
 			timer := time.AfterFunc(time.Second, func() {
 				t.Error("timeout")
-				world.Quit()
+				world.Canceler().Cancel()
 			})
 			defer timer.Stop()
 			// Goroutine 6 is a progress monitor.
@@ -125,14 +125,14 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 		var msg any
 		checkD := func(d int) {
 			if d < 0 {
-				t.Errorf("goroutine %d, dst %d, detected an unexpected quit signal", r, dst)
+				t.Errorf("goroutine %d, dst %d, detected an unexpected cancellation signal", r, dst)
 			} else if d != dst {
 				t.Errorf("goroutine %d, got dst %d; want %d", r, d, dst)
 			}
 		}
 		checkSrcMsg := func() {
 			if src < 0 {
-				t.Errorf("goroutine %d, detected an unexpected quit signal", r)
+				t.Errorf("goroutine %d, detected an unexpected cancellation signal", r)
 			} else if want := dataFn(src, r); msg != want {
 				t.Errorf("goroutine %d, src %d, Receive got %d; want %d", r, src, msg, want)
 			}
@@ -177,7 +177,7 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 			for _, src = range []int{0, 4} {
 				msg, ok := comm.Receive(src)
 				if !ok {
-					t.Errorf("goroutine %d, detected an unexpected quit signal", r)
+					t.Errorf("goroutine %d, detected an unexpected cancellation signal", r)
 				} else if want := dataFn(src, r); msg != want {
 					t.Errorf("goroutine %d, src %d, Receive got %d; want %d", r, src, msg, want)
 				}
@@ -189,7 +189,7 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 			}
 			world.Barrier()
 			time.AfterFunc(time.Microsecond, func() {
-				comm.Quit() // quit the job to let other goroutines exit
+				comm.Canceler().Cancel() // cancel the job to let other goroutines exit
 			})
 			src, msg = comm.ReceivePublic()
 			if src >= 0 {
@@ -237,7 +237,7 @@ func TestCommunicator_Broadcast(t *testing.T) {
 		for i, a := range data {
 			msg, ok := world.Broadcast(i%4, a[r])
 			if !ok {
-				t.Errorf("goroutine %d, root %d, detected an unexpected quit signal", r, i%4)
+				t.Errorf("goroutine %d, root %d, detected an unexpected cancellation signal", r, i%4)
 			}
 			if msg != a[i%4] {
 				t.Errorf("goroutine %d, root %d, got %v; want %v", r, i%4, msg, a[i%4])
@@ -249,7 +249,7 @@ func TestCommunicator_Broadcast(t *testing.T) {
 		t.Errorf("panic %q", prs)
 	}
 	if n := spmd.WrapController[any](ctrl).GetWorldBcastMapLen(); n > 0 {
-		t.Errorf("broadcast channel map is NOT clean: %d element(s) remained", n)
+		t.Errorf("broadcast channel map is not clean: %d element(s) remained", n)
 	}
 }
 
@@ -273,7 +273,7 @@ func TestCommunicator_Scatter(t *testing.T) {
 		for i, a := range data {
 			intArray, ok := world.Scatter(i%4, a[r])
 			if !ok {
-				t.Errorf("goroutine %d, root %d, detected an unexpected quit signal", r, i%4)
+				t.Errorf("goroutine %d, root %d, detected an unexpected cancellation signal", r, i%4)
 			}
 			if intArray == nil {
 				if i < 4 {
@@ -301,7 +301,7 @@ func TestCommunicator_Scatter(t *testing.T) {
 		t.Errorf("panic %q", prs)
 	}
 	if n := spmd.WrapController[int](ctrl).GetWorldScatterMapLen(); n > 0 {
-		t.Errorf("scatter channel map is NOT clean: %d element(s) remained", n)
+		t.Errorf("scatter channel map is not clean: %d element(s) remained", n)
 	}
 }
 
@@ -318,7 +318,7 @@ func TestCommunicator_Gather(t *testing.T) {
 			for root := 0; root < 4; root++ {
 				x, ok := world.Gather(root, a[r])
 				if !ok {
-					t.Errorf("goroutine %d, root %d, detected an unexpected quit signal", r, root)
+					t.Errorf("goroutine %d, root %d, detected an unexpected cancellation signal", r, root)
 				}
 				if r == root {
 					if len(x) != len(a) {
@@ -342,6 +342,6 @@ func TestCommunicator_Gather(t *testing.T) {
 		t.Errorf("panic %q", prs)
 	}
 	if n := spmd.WrapController[any](ctrl).GetWorldGatherMapLen(); n > 0 {
-		t.Errorf("gather channel map is NOT clean: %d element(s) remained", n)
+		t.Errorf("gather channel map is not clean: %d element(s) remained", n)
 	}
 }

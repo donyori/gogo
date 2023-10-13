@@ -27,13 +27,12 @@ import (
 
 	"github.com/donyori/gogo/concurrency"
 	"github.com/donyori/gogo/concurrency/framework"
-	"github.com/donyori/gogo/concurrency/framework/internal/quitdevice"
 	"github.com/donyori/gogo/errors"
 )
 
 // Controller is a controller for this job scheduling framework.
 //
-// It is used to launch, quit, and wait for the job.
+// It is used to launch, cancel, and wait for the job.
 // Also, it is used to input new jobs.
 //
 // The first type parameter Job is the type of jobs.
@@ -79,9 +78,7 @@ var noFeedbackType = reflect.TypeOf(NoFeedback{})
 // The third type parameter Feedback is the type of feedback on the jobs,
 // which is collected and handled in a dedicated goroutine.
 //
-// The first parameter is a device to acquire the channel for the quit signal,
-// detect the quit signal, and broadcast a quit signal to interrupt
-// all job processors.
+// The first parameter is a canceler to interrupt all job processors.
 // The second parameter is the rank of the worker goroutine
 // (from 0 to ctrl.NumGoroutine()-1) to identify the goroutine uniquely.
 // The third parameter is the job to be processed.
@@ -99,19 +96,17 @@ var noFeedbackType = reflect.TypeOf(NoFeedback{})
 // In particular, if the type of feedback is NoFeedback,
 // the framework skips the feedback handler.
 type JobHandler[Job, Properties, Feedback any] func(
-	quitDevice framework.QuitDevice,
+	canceler concurrency.Canceler,
 	rank int,
 	job Job,
 ) (newJobs []*MetaJob[Job, Properties], feedback Feedback)
 
 // FeedbackHandler is a function to process feedback.
 //
-// The first parameter is a device to acquire the channel for the quit signal,
-// detect the quit signal, and broadcast a quit signal to interrupt
-// all job processors.
+// The first parameter is a canceler to interrupt all job processors.
 // The second parameter is the feedback to be processed.
 type FeedbackHandler[Feedback any] func(
-	quitDevice framework.QuitDevice,
+	canceler concurrency.Canceler,
 	feedback Feedback,
 )
 
@@ -216,7 +211,7 @@ func New[Job, Properties, Feedback any](
 		n:       n,
 		jh:      jobHandler,
 		fh:      feedbackHandler,
-		qd:      quitdevice.NewQuitDevice(),
+		c:       concurrency.NewCanceler(),
 		jq:      jq,
 		ic:      make(chan []*MetaJob[Job, Properties], 1),
 		eqc:     make(chan []*MetaJob[Job, Properties], n),
@@ -291,7 +286,7 @@ type controller[Job, Properties, Feedback any] struct {
 	jh JobHandler[Job, Properties, Feedback] // Job handler.
 	fh FeedbackHandler[Feedback]             // Feedback handler.
 
-	qd framework.QuitDevice      // Quit device.
+	c  concurrency.Canceler      // Canceler.
 	jq JobQueue[Job, Properties] // Job queue.
 
 	ic   chan []*MetaJob[Job, Properties] // Input channel, to input jobs from the client.
@@ -314,16 +309,8 @@ type controller[Job, Properties, Feedback any] struct {
 	cleanup func(ctrl Controller[Job, Properties, Feedback], rank int) // Worker cleanup function.
 }
 
-func (ctrl *controller[Job, Properties, Feedback]) QuitChan() <-chan struct{} {
-	return ctrl.qd.QuitChan()
-}
-
-func (ctrl *controller[Job, Properties, Feedback]) IsQuit() bool {
-	return ctrl.qd.IsQuit()
-}
-
-func (ctrl *controller[Job, Properties, Feedback]) Quit() {
-	ctrl.qd.Quit()
+func (ctrl *controller[Job, Properties, Feedback]) Canceler() concurrency.Canceler {
+	return ctrl.c
 }
 
 func (ctrl *controller[Job, Properties, Feedback]) Launch() {
@@ -334,7 +321,7 @@ func (ctrl *controller[Job, Properties, Feedback]) Wait() int {
 	if !ctrl.lo.Done() {
 		return -1
 	}
-	defer ctrl.qd.Quit() // for cleanup possible daemon goroutines that wait for a quit signal to exit
+	defer ctrl.c.Cancel() // for cleanup possible daemon goroutines that wait for a cancellation signal to exit
 	ctrl.wso.Do()
 	ctrl.wg.Wait()
 	if ctrl.fhdc != nil {
@@ -366,7 +353,7 @@ func (ctrl *controller[Job, Properties, Feedback]) Input(
 		return len(mjs)
 	}
 	select {
-	case <-ctrl.qd.QuitChan():
+	case <-ctrl.c.C():
 		return 0
 	case ctrl.ic <- mjs:
 		return len(mjs)
@@ -386,7 +373,7 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 			defer close(ctrl.fhdc)
 			defer func() {
 				if e := recover(); e != nil {
-					ctrl.qd.Quit()
+					ctrl.c.Cancel()
 					ctrl.pr.Record(framework.PanicRecord{
 						Name:    "feedback handler",
 						Content: e,
@@ -399,7 +386,7 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 			defer close(ctrl.fc)
 			defer func() {
 				if e := recover(); e != nil {
-					ctrl.qd.Quit()
+					ctrl.c.Cancel()
 					ctrl.pr.Record(framework.PanicRecord{
 						Name:    "feedback channel closer",
 						Content: e,
@@ -414,7 +401,7 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 			defer ctrl.wg.Done()
 			defer func() {
 				if e := recover(); e != nil {
-					ctrl.qd.Quit()
+					ctrl.c.Cancel()
 					ctrl.pr.Record(framework.PanicRecord{
 						Name:    "worker " + strconv.Itoa(rank),
 						Content: e,
@@ -428,7 +415,7 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 		defer ctrl.wg.Done()
 		defer func() {
 			if e := recover(); e != nil {
-				ctrl.qd.Quit()
+				ctrl.c.Cancel()
 				ctrl.pr.Record(framework.PanicRecord{
 					Name:    "job allocator",
 					Content: e,
@@ -444,14 +431,14 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 func (ctrl *controller[Job, Properties, Feedback]) feedbackHandlerProc() {
 	// The feedback handler must handle all feedback
 	// returned by the job handlers.
-	// Therefore, this function does not listen to ctrl.qd.QuitChan().
+	// Therefore, this function does not listen to ctrl.c.C().
 	switch {
 	case ctrl.fc == nil:
 		// This should never happen, but will act as a safeguard for later.
 		return
 	case ctrl.fh != nil:
 		for fb := range ctrl.fc {
-			ctrl.fh(ctrl.qd, fb)
+			ctrl.fh(ctrl.c, fb)
 		}
 	default:
 		for range ctrl.fc {
@@ -468,25 +455,25 @@ func (ctrl *controller[Job, Properties, Feedback]) workerProc(rank int) {
 	if ctrl.cleanup != nil {
 		defer ctrl.cleanup(ctrl, rank)
 	}
-	quitChan := ctrl.qd.QuitChan()
+	cancelChan := ctrl.c.C()
 	for {
 		var mjs []*MetaJob[Job, Properties]
 		var fb Feedback
 		select {
-		case <-quitChan:
+		case <-cancelChan:
 			return
 		case job, ok := <-ctrl.dqc:
 			if !ok {
 				return
 			}
-			mjs, fb = ctrl.jh(ctrl.qd, rank, job)
+			mjs, fb = ctrl.jh(ctrl.c, rank, job)
 			mjs = copyMetaJobs(mjs)
 		}
 		if ctrl.fc != nil {
 			// The feedback type is not NoFeedback.
 			// Send feedback first.
 			select {
-			case <-quitChan:
+			case <-cancelChan:
 				return
 			case ctrl.fc <- fb:
 			}
@@ -494,7 +481,7 @@ func (ctrl *controller[Job, Properties, Feedback]) workerProc(rank int) {
 		// Always send new jobs to the job allocator,
 		// regardless of whether jobs are empty.
 		select {
-		case <-quitChan:
+		case <-cancelChan:
 			return
 		case ctrl.eqc <- mjs:
 		}
@@ -512,10 +499,10 @@ func (ctrl *controller[Job, Properties, Feedback]) jobAllocatorProc() {
 		dqc = ctrl.dqc // enable dqc
 	}
 	ctr := 1 // counter for available input sources. 1 at the beginning stands for the client
-	quitChan, wsoC := ctrl.qd.QuitChan(), ctrl.wso.C()
+	cancelChan, wsoC := ctrl.c.C(), ctrl.wso.C()
 	for ctr > 0 || len(ctrl.ic) > 0 || dqc != nil {
 		select {
-		case <-quitChan:
+		case <-cancelChan:
 			return
 		case <-wsoC:
 			wsoC = nil // disable this channel to avoid receiving twice
