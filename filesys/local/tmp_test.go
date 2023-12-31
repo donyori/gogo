@@ -57,13 +57,13 @@ func TestTmp_Sync(t *testing.T) {
 	} else if n := len(files); n != N {
 		t.Errorf("got %d files; want %d", n, N)
 	}
-	set := make(map[string]bool)
+	set := make(map[string]struct{})
 	for _, filename := range files {
-		if set[filename] {
+		if _, ok := set[filename]; ok {
 			t.Error("collided filename", filename)
 			continue
 		}
-		set[filename] = true
+		set[filename] = struct{}{}
 	}
 }
 
@@ -93,12 +93,12 @@ func TestTmpDir_Sync(t *testing.T) {
 	} else if n := len(dirs); n != N {
 		t.Errorf("got %d dirs; want %d", n, N)
 	}
-	set := make(map[string]bool)
+	set := make(map[string]struct{})
 	for _, dir := range dirs {
-		if set[dir] {
+		if _, ok := set[dir]; ok {
 			t.Error("collided directory", dir)
 			continue
 		}
-		set[dir] = true
+		set[dir] = struct{}{}
 	}
 }

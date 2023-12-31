@@ -153,79 +153,120 @@ func testMultiCloser(t *testing.T, tryAll, noError bool) {
 	})
 }
 
-func testMultiCloserOneCall(t *testing.T, tryAll, noError bool, failErr error,
-	closers []io.Closer, anotherCloser io.Closer, mc inout.MultiCloser, callNo int) {
+func testMultiCloserOneCall(
+	t *testing.T,
+	tryAll bool,
+	noError bool,
+	failErr error,
+	closers []io.Closer,
+	anotherCloser io.Closer,
+	mc inout.MultiCloser,
+	callNo int,
+) {
 	t.Run(fmt.Sprintf("callNo=%d", callNo), func(t *testing.T) {
-		err := mc.Close()
-		var wantErr error
-		var wantClosed bool
-		callString := "a failed call"
-		switch callNo {
-		case 0:
-			if tryAll {
-				el, ok := err.(errors.ErrorList)
-				if !ok {
-					t.Errorf("mc.Close returned %v, not an ErrorList", err)
-				}
-				errs := el.ToList()
-				if len(errs) != 2 || errs[0] != failErr || errs[1] != failErr {
-					t.Errorf("mc.Close returned %v; want (%v, %[2]v)", err, failErr)
-				}
-			} else {
-				wantErr = failErr
-			}
-		case 1:
-			wantErr = failErr
-		case 2:
-			wantClosed = true
-			callString = "a successful call"
-		default:
-			if !noError {
-				wantErr = inout.ErrClosed
-			}
-			wantClosed = true
-			callString = "a call to the successfully closed mc"
-		}
-		if (!tryAll || callNo > 0) && !errors.Is(err, wantErr) {
-			t.Errorf("mc.Close returned %v; want %v", err, wantErr)
-		}
-		if mc.Closed() != wantClosed {
-			t.Errorf("mc.Closed returned %t after the %d call (%s) to Close", !wantClosed, callNo, callString)
-		}
+		testMultiCloserOneCallClose(t, tryAll, noError, failErr, mc, callNo)
+		testMultiCloserOneCallCloserClosed(
+			t, tryAll, closers, anotherCloser, mc)
+	})
+}
 
+// testMultiCloserOneCallClose is a subprocess of testMultiCloserOneCall
+// to test inout.MultiCloser.Close.
+func testMultiCloserOneCallClose(
+	t *testing.T,
+	tryAll bool,
+	noError bool,
+	failErr error,
+	mc inout.MultiCloser,
+	callNo int,
+) {
+	err := mc.Close()
+	var wantErr error
+	var wantClosed bool
+	callString := "a failed call"
+	switch callNo {
+	case 0:
 		if tryAll {
-			for i, closer := range closers {
-				wantClosed := closer.(*testCloser).err == nil
-				closed, ok := mc.CloserClosed(closer)
-				if !ok {
-					t.Errorf("the %d closer is in mc but mc.CloserClosed returned (%t, %t)", i, closed, ok)
-				}
-				if closed != wantClosed {
-					t.Errorf("mc.CloserClosed for the %d closer was %t; want %t", i, closed, wantClosed)
-				}
+			el, ok := err.(errors.ErrorList)
+			if !ok {
+				t.Errorf("mc.Close returned %v (of type %[1]v), not an ErrorList",
+					err)
+			}
+			errs := el.ToList()
+			if len(errs) != 2 || errs[0] != failErr || errs[1] != failErr {
+				t.Errorf("mc.Close returned %v; want (%v, %[2]v)",
+					err, failErr)
 			}
 		} else {
-			var idx int
-			for idx = len(closers) - 1; idx >= 0; idx-- {
-				if closers[idx].(*testCloser).err != nil {
-					break
-				}
-			}
-			for i, closer := range closers {
-				wantClosed := i > idx
-				closed, ok := mc.CloserClosed(closer)
-				if !ok {
-					t.Errorf("the %d closer is in mc but mc.CloserClosed returned (%t, %t)", i, closed, ok)
-				}
-				if closed != wantClosed {
-					t.Errorf("mc.CloserClosed for the %d closer was %t; want %t", i, closed, wantClosed)
-				}
-			}
+			wantErr = failErr
 		}
+	case 1:
+		wantErr = failErr
+	case 2:
+		wantClosed = true
+		callString = "a successful call"
+	default:
+		if !noError {
+			wantErr = inout.ErrClosed
+		}
+		wantClosed = true
+		callString = "a call to the successfully closed mc"
+	}
+	if (!tryAll || callNo > 0) && !errors.Is(err, wantErr) {
+		t.Errorf("mc.Close returned %v; want %v", err, wantErr)
+	}
+	if mc.Closed() != wantClosed {
+		t.Errorf("mc.Closed returned %t after the %d call (%s) to Close",
+			!wantClosed, callNo, callString)
+	}
+}
 
-		closed, ok := mc.CloserClosed(anotherCloser)
-		if closed || ok {
-			t.Errorf("mc.CloserClosed returned (%t, %t) for anotherCloser", closed, ok)
+// testMultiCloserOneCallCloserClosed is a subprocess of testMultiCloserOneCall
+// to test inout.MultiCloser.CloserClosed after calling Close.
+func testMultiCloserOneCallCloserClosed(
+	t *testing.T,
+	tryAll bool,
+	closers []io.Closer,
+	anotherCloser io.Closer,
+	mc inout.MultiCloser,
+) {
+	if tryAll {
+		for i, closer := range closers {
+			wantClosed := closer.(*testCloser).err == nil
+			closed, ok := mc.CloserClosed(closer)
+			if !ok {
+				t.Errorf("the %d closer is in mc but mc.CloserClosed returned (%t, %t)",
+					i, closed, ok)
+			}
+			if closed != wantClosed {
+				t.Errorf("mc.CloserClosed for the %d closer was %t; want %t",
+					i, closed, wantClosed)
+			}
 		}
-	})
+	} else {
+		var idx int
+		for idx = len(closers) - 1; idx >= 0; idx-- {
+			if closers[idx].(*testCloser).err != nil {
+				break
+			}
+		}
+		for i, closer := range closers {
+			wantClosed := i > idx
+			closed, ok := mc.CloserClosed(closer)
+			if !ok {
+				t.Errorf("the %d closer is in mc but mc.CloserClosed returned (%t, %t)",
+					i, closed, ok)
+			}
+			if closed != wantClosed {
+				t.Errorf("mc.CloserClosed for the %d closer was %t; want %t",
+					i, closed, wantClosed)
+			}
+		}
+	}
+
+	closed, ok := mc.CloserClosed(anotherCloser)
+	if closed || ok {
+		t.Errorf("mc.CloserClosed returned (%t, %t) for anotherCloser",
+			closed, ok)
+	}
 }

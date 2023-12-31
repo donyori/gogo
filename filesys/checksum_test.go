@@ -61,7 +61,8 @@ func TestChecksum(t *testing.T) {
 							t.Error("close file -", err)
 						}
 					}(file)
-					got, err := filesys.Checksum(file, false, upper, newHashes...)
+					got, err := filesys.Checksum(
+						file, false, upper, newHashes...)
 					if err != nil {
 						t.Error("checksum -", err)
 					} else if !slices.Equal(got, want) {
@@ -93,7 +94,8 @@ func TestChecksumFromFS(t *testing.T) {
 					want = wantUpper
 				}
 				t.Run(fmt.Sprintf("upper=%t", upper), func(t *testing.T) {
-					got, err := filesys.ChecksumFromFS(testFS, filename, upper, newHashes...)
+					got, err := filesys.ChecksumFromFS(
+						testFS, filename, upper, newHashes...)
 					if err != nil {
 						t.Error("checksum -", err)
 					} else if !slices.Equal(got, want) {
@@ -195,7 +197,8 @@ func TestNewHashVerifier(t *testing.T) {
 				e := recover()
 				if tc.panicMsg != "" {
 					if s, ok := e.(string); !ok || s != tc.panicMsg {
-						t.Errorf("got panic %v (type: %[1]T); want %s", e, tc.panicMsg)
+						t.Errorf("got panic %v (type: %[1]T); want %s",
+							e, tc.panicMsg)
 					}
 				} else if e != nil {
 					t.Error("panic -", e)
@@ -251,7 +254,8 @@ func TestVerifyChecksumFromFS(t *testing.T) {
 	t.Run(`fsys=<nil>&file=""`, func(t *testing.T) {
 		for _, tc := range nilAndNonExistTestCases {
 			t.Run("hvs="+tc.hvsName, func(t *testing.T) {
-				if got := filesys.VerifyChecksumFromFS(nil, "", tc.hvs...); got {
+				got := filesys.VerifyChecksumFromFS(nil, "", tc.hvs...)
+				if got {
 					t.Error("got true; want false")
 				}
 			})
@@ -261,7 +265,9 @@ func TestVerifyChecksumFromFS(t *testing.T) {
 	t.Run(`file="nonexist"`, func(t *testing.T) {
 		for _, tc := range nilAndNonExistTestCases {
 			t.Run("hvs="+tc.hvsName, func(t *testing.T) {
-				if got := filesys.VerifyChecksumFromFS(testFS, "nonexist", tc.hvs...); got {
+				got := filesys.VerifyChecksumFromFS(
+					testFS, "nonexist", tc.hvs...)
+				if got {
 					t.Error("got true; want false")
 				}
 			})
@@ -272,7 +278,8 @@ func TestVerifyChecksumFromFS(t *testing.T) {
 		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
 			for _, tc := range verifyChecksumTestCases(filename) {
 				t.Run("hvs="+tc.hvsName, func(t *testing.T) {
-					got := filesys.VerifyChecksumFromFS(testFS, filename, tc.hvs...)
+					got := filesys.VerifyChecksumFromFS(
+						testFS, filename, tc.hvs...)
 					if got != tc.want {
 						t.Errorf("got %t; want %t", got, tc.want)
 					}
@@ -402,7 +409,8 @@ func TestNonNilDeduplicatedHashVerifiers(t *testing.T) {
 			got := filesys.NonNilDeduplicatedHashVerifiers(input)
 			if tc.want != nil {
 				if !compare.AnySliceEqual(got, tc.want) {
-					t.Errorf("got (len: %d) %v; want (len: %d) %v", len(got), got, len(tc.want), tc.want)
+					t.Errorf("got (len: %d) %v; want (len: %d) %v",
+						len(got), got, len(tc.want), tc.want)
 				}
 			} else if got != nil {
 				t.Errorf("got (len: %d) %v; want <nil>", len(got), got)

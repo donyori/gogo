@@ -194,40 +194,51 @@ func TestRead_TarTgzTbz(t *testing.T) {
 			if err != nil {
 				t.Fatal("load tar file -", err)
 			}
-
-			for i := 0; ; i++ {
-				hdr, err := r.TarNext()
-				if err != nil {
-					if errors.Is(err, io.EOF) {
-						if i != len(files) {
-							t.Errorf("tar header number: %d != %d, but got EOF",
-								i, len(files))
-						}
-						return // end of archive
-					}
-					t.Fatalf("read No.%d tar header - %v", i, err)
-				}
-				if i >= len(files) {
-					t.Fatal("tar headers more than", len(files))
-				}
-				if hdr.Name != files[i].name {
-					t.Errorf("No.%d tar header name unequal - got %s; want %s",
-						i, hdr.Name, files[i].name)
-				}
-				if TarHeaderIsDir(hdr) {
-					_, err = r.Read([]byte{})
-					if !errors.Is(err, filesys.ErrIsDir) {
-						t.Errorf("No.%d tar read file body - got %v; want %v",
-							i, err, filesys.ErrIsDir)
-					}
-				} else {
-					err = iotest.TestReader(r, files[i].body)
-					if err != nil {
-						t.Errorf("No.%d tar test read - %v", i, err)
-					}
-				}
-			}
+			testReadTarTgzTbz(t, r, files)
 		})
+	}
+}
+
+// testReadTarTgzTbz is a subprocess of TestRead_TarTgzTbz
+// to test reading a tar archive.
+//
+// It may use t.Fatal and t.Fatalf to stop the test.
+func testReadTarTgzTbz(
+	t *testing.T,
+	r filesys.Reader,
+	files []tarFileNameBody,
+) {
+	for i := 0; ; i++ {
+		hdr, err := r.TarNext()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				if i != len(files) {
+					t.Errorf("tar header number: %d != %d, but got EOF",
+						i, len(files))
+				}
+				return // end of archive
+			}
+			t.Fatalf("read No.%d tar header - %v", i, err)
+		}
+		if i >= len(files) {
+			t.Fatal("tar headers more than", len(files))
+		}
+		if hdr.Name != files[i].name {
+			t.Errorf("No.%d tar header name unequal - got %s; want %s",
+				i, hdr.Name, files[i].name)
+		}
+		if TarHeaderIsDir(hdr) {
+			_, err = r.Read([]byte{})
+			if !errors.Is(err, filesys.ErrIsDir) {
+				t.Errorf("No.%d tar read file body - got %v; want %v",
+					i, err, filesys.ErrIsDir)
+			}
+		} else {
+			err = iotest.TestReader(r, files[i].body)
+			if err != nil {
+				t.Errorf("No.%d tar test read - %v", i, err)
+			}
+		}
 	}
 }
 
@@ -252,55 +263,68 @@ func TestRead_Zip(t *testing.T) {
 			if err != nil {
 				t.Fatal("load zip file -", err)
 			}
+			testReadZip(t, r, fileMap)
+		})
+	}
+}
 
-			zipFiles, err := r.ZipFiles()
+// testReadZip is a subprocess of TestRead_Zip
+// to test reading a ZIP archive.
+//
+// It may use t.Fatal to stop the test.
+//
+// It may use t.Run to create subtests for each file in the ZIP archive.
+func testReadZip(
+	t *testing.T,
+	r filesys.Reader,
+	fileMap map[string]*zipHeaderBody,
+) {
+	zipFiles, err := r.ZipFiles()
+	if err != nil {
+		t.Fatal("ZipFiles -", err)
+	}
+	if len(zipFiles) != len(fileMap) {
+		t.Errorf("got %d zip files; want %d",
+			len(zipFiles), len(fileMap))
+	}
+	for i, file := range zipFiles {
+		if file == nil {
+			t.Errorf("No.%d zip file is nil", i)
+			continue
+		}
+		t.Run(fmt.Sprintf("zipFile=%+q", file.Name), func(t *testing.T) {
+			hb, ok := fileMap[file.Name]
+			if !ok {
+				t.Fatalf("unknown zip file %q", file.Name)
+			}
+			isDir := hb.header.FileInfo().IsDir()
+			if d := file.FileInfo().IsDir(); d != isDir {
+				t.Errorf("got IsDir %t; want %t", d, isDir)
+			}
+			if isDir {
+				return
+			}
+			rc, err := file.Open()
 			if err != nil {
-				t.Fatal("ZipFiles -", err)
+				t.Fatal("open -", err)
 			}
-			if len(zipFiles) != len(fileMap) {
-				t.Errorf("got %d zip files; want %d",
-					len(zipFiles), len(fileMap))
-			}
-			for i, file := range zipFiles {
-				if file == nil {
-					t.Errorf("No.%d zip file is nil", i)
-					continue
+			defer func(rc io.ReadCloser) {
+				if err := rc.Close(); err != nil {
+					t.Error("close -", err)
 				}
-				t.Run(fmt.Sprintf("zipFile=%+q", file.Name), func(t *testing.T) {
-					hb, ok := fileMap[file.Name]
-					if !ok {
-						t.Fatalf("unknown zip file %q", file.Name)
-					}
-					isDir := hb.header.FileInfo().IsDir()
-					if d := file.FileInfo().IsDir(); d != isDir {
-						t.Errorf("got IsDir %t; want %t", d, isDir)
-					}
-					if isDir {
-						return
-					}
-					rc, err := file.Open()
-					if err != nil {
-						t.Fatal("open -", err)
-					}
-					defer func(rc io.ReadCloser) {
-						if err := rc.Close(); err != nil {
-							t.Error("close -", err)
-						}
-					}(rc)
-					data, err := io.ReadAll(rc)
-					if err != nil {
-						t.Fatal("read -", err)
-					}
-					if !bytes.Equal(data, hb.body) {
-						t.Errorf(
-							"file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
-							len(data),
-							data,
-							len(hb.body),
-							hb.body,
-						)
-					}
-				})
+			}(rc)
+			data, err := io.ReadAll(rc)
+			if err != nil {
+				t.Fatal("read -", err)
+			}
+			if !bytes.Equal(data, hb.body) {
+				t.Errorf(
+					"file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
+					len(data),
+					data,
+					len(hb.body),
+					hb.body,
+				)
 			}
 		})
 	}
@@ -324,7 +348,10 @@ func TestRead_Offset(t *testing.T) {
 			continue
 		}
 		t.Run(fmt.Sprintf("offset=%d", offset), func(t *testing.T) {
-			r, err := local.Read(name, &filesys.ReadOptions{Offset: offset, Raw: true})
+			r, err := local.Read(name, &filesys.ReadOptions{
+				Offset: offset,
+				Raw:    true,
+			})
 			if err != nil {
 				t.Fatal("create -", err)
 			}
@@ -340,9 +367,17 @@ func TestRead_Offset(t *testing.T) {
 		})
 	}
 
-	for _, offset := range []int64{math.MinInt64, -size - 1, size + 1, math.MaxInt64} {
+	for _, offset := range []int64{
+		math.MinInt64,
+		-size - 1,
+		size + 1,
+		math.MaxInt64,
+	} {
 		t.Run(fmt.Sprintf("offset=%d", offset), func(t *testing.T) {
-			r, err := local.Read(name, &filesys.ReadOptions{Offset: offset, Raw: true})
+			r, err := local.Read(name, &filesys.ReadOptions{
+				Offset: offset,
+				Raw:    true,
+			})
 			if err == nil {
 				_ = r.Close() // ignore error
 				t.Fatal("create - no error but offset is out of range")
@@ -361,6 +396,8 @@ func TestRead_Offset(t *testing.T) {
 // TarHeaderIsDir reports whether the tar header represents a directory.
 func TarHeaderIsDir(hdr *tar.Header) bool {
 	return hdr != nil &&
-		(hdr.Typeflag == '\x00' && len(hdr.Name) > 0 && hdr.Name[len(hdr.Name)-1] == '/' ||
+		(hdr.Typeflag == '\x00' &&
+			len(hdr.Name) > 0 &&
+			hdr.Name[len(hdr.Name)-1] == '/' ||
 			hdr.FileInfo().IsDir())
 }

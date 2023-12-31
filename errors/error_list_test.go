@@ -21,7 +21,6 @@ package errors_test
 import (
 	stderrors "errors"
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -123,7 +122,7 @@ func TestErrorList_ToError(t *testing.T) {
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.el.GetList()), func(t *testing.T) {
 			err := tc.el.ToError()
-			if !reflect.DeepEqual(err, tc.err) {
+			if err != tc.err {
 				t.Errorf("got %v; want %v", err, tc.err)
 			}
 		})

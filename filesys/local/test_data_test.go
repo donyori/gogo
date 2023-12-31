@@ -84,6 +84,13 @@ func lazyLoadTestData(name string) (data []byte, err error) {
 	return
 }
 
+// tarFileNameBody consists of the name and content (body)
+// of a file in a tar archive.
+type tarFileNameBody struct {
+	name string
+	body []byte
+}
+
 // lazyLoadTarFile loads a ".tar", ".tgz", ".tar.gz", ".tbz", or ".tar.bz2"
 // file with specified name through lazyLoadTestData.
 //
@@ -92,10 +99,7 @@ func lazyLoadTestData(name string) (data []byte, err error) {
 //
 // Caller should guarantee that the file name has
 // the suffix ".tar", ".tgz", ".tar.gz", ".tbz", or ".tar.bz2".
-func lazyLoadTarFile(name string) (files []struct {
-	name string
-	body []byte
-}, err error) {
+func lazyLoadTarFile(name string) (files []tarFileNameBody, err error) {
 	data, err := lazyLoadTestData(name)
 	if err != nil {
 		return nil, errors.AutoWrap(err)
@@ -127,11 +131,15 @@ func lazyLoadTarFile(name string) (files []struct {
 		if err != nil {
 			return files, errors.AutoWrap(err)
 		}
-		files = append(files, struct {
-			name string
-			body []byte
-		}{hdr.Name, data})
+		files = append(files, tarFileNameBody{name: hdr.Name, body: data})
 	}
+}
+
+// zipHeaderBody consists of the header and content (body)
+// of a file in a ZIP archive.
+type zipHeaderBody struct {
+	header *zip.FileHeader
+	body   []byte
 }
 
 // lazyLoadZipFile loads a ".zip" file with specified name
@@ -141,10 +149,8 @@ func lazyLoadTarFile(name string) (files []struct {
 // It also returns any error encountered.
 //
 // Caller should guarantee that the file name has the suffix ".zip".
-func lazyLoadZipFile(name string) (fileMap map[string]*struct {
-	header *zip.FileHeader
-	body   []byte
-}, err error) {
+func lazyLoadZipFile(name string) (
+	fileMap map[string]*zipHeaderBody, err error) {
 	data, err := lazyLoadTestData(name)
 	if err != nil {
 		return nil, errors.AutoWrap(err)
@@ -153,10 +159,7 @@ func lazyLoadZipFile(name string) (fileMap map[string]*struct {
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
-	fileMap = make(map[string]*struct {
-		header *zip.FileHeader
-		body   []byte
-	}, len(zr.File))
+	fileMap = make(map[string]*zipHeaderBody, len(zr.File))
 	for _, file := range zr.File {
 		rc, err := file.Open()
 		if err != nil {
@@ -167,10 +170,10 @@ func lazyLoadZipFile(name string) (fileMap map[string]*struct {
 			return nil, errors.AutoWrap(err)
 		}
 		_ = rc.Close() // ignore error
-		fileMap[file.Name] = &struct {
-			header *zip.FileHeader
-			body   []byte
-		}{header: &file.FileHeader, body: body}
+		fileMap[file.Name] = &zipHeaderBody{
+			header: &file.FileHeader,
+			body:   body,
+		}
 	}
 	return
 }
@@ -185,7 +188,8 @@ func lazyLoadZipFile(name string) (fileMap map[string]*struct {
 // They are in hexadecimal representation, lowercase.
 //
 // lazyCalculateChecksums panics if anyone in newHashes is nil or returns nil.
-func lazyCalculateChecksums(name string, newHashes ...func() hash.Hash) (checksums []string, err error) {
+func lazyCalculateChecksums(name string, newHashes ...func() hash.Hash) (
+	checksums []string, err error) {
 	data, err := lazyLoadTestData(name)
 	if err != nil || len(newHashes) == 0 {
 		return nil, errors.AutoWrap(err)

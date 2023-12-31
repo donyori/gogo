@@ -34,19 +34,26 @@ func TestNew_lnchCommMaps(t *testing.T) {
 		"g5": {4, 1, 1, 1},
 		"g6": {4, 1, 1, 2, 1, 1, 4},
 	}
-	ctrl := spmd.New(N, func(world spmd.Communicator[int], commMap map[string]spmd.Communicator[int]) {
-		// Empty function body.
-	}, groupMap)
+	ctrl := spmd.New(
+		N,
+		func(
+			world spmd.Communicator[int],
+			commMap map[string]spmd.Communicator[int],
+		) {
+			// Empty function body.
+		},
+		groupMap,
+	)
 
 	deduplicatedGroupMap := make(map[string][]int, len(groupMap))
 	for k, v := range groupMap {
 		newV := make([]int, 0, len(v))
-		set := make(map[int]bool, N)
+		set := make(map[int]struct{}, N)
 		for _, x := range v {
-			if set[x] {
+			if _, ok := set[x]; ok {
 				continue
 			}
-			set[x] = true
+			set[x] = struct{}{}
 			newV = append(newV, x)
 		}
 		deduplicatedGroupMap[k] = newV
@@ -78,9 +85,16 @@ func TestNew_lnchCommMaps(t *testing.T) {
 }
 
 func TestController_Wait_BeforeLaunch(t *testing.T) {
-	ctrl := spmd.New(0, func(world spmd.Communicator[int], commMap map[string]spmd.Communicator[int]) {
-		// Do nothing.
-	}, nil)
+	ctrl := spmd.New(
+		0,
+		func(
+			world spmd.Communicator[int],
+			commMap map[string]spmd.Communicator[int],
+		) {
+			// Do nothing.
+		},
+		nil,
+	)
 	if got := ctrl.Wait(); got != -1 {
 		t.Errorf("got %d; want -1", got)
 	}

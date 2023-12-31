@@ -20,6 +20,7 @@ package concurrency_test
 
 import (
 	"slices"
+	"strconv"
 	"sync"
 	"testing"
 
@@ -70,68 +71,16 @@ func TestRecorder(t *testing.T) {
 	wg.Add(NumReader + NumRecorder)
 
 	for i := 0; i < NumReader; i++ {
-		go func(rank int) {
-			defer wg.Done()
-
-			if got := r.Len(); got != 0 {
-				t.Errorf("reader %d, initially - got Len %d; want 0",
-					rank, got)
-			}
-			if gotX, gotOK := r.Last(); gotX != 0 || gotOK {
-				t.Errorf("reader %d, initially - got Last (%d, %t); want (0, false)",
-					rank, gotX, gotOK)
-			}
-			if got := r.All(); got != nil {
-				t.Errorf("reader %d, initially - got All %v; want <nil>",
-					rank, got)
-			}
-
-			var wantAll []int
-			for round, x := range data {
-				if len(x) > 0 {
-					for k := 0; k < NumRecorder; k++ {
-						wantAll = append(wantAll, x...)
-					}
-				}
-				var wantLastX int
-				var wantLastOK bool
-				if len(wantAll) > 0 {
-					wantLastX, wantLastOK = wantAll[len(wantAll)-1], true
-				}
-
-				close(readyCsList[rank][round])
-				for k := 0; k < NumRecorder; k++ {
-					<-recordedCsList[k][round]
-				}
-
-				if got := r.Len(); got != len(wantAll) {
-					t.Errorf("reader %d, round %d - got Len %d; want %d",
-						rank, round, got, len(wantAll))
-				}
-				if gotX, gotOK := r.Last(); gotX != wantLastX ||
-					gotOK != wantLastOK {
-					t.Errorf("reader %d, round %d - got Last (%d, %t); want (%d, %t)",
-						rank, round, gotX, gotOK, wantLastX, wantLastOK)
-				}
-				if got := r.All(); (got == nil) != (wantAll == nil) ||
-					!slices.Equal(got, wantAll) {
-					switch {
-					case got == nil:
-						// wantAll is non-nil.
-						t.Errorf("reader %d, round %d - got All <nil>; want %v",
-							rank, round, wantAll)
-					case wantAll == nil:
-						// got is non-nil.
-						t.Errorf("reader %d, round %d - got All %v; want <nil>",
-							rank, round, got)
-					default:
-						// Both got and wantAll are non-nil.
-						t.Errorf("reader %d, round %d - got All %v; want %v",
-							rank, round, got, wantAll)
-					}
-				}
-			}
-		}(i)
+		go goroutineTestRecorderReader(
+			&wg,
+			i,
+			t,
+			r,
+			NumRecorder,
+			data,
+			readyCsList[:],
+			recordedCsList[:],
+		)
 	}
 
 	for i := 0; i < NumRecorder; i++ {
@@ -148,4 +97,74 @@ func TestRecorder(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+// goroutineTestRecorderReader is the process of the goroutine
+// launched by TestRecorder to test concurrency.RecordReader.
+func goroutineTestRecorderReader(
+	wg *sync.WaitGroup,
+	rank int,
+	t *testing.T,
+	r concurrency.RecordReader[int],
+	numRecorder int,
+	data [][]int,
+	readyCsList [][]chan struct{},
+	recordedCsList [][]chan struct{},
+) {
+	defer wg.Done()
+
+	check := func(round int, wantLastX int, wantLastOK bool, wantAll []int) {
+		s := "initially"
+		if round >= 0 {
+			s = "round " + strconv.Itoa(round)
+		}
+		if got := r.Len(); got != len(wantAll) {
+			t.Errorf("reader %d, %s - got Len %d; want %d",
+				rank, s, got, len(wantAll))
+		}
+		if gotX, gotOK := r.Last(); gotX != wantLastX || gotOK != wantLastOK {
+			t.Errorf("reader %d, %s - got Last (%d, %t); want (%d, %t)",
+				rank, s, gotX, gotOK, wantLastX, wantLastOK)
+		}
+		if got := r.All(); (got == nil) != (wantAll == nil) ||
+			!slices.Equal(got, wantAll) {
+			switch {
+			case got == nil:
+				// wantAll is non-nil.
+				t.Errorf("reader %d, %s - got All <nil>; want %v",
+					rank, s, wantAll)
+			case wantAll == nil:
+				// got is non-nil.
+				t.Errorf("reader %d, %s - got All %v; want <nil>",
+					rank, s, got)
+			default:
+				// Both got and wantAll are non-nil.
+				t.Errorf("reader %d, %s - got All %v; want %v",
+					rank, s, got, wantAll)
+			}
+		}
+	}
+
+	check(-1, 0, false, nil)
+
+	var wantAll []int
+	for round, x := range data {
+		if len(x) > 0 {
+			for k := 0; k < numRecorder; k++ {
+				wantAll = append(wantAll, x...)
+			}
+		}
+		var wantLastX int
+		var wantLastOK bool
+		if len(wantAll) > 0 {
+			wantLastX, wantLastOK = wantAll[len(wantAll)-1], true
+		}
+
+		close(readyCsList[rank][round])
+		for k := 0; k < numRecorder; k++ {
+			<-recordedCsList[k][round]
+		}
+
+		check(round, wantLastX, wantLastOK, wantAll)
+	}
 }

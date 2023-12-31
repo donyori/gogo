@@ -74,7 +74,8 @@ var ErrAuthorMissing = errors.AutoNewCustom(
 // If source is empty, the program source part is discarded.
 //
 // It returns the number of bytes written to w and any error encountered.
-func PrintCopyrightNotice(w io.Writer, program, year, author, source string) (n int, err error) {
+func PrintCopyrightNotice(w io.Writer, program, year, author, source string) (
+	n int, err error) {
 	if author == "" {
 		return 0, errors.AutoWrap(ErrAuthorMissing)
 	}

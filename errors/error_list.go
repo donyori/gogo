@@ -211,13 +211,13 @@ func (el *errorList) Deduplicate() {
 	if len(el.list) == 0 {
 		return
 	}
-	set, n := make(map[string]bool), 0
+	set, n := make(map[string]struct{}), 0
 	for i := 0; i < len(el.list); i++ {
 		x := el.list[i]
 		if x != nil {
 			errStr := x.Error()
-			if !set[errStr] {
-				set[errStr] = true
+			if _, ok := set[errStr]; !ok {
+				set[errStr] = struct{}{}
 				el.list[n] = x
 				n++
 			}

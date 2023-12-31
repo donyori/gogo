@@ -275,73 +275,17 @@ func TestIDSPath(t *testing.T) {
 	})
 }
 
+// testBruteForceSearchFunc is the type of function
+// testing the brute force search function.
+type testBruteForceSearchFunc func(
+	t *testing.T,
+	itf graphv.IDSAccessVertex[int],
+	initArgs ...any,
+) (vertexFound int, found bool)
+
 func testBruteForceSearch(t *testing.T, name string) {
-	var f func(t *testing.T, itf graphv.IDSAccessVertex[int], initArgs ...any) (int, bool)
-	var ordering []int
-	switch name {
-	case "DFS":
-		f = func(t *testing.T, itf graphv.IDSAccessVertex[int], initArgs ...any) (int, bool) {
-			return graphv.DFS[int](itf, initArgs...)
-		}
-		ordering = undirectedGraphDataOrderingMap["dfs"]
-	case "BFS":
-		f = func(t *testing.T, itf graphv.IDSAccessVertex[int], initArgs ...any) (int, bool) {
-			return graphv.BFS[int](itf, initArgs...)
-		}
-		ordering = undirectedGraphDataOrderingMap["bfs"]
-	case "DLS-0":
-		f = func(t *testing.T, itf graphv.IDSAccessVertex[int], initArgs ...any) (int, bool) {
-			vertex, found, more := graphv.DLS[int](itf, 0, initArgs...)
-			if isFirstInitArgInt(initArgs) && !found && !more {
-				t.Error("more is false but there are undiscovered vertices")
-			}
-			return vertex, found
-		}
-		ordering = undirectedGraphDataOrderingMap["dls-0"]
-	case "DLS-1":
-		f = func(t *testing.T, itf graphv.IDSAccessVertex[int], initArgs ...any) (int, bool) {
-			vertex, found, more := graphv.DLS[int](itf, 1, initArgs...)
-			if isFirstInitArgInt(initArgs) && !found && !more {
-				t.Error("more is false but there are undiscovered vertices")
-			}
-			return vertex, found
-		}
-		ordering = undirectedGraphDataOrderingMap["dls-1"]
-	case "DLS-2":
-		f = func(t *testing.T, itf graphv.IDSAccessVertex[int], initArgs ...any) (int, bool) {
-			vertex, found, _ := graphv.DLS[int](itf, 2, initArgs...)
-			// Both true and false are acceptable for the third return value.
-			return vertex, found
-		}
-		ordering = undirectedGraphDataOrderingMap["dls-2"]
-	case "DLS-3":
-		f = func(t *testing.T, itf graphv.IDSAccessVertex[int], initArgs ...any) (int, bool) {
-			vertex, found, _ := graphv.DLS[int](itf, 3, initArgs...)
-			// Both true and false are acceptable for the third return value.
-			return vertex, found
-		}
-		ordering = undirectedGraphDataOrderingMap["dls-3"]
-	case "DLS-m1":
-		f = func(t *testing.T, itf graphv.IDSAccessVertex[int], initArgs ...any) (int, bool) {
-			vertex, found, more := graphv.DLS[int](itf, -1, initArgs...)
-			if isFirstInitArgInt(initArgs) && !found && !more {
-				t.Error("more is false but there are undiscovered vertices")
-			}
-			return vertex, found
-		}
-		ordering = undirectedGraphDataOrderingMap["dls-m1"]
-	case "IDS":
-		f = func(t *testing.T, itf graphv.IDSAccessVertex[int], initArgs ...any) (int, bool) {
-			return graphv.IDS(itf, 1, initArgs...)
-		}
-		ordering = undirectedGraphDataOrderingMap["ids"]
-	case "IDS-m":
-		f = func(t *testing.T, itf graphv.IDSAccessVertex[int], initArgs ...any) (int, bool) {
-			return graphv.IDS(itf, -1, initArgs...)
-		}
-		ordering = undirectedGraphDataOrderingMap["ids"]
-	default:
-		t.Errorf("unacceptable name %q", name)
+	f, ordering := getTestBruteForceSearchFunctionAndOrdering(t, name)
+	if t.Failed() {
 		return
 	}
 
@@ -365,7 +309,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 			checkAccessHistory(t, tg, wantHx)
 		})
 	}
-	// Non-existent nodes:
+	// Non-existent vertices:
 	for _, goal := range []any{nil, -1, len(undirectedGraphData), 1.2} {
 		t.Run(fmt.Sprintf("goal=%v", goal), func(t *testing.T) {
 			wantHx := ordering // expected history
@@ -383,73 +327,128 @@ func testBruteForceSearch(t *testing.T, name string) {
 	}
 }
 
-func testBruteForceSearchPath(t *testing.T, name string) {
-	var f func(t *testing.T, itf graphv.IDSAccessPath[int], initArgs ...any) []int
-	var ordering []int
+// getTestBruteForceSearchFunctionAndOrdering returns the function
+// testing the brute force search function
+// and the expected vertex access ordering
+// according to the specified name.
+//
+// It reports an error using t.Errorf if the name is unacceptable.
+func getTestBruteForceSearchFunctionAndOrdering(t *testing.T, name string) (
+	f testBruteForceSearchFunc, ordering []int) {
+	checkMore := func(t *testing.T, initArgs []any, found bool, more bool) {
+		if isFirstInitArgInt(initArgs) && !found && !more {
+			t.Error("more is false but there are undiscovered vertices")
+		}
+	}
 	switch name {
-	case "DFSPath":
-		f = func(t *testing.T, itf graphv.IDSAccessPath[int], initArgs ...any) []int {
-			return graphv.DFSPath[int](itf, initArgs...)
+	case "DFS":
+		f = func(
+			_ *testing.T,
+			itf graphv.IDSAccessVertex[int],
+			initArgs ...any,
+		) (vertexFound int, found bool) {
+			return graphv.DFS[int](itf, initArgs...)
 		}
 		ordering = undirectedGraphDataOrderingMap["dfs"]
-	case "BFSPath":
-		f = func(t *testing.T, itf graphv.IDSAccessPath[int], initArgs ...any) []int {
-			return graphv.BFSPath[int](itf, initArgs...)
+	case "BFS":
+		f = func(
+			_ *testing.T,
+			itf graphv.IDSAccessVertex[int],
+			initArgs ...any,
+		) (vertexFound int, found bool) {
+			return graphv.BFS[int](itf, initArgs...)
 		}
 		ordering = undirectedGraphDataOrderingMap["bfs"]
-	case "DLSPath-0":
-		f = func(t *testing.T, itf graphv.IDSAccessPath[int], initArgs ...any) []int {
-			path, more := graphv.DLSPath[int](itf, 0, initArgs...)
-			if isFirstInitArgInt(initArgs) && path == nil && !more {
-				t.Error("more is false but there are undiscovered vertices")
-			}
-			return path
+	case "DLS-0":
+		f = func(
+			t *testing.T,
+			itf graphv.IDSAccessVertex[int],
+			initArgs ...any,
+		) (vertexFound int, found bool) {
+			vertex, found, more := graphv.DLS[int](itf, 0, initArgs...)
+			checkMore(t, initArgs, found, more)
+			return vertex, found
 		}
 		ordering = undirectedGraphDataOrderingMap["dls-0"]
-	case "DLSPath-1":
-		f = func(t *testing.T, itf graphv.IDSAccessPath[int], initArgs ...any) []int {
-			path, more := graphv.DLSPath[int](itf, 1, initArgs...)
-			if isFirstInitArgInt(initArgs) && path == nil && !more {
-				t.Error("more is false but there are undiscovered vertices")
-			}
-			return path
+	case "DLS-1":
+		f = func(
+			t *testing.T,
+			itf graphv.IDSAccessVertex[int],
+			initArgs ...any,
+		) (vertexFound int, found bool) {
+			vertex, found, more := graphv.DLS[int](itf, 1, initArgs...)
+			checkMore(t, initArgs, found, more)
+			return vertex, found
 		}
 		ordering = undirectedGraphDataOrderingMap["dls-1"]
-	case "DLSPath-2":
-		f = func(t *testing.T, itf graphv.IDSAccessPath[int], initArgs ...any) []int {
-			path, _ := graphv.DLSPath[int](itf, 2, initArgs...)
-			// Both true and false are acceptable for the second return value.
-			return path
+	case "DLS-2":
+		f = func(
+			_ *testing.T,
+			itf graphv.IDSAccessVertex[int],
+			initArgs ...any,
+		) (vertexFound int, found bool) {
+			vertex, found, _ := graphv.DLS[int](itf, 2, initArgs...)
+			// Both true and false are acceptable for the third return value.
+			return vertex, found
 		}
 		ordering = undirectedGraphDataOrderingMap["dls-2"]
-	case "DLSPath-3":
-		f = func(t *testing.T, itf graphv.IDSAccessPath[int], initArgs ...any) []int {
-			path, _ := graphv.DLSPath[int](itf, 3, initArgs...)
-			// Both true and false are acceptable for the second return value.
-			return path
+	case "DLS-3":
+		f = func(
+			_ *testing.T,
+			itf graphv.IDSAccessVertex[int],
+			initArgs ...any,
+		) (vertexFound int, found bool) {
+			vertex, found, _ := graphv.DLS[int](itf, 3, initArgs...)
+			// Both true and false are acceptable for the third return value.
+			return vertex, found
 		}
 		ordering = undirectedGraphDataOrderingMap["dls-3"]
-	case "DLSPath-m1":
-		f = func(t *testing.T, itf graphv.IDSAccessPath[int], initArgs ...any) []int {
-			path, more := graphv.DLSPath[int](itf, -1, initArgs...)
-			if isFirstInitArgInt(initArgs) && path == nil && !more {
-				t.Error("more is false but there are undiscovered vertices")
-			}
-			return path
+	case "DLS-m1":
+		f = func(
+			t *testing.T,
+			itf graphv.IDSAccessVertex[int],
+			initArgs ...any,
+		) (vertexFound int, found bool) {
+			vertex, found, more := graphv.DLS[int](itf, -1, initArgs...)
+			checkMore(t, initArgs, found, more)
+			return vertex, found
 		}
 		ordering = undirectedGraphDataOrderingMap["dls-m1"]
-	case "IDSPath":
-		f = func(t *testing.T, itf graphv.IDSAccessPath[int], initArgs ...any) []int {
-			return graphv.IDSPath(itf, 1, initArgs...)
+	case "IDS":
+		f = func(
+			_ *testing.T,
+			itf graphv.IDSAccessVertex[int],
+			initArgs ...any,
+		) (vertexFound int, found bool) {
+			return graphv.IDS(itf, 1, initArgs...)
 		}
 		ordering = undirectedGraphDataOrderingMap["ids"]
-	case "IDSPath-m":
-		f = func(t *testing.T, itf graphv.IDSAccessPath[int], initArgs ...any) []int {
-			return graphv.IDSPath(itf, -1, initArgs...)
+	case "IDS-m":
+		f = func(
+			_ *testing.T,
+			itf graphv.IDSAccessVertex[int],
+			initArgs ...any,
+		) (vertexFound int, found bool) {
+			return graphv.IDS(itf, -1, initArgs...)
 		}
 		ordering = undirectedGraphDataOrderingMap["ids"]
 	default:
 		t.Errorf("unacceptable name %q", name)
+	}
+	return
+}
+
+// testBruteForceSearchPathFunc is the type of function
+// testing the brute force search path function.
+type testBruteForceSearchPathFunc func(
+	t *testing.T,
+	itf graphv.IDSAccessPath[int],
+	initArgs ...any,
+) []int
+
+func testBruteForceSearchPath(t *testing.T, name string) {
+	f, ordering := getTestBruteForceSearchPathFunctionAndOrdering(t, name)
+	if t.Failed() {
 		return
 	}
 
@@ -469,7 +468,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 			checkAccessHistory(t, tg, wantHx)
 		})
 	}
-	// Non-existent nodes:
+	// Non-existent vertices:
 	for _, goal := range []any{nil, -1, len(undirectedGraphData), 1.2} {
 		t.Run(fmt.Sprintf("goal=%v", goal), func(t *testing.T) {
 			wantHx := ordering // expected history
@@ -484,6 +483,117 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 			checkAccessHistory(t, tg, wantHx)
 		})
 	}
+}
+
+// getTestBruteForceSearchPathFunctionAndOrdering returns the function
+// testing the brute force search path function
+// and the expected vertex access ordering
+// according to the specified name.
+//
+// It reports an error using t.Errorf if the name is unacceptable.
+func getTestBruteForceSearchPathFunctionAndOrdering(t *testing.T, name string) (
+	f testBruteForceSearchPathFunc, ordering []int) {
+	checkMore := func(t *testing.T, initArgs []any, path []int, more bool) {
+		if isFirstInitArgInt(initArgs) && path == nil && !more {
+			t.Error("more is false but there are undiscovered vertices")
+		}
+	}
+	switch name {
+	case "DFSPath":
+		f = func(
+			_ *testing.T,
+			itf graphv.IDSAccessPath[int],
+			initArgs ...any,
+		) []int {
+			return graphv.DFSPath[int](itf, initArgs...)
+		}
+		ordering = undirectedGraphDataOrderingMap["dfs"]
+	case "BFSPath":
+		f = func(
+			_ *testing.T,
+			itf graphv.IDSAccessPath[int],
+			initArgs ...any,
+		) []int {
+			return graphv.BFSPath[int](itf, initArgs...)
+		}
+		ordering = undirectedGraphDataOrderingMap["bfs"]
+	case "DLSPath-0":
+		f = func(
+			t *testing.T,
+			itf graphv.IDSAccessPath[int],
+			initArgs ...any,
+		) []int {
+			path, more := graphv.DLSPath[int](itf, 0, initArgs...)
+			checkMore(t, initArgs, path, more)
+			return path
+		}
+		ordering = undirectedGraphDataOrderingMap["dls-0"]
+	case "DLSPath-1":
+		f = func(
+			t *testing.T,
+			itf graphv.IDSAccessPath[int],
+			initArgs ...any,
+		) []int {
+			path, more := graphv.DLSPath[int](itf, 1, initArgs...)
+			checkMore(t, initArgs, path, more)
+			return path
+		}
+		ordering = undirectedGraphDataOrderingMap["dls-1"]
+	case "DLSPath-2":
+		f = func(
+			_ *testing.T,
+			itf graphv.IDSAccessPath[int],
+			initArgs ...any,
+		) []int {
+			path, _ := graphv.DLSPath[int](itf, 2, initArgs...)
+			// Both true and false are acceptable for the second return value.
+			return path
+		}
+		ordering = undirectedGraphDataOrderingMap["dls-2"]
+	case "DLSPath-3":
+		f = func(
+			_ *testing.T,
+			itf graphv.IDSAccessPath[int],
+			initArgs ...any,
+		) []int {
+			path, _ := graphv.DLSPath[int](itf, 3, initArgs...)
+			// Both true and false are acceptable for the second return value.
+			return path
+		}
+		ordering = undirectedGraphDataOrderingMap["dls-3"]
+	case "DLSPath-m1":
+		f = func(
+			t *testing.T,
+			itf graphv.IDSAccessPath[int],
+			initArgs ...any,
+		) []int {
+			path, more := graphv.DLSPath[int](itf, -1, initArgs...)
+			checkMore(t, initArgs, path, more)
+			return path
+		}
+		ordering = undirectedGraphDataOrderingMap["dls-m1"]
+	case "IDSPath":
+		f = func(
+			_ *testing.T,
+			itf graphv.IDSAccessPath[int],
+			initArgs ...any,
+		) []int {
+			return graphv.IDSPath(itf, 1, initArgs...)
+		}
+		ordering = undirectedGraphDataOrderingMap["ids"]
+	case "IDSPath-m":
+		f = func(
+			_ *testing.T,
+			itf graphv.IDSAccessPath[int],
+			initArgs ...any,
+		) []int {
+			return graphv.IDSPath(itf, -1, initArgs...)
+		}
+		ordering = undirectedGraphDataOrderingMap["ids"]
+	default:
+		t.Errorf("unacceptable name %q", name)
+	}
+	return
 }
 
 func isFirstInitArgInt(initArgs []any) bool {
@@ -508,7 +618,6 @@ func checkAccessHistory(t *testing.T, tg *graphImpl, want []int) {
 }
 
 func checkPath(t *testing.T, name string, vertex int, pathList []int) {
-	var wantPath []int
 	var list [][]int
 	switch name {
 	case "DFSPath":
@@ -533,6 +642,8 @@ func checkPath(t *testing.T, name string, vertex int, pathList []int) {
 		t.Errorf("unacceptable name %q", name)
 		return
 	}
+
+	var wantPath []int
 	if vertex >= 0 && vertex < len(list) {
 		wantPath = list[vertex]
 	}

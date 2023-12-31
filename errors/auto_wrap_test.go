@@ -154,135 +154,11 @@ func TestAutoWrapSkip(t *testing.T) {
 		if tc.err != nil {
 			errName = strconv.QuoteToASCII(tc.err.Error())
 		}
-		t.Run(fmt.Sprintf("case %d?err=%s&skip=%d", i, errName, tc.skip), func(t *testing.T) {
-			func() { // use an inner function to test the "skip"
-				got := errors.AutoWrapSkip(tc.err, tc.skip)
-				if (got == tc.err) != tc.equal {
-					if tc.equal {
-						t.Errorf("got %q; != tc.err", got)
-					} else {
-						t.Errorf("got %q; == tc.err", got)
-					}
-				}
-				if tc.err == nil || got == nil || tc.equal {
-					return
-				}
-				if gotMsg := got.Error(); gotMsg != tc.wantMsg {
-					t.Errorf("got msg %q; want %q", gotMsg, tc.wantMsg)
-				}
-				if gotUnwrap := stderrors.Unwrap(got); gotUnwrap != tc.err {
-					t.Errorf("got unwrap %q; != tc.err", gotUnwrap)
-				}
-			}()
-		})
-	}
-}
-
-func TestAutoWrapCustom(t *testing.T) {
-	// ".func1" is the anonymous function passed to t.Run.
-	// ".func1.1" is the anonymous inner function that calls function AutoWrapCustom.
-	const FullFuncSkip0Prefix = "github.com/donyori/gogo/errors_test.TestAutoWrapCustom.func1.1: "
-	const FullFuncSkip1Prefix = "github.com/donyori/gogo/errors_test.TestAutoWrapCustom.func1: "
-	const FullPkgPrefix = "github.com/donyori/gogo/errors_test: "
-	const SimpleFuncSkip0Prefix = "TestAutoWrapCustom.func1.1: "
-	const SimpleFuncSkip1Prefix = "TestAutoWrapCustom.func1: "
-	const SimplePkgPrefix = "errors_test: "
-
-	err0 := stderrors.New("error 0")
-	err1 := errors.NewAutoWrappedError(err0, "1")
-	err2 := errors.NewAutoWrappedError(err1, "2")
-	err3 := &testError{err: err2}
-	err4 := errors.NewAutoWrappedError(err3, "4")
-	err5 := errors.NewAutoWrappedError(err4, "5")
-	err6 := stderrors.New("")
-
-	excl := errors.NewErrorReadOnlySetIs(io.EOF, err0)
-
-	errorList := []error{nil, io.EOF, err0, err1, err2, err3, err4, err5, err6}
-	excls := []errors.ErrorReadOnlySet{nil, excl}
-	testCases := make([]struct {
-		err     error
-		ms      errors.ErrorMessageStrategy
-		skip    int
-		excl    errors.ErrorReadOnlySet
-		equal   bool
-		wantMsg string
-	}, len(errorList)*len(excls)*(int(errors.PrependSimplePkgName)+3)*2)
-	var idx int
-	for _, err := range errorList {
-		for ms := errors.ErrorMessageStrategy(-1); ms <= errors.PrependSimplePkgName+1; ms++ {
-			for skip := 0; skip <= 1; skip++ {
-				for _, excl := range excls {
-					if idx >= len(testCases) {
-						t.Fatal("not enough test cases, please update")
-					}
-					var wantMsg string
-					if err != nil {
-						if excl == nil || !excl.Contains(err) {
-							switch ms {
-							case errors.OriginalMsg:
-								// The prefix is "". Do nothing here.
-							case errors.PrependFullPkgName:
-								wantMsg = FullPkgPrefix
-							case errors.PrependSimpleFuncName:
-								if skip == 0 {
-									wantMsg = SimpleFuncSkip0Prefix
-								} else {
-									wantMsg = SimpleFuncSkip1Prefix
-								}
-							case errors.PrependSimplePkgName:
-								wantMsg = SimplePkgPrefix
-							default:
-								if skip == 0 {
-									wantMsg = FullFuncSkip0Prefix
-								} else {
-									wantMsg = FullFuncSkip1Prefix
-								}
-							}
-							var errMsg string
-							switch err {
-							case err1, err2:
-								errMsg = err0.Error()
-							case err4, err5:
-								errMsg = err3.Error()
-							default:
-								errMsg = err.Error()
-							}
-							if errMsg != "" {
-								wantMsg += errMsg
-							} else {
-								wantMsg += "<no error message>"
-							}
-						} else {
-							wantMsg = err.Error()
-						}
-					}
-
-					testCases[idx].err = err
-					testCases[idx].ms = ms
-					testCases[idx].skip = skip
-					testCases[idx].excl = excl
-					testCases[idx].equal = err == nil || excl != nil && excl.Contains(err)
-					testCases[idx].wantMsg = wantMsg
-					idx++
-				}
-			}
-		}
-	}
-	if idx != len(testCases) {
-		t.Fatal("excessive test cases, please update")
-	}
-
-	for i, tc := range testCases {
-		errName := "<nil>"
-		if tc.err != nil {
-			errName = strconv.QuoteToASCII(tc.err.Error())
-		}
 		t.Run(
-			fmt.Sprintf("case %d?err=%s&ms=%s(%[3]d)&skip=%d&hasExcl=%t", i, errName, tc.ms, tc.skip, tc.excl != nil),
+			fmt.Sprintf("case %d?err=%s&skip=%d", i, errName, tc.skip),
 			func(t *testing.T) {
 				func() { // use an inner function to test the "skip"
-					got := errors.AutoWrapCustom(tc.err, tc.ms, tc.skip, tc.excl)
+					got := errors.AutoWrapSkip(tc.err, tc.skip)
 					if (got == tc.err) != tc.equal {
 						if tc.equal {
 							t.Errorf("got %q; != tc.err", got)
@@ -303,6 +179,163 @@ func TestAutoWrapCustom(t *testing.T) {
 			},
 		)
 	}
+}
+
+type autoWrapCustomTestCase struct {
+	err     error
+	ms      errors.ErrorMessageStrategy
+	skip    int
+	excl    errors.ErrorReadOnlySet
+	equal   bool
+	wantMsg string
+}
+
+func TestAutoWrapCustom(t *testing.T) {
+	for i, tc := range getTestCasesForAutoWrapCustom(t) {
+		errName := "<nil>"
+		if tc.err != nil {
+			errName = strconv.QuoteToASCII(tc.err.Error())
+		}
+		t.Run(
+			fmt.Sprintf("case %d?err=%s&ms=%s(%[3]d)&skip=%d&hasExcl=%t",
+				i, errName, tc.ms, tc.skip, tc.excl != nil),
+			func(t *testing.T) {
+				func() { // use an inner function to test the "skip"
+					got := errors.AutoWrapCustom(
+						tc.err, tc.ms, tc.skip, tc.excl)
+					if (got == tc.err) != tc.equal {
+						if tc.equal {
+							t.Errorf("got %q; != tc.err", got)
+						} else {
+							t.Errorf("got %q; == tc.err", got)
+						}
+					}
+					if tc.err == nil || got == nil || tc.equal {
+						return
+					}
+					if gotMsg := got.Error(); gotMsg != tc.wantMsg {
+						t.Errorf("got msg %q; want %q", gotMsg, tc.wantMsg)
+					}
+					if gotUnwrap := stderrors.Unwrap(got); gotUnwrap != tc.err {
+						t.Errorf("got unwrap %q; != tc.err", gotUnwrap)
+					}
+				}()
+			},
+		)
+	}
+}
+
+// getTestCasesForAutoWrapCustom returns test cases for TestAutoWrapCustom.
+//
+// It uses t.Fatal to stop the test if something is wrong.
+func getTestCasesForAutoWrapCustom(t *testing.T) []autoWrapCustomTestCase {
+	err0 := stderrors.New("error 0")
+	err1 := errors.NewAutoWrappedError(err0, "1")
+	err2 := errors.NewAutoWrappedError(err1, "2")
+	err3 := &testError{err: err2}
+	err4 := errors.NewAutoWrappedError(err3, "4")
+	err5 := errors.NewAutoWrappedError(err4, "5")
+	err6 := stderrors.New("")
+
+	excl := errors.NewErrorReadOnlySetIs(io.EOF, err0)
+
+	errorList := []error{nil, io.EOF, err0, err1, err2, err3, err4, err5, err6}
+	exclList := []errors.ErrorReadOnlySet{nil, excl}
+	testCases := make(
+		[]autoWrapCustomTestCase,
+		len(errorList)*len(exclList)*(int(errors.PrependSimplePkgName)+3)*2,
+	)
+	var idx int
+	for _, err := range errorList {
+		for ms := errors.ErrorMessageStrategy(-1); ms <= errors.PrependSimplePkgName+1; ms++ {
+			for skip := 0; skip <= 1; skip++ {
+				for _, excl := range exclList {
+					if idx >= len(testCases) {
+						t.Fatal("not enough test cases, please update")
+					}
+					testCases[idx].err = err
+					testCases[idx].ms = ms
+					testCases[idx].skip = skip
+					testCases[idx].excl = excl
+					testCases[idx].equal = err == nil || excl != nil && excl.Contains(err)
+					testCases[idx].wantMsg = getWantMessageForAutoWrapCustom(
+						err0, err1, err2, err3, err4, err5, err, ms, skip, excl)
+					idx++
+				}
+			}
+		}
+	}
+	if idx != len(testCases) {
+		t.Fatal("excessive test cases, please update")
+	}
+	return testCases
+}
+
+// getWantMessageForAutoWrapCustom returns the expected error message
+// for TestAutoWrapCustom.
+func getWantMessageForAutoWrapCustom(
+	err0 error,
+	err1 error,
+	err2 error,
+	err3 error,
+	err4 error,
+	err5 error,
+	err error,
+	ms errors.ErrorMessageStrategy,
+	skip int,
+	excl errors.ErrorReadOnlySet,
+) string {
+	// ".func1" is the anonymous function passed to t.Run.
+	// ".func1.1" is the anonymous inner function that calls function AutoWrapCustom.
+	const FullFuncSkip0Prefix = "github.com/donyori/gogo/errors_test.TestAutoWrapCustom.func1.1: "
+	const FullFuncSkip1Prefix = "github.com/donyori/gogo/errors_test.TestAutoWrapCustom.func1: "
+	const FullPkgPrefix = "github.com/donyori/gogo/errors_test: "
+	const SimpleFuncSkip0Prefix = "TestAutoWrapCustom.func1.1: "
+	const SimpleFuncSkip1Prefix = "TestAutoWrapCustom.func1: "
+	const SimplePkgPrefix = "errors_test: "
+
+	var wantMsg string
+	if err != nil {
+		if excl == nil || !excl.Contains(err) {
+			switch ms {
+			case errors.OriginalMsg:
+				// The prefix is "". Do nothing here.
+			case errors.PrependFullPkgName:
+				wantMsg = FullPkgPrefix
+			case errors.PrependSimpleFuncName:
+				if skip == 0 {
+					wantMsg = SimpleFuncSkip0Prefix
+				} else {
+					wantMsg = SimpleFuncSkip1Prefix
+				}
+			case errors.PrependSimplePkgName:
+				wantMsg = SimplePkgPrefix
+			default:
+				if skip == 0 {
+					wantMsg = FullFuncSkip0Prefix
+				} else {
+					wantMsg = FullFuncSkip1Prefix
+				}
+			}
+			var errMsg string
+			switch err {
+			case err1, err2:
+				errMsg = err0.Error()
+			case err4, err5:
+				errMsg = err3.Error()
+			default:
+				errMsg = err.Error()
+			}
+			if errMsg != "" {
+				wantMsg += errMsg
+			} else {
+				wantMsg += "<no error message>"
+			}
+		} else {
+			wantMsg = err.Error()
+		}
+	}
+	return wantMsg
 }
 
 func TestIsAutoWrappedError(t *testing.T) {
@@ -373,7 +406,8 @@ func TestUnwrapAutoWrappedError(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d?err=%s", i, errName), func(t *testing.T) {
 			gotErr, gotBool := errors.UnwrapAutoWrappedError(tc.err)
 			if gotErr != tc.wantErr || gotBool != wantBool {
-				t.Errorf("got (%q, %t); want (%q, %t)", gotErr, gotBool, tc.wantErr, wantBool)
+				t.Errorf("got (%q, %t); want (%q, %t)",
+					gotErr, gotBool, tc.wantErr, wantBool)
 			}
 		})
 	}
@@ -411,7 +445,8 @@ func TestUnwrapAllAutoWrappedErrors(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d?err=%s", i, errName), func(t *testing.T) {
 			gotErr, gotBool := errors.UnwrapAllAutoWrappedErrors(tc.err)
 			if gotErr != tc.wantErr || gotBool != wantBool {
-				t.Errorf("got (%q, %t); want (%q, %t)", gotErr, gotBool, tc.wantErr, wantBool)
+				t.Errorf("got (%q, %t); want (%q, %t)",
+					gotErr, gotBool, tc.wantErr, wantBool)
 			}
 		})
 	}
@@ -449,7 +484,8 @@ func TestListFunctionNamesInAutoWrappedErrors(t *testing.T) {
 			errName = strconv.QuoteToASCII(tc.err.Error())
 		}
 		t.Run(fmt.Sprintf("case %d?err=%s", i, errName), func(t *testing.T) {
-			gotNames, gotRoot := errors.ListFunctionNamesInAutoWrappedErrors(tc.err)
+			gotNames, gotRoot := errors.ListFunctionNamesInAutoWrappedErrors(
+				tc.err)
 			switch {
 			case tc.wantNames == nil:
 				if gotNames != nil {

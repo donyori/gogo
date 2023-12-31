@@ -43,7 +43,8 @@ func init() {
 		numInts *= MaxD + 1
 	}
 	testIntegers = make([]int, numInts)
-	testIntegersFactorMap = make(map[int][NumTestIntegerPrimeFactors]int, numInts)
+	testIntegersFactorMap = make(
+		map[int][NumTestIntegerPrimeFactors]int, numInts)
 	d2s := [MaxD + 1]int{1, 2, 4}
 	d3s := [MaxD + 1]int{1, 3, 9}
 	d5s := [MaxD + 1]int{1, 5, 25}
@@ -56,7 +57,11 @@ func init() {
 				}
 				x := d2s[d2] * d3s[d3] * d5s[d5]
 				testIntegers[idx] = x
-				testIntegersFactorMap[x] = [NumTestIntegerPrimeFactors]int{d2s[d2], d3s[d3], d5s[d5]}
+				testIntegersFactorMap[x] = [NumTestIntegerPrimeFactors]int{
+					d2s[d2],
+					d3s[d3],
+					d5s[d5],
+				}
 				idx++
 			}
 		}
@@ -139,39 +144,16 @@ func TestGCD_0(t *testing.T) {
 	}
 }
 
-func TestGCD_RandomSelectInt(t *testing.T) {
+func TestGCD_RandomlySelectInt(t *testing.T) {
 	const N int = 100
-	const MaxTry int = 100
-	const MaxLen int = 64
-
-	nameSet := make(map[string]bool, N)
-	nameSet[""] = true
+	xsNameSet := make(map[string]struct{}, N)
+	xsNameSet[""] = struct{}{}
 	random := rand.New(rand.NewSource(20))
-
 	for i := 0; i < N; i++ {
-		var n int
-		for try := 0; n == 0 && try < MaxTry; try++ {
-			n = random.Intn(MaxLen + 1)
+		xs, xsName := randomlySelectInts(t, random, xsNameSet)
+		if t.Failed() {
+			return
 		}
-		if n == 0 {
-			t.Fatalf("try %d times but always get n as 0", MaxTry)
-		}
-
-		xs := make([]int, n)
-		var xsName string
-		for try := 0; nameSet[xsName] && try < MaxTry; try++ {
-			for i := range xs {
-				xs[i] = testIntegers[random.Intn(len(testIntegers))]
-				if random.Int31n(2) == 0 {
-					xs[i] = -xs[i]
-				}
-			}
-			xsName = xsToName(xs)
-		}
-		if nameSet[xsName] {
-			t.Fatalf("try %d times but always get tested xs", MaxTry)
-		}
-		nameSet[xsName] = true
 
 		minF2, minF3, minF5 := math.MaxInt, math.MaxInt, math.MaxInt
 		for _, x := range xs {
@@ -202,36 +184,15 @@ func TestGCD_RandomSelectInt(t *testing.T) {
 
 func TestGCD_AllRandom(t *testing.T) {
 	const N int = 100
-	const MaxTry int = 100
-	const MaxLen int = 4
-	const MaxX int = 32
-
-	nameSet := make(map[string]bool, N)
-	nameSet[""] = true
+	xsNameSet := make(map[string]struct{}, N)
+	xsNameSet[""] = struct{}{}
 	var isWantMoreThan1 bool
 	random := rand.New(rand.NewSource(30))
-
 	for i := 0; i < N; i++ {
-		var n int
-		for try := 0; n == 0 && try < MaxTry; try++ {
-			n = random.Intn(MaxLen + 1)
+		xs, xsName := randomlyGenerateInts(t, random, xsNameSet)
+		if t.Failed() {
+			return
 		}
-		if n == 0 {
-			t.Fatalf("try %d times but always get n as 0", MaxTry)
-		}
-
-		xs := make([]int, n)
-		var xsName string
-		for try := 0; nameSet[xsName] && try < MaxTry; try++ {
-			for i := range xs {
-				xs[i] = random.Intn(MaxX + 1)
-			}
-			xsName = xsToName(xs)
-		}
-		if nameSet[xsName] {
-			t.Fatalf("try %d times but always get tested xs", MaxTry)
-		}
-		nameSet[xsName] = true
 
 		want := gcdBruteForce(xs...)
 		if want > 1 {
@@ -401,6 +362,76 @@ func xsToName[Int constraints.Integer](xs []Int) string {
 		},
 		FormatItemFn: fmtcoll.FprintfToFormatFunc[Int]("%d"),
 	})
+}
+
+// randomlySelectInts selects 1 to 64 integers from testIntegers randomly.
+//
+// random is the source of random numbers.
+//
+// xsNameSet is the set to record generated integer lists.
+//
+// If there is something wrong,
+// randomlySelectInts reports the error using t.Errorf and returns zero values.
+func randomlySelectInts(
+	t *testing.T,
+	random *rand.Rand,
+	xsNameSet map[string]struct{},
+) (xs []int, xsName string) {
+	const MaxTry int = 100
+	const MaxLen int = 64
+	xs = make([]int, 1+random.Intn(MaxLen))
+	_, duplicated := xsNameSet[xsName]
+	for try := 0; duplicated && try < MaxTry; try++ {
+		for i := range xs {
+			xs[i] = testIntegers[random.Intn(len(testIntegers))]
+			if random.Int31n(2) == 0 {
+				xs[i] = -xs[i]
+			}
+		}
+		xsName = xsToName(xs)
+		_, duplicated = xsNameSet[xsName]
+	}
+	if _, duplicated = xsNameSet[xsName]; duplicated {
+		t.Errorf("try %d times but always get tested xs", MaxTry)
+		return nil, ""
+	}
+	xsNameSet[xsName] = struct{}{}
+	return
+}
+
+// randomlyGenerateInts generates 1 to 4 integers randomly.
+// Each integer is in the interval [0, 127].
+//
+// random is the source of random numbers.
+//
+// xsNameSet is the set to record generated integer lists.
+//
+// If there is something wrong,
+// randomlyGenerateInts reports the error using t.Errorf
+// and returns zero values.
+func randomlyGenerateInts(
+	t *testing.T,
+	random *rand.Rand,
+	xsNameSet map[string]struct{},
+) (xs []int, xsName string) {
+	const MaxTry int = 100
+	const MaxLen int = 4
+	const MaxX int = 127
+	xs = make([]int, 1+random.Intn(MaxLen))
+	_, duplicated := xsNameSet[xsName]
+	for try := 0; duplicated && try < MaxTry; try++ {
+		for i := range xs {
+			xs[i] = random.Intn(MaxX + 1)
+		}
+		xsName = xsToName(xs)
+		_, duplicated = xsNameSet[xsName]
+	}
+	if _, duplicated = xsNameSet[xsName]; duplicated {
+		t.Errorf("try %d times but always get tested xs", MaxTry)
+		return nil, ""
+	}
+	xsNameSet[xsName] = struct{}{}
+	return
 }
 
 // gcdBruteForce finds the greatest common divisor of the integers xs

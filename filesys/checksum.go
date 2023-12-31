@@ -59,8 +59,12 @@ import (
 // If len(newHashes) is 0, checksums is nil.
 //
 // This function panics if file is nil.
-func Checksum(file fs.File, closeFile, upper bool, newHashes ...func() hash.Hash) (
-	checksums []string, err error) {
+func Checksum(
+	file fs.File,
+	closeFile bool,
+	upper bool,
+	newHashes ...func() hash.Hash,
+) (checksums []string, err error) {
 	if file == nil {
 		panic(errors.AutoMsg("file is nil"))
 	} else if closeFile {
@@ -68,14 +72,9 @@ func Checksum(file fs.File, closeFile, upper bool, newHashes ...func() hash.Hash
 			_ = f.Close() // ignore error
 		}(file)
 	}
-	info, err := file.Stat()
-	switch {
-	case err != nil:
+	err = checksumTestDir(file)
+	if err != nil || len(newHashes) == 0 {
 		return nil, errors.AutoWrap(err)
-	case info.IsDir():
-		return nil, errors.AutoWrap(ErrIsDir)
-	case len(newHashes) == 0:
-		return
 	}
 
 	checksums = make([]string, len(newHashes))
@@ -120,6 +119,18 @@ func Checksum(file fs.File, closeFile, upper bool, newHashes ...func() hash.Hash
 	return
 }
 
+// checksumTestDir is a subprocess of Checksum
+// to test whether the file is a directory.
+func checksumTestDir(file fs.File) error {
+	info, err := file.Stat()
+	if err != nil {
+		return errors.AutoWrap(err)
+	} else if info.IsDir() {
+		return errors.AutoWrap(ErrIsDir)
+	}
+	return nil
+}
+
 // ChecksumFromFS calculates hash checksums of the file opened from fsys
 // by specified name, and returns the result in hexadecimal representation
 // and any error encountered during opening and reading the file.
@@ -140,8 +151,12 @@ func Checksum(file fs.File, closeFile, upper bool, newHashes ...func() hash.Hash
 // If len(newHashes) is 0, checksums is nil.
 //
 // This function panics if fsys is nil.
-func ChecksumFromFS(fsys fs.FS, name string, upper bool, newHashes ...func() hash.Hash) (
-	checksums []string, err error) {
+func ChecksumFromFS(
+	fsys fs.FS,
+	name string,
+	upper bool,
+	newHashes ...func() hash.Hash,
+) (checksums []string, err error) {
 	if fsys == nil {
 		panic(errors.AutoMsg("fsys is nil"))
 	}
@@ -183,7 +198,8 @@ func NewHashVerifier(newHash func() hash.Hash, prefixHex string) HashVerifier {
 	} else if strings.IndexFunc(prefixHex, func(r rune) bool {
 		return r < '0' || r > '9' && r < 'A' || r > 'F' && r < 'a' || r > 'f'
 	}) >= 0 {
-		panic(errors.AutoMsg(fmt.Sprintf("prefixHex (%q) is not hexadecimal", prefixHex)))
+		panic(errors.AutoMsg(fmt.Sprintf(
+			"prefixHex (%q) is not hexadecimal", prefixHex)))
 	}
 	h := newHash()
 	if h == nil {
@@ -289,6 +305,38 @@ func VerifyChecksum(file fs.File, closeFile bool, hvs ...HashVerifier) bool {
 	return true
 }
 
+// nonNilDeduplicatedHashVerifiers returns all
+// non-nil deduplicated HashVerifier in hvs.
+//
+// If there is no nil or duplicate HashVerifier in hvs, it returns hvs itself.
+// Otherwise, it copies all non-nil deduplicated HashVerifier from hvs to
+// a new slice and returns that slice.
+// The content of hvs is not modified in both cases.
+//
+// If there is no non-nil HashVerifier in hvs, it returns nil.
+func nonNilDeduplicatedHashVerifiers(hvs []HashVerifier) []HashVerifier {
+	result := hvs
+	set := make(map[HashVerifier]struct{}, 1+len(hvs))
+	set[nil] = struct{}{}
+	original := true
+	for i, hv := range hvs {
+		if original {
+			if _, ok := set[hv]; ok {
+				result, original = make([]HashVerifier, i, len(hvs)-1), false
+				copy(result, hvs[:i])
+			} else {
+				set[hv] = struct{}{}
+			}
+		} else if _, ok := set[hv]; !ok {
+			result, set[hv] = append(result, hv), struct{}{}
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
 // VerifyChecksumFromFS verifies a file by hash checksum,
 // where the file is opened from fsys by specified name.
 //
@@ -312,35 +360,4 @@ func VerifyChecksumFromFS(fsys fs.FS, name string, hvs ...HashVerifier) bool {
 		return false
 	}
 	return VerifyChecksum(f, true, hvs...)
-}
-
-// nonNilDeduplicatedHashVerifiers returns all
-// non-nil deduplicated HashVerifier in hvs.
-//
-// If there is no nil or duplicate HashVerifier in hvs, it returns hvs itself.
-// Otherwise, it copies all non-nil deduplicated HashVerifier from hvs to
-// a new slice and returns that slice.
-// The content of hvs is not modified in both cases.
-//
-// If there is no non-nil HashVerifier in hvs, it returns nil.
-func nonNilDeduplicatedHashVerifiers(hvs []HashVerifier) []HashVerifier {
-	result := hvs
-	set := make(map[HashVerifier]bool, len(hvs))
-	original := true
-	for i, hv := range hvs {
-		if original {
-			if hv == nil || set[hv] {
-				result, original = make([]HashVerifier, i, len(hvs)-1), false
-				copy(result, hvs[:i])
-			} else {
-				set[hv] = true
-			}
-		} else if hv != nil && !set[hv] {
-			result, set[hv] = append(result, hv), true
-		}
-	}
-	if len(result) == 0 {
-		return nil
-	}
-	return result
 }

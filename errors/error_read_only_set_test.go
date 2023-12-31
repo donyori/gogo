@@ -250,23 +250,28 @@ func TestErrorReadOnlySetSameMessage_Len_Nil(t *testing.T) {
 
 func TestErrorReadOnlySetSameMessage_Contains(t *testing.T) {
 	var setErrs []error
-	msgSet := make(map[string]bool)
+	msgSet := make(map[string]struct{})
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 		for _, err := range errs {
-			msgSet[err.Error()] = true
+			msgSet[err.Error()] = struct{}{}
 		}
 	}
 	testCases := make([]errorReadOnlySetContainsCase, 0, len(setErrs)*7+1)
 	for _, err := range setErrs {
-		eu, et, ef := &errorUnwrap{err}, &errorIsAlwaysTrue{err}, &errorIsAlwaysFalse{err}
+		eu := &errorUnwrap{err}
+		_, wantEU := msgSet[eu.Error()]
+		et := &errorIsAlwaysTrue{err}
+		_, wantET := msgSet[et.Error()]
+		ef := &errorIsAlwaysFalse{err}
+		_, wantEF := msgSet[ef.Error()]
 		testCases = append(
 			testCases,
 			errorReadOnlySetContainsCase{err, true},
 			errorReadOnlySetContainsCase{stderrors.New(err.Error()), true},
-			errorReadOnlySetContainsCase{eu, msgSet[eu.Error()]},
-			errorReadOnlySetContainsCase{et, msgSet[et.Error()]},
-			errorReadOnlySetContainsCase{ef, msgSet[ef.Error()]},
+			errorReadOnlySetContainsCase{eu, wantEU},
+			errorReadOnlySetContainsCase{et, wantET},
+			errorReadOnlySetContainsCase{ef, wantEF},
 			errorReadOnlySetContainsCase{anotherErrorForErrorReadOnlySet, false},
 			errorReadOnlySetContainsCase{stderrors.Join(anotherErrorForErrorReadOnlySet, err), false},
 		)

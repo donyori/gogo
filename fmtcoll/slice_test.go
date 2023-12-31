@@ -114,21 +114,10 @@ func testFormatSequenceToString(
 		commonFormatList []fmtcoll.CommonFormat,
 	) (result string, err error),
 ) {
-	const NilItemStr = "<nilptr>"
 	const Separator, Prefix, Suffix = ",", "<PREFIX>", "<SUFFIX>"
+
 	two, three := 2, 3
 	dataList := [][]*int{nil, {}, {nil}, {nil, &two}, {nil, &two, &three}}
-	formatItemFn := func(w io.Writer, x *int) error {
-		var err error
-		if x != nil {
-			_, err = fmt.Fprintf(w, "%d", *x)
-		} else if sw, ok := w.(io.StringWriter); ok {
-			_, err = sw.WriteString(NilItemStr)
-		} else {
-			_, err = w.Write([]byte(NilItemStr))
-		}
-		return err
-	}
 	commonFormatList := []fmtcoll.CommonFormat{
 		{},
 		{PrependType: true},
@@ -142,6 +131,44 @@ func testFormatSequenceToString(
 		{Separator: Separator, Prefix: Prefix, Suffix: Suffix, PrependType: true},
 		{Separator: Separator, Prefix: Prefix, Suffix: Suffix, PrependSize: true},
 		{Separator: Separator, Prefix: Prefix, Suffix: Suffix, PrependType: true, PrependSize: true},
+	}
+
+	for _, tc := range getTestCasesForFormatSequenceToString(
+		typeStr, dataList, commonFormatList) {
+		name := fmt.Sprintf("dataIdx=%d&commonFormatIdx=%d",
+			tc.dataIdx, tc.commonFormatIdx)
+		if tc.formatItemFn == nil {
+			name += "&formatItemFn=<nil>"
+		}
+		t.Run(name, func(t *testing.T) {
+			got, err := f(tc, dataList, commonFormatList)
+			if err != nil {
+				t.Error("err -", err)
+			} else if got != tc.want {
+				t.Errorf("got %q; want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// getTestCasesForFormatSequenceToString returns test cases
+// for testFormatSequenceToString.
+func getTestCasesForFormatSequenceToString(
+	typeStr string,
+	dataList [][]*int,
+	commonFormatList []fmtcoll.CommonFormat,
+) []sequenceTestCase {
+	const NilItemStr = "<nilptr>"
+	formatItemFn := func(w io.Writer, x *int) error {
+		var err error
+		if x != nil {
+			_, err = fmt.Fprintf(w, "%d", *x)
+		} else if sw, ok := w.(io.StringWriter); ok {
+			_, err = sw.WriteString(NilItemStr)
+		} else {
+			_, err = w.Write([]byte(NilItemStr))
+		}
+		return err
 	}
 
 	testCases := make([]sequenceTestCase, len(dataList)*len(commonFormatList)*2)
@@ -159,7 +186,10 @@ func testFormatSequenceToString(
 				prefix = fmt.Sprintf("(%d)", len(data))
 			}
 
-			for _, fmtItemFn := range []fmtcoll.FormatFunc[*int]{nil, formatItemFn} {
+			for _, fmtItemFn := range []fmtcoll.FormatFunc[*int]{
+				nil,
+				formatItemFn,
+			} {
 				var s string
 				switch {
 				case data == nil:
@@ -174,7 +204,8 @@ func testFormatSequenceToString(
 					b.WriteString(commonFormatList[commonFormatIdx].Prefix)
 					for i, x := range data {
 						if i > 0 {
-							b.WriteString(commonFormatList[commonFormatIdx].Separator)
+							b.WriteString(
+								commonFormatList[commonFormatIdx].Separator)
 						}
 						if x != nil {
 							b.WriteString(strconv.Itoa(*x))
@@ -195,21 +226,7 @@ func testFormatSequenceToString(
 			}
 		}
 	}
-
-	for _, tc := range testCases {
-		name := fmt.Sprintf("dataIdx=%d&commonFormatIdx=%d", tc.dataIdx, tc.commonFormatIdx)
-		if tc.formatItemFn == nil {
-			name += "&formatItemFn=<nil>"
-		}
-		t.Run(name, func(t *testing.T) {
-			got, err := f(tc, dataList, commonFormatList)
-			if err != nil {
-				t.Error("err -", err)
-			} else if got != tc.want {
-				t.Errorf("got %q; want %q", got, tc.want)
-			}
-		})
-	}
+	return testCases
 }
 
 func testMustFormatToStringPanic(

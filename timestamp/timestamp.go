@@ -29,17 +29,17 @@ import (
 
 // Regular expression patterns for various timestamps.
 const (
-	// UnixTimestampPattern is a regular expression pattern for UNIX timestamp.
-	// (without escape to fit more languages)
+	// UnixTimestampPattern is a regular expression pattern for UNIX timestamp
+	// (without escape to fit more languages).
 	UnixTimestampPattern = "^[+-]?[0-9]+([.][0-9]{1,9})?$"
 	// MilliTimestampPattern is a regular expression pattern for
-	// millisecond timestamp. (without escape to fit more languages)
+	// millisecond timestamp (without escape to fit more languages).
 	MilliTimestampPattern = "^[+-]?[0-9]+([.][0-9]{1,6})?$"
 	// MicroTimestampPattern is a regular expression pattern for
-	// microsecond timestamp. (without escape to fit more languages)
+	// microsecond timestamp (without escape to fit more languages).
 	MicroTimestampPattern = "^[+-]?[0-9]+([.][0-9]{1,3})?$"
 	// NanoTimestampPattern is a regular expression pattern for
-	// nanosecond timestamp. (without escape to fit more languages)
+	// nanosecond timestamp (without escape to fit more languages).
 	NanoTimestampPattern = "^[+-]?[0-9]+$"
 )
 
@@ -395,10 +395,10 @@ const (
 	// It is treated as a UNIX timestamp (in seconds) when formatted to strings.
 	//
 	// It determines the time unit by the integer part digits, as follows:
-	//  less than 12-digits - second,
-	//  12-digits to 14-digits - millisecond,
-	//  15-digits or 16-digits - microsecond,
-	//  more than 16-digits - nanosecond.
+	//   - less than 12-digits - second,
+	//   - 12-digits to 14-digits - millisecond,
+	//   - 15-digits or 16-digits - microsecond,
+	//   - more than 16-digits - nanosecond.
 	autoTimestamp timestampType = iota
 	// unixTimestamp is a UNIX timestamp (in seconds).
 	unixTimestamp
@@ -462,26 +462,9 @@ func timestampToTime(tsType timestampType, ts []byte) (t time.Time, err error) {
 	pointIdx := bytes.IndexByte(ts, '.')
 	tst := tsType
 	if tsType == autoTimestamp {
-		var k int // length of integer part
-		if pointIdx < 0 {
-			k = len(ts)
-		} else {
-			k = pointIdx
-		}
-		if ts[0] == '-' || ts[0] == '+' {
-			k--
-		}
-		if k < 12 {
-			tst = unixTimestamp
-		} else if k < 15 {
-			tst = milliTimestamp
-		} else if k < 17 {
-			tst = microTimestamp
-		} else {
-			tst = nanoTimestamp
-		}
-		if pointIdx >= 0 && len(ts)-pointIdx-1 > timestampFractionalLenMapping[tst] {
-			err = errors.AutoNew("invalid timestamp")
+		tst, err = detectTimestampType(ts, pointIdx)
+		if err != nil {
+			err = errors.AutoWrap(err)
 			return
 		}
 	}
@@ -495,10 +478,12 @@ func timestampToTime(tsType timestampType, ts []byte) (t time.Time, err error) {
 	var sec, nsec int64
 	sec, err = strconv.ParseInt(string(s), 10, 64)
 	if err != nil {
+		err = errors.AutoWrap(err)
 		return
 	} else if ns != nil {
 		nsec, err = strconv.ParseInt(string(ns), 10, 64)
 		if err != nil {
+			err = errors.AutoWrap(err)
 			return
 		}
 		for i, end := len(ns), timestampFractionalLenMapping[tst]; i < end; i++ {
@@ -545,4 +530,40 @@ func timeToTimestamp(tsType timestampType, t time.Time) []byte {
 		fracPart %= radix
 	}
 	return b.Bytes()
+}
+
+// detectTimestampType detects the type of timestamp
+// according to the specifications of autoTimestamp.
+//
+// It is called by function timestampToTime.
+//
+// ts is the decimal timestamp.
+//
+// pointIdx is the index of the decimal point.
+// pointIdx is -1 if the decimal point is not present in ts.
+func detectTimestampType(ts []byte, pointIdx int) (
+	tst timestampType, err error) {
+	var k int // length of integer part
+	if pointIdx < 0 {
+		k = len(ts)
+	} else {
+		k = pointIdx
+	}
+	if ts[0] == '-' || ts[0] == '+' {
+		k--
+	}
+	tst = nanoTimestamp
+	switch {
+	case k < 12:
+		tst = unixTimestamp
+	case k < 15:
+		tst = milliTimestamp
+	case k < 17:
+		tst = microTimestamp
+	}
+	if pointIdx >= 0 &&
+		len(ts)-pointIdx-1 > timestampFractionalLenMapping[tst] {
+		err = errors.AutoNew("invalid timestamp")
+	}
+	return
 }

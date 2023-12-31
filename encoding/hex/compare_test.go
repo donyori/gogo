@@ -32,12 +32,12 @@ func TestCanEncodeTo(t *testing.T) {
 		if srcCase.upper { // only use the lower cases to avoid redundant sources
 			continue
 		}
-		xSet := make(map[string]bool, len(testEncodeCases))
+		xSet := make(map[string]struct{}, len(testEncodeCases))
 		for _, xCase := range testEncodeCases {
-			if xSet[xCase.dstStr] {
+			if _, ok := xSet[xCase.dstStr]; ok {
 				continue
 			}
-			xSet[xCase.dstStr] = true
+			xSet[xCase.dstStr] = struct{}{}
 			want := srcCase.srcStr == xCase.srcStr
 			t.Run(
 				fmt.Sprintf(
@@ -75,10 +75,11 @@ func TestCanEncodeTo(t *testing.T) {
 			)
 		}
 	}
+}
 
-	// Test about hex.LetterCaseDiff.
+func TestCanEncodeTo_LetterCaseDiff(t *testing.T) {
 	skipAll := true
-	xSet := make(map[string]bool, len(testEncodeCases))
+	xSet := make(map[string]struct{}, len(testEncodeCases))
 	for _, tc := range testEncodeCases {
 		if len(tc.dstStr) == 0 {
 			continue
@@ -93,10 +94,12 @@ func TestCanEncodeTo(t *testing.T) {
 			}
 		}
 		xStr := string(x)
-		if skip || xSet[xStr] {
+		if skip {
+			continue
+		} else if _, ok := xSet[xStr]; ok {
 			continue
 		}
-		xSet[xStr] = true
+		xSet[xStr] = struct{}{}
 		t.Run(
 			fmt.Sprintf(
 				"src=%s&x=%s&upper=%t&numeric-xor-%#x",
@@ -131,63 +134,25 @@ func TestCanEncodeTo(t *testing.T) {
 		skipAll = false
 	}
 	if skipAll {
-		t.Errorf("No test about numeric character xor %#x as dst!", hex.LetterCaseDiff)
+		t.Errorf("No test about numeric character xor %#x as dst!",
+			hex.LetterCaseDiff)
 	}
 }
 
 func TestCanEncodeToPrefix(t *testing.T) {
-	const MaxI int = 8
+	const MaxI int = 7
 	for _, srcCase := range testEncodeCases {
 		if srcCase.upper { // only use the lower cases to avoid redundant sources
 			continue
 		}
-		prefixSet := make(map[string]bool, len(testEncodeCases)*MaxI)
-		for i := 0; i < MaxI; i++ {
+		prefixSet := make(map[string]struct{}, len(testEncodeCases)*(MaxI+1))
+		for i := 0; i <= MaxI; i++ {
 			for _, prefixCase := range testEncodeCases {
-				var prefix string
-				var prefixBytes []byte
-				switch i {
-				case 0:
-					if len(prefixCase.dstStr) > 1 {
-						prefix = prefixCase.dstStr[:1]
-						prefixBytes = prefixCase.dstBytes[:1]
-					}
-				case 1:
-					if len(prefixCase.dstStr) > 2 {
-						prefix = prefixCase.dstStr[:2]
-						prefixBytes = prefixCase.dstBytes[:2]
-					}
-				case 2:
-					if end := len(prefixCase.dstStr)/2 - 1; end > 0 {
-						prefix = prefixCase.dstStr[:end]
-						prefixBytes = prefixCase.dstBytes[:end]
-					}
-				case 3:
-					prefix = prefixCase.dstStr[:len(prefixCase.dstStr)/2]
-					prefixBytes = prefixCase.dstBytes[:len(prefixCase.dstBytes)/2]
-				case 4:
-					if end := len(prefixCase.dstStr) - 1; end > 0 {
-						prefix = prefixCase.dstStr[:end]
-						prefixBytes = prefixCase.dstBytes[:end]
-					}
-				case 5:
-					prefix = prefixCase.dstStr
-					prefixBytes = prefixCase.dstBytes
-				case 6:
-					prefix = prefixCase.dstStr + "0"
-					prefixBytes = []byte(prefix)
-				case 7:
-					prefix = prefixCase.dstStr + "00"
-					prefixBytes = []byte(prefix)
-				default:
-					// This should never happen, but will act as a safeguard for later,
-					// as a default value doesn't make sense here.
-					t.Fatalf("i (%d) is out of range", i)
-				}
-				if prefixSet[prefix] {
+				prefix, prefixBytes := getPrefixAndPrefixBytes(t, i, prefixCase)
+				if _, ok := prefixSet[prefix]; ok {
 					continue
 				}
-				prefixSet[prefix] = true
+				prefixSet[prefix] = struct{}{}
 				// srcCase.dstStr is in lowercase as the uppercase is skipped.
 				want := strings.HasPrefix(srcCase.dstStr, strings.ToLower(prefix))
 				t.Run(
@@ -227,6 +192,51 @@ func TestCanEncodeToPrefix(t *testing.T) {
 			}
 		}
 	}
+}
+
+// getPrefixAndPrefixBytes returns the prefix and prefix bytes
+// for TestCanEncodeToPrefix according to the specified i and test encode case.
+//
+// It uses t.Fatalf to stop the test if i is out of range [0, 7].
+func getPrefixAndPrefixBytes(t *testing.T, i int, prefixCase *testEncodeCase) (
+	prefix string, prefixBytes []byte) {
+	switch i {
+	case 0:
+		if len(prefixCase.dstStr) > 1 {
+			prefix = prefixCase.dstStr[:1]
+			prefixBytes = prefixCase.dstBytes[:1]
+		}
+	case 1:
+		if len(prefixCase.dstStr) > 2 {
+			prefix = prefixCase.dstStr[:2]
+			prefixBytes = prefixCase.dstBytes[:2]
+		}
+	case 2:
+		if end := len(prefixCase.dstStr)/2 - 1; end > 0 {
+			prefix = prefixCase.dstStr[:end]
+			prefixBytes = prefixCase.dstBytes[:end]
+		}
+	case 3:
+		prefix = prefixCase.dstStr[:len(prefixCase.dstStr)/2]
+		prefixBytes = prefixCase.dstBytes[:len(prefixCase.dstBytes)/2]
+	case 4:
+		if end := len(prefixCase.dstStr) - 1; end > 0 {
+			prefix = prefixCase.dstStr[:end]
+			prefixBytes = prefixCase.dstBytes[:end]
+		}
+	case 5:
+		prefix = prefixCase.dstStr
+		prefixBytes = prefixCase.dstBytes
+	case 6:
+		prefix = prefixCase.dstStr + "0"
+		prefixBytes = []byte(prefix)
+	case 7:
+		prefix = prefixCase.dstStr + "00"
+		prefixBytes = []byte(prefix)
+	default:
+		t.Fatalf("i (%d) is out of range [0, 7]", i)
+	}
+	return
 }
 
 func TestCanEncodeToBytesStringFunctions(t *testing.T) {

@@ -98,39 +98,16 @@ func TestLCM_0(t *testing.T) {
 	}
 }
 
-func TestLCM_RandomSelectInt(t *testing.T) {
+func TestLCM_RandomlySelectInt(t *testing.T) {
 	const N int = 100
-	const MaxTry int = 100
-	const MaxLen int = 64
-
-	nameSet := make(map[string]bool, N)
-	nameSet[""] = true
+	xsNameSet := make(map[string]struct{}, N)
+	xsNameSet[""] = struct{}{}
 	random := rand.New(rand.NewSource(20))
-
 	for i := 0; i < N; i++ {
-		var n int
-		for try := 0; n == 0 && try < MaxTry; try++ {
-			n = random.Intn(MaxLen + 1)
+		xs, xsName := randomlySelectInts(t, random, xsNameSet)
+		if t.Failed() {
+			return
 		}
-		if n == 0 {
-			t.Fatalf("try %d times but always get n as 0", MaxTry)
-		}
-
-		xs := make([]int, n)
-		var xsName string
-		for try := 0; nameSet[xsName] && try < MaxTry; try++ {
-			for i := range xs {
-				xs[i] = testIntegers[random.Intn(len(testIntegers))]
-				if random.Int31n(2) == 0 {
-					xs[i] = -xs[i]
-				}
-			}
-			xsName = xsToName(xs)
-		}
-		if nameSet[xsName] {
-			t.Fatalf("try %d times but always get tested xs", MaxTry)
-		}
-		nameSet[xsName] = true
 
 		var maxF2, maxF3, maxF5 int
 		for _, x := range xs {
@@ -161,36 +138,15 @@ func TestLCM_RandomSelectInt(t *testing.T) {
 
 func TestLCM_AllRandom(t *testing.T) {
 	const N int = 100
-	const MaxTry int = 100
-	const MaxLen int = 4
-	const MaxX int = 32
-
-	nameSet := make(map[string]bool, N)
-	nameSet[""] = true
+	xsNameSet := make(map[string]struct{}, N)
+	xsNameSet[""] = struct{}{}
 	var isWantPositive bool
 	random := rand.New(rand.NewSource(30))
-
 	for i := 0; i < N; i++ {
-		var n int
-		for try := 0; n == 0 && try < MaxTry; try++ {
-			n = random.Intn(MaxLen + 1)
+		xs, xsName := randomlyGenerateInts(t, random, xsNameSet)
+		if t.Failed() {
+			return
 		}
-		if n == 0 {
-			t.Fatalf("try %d times but always get n as 0", MaxTry)
-		}
-
-		xs := make([]int, n)
-		var xsName string
-		for try := 0; nameSet[xsName] && try < MaxTry; try++ {
-			for i := range xs {
-				xs[i] = random.Intn(MaxX + 1)
-			}
-			xsName = xsToName(xs)
-		}
-		if nameSet[xsName] {
-			t.Fatalf("try %d times but always get tested xs", MaxTry)
-		}
-		nameSet[xsName] = true
 
 		want := lcmBruteForce(xs...)
 		if want > 0 {
@@ -287,6 +243,29 @@ func lcmBruteForce[Int constraints.Integer](xs ...Int) Int {
 		}
 	}
 
+	limit := getLimitAccordingToType(xs...)
+	for m < limit {
+		var i int
+		for i < len(xs) && m%mathalgo.AbsIntToUint64(xs[i]) == 0 {
+			i++
+		}
+		if i >= len(xs) {
+			return Int(m)
+		}
+		m++
+	}
+	for _, x := range xs {
+		if m%mathalgo.AbsIntToUint64(x) != 0 {
+			panic("lcm overflows")
+		}
+	}
+	return Int(m)
+}
+
+// getLimitAccordingToType returns the maximum value
+// of the corresponding integer type.
+// The result is of type uint64.
+func getLimitAccordingToType[Int constraints.Integer](xs ...Int) uint64 {
 	var limit uint64
 	switch any(xs).(type) {
 	case []int:
@@ -313,21 +292,5 @@ func lcmBruteForce[Int constraints.Integer](xs ...Int) Int {
 		// This should never happen, but will act as a safeguard for later.
 		panic("type of xs is unacceptable")
 	}
-
-	for m < limit {
-		var i int
-		for i < len(xs) && m%mathalgo.AbsIntToUint64(xs[i]) == 0 {
-			i++
-		}
-		if i >= len(xs) {
-			return Int(m)
-		}
-		m++
-	}
-	for _, x := range xs {
-		if m%mathalgo.AbsIntToUint64(x) != 0 {
-			panic("lcm overflows")
-		}
-	}
-	return Int(m)
+	return limit
 }

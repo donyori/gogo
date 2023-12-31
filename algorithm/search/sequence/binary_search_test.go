@@ -78,7 +78,7 @@ var (
 	dataList     [][]*idValue
 )
 
-var acceptNotFound = map[int]bool{-1: true}
+var acceptNotFound = map[int]struct{}{-1: {}}
 
 func init() {
 	valueCounter = make(map[int]int, MaxValue+1)
@@ -111,30 +111,30 @@ func init() {
 	}
 }
 
-type testCase[AcceptType int | map[int]bool] struct {
+type testCase[AcceptType int | map[int]struct{}] struct {
 	data   []*idValue
 	goal   *idValue
 	accept AcceptType
 }
 
 func TestBinarySearch(t *testing.T) {
-	var testCases []testCase[map[int]bool]
+	var testCases []testCase[map[int]struct{}]
 	for _, data := range dataList {
 		for _, goal := range data {
-			accept := make(map[int]bool, 3)
+			accept := make(map[int]struct{}, 3)
 			for i, x := range data {
 				if idValueEqual(x, goal) {
-					accept[i] = true
+					accept[i] = struct{}{}
 				}
 			}
-			testCases = append(testCases, testCase[map[int]bool]{
+			testCases = append(testCases, testCase[map[int]struct{}]{
 				data:   data,
 				goal:   goal,
 				accept: accept,
 			})
 		}
 		for v := -2; v <= MaxValue+2; v++ {
-			testCases = append(testCases, testCase[map[int]bool]{
+			testCases = append(testCases, testCase[map[int]struct{}]{
 				data: data,
 				goal: &idValue{
 					id:    fmt.Sprintf("%d-%d", v, valueCounter[v]),
@@ -149,8 +149,12 @@ func TestBinarySearch(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d?data=%s&goal=%v",
 			i, dataToName(tc.data), tc.goal), func(t *testing.T) {
 			itf := sequence.WrapArrayLessEqual[*idValue](
-				(*array.SliceDynamicArray[*idValue])(&tc.data), idValueLess, idValueEqual)
-			if idx := sequence.BinarySearch(itf, tc.goal); !tc.accept[idx] {
+				(*array.SliceDynamicArray[*idValue])(&tc.data),
+				idValueLess,
+				idValueEqual,
+			)
+			idx := sequence.BinarySearch(itf, tc.goal)
+			if _, ok := tc.accept[idx]; !ok {
 				t.Errorf("got %d; accept %s", idx, acceptSetString(tc.accept))
 			}
 		})
@@ -192,8 +196,12 @@ func TestBinarySearchMaxLess(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d?data=%s&goal=%v",
 			i, dataToName(tc.data), tc.goal), func(t *testing.T) {
 			itf := sequence.WrapArrayLessEqual[*idValue](
-				(*array.SliceDynamicArray[*idValue])(&tc.data), idValueLess, idValueEqual)
-			if idx := sequence.BinarySearchMaxLess(itf, tc.goal); idx != tc.accept {
+				(*array.SliceDynamicArray[*idValue])(&tc.data),
+				idValueLess,
+				idValueEqual,
+			)
+			idx := sequence.BinarySearchMaxLess(itf, tc.goal)
+			if idx != tc.accept {
 				t.Errorf("got %d; want %d", idx, tc.accept)
 			}
 		})
@@ -235,15 +243,19 @@ func TestBinarySearchMinGreater(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d?data=%s&goal=%v",
 			i, dataToName(tc.data), tc.goal), func(t *testing.T) {
 			itf := sequence.WrapArrayLessEqual[*idValue](
-				(*array.SliceDynamicArray[*idValue])(&tc.data), idValueLess, idValueEqual)
-			if idx := sequence.BinarySearchMinGreater(itf, tc.goal); idx != tc.accept {
+				(*array.SliceDynamicArray[*idValue])(&tc.data),
+				idValueLess,
+				idValueEqual,
+			)
+			idx := sequence.BinarySearchMinGreater(itf, tc.goal)
+			if idx != tc.accept {
 				t.Errorf("got %d; want %d", idx, tc.accept)
 			}
 		})
 	}
 }
 
-func acceptSetString(acceptSet map[int]bool) string {
+func acceptSetString(acceptSet map[int]struct{}) string {
 	if acceptSet == nil {
 		return "<nil>"
 	}
@@ -267,10 +279,13 @@ func acceptSetString(acceptSet map[int]bool) string {
 }
 
 func dataToName(data []*idValue) string {
-	return fmtcoll.MustFormatSliceToString(data, &fmtcoll.SequenceFormat[*idValue]{
-		CommonFormat: fmtcoll.CommonFormat{
-			Separator: ",",
+	return fmtcoll.MustFormatSliceToString(
+		data,
+		&fmtcoll.SequenceFormat[*idValue]{
+			CommonFormat: fmtcoll.CommonFormat{
+				Separator: ",",
+			},
+			FormatItemFn: fmtcoll.FprintfToFormatFunc[*idValue]("%v"),
 		},
-		FormatItemFn: fmtcoll.FprintfToFormatFunc[*idValue]("%v"),
-	})
+	)
 }

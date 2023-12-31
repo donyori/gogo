@@ -21,7 +21,7 @@ package fmtcoll
 import (
 	"fmt"
 	"reflect"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/donyori/gogo/constraints"
@@ -135,44 +135,68 @@ func formatMapToString[Key, Value any](
 	b.WriteString(prefix)
 	b.WriteByte('{')
 	if size > 0 {
-		if format.FormatKeyFn != nil || format.FormatValueFn != nil {
-			entries := make([]mapping.Entry[Key, Value], 0, size)
-			rangeFn(func(x mapping.Entry[Key, Value]) (cont bool) {
-				entries = append(entries, x)
-				return true
-			})
-			if format.KeyValueLess != nil {
-				sort.Slice(entries, func(i, j int) bool {
-					return format.KeyValueLess(entries[i].Key, entries[j].Key,
-						entries[i].Value, entries[j].Value)
-				})
-			}
-
-			b.WriteString(format.Prefix)
-			for i := range entries {
-				if i > 0 {
-					b.WriteString(format.Separator)
-				}
-				if format.FormatKeyFn != nil {
-					err = format.FormatKeyFn(&b, entries[i].Key)
-					if err != nil {
-						return "", errors.AutoWrap(err)
-					} else if format.FormatValueFn != nil {
-						b.WriteByte(':')
-					}
-				}
-				if format.FormatValueFn != nil {
-					err = format.FormatValueFn(&b, entries[i].Value)
-					if err != nil {
-						return "", errors.AutoWrap(err)
-					}
-				}
-			}
-			b.WriteString(format.Suffix)
-		} else {
-			b.WriteString("...")
+		err = formatMapContentToString(&b, format, size, rangeFn)
+		if err != nil {
+			return "", errors.AutoWrap(err)
 		}
 	}
 	b.WriteByte('}')
 	return b.String(), nil
+}
+
+// formatMapContentToString is a subprocess of formatMapToString
+// to write the map content to the string builder b.
+func formatMapContentToString[Key, Value any](
+	b *strings.Builder,
+	format *MapFormat[Key, Value],
+	size int,
+	rangeFn func(handler func(x mapping.Entry[Key, Value]) (cont bool)),
+) error {
+	if format.FormatKeyFn != nil || format.FormatValueFn != nil {
+		entries := make([]mapping.Entry[Key, Value], 0, size)
+		rangeFn(func(x mapping.Entry[Key, Value]) (cont bool) {
+			entries = append(entries, x)
+			return true
+		})
+		if format.KeyValueLess != nil {
+			slices.SortFunc(
+				entries,
+				func(a, b mapping.Entry[Key, Value]) int {
+					if format.KeyValueLess(
+						a.Key, b.Key, a.Value, b.Value) {
+						return -1
+					} else if format.KeyValueLess(
+						b.Key, a.Key, b.Value, a.Value) {
+						return 1
+					}
+					return 0
+				},
+			)
+		}
+
+		b.WriteString(format.Prefix)
+		for i := range entries {
+			if i > 0 {
+				b.WriteString(format.Separator)
+			}
+			if format.FormatKeyFn != nil {
+				err := format.FormatKeyFn(b, entries[i].Key)
+				if err != nil {
+					return errors.AutoWrap(err)
+				} else if format.FormatValueFn != nil {
+					b.WriteByte(':')
+				}
+			}
+			if format.FormatValueFn != nil {
+				err := format.FormatValueFn(b, entries[i].Value)
+				if err != nil {
+					return errors.AutoWrap(err)
+				}
+			}
+		}
+		b.WriteString(format.Suffix)
+	} else {
+		b.WriteString("...")
+	}
+	return nil
 }

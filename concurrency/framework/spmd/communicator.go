@@ -350,6 +350,7 @@ func (comm *communicator[Message]) SendAny(msg Message) int {
 	if len(comm.ctx.comms) == 1 {
 		panic(errors.AutoMsg("only one goroutine in this group"))
 	}
+	cancelChan := comm.ctx.ctrl.c.C()
 	rxC := make(chan int, 1)
 	m := &sndrMsgRxc[Message]{
 		sndrMsg: sndrMsg[Message]{
@@ -358,40 +359,11 @@ func (comm *communicator[Message]) SendAny(msg Message) int {
 		},
 		rxC: rxC,
 	}
-	cancelChan, n := comm.ctx.ctrl.c.C(), len(comm.ctx.comms)
-	poll := func() int {
-		for dst := 0; dst < n; dst++ {
-			if dst == comm.rank {
-				dst++
-			}
-			var idx int
-			if comm.rank > dst {
-				idx = comm.rank - 1
-			} else {
-				idx = comm.rank
-			}
-			select {
-			case <-cancelChan:
-				return -1
-			case comm.ctx.pubC <- m:
-				select {
-				case <-cancelChan:
-					return -1
-				case dst := <-rxC:
-					return dst
-				}
-			case comm.ctx.comms[dst].pcs[idx] <- msg:
-				return dst
-			default:
-			}
-		}
-		return -2
-	}
-	pollR := poll()
+	pollR := comm.sendAnyPoll(msg, cancelChan, rxC, m)
 	if pollR > -2 {
 		return pollR
 	}
-	ticker := time.NewTicker(time.Duration(n-1)*50 + 100)
+	ticker := time.NewTicker(time.Duration(len(comm.ctx.comms)-1)*50 + 100)
 	defer ticker.Stop()
 	for {
 		select {
@@ -405,12 +377,55 @@ func (comm *communicator[Message]) SendAny(msg Message) int {
 				return dst
 			}
 		case <-ticker.C:
-			pollR = poll()
+			pollR = comm.sendAnyPoll(msg, cancelChan, rxC, m)
 			if pollR > -2 {
 				return pollR
 			}
 		}
 	}
+}
+
+// sendAnyPoll is a subprocess of SendAny to try to
+// send the message to its public channel or
+// a point-to-point channel of someone else in its group,
+// without blocking.
+//
+// If the message is sent successfully,
+// sendAnyPoll returns the rank of the receiver.
+// If a cancellation signal is detected, sendAnyPoll returns -1.
+// Otherwise, sendAnyPoll returns -2.
+func (comm *communicator[Message]) sendAnyPoll(
+	msg Message,
+	cancelChan <-chan struct{},
+	rxC <-chan int,
+	m *sndrMsgRxc[Message],
+) int {
+	for dst := 0; dst < len(comm.ctx.comms); dst++ {
+		if dst == comm.rank {
+			dst++
+		}
+		var idx int
+		if comm.rank > dst {
+			idx = comm.rank - 1
+		} else {
+			idx = comm.rank
+		}
+		select {
+		case <-cancelChan:
+			return -1
+		case comm.ctx.pubC <- m:
+			select {
+			case <-cancelChan:
+				return -1
+			case dst := <-rxC:
+				return dst
+			}
+		case comm.ctx.comms[dst].pcs[idx] <- msg:
+			return dst
+		default:
+		}
+	}
+	return -2
 }
 
 func (comm *communicator[Message]) ReceiveAny() (src int, msg Message) {
@@ -455,7 +470,8 @@ func (comm *communicator[Message]) Barrier() bool {
 		// The first goroutine makes the signal channel.
 		c = make(chan struct{})
 	} else {
-		// Other goroutines receive the signal channel from their respective previous goroutines.
+		// Other goroutines receive the signal channel
+		// from their respective previous goroutines.
 		select {
 		case <-cancelChan:
 			return false
@@ -467,7 +483,8 @@ func (comm *communicator[Message]) Barrier() bool {
 		// the information that all goroutines call method Barrier successfully.
 		close(c)
 	} else {
-		// Other goroutines send the signal channel to their respective next goroutines.
+		// Other goroutines send the signal channel
+		// to their respective next goroutines.
 		select {
 		case <-cancelChan:
 			return false
@@ -542,7 +559,7 @@ func (comm *communicator[Message]) Scatter(
 		// No other goroutines in this group.
 		ok = !comm.ctx.ctrl.c.Canceled()
 		if ok && x != nil {
-			if a, b := any(x).(array.Array[Message]); b {
+			if a, isArray := any(x).(array.Array[Message]); isArray {
 				msg = a
 			} else {
 				sda := make(array.SliceDynamicArray[Message], 0, x.Len())
@@ -584,42 +601,54 @@ func (comm *communicator[Message]) Scatter(
 			return
 		case msg = <-cs[idx]:
 		}
+		ok = true
 	} else {
-		if x == nil || x.Len() <= 0 {
-			for _, c := range cs {
-				close(c)
-			}
-			return nil, true
-		}
+		msg, ok = comm.scatterRoot(root, x, cancelChan, cs)
+	}
+	return
+}
 
-		size := x.Len()
-		a, b := any(x).(array.Array[Message])
-		if !b {
-			sda := make(array.SliceDynamicArray[Message], 0, size)
-			sda.Append(x)
-			a = &sda
+// scatterRoot is a subprocess of Scatter for the root goroutine.
+func (comm *communicator[Message]) scatterRoot(
+	root int,
+	x sequence.Sequence[Message],
+	cancelChan <-chan struct{},
+	cs []chan array.Array[Message],
+) (msg array.Array[Message], ok bool) {
+	if x == nil || x.Len() <= 0 {
+		for _, c := range cs {
+			close(c)
 		}
-		n, idx, cIdx := len(comm.ctx.comms), 0, 0
-		q, r := size/n, size%n
-		chunkLen := q + 1
-		for i := 0; i < n; i++ {
-			if i == r {
-				chunkLen--
+		return nil, true
+	}
+
+	size := x.Len()
+	a, isArray := any(x).(array.Array[Message])
+	if !isArray {
+		sda := make(array.SliceDynamicArray[Message], 0, size)
+		sda.Append(x)
+		a = &sda
+	}
+	n, idx, cIdx := len(comm.ctx.comms), 0, 0
+	q, r := size/n, size%n
+	chunkLen := q + 1
+	for i := 0; i < n; i++ {
+		if i == r {
+			chunkLen--
+		}
+		chunk := a.Slice(idx, idx+chunkLen)
+		idx += chunkLen
+		if i != root {
+			// Send this chunk to the target goroutine.
+			select {
+			case <-cancelChan:
+				return nil, false
+			case cs[cIdx] <- chunk:
+				cIdx++
 			}
-			chunk := a.Slice(idx, idx+chunkLen)
-			idx += chunkLen
-			if i != root {
-				// Send this chunk to the target goroutine.
-				select {
-				case <-cancelChan:
-					return nil, false
-				case cs[cIdx] <- chunk:
-					cIdx++
-				}
-			} else {
-				// This chunk is for the root itself.
-				msg = chunk
-			}
+		} else {
+			// This chunk is for the root itself.
+			msg = chunk
 		}
 	}
 	return msg, true

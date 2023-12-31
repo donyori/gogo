@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"path"
 	"sort"
 	"strings"
@@ -177,7 +178,8 @@ type reader struct {
 // and it is also closed by this function when encountering an error.
 //
 // This function panics if file is nil.
-func Read(file fs.File, opts *ReadOptions, closeFile bool) (r Reader, err error) {
+func Read(file fs.File, opts *ReadOptions, closeFile bool) (
+	r Reader, err error) {
 	if file == nil {
 		panic(errors.AutoMsg("file is nil"))
 	}
@@ -227,18 +229,17 @@ func Read(file fs.File, opts *ReadOptions, closeFile bool) (r Reader, err error)
 			Offset:          opts.Offset,
 			Limit:           opts.Limit,
 			Raw:             opts.Raw,
+			ZipDcomp:        maps.Clone(opts.ZipDcomp),
 			ZipReaderAtFunc: opts.ZipReaderAtFunc,
 		},
 		f: file,
 	}
-	for method, dcomp := range opts.ZipDcomp {
-		if dcomp != nil {
-			if fr.opts.ZipDcomp == nil {
-				fr.opts.ZipDcomp = make(map[uint16]zip.Decompressor, len(opts.ZipDcomp))
-			}
-			fr.opts.ZipDcomp[method] = dcomp
-		}
-	}
+	maps.DeleteFunc(
+		fr.opts.ZipDcomp,
+		func(method uint16, dcomp zip.Decompressor) bool {
+			return dcomp == nil
+		},
+	)
 	r = fr
 	el.Append(fr.init(info, size, &closers))
 	return
@@ -256,7 +257,8 @@ func Read(file fs.File, opts *ReadOptions, closeFile bool) (r Reader, err error)
 // The file is closed when the returned reader is closed.
 //
 // This function panics if fsys is nil.
-func ReadFromFS(fsys fs.FS, name string, opts *ReadOptions) (r Reader, err error) {
+func ReadFromFS(fsys fs.FS, name string, opts *ReadOptions) (
+	r Reader, err error) {
 	if fsys == nil {
 		panic(errors.AutoMsg("fsys is nil"))
 	}
@@ -271,7 +273,11 @@ func ReadFromFS(fsys fs.FS, name string, opts *ReadOptions) (r Reader, err error
 // init initializes the reader according to the options.
 //
 // It may update closers.
-func (fr *reader) init(info fs.FileInfo, size int64, pClosers *[]io.Closer) error {
+func (fr *reader) init(
+	info fs.FileInfo,
+	size int64,
+	pClosers *[]io.Closer,
+) error {
 	n, err := fr.initOffsetAndLimit(size)
 	if err != nil {
 		return err
@@ -333,36 +339,40 @@ func (fr *reader) initOffsetAndLimit(size int64) (n int64, err error) {
 // size is obtained from initOffsetAndLimit, not the file size.
 //
 // It may update closers.
-func (fr *reader) initRaw(info fs.FileInfo, size int64, pClosers *[]io.Closer) error {
+func (fr *reader) initRaw(
+	info fs.FileInfo,
+	size int64,
+	pClosers *[]io.Closer,
+) error {
 	if fr.opts.Raw {
 		return nil
 	}
 	name := strings.ToLower(info.Name())
-	ext := path.Ext(name)
-	for {
-		var endLoop bool
+	var ext string
+	loop := true
+	for loop {
+		name = name[:len(name)-len(ext)]
+		ext = path.Ext(name)
 		switch ext {
-		case ".gz", ".tgz":
+		case ".tgz":
+			name = name[:len(name)-len(ext)] + ".tar.gz"
+			ext = ""
+		case ".tbz":
+			name = name[:len(name)-len(ext)] + ".tar.bz2"
+			ext = ""
+		case ".gz":
 			gr, err := gzip.NewReader(fr.ur)
 			if err != nil {
 				return err
 			}
 			*pClosers = append(*pClosers, gr)
 			fr.ur = gr
-			if ext == ".tgz" {
-				ext = ".tar"
-				continue
-			}
-		case ".bz2", ".tbz":
+		case ".bz2":
 			fr.ur = bzip2.NewReader(fr.ur)
-			if ext == ".tbz" {
-				ext = ".tar"
-				continue
-			}
 		case ".tar":
 			fr.tr = tar.NewReader(fr.ur)
 			fr.ur = fr.tr
-			endLoop = true
+			loop = false
 		case ".zip":
 			r, ok := fr.ur.(io.ReaderAt)
 			var err error
@@ -384,15 +394,10 @@ func (fr *reader) initRaw(info fs.FileInfo, size int64, pClosers *[]io.Closer) e
 				fr.zr.RegisterDecompressor(method, dcomp)
 			}
 			fr.ur, fr.err = readZipErrorReader, ErrReadZip
-			endLoop = true
+			loop = false
 		default:
-			endLoop = true
+			loop = false
 		}
-		if endLoop {
-			break
-		}
-		name = name[:len(name)-len(ext)]
-		ext = path.Ext(name)
 	}
 	return nil
 }
@@ -629,13 +634,8 @@ func (fr *reader) Options() *ReadOptions {
 		Offset:          fr.opts.Offset,
 		Limit:           fr.opts.Limit,
 		Raw:             fr.opts.Raw,
+		ZipDcomp:        maps.Clone(fr.opts.ZipDcomp),
 		ZipReaderAtFunc: fr.opts.ZipReaderAtFunc,
-	}
-	if len(fr.opts.ZipDcomp) > 0 {
-		opts.ZipDcomp = make(map[uint16]zip.Decompressor, len(fr.opts.ZipDcomp))
-		for method, dcomp := range fr.opts.ZipDcomp {
-			opts.ZipDcomp[method] = dcomp
-		}
 	}
 	return opts
 }
@@ -647,7 +647,9 @@ func (fr *reader) FileStat() (info fs.FileInfo, err error) {
 // tarHeaderIsDir reports whether the tar header represents a directory.
 func tarHeaderIsDir(hdr *tar.Header) bool {
 	return hdr != nil &&
-		(hdr.Typeflag == '\x00' && len(hdr.Name) > 0 && hdr.Name[len(hdr.Name)-1] == '/' ||
+		(hdr.Typeflag == '\x00' &&
+			len(hdr.Name) > 0 &&
+			hdr.Name[len(hdr.Name)-1] == '/' ||
 			hdr.FileInfo().IsDir())
 }
 

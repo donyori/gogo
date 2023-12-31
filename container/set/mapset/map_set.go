@@ -58,7 +58,7 @@ func New[Item comparable](capacity int, items container.Container[Item]) set.Set
 	}
 	if n > 0 {
 		items.Range(func(x Item) (cont bool) {
-			m[x] = v
+			m[x] = struct{}{}
 			return true
 		})
 	}
@@ -128,7 +128,7 @@ func (ms *mapSet[Item]) ContainsAny(c container.Container[Item]) bool {
 
 func (ms *mapSet[Item]) Add(x ...Item) {
 	for _, item := range x {
-		ms.m[item] = v
+		ms.m[item] = struct{}{}
 	}
 }
 
@@ -143,7 +143,7 @@ func (ms *mapSet[Item]) Union(s set.Set[Item]) {
 		return
 	}
 	s.Range(func(x Item) (cont bool) {
-		ms.m[x] = v
+		ms.m[x] = struct{}{}
 		return true
 	})
 }
@@ -178,7 +178,7 @@ func (ms *mapSet[Item]) DisjunctiveUnion(s set.Set[Item]) {
 		if _, ok := ms.m[x]; ok {
 			delete(ms.m, x)
 		} else {
-			ms.m[x] = v
+			ms.m[x] = struct{}{}
 		}
 		return true
 	})
@@ -187,7 +187,3 @@ func (ms *mapSet[Item]) DisjunctiveUnion(s set.Set[Item]) {
 func (ms *mapSet[Item]) Clear() {
 	ms.m = make(map[Item]struct{})
 }
-
-// v is the value for map[Item]struct{}.
-// May be redundant.
-var v = struct{}{}

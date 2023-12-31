@@ -101,15 +101,17 @@ func New[Message any](
 		} else if len(group) == 0 {
 			panic(errors.AutoMsg("group is nil or empty"))
 		}
-		g, set := make(array.SliceDynamicArray[int], 0, len(group)), make(map[int]bool, len(group))
+		g := make(array.SliceDynamicArray[int], 0, len(group))
+		set := make(map[int]struct{}, len(group))
 		// Deduplicate and check out-of-range items:
 		for _, wr := range group {
 			if wr < 0 || wr >= n {
-				panic(errors.AutoMsg(fmt.Sprintf("world rank %d is out of range (n: %d)", wr, n)))
-			} else if set[wr] {
+				panic(errors.AutoMsg(fmt.Sprintf(
+					"world rank %d is out of range (n: %d)", wr, n)))
+			} else if _, ok := set[wr]; ok {
 				continue
 			}
-			set[wr] = true
+			set[wr] = struct{}{}
 			g.Push(wr)
 		}
 		g.Shrink()

@@ -41,7 +41,6 @@ func TestMutex_Lock(t *testing.T) {
 		}()
 		<-c
 		m.Lock()
-		m.Unlock()
 		if time.Since(start) < time.Millisecond {
 			t.Error("not working")
 		}
@@ -59,7 +58,6 @@ func TestMutex_Lock(t *testing.T) {
 		}()
 		<-c
 		m.Lock()
-		m.Unlock()
 		if time.Since(start) < time.Millisecond {
 			t.Error("not working")
 		}
@@ -103,6 +101,7 @@ func TestMutex_UnlockTwice(t *testing.T) {
 	}()
 	m := concurrency.NewMutex()
 	m.Lock()
+	var _ struct{} // to suppress "SA2001: empty critical section (staticcheck)"
 	m.Unlock()
 	m.Unlock() // want panic here
 	t.Error("no panic when calling Unlock twice")

@@ -411,74 +411,77 @@ func TestOnce_PanicValue(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("f=%s&useDo=%t", tc.fName, tc.useDo), func(t *testing.T) {
-			var f func()
-			switch tc.fName {
-			case EmptyF:
-				f = func() {}
-			case PanicF:
-				f = func() {
-					panic(panicMsg)
+		t.Run(
+			fmt.Sprintf("f=%s&useDo=%t", tc.fName, tc.useDo),
+			func(t *testing.T) {
+				var f func()
+				switch tc.fName {
+				case EmptyF:
+					f = func() {}
+				case PanicF:
+					f = func() {
+						panic(panicMsg)
+					}
+				case GoexitF:
+					f = runtime.Goexit
+				case NilF:
+					// Do nothing here.
+				default:
+					t.Fatalf("unknown fName %q", tc.fName)
 				}
-			case GoexitF:
-				f = runtime.Goexit
-			case NilF:
-				// Do nothing here.
-			default:
-				t.Fatalf("unknown fName %q", tc.fName)
-			}
-			methodName := "DoRecover"
-			if tc.useDo {
-				methodName = "Do"
-			}
-
-			once := concurrency.NewOnce(f)
-			interrupted, panicValue := once.PanicValue()
-			if interrupted {
-				t.Errorf("before calling %s, got interrupted true; want false",
-					methodName)
-			}
-			if panicValue != nil {
-				t.Errorf("before calling %s, got panicValue %v; want <nil>",
-					methodName, panicValue)
-			}
-
-			// Launch a new goroutine to call Do or DoRecover
-			// because runtime.Goexit will break the test goroutine.
-			doneC := make(chan struct{})
-			go func(doneC chan<- struct{}) {
-				defer close(doneC)
+				methodName := "DoRecover"
 				if tc.useDo {
-					defer func() {
-						if e := recover(); e != tc.wantPanicValue {
-							t.Errorf("got panic %v; want %v",
-								e, tc.wantPanicValue)
-						}
-					}()
-					once.Do()
-				} else {
-					called, panicValue := once.DoRecover()
-					if !called {
-						t.Error("got called false; want true")
-					}
-					if panicValue != tc.wantPanicValue {
-						t.Errorf("got panicValue %v; want %v",
-							panicValue, tc.wantPanicValue)
-					}
+					methodName = "Do"
 				}
-			}(doneC)
-			<-doneC
 
-			interrupted, panicValue = once.PanicValue()
-			if interrupted != tc.wantInterrupted {
-				t.Errorf("after calling %s, got interrupted %t; want %t",
-					methodName, interrupted, tc.wantInterrupted)
-			}
-			if panicValue != tc.wantPanicValue {
-				t.Errorf("after calling %s, got panicValue %v; want %v",
-					methodName, panicValue, tc.wantPanicValue)
-			}
-		})
+				once := concurrency.NewOnce(f)
+				interrupted, panicValue := once.PanicValue()
+				if interrupted {
+					t.Errorf("before calling %s, got interrupted true; want false",
+						methodName)
+				}
+				if panicValue != nil {
+					t.Errorf("before calling %s, got panicValue %v; want <nil>",
+						methodName, panicValue)
+				}
+
+				// Launch a new goroutine to call Do or DoRecover
+				// because runtime.Goexit will break the test goroutine.
+				doneC := make(chan struct{})
+				go func(doneC chan<- struct{}) {
+					defer close(doneC)
+					if tc.useDo {
+						defer func() {
+							if e := recover(); e != tc.wantPanicValue {
+								t.Errorf("got panic %v; want %v",
+									e, tc.wantPanicValue)
+							}
+						}()
+						once.Do()
+					} else {
+						called, panicValue := once.DoRecover()
+						if !called {
+							t.Error("got called false; want true")
+						}
+						if panicValue != tc.wantPanicValue {
+							t.Errorf("got panicValue %v; want %v",
+								panicValue, tc.wantPanicValue)
+						}
+					}
+				}(doneC)
+				<-doneC
+
+				interrupted, panicValue = once.PanicValue()
+				if interrupted != tc.wantInterrupted {
+					t.Errorf("after calling %s, got interrupted %t; want %t",
+						methodName, interrupted, tc.wantInterrupted)
+				}
+				if panicValue != tc.wantPanicValue {
+					t.Errorf("after calling %s, got panicValue %v; want %v",
+						methodName, panicValue, tc.wantPanicValue)
+				}
+			},
+		)
 	}
 }
 
@@ -531,74 +534,96 @@ func testOnceCAndDoneFunc(
 
 	var panicMsg any = "test panic message"
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("f=%s&useDo=%t", tc.fName, tc.useDo), func(t *testing.T) {
-			var f func()
-			var wantPanicValue any
-			switch tc.fName {
-			case EmptyF:
-				f = func() {}
-			case PanicF:
-				f = func() {
-					panic(panicMsg)
+		t.Run(
+			fmt.Sprintf("f=%s&useDo=%t", tc.fName, tc.useDo),
+			func(t *testing.T) {
+				var f func()
+				var wantPanicValue any
+				switch tc.fName {
+				case EmptyF:
+					f = func() {}
+				case PanicF:
+					f = func() {
+						panic(panicMsg)
+					}
+					wantPanicValue = panicMsg
+				case GoexitF:
+					f = runtime.Goexit
+				case NilF:
+					// Do nothing here.
+				default:
+					t.Fatalf("unknown fName %q", tc.fName)
 				}
-				wantPanicValue = panicMsg
-			case GoexitF:
-				f = runtime.Goexit
-			case NilF:
-				// Do nothing here.
-			default:
-				t.Fatalf("unknown fName %q", tc.fName)
-			}
 
-			// Launch a new goroutine because
-			// runtime.Goexit will break the test goroutine.
-			var numCallToDoneFunc int
-			doneC := make(chan struct{})
-			go func(doneC chan<- struct{}) {
-				defer close(doneC)
-				once := concurrency.NewOnce(f)
-				methodName := "DoRecover"
-				if tc.useDo {
-					methodName = "Do"
-					defer func() {
-						if e := recover(); e != wantPanicValue {
-							t.Errorf("got panic %v; want %v",
-								e, wantPanicValue)
-						}
-					}()
+				// Launch a new goroutine because
+				// runtime.Goexit will break the test goroutine.
+				var numCallToDoneFunc atomic.Int32
+				doneC := make(chan struct{})
+				go goroutineTestOnceCAndDoneFunc(
+					doneC,
+					t,
+					doneFunc,
+					tc.useDo,
+					f,
+					wantPanicValue,
+					&numCallToDoneFunc,
+				)
+				<-doneC
+				if n := numCallToDoneFunc.Load(); n != 2 {
+					t.Errorf("the number of calls to doneFunc is %d; want 2", n)
 				}
-				done := doneFunc(t, once)
-				numCallToDoneFunc++
-				if !t.Failed() && done {
-					t.Errorf("doneFunc returned true before calling %s; want false",
-						methodName)
-				}
-				defer func() {
-					done = doneFunc(t, once)
-					numCallToDoneFunc++
-					if !t.Failed() && !done {
-						t.Errorf("doneFunc returned false after calling %s; want true",
-							methodName)
-					}
-				}()
-				if tc.useDo {
-					once.Do()
-				} else {
-					called, panicValue := once.DoRecover()
-					if !called {
-						t.Error("got called false; want true")
-					}
-					if panicValue != wantPanicValue {
-						t.Errorf("got panicValue %v; want %v",
-							panicValue, wantPanicValue)
-					}
-				}
-			}(doneC)
-			<-doneC
-			if numCallToDoneFunc != 2 {
-				t.Errorf("the number of calls to doneFunc is %d; want 2",
-					numCallToDoneFunc)
+			},
+		)
+	}
+}
+
+// goroutineTestOnceCAndDoneFunc is the process of the goroutine
+// launched by testOnceCAndDoneFunc.
+func goroutineTestOnceCAndDoneFunc(
+	doneC chan<- struct{},
+	t *testing.T,
+	doneFunc func(t *testing.T, once concurrency.Once) bool,
+	useDo bool,
+	f func(),
+	wantPanicValue any,
+	numCallToDoneFunc *atomic.Int32,
+) {
+	defer close(doneC)
+	once := concurrency.NewOnce(f)
+	methodName := "DoRecover"
+	if useDo {
+		methodName = "Do"
+		defer func() {
+			if e := recover(); e != wantPanicValue {
+				t.Errorf("got panic %v; want %v",
+					e, wantPanicValue)
 			}
-		})
+		}()
+	}
+	done := doneFunc(t, once)
+	numCallToDoneFunc.Add(1)
+	if !t.Failed() && done {
+		t.Errorf("doneFunc returned true before calling %s; want false",
+			methodName)
+	}
+	defer func() {
+		done = doneFunc(t, once)
+		numCallToDoneFunc.Add(1)
+		if !t.Failed() && !done {
+			t.Errorf("doneFunc returned false after calling %s; want true",
+				methodName)
+		}
+	}()
+	if useDo {
+		once.Do()
+	} else {
+		called, panicValue := once.DoRecover()
+		if !called {
+			t.Error("got called false; want true")
+		}
+		if panicValue != wantPanicValue {
+			t.Errorf("got panicValue %v; want %v",
+				panicValue, wantPanicValue)
+		}
 	}
 }

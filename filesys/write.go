@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"path"
 	"strings"
 
@@ -224,7 +225,8 @@ type writer struct {
 // and it is also closed by this function when encountering an error.
 //
 // This function panics if file is nil.
-func Write(file WritableFile, opts *WriteOptions, closeFile bool) (w Writer, err error) {
+func Write(file WritableFile, opts *WriteOptions, closeFile bool) (
+	w Writer, err error) {
 	if file == nil {
 		panic(errors.AutoMsg("file is nil"))
 	}
@@ -279,17 +281,16 @@ func Write(file WritableFile, opts *WriteOptions, closeFile bool) (w Writer, err
 			DeflateLv:  opts.DeflateLv,
 			ZipOffset:  opts.ZipOffset,
 			ZipComment: opts.ZipComment,
+			ZipComp:    maps.Clone(opts.ZipComp),
 		},
 		f: file,
 	}
-	for method, comp := range opts.ZipComp {
-		if comp != nil {
-			if fw.opts.ZipComp == nil {
-				fw.opts.ZipComp = make(map[uint16]zip.Compressor, len(opts.ZipComp))
-			}
-			fw.opts.ZipComp[method] = comp
-		}
-	}
+	maps.DeleteFunc(
+		fw.opts.ZipComp,
+		func(method uint16, comp zip.Compressor) bool {
+			return comp == nil
+		},
+	)
 	w = fw
 	el.Append(fw.init(info, &closers))
 	return
@@ -315,26 +316,27 @@ func (fw *writer) initRaw(info fs.FileInfo, pClosers *[]io.Closer) error {
 		return nil
 	}
 	name := strings.ToLower(info.Name())
-	ext := path.Ext(name)
-	for {
-		var endLoop bool
+	var ext string
+	loop := true
+	for loop {
+		name = name[:len(name)-len(ext)]
+		ext = path.Ext(name)
 		switch ext {
-		case ".gz", ".tgz":
+		case ".tgz":
+			name = name[:len(name)-len(ext)] + ".tar.gz"
+			ext = ""
+		case ".gz":
 			gw, err := gzip.NewWriterLevel(fw.uw, fw.opts.DeflateLv)
 			if err != nil {
 				return err
 			}
 			*pClosers = append(*pClosers, gw)
 			fw.uw = gw
-			if ext == ".tgz" {
-				ext = ".tar"
-				continue
-			}
 		case ".tar":
 			fw.tw = tar.NewWriter(fw.uw)
 			*pClosers = append(*pClosers, fw.tw)
 			fw.uw = fw.tw
-			endLoop = true
+			loop = false
 		case ".zip":
 			fw.zw = zip.NewWriter(fw.uw)
 			*pClosers = append(*pClosers, fw.zw)
@@ -362,16 +364,12 @@ func (fw *writer) initRaw(info fs.FileInfo, pClosers *[]io.Closer) error {
 					},
 				)
 			}
-			fw.uw, fw.err = zipWriteBeforeCreateErrorWriter, ErrZipWriteBeforeCreate
-			endLoop = true
+			fw.uw = zipWriteBeforeCreateErrorWriter
+			fw.err = ErrZipWriteBeforeCreate
+			loop = false
 		default:
-			endLoop = true
+			loop = false
 		}
-		if endLoop {
-			break
-		}
-		name = name[:len(name)-len(ext)]
-		ext = path.Ext(name)
 	}
 	return nil
 }
@@ -579,21 +577,33 @@ func (fw *writer) ZipEnabled() bool {
 }
 
 func (fw *writer) ZipCreate(name string) error {
-	return errors.AutoWrap(fw.zipCreateFunc(nil, name, func() (io.Writer, error) {
-		return fw.zw.Create(name)
-	}))
+	return errors.AutoWrap(fw.zipCreateFunc(
+		nil,
+		name,
+		func() (io.Writer, error) {
+			return fw.zw.Create(name)
+		},
+	))
 }
 
 func (fw *writer) ZipCreateHeader(fh *zip.FileHeader) error {
-	return errors.AutoWrap(fw.zipCreateFunc(fh, "", func() (io.Writer, error) {
-		return fw.zw.CreateHeader(fh)
-	}))
+	return errors.AutoWrap(fw.zipCreateFunc(
+		fh,
+		"",
+		func() (io.Writer, error) {
+			return fw.zw.CreateHeader(fh)
+		},
+	))
 }
 
 func (fw *writer) ZipCreateRaw(fh *zip.FileHeader) error {
-	return errors.AutoWrap(fw.zipCreateFunc(fh, "", func() (io.Writer, error) {
-		return fw.zw.CreateRaw(fh)
-	}))
+	return errors.AutoWrap(fw.zipCreateFunc(
+		fh,
+		"",
+		func() (io.Writer, error) {
+			return fw.zw.CreateRaw(fh)
+		},
+	))
 }
 
 func (fw *writer) ZipCopy(f *zip.File) error {
@@ -613,12 +623,7 @@ func (fw *writer) Options() *WriteOptions {
 		DeflateLv:  fw.opts.DeflateLv,
 		ZipOffset:  fw.opts.ZipOffset,
 		ZipComment: fw.opts.ZipComment,
-	}
-	if len(fw.opts.ZipComp) > 0 {
-		opts.ZipComp = make(map[uint16]zip.Compressor, len(fw.opts.ZipComp))
-		for method, comp := range fw.opts.ZipComp {
-			opts.ZipComp[method] = comp
-		}
+		ZipComp:    maps.Clone(fw.opts.ZipComp),
 	}
 	return opts
 }
@@ -650,7 +655,11 @@ func (fw *writer) zipCheckAndFlush() error {
 // empty for ZipCreateHeader and ZipCreateRaw.
 //
 // f is a function that calls Create, CreateHeader, or CreateRaw of fw.zw.
-func (fw *writer) zipCreateFunc(fh *zip.FileHeader, name string, f func() (io.Writer, error)) error {
+func (fw *writer) zipCreateFunc(
+	fh *zip.FileHeader,
+	name string,
+	f func() (io.Writer, error),
+) error {
 	err := fw.zipCheckAndFlush()
 	if err != nil {
 		return errors.AutoWrap(err)
@@ -666,7 +675,8 @@ func (fw *writer) zipCreateFunc(fh *zip.FileHeader, name string, f func() (io.Wr
 			fw.uw, fw.err = isDirErrorWriter, ErrIsDir
 		}
 	} else {
-		fw.uw, fw.err = zipWriteBeforeCreateErrorWriter, ErrZipWriteBeforeCreate
+		fw.uw = zipWriteBeforeCreateErrorWriter
+		fw.err = ErrZipWriteBeforeCreate
 	}
 	fw.bw.Reset(fw.uw)
 	return errors.AutoWrap(err)

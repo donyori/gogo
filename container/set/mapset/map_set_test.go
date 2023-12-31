@@ -44,14 +44,14 @@ var dataList = [][]int{
 	{0, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5},
 }
 
-var dataSetList []map[int]bool // it is set in function init
+var dataSetList []map[int]struct{} // it is set in function init
 
 func init() {
-	dataSetList = make([]map[int]bool, len(dataList))
+	dataSetList = make([]map[int]struct{}, len(dataList))
 	for i := range dataSetList {
-		dataSetList[i] = make(map[int]bool, len(dataList[i]))
+		dataSetList[i] = make(map[int]struct{}, len(dataList[i]))
 		for _, x := range dataList[i] {
-			dataSetList[i][x] = true
+			dataSetList[i][x] = struct{}{}
 		}
 	}
 }
@@ -65,7 +65,7 @@ func TestNew(t *testing.T) {
 	testCases := make([]struct {
 		data     []int
 		capacity int
-		want     map[int]bool
+		want     map[int]struct{}
 	}, n)
 	var idx int
 	for i, data := range dataList {
@@ -78,12 +78,16 @@ func TestNew(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&cap=%d", sliceToName(tc.data), tc.capacity), func(t *testing.T) {
-			ms := mapset.New[int](tc.capacity, IntSDAPtr(&tc.data))
-			if setWrong(ms, tc.want) {
-				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
-			}
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&cap=%d", sliceToName(tc.data), tc.capacity),
+			func(t *testing.T) {
+				ms := mapset.New[int](tc.capacity, IntSDAPtr(&tc.data))
+				if setWrong(ms, tc.want) {
+					t.Errorf("got %s; want %s",
+						setToString(ms), mapKeyToString(tc.want))
+				}
+			},
+		)
 	}
 }
 
@@ -135,17 +139,17 @@ func TestMapSet_Filter(t *testing.T) {
 	testCases := make([]struct {
 		data      []int
 		filterIdx int
-		want      map[int]bool
+		want      map[int]struct{}
 	}, len(dataList)*len(filterList))
 	var idx int
 	for _, data := range dataList {
 		for filterIdx, filter := range filterList {
 			testCases[idx].data = data
 			testCases[idx].filterIdx = filterIdx
-			testCases[idx].want = make(map[int]bool, len(data))
+			testCases[idx].want = make(map[int]struct{}, len(data))
 			for _, x := range data {
 				if filter(x) {
-					testCases[idx].want[x] = true
+					testCases[idx].want[x] = struct{}{}
 				}
 			}
 			idx++
@@ -153,13 +157,18 @@ func TestMapSet_Filter(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&filterIdx=%d", sliceToName(tc.data), tc.filterIdx), func(t *testing.T) {
-			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
-			ms.Filter(filterList[tc.filterIdx])
-			if setWrong(ms, tc.want) {
-				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
-			}
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&filterIdx=%d",
+				sliceToName(tc.data), tc.filterIdx),
+			func(t *testing.T) {
+				ms := mapset.New[int](0, IntSDAPtr(&tc.data))
+				ms.Filter(filterList[tc.filterIdx])
+				if setWrong(ms, tc.want) {
+					t.Errorf("got %s; want %s",
+						setToString(ms), mapKeyToString(tc.want))
+				}
+			},
+		)
 	}
 }
 
@@ -176,18 +185,21 @@ func TestMapSet_ContainsItem(t *testing.T) {
 		for x := -1; x <= MaxX; x++ {
 			testCases[idx].data = data
 			testCases[idx].x = x
-			testCases[idx].want = dataSetList[i][x]
+			_, testCases[idx].want = dataSetList[i][x]
 			idx++
 		}
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&x=%d", sliceToName(tc.data), tc.x), func(t *testing.T) {
-			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
-			if got := ms.ContainsItem(tc.x); got != tc.want {
-				t.Errorf("got %t; want %t", got, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&x=%d", sliceToName(tc.data), tc.x),
+			func(t *testing.T) {
+				ms := mapset.New[int](0, IntSDAPtr(&tc.data))
+				if got := ms.ContainsItem(tc.x); got != tc.want {
+					t.Errorf("got %t; want %t", got, tc.want)
+				}
+			},
+		)
 	}
 }
 
@@ -217,7 +229,7 @@ func TestMapSet_ContainsSet(t *testing.T) {
 			want := true
 			if s != nil {
 				s.Range(func(x int) (cont bool) {
-					if !dataSetList[i][x] {
+					if _, ok := dataSetList[i][x]; !ok {
 						want = false
 						return false
 					}
@@ -230,12 +242,16 @@ func TestMapSet_ContainsSet(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&s=%s", sliceToName(tc.data), setToString(tc.s)), func(t *testing.T) {
-			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
-			if got := ms.ContainsSet(tc.s); got != tc.want {
-				t.Errorf("got %t; want %t", got, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&s=%s",
+				sliceToName(tc.data), setToString(tc.s)),
+			func(t *testing.T) {
+				ms := mapset.New[int](0, IntSDAPtr(&tc.data))
+				if got := ms.ContainsSet(tc.s); got != tc.want {
+					t.Errorf("got %t; want %t", got, tc.want)
+				}
+			},
+		)
 	}
 }
 
@@ -268,7 +284,7 @@ func TestMapSet_ContainsAny(t *testing.T) {
 			testCases[idx].data = data
 			testCases[idx].c = ctnr
 			for _, x := range ctnr {
-				if dataSetList[i][x] {
+				if _, ok := dataSetList[i][x]; ok {
 					testCases[idx].want = true
 					break
 				}
@@ -278,19 +294,23 @@ func TestMapSet_ContainsAny(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&c=%s", sliceToName(tc.data), sliceToName(tc.c)), func(t *testing.T) {
-			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
-			if got := ms.ContainsAny(IntSDAPtr(&tc.c)); got != tc.want {
-				t.Errorf("got %t; want %t", got, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&c=%s",
+				sliceToName(tc.data), sliceToName(tc.c)),
+			func(t *testing.T) {
+				ms := mapset.New[int](0, IntSDAPtr(&tc.data))
+				if got := ms.ContainsAny(IntSDAPtr(&tc.c)); got != tc.want {
+					t.Errorf("got %t; want %t", got, tc.want)
+				}
+			},
+		)
 	}
 }
 
 func TestMapSet_Add(t *testing.T) {
 	testCases := make([]struct {
 		data, x []int
-		want    map[int]bool
+		want    map[int]struct{}
 	}, len(dataList)*len(dataList))
 	var idx int
 	for i, data := range dataList {
@@ -299,7 +319,7 @@ func TestMapSet_Add(t *testing.T) {
 			testCases[idx].x = x
 			want := maps.Clone(dataSetList[i])
 			for _, item := range x {
-				want[item] = true
+				want[item] = struct{}{}
 			}
 			testCases[idx].want = want
 			idx++
@@ -307,20 +327,25 @@ func TestMapSet_Add(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&x=%s", sliceToName(tc.data), sliceToName(tc.x)), func(t *testing.T) {
-			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
-			ms.Add(tc.x...)
-			if setWrong(ms, tc.want) {
-				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
-			}
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&x=%s",
+				sliceToName(tc.data), sliceToName(tc.x)),
+			func(t *testing.T) {
+				ms := mapset.New[int](0, IntSDAPtr(&tc.data))
+				ms.Add(tc.x...)
+				if setWrong(ms, tc.want) {
+					t.Errorf("got %s; want %s",
+						setToString(ms), mapKeyToString(tc.want))
+				}
+			},
+		)
 	}
 }
 
 func TestMapSet_Remove(t *testing.T) {
 	testCases := make([]struct {
 		data, x []int
-		want    map[int]bool
+		want    map[int]struct{}
 	}, len(dataList)*len(dataList))
 	var idx int
 	for i, data := range dataList {
@@ -337,13 +362,18 @@ func TestMapSet_Remove(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&x=%s", sliceToName(tc.data), sliceToName(tc.x)), func(t *testing.T) {
-			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
-			ms.Remove(tc.x...)
-			if setWrong(ms, tc.want) {
-				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
-			}
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&x=%s",
+				sliceToName(tc.data), sliceToName(tc.x)),
+			func(t *testing.T) {
+				ms := mapset.New[int](0, IntSDAPtr(&tc.data))
+				ms.Remove(tc.x...)
+				if setWrong(ms, tc.want) {
+					t.Errorf("got %s; want %s",
+						setToString(ms), mapKeyToString(tc.want))
+				}
+			},
+		)
 	}
 }
 
@@ -363,7 +393,7 @@ func TestMapSet_Union(t *testing.T) {
 	testCases := make([]struct {
 		data []int
 		s    set.Set[int]
-		want map[int]bool
+		want map[int]struct{}
 	}, len(dataList)*len(setList))
 	var idx int
 	for i, data := range dataList {
@@ -373,7 +403,7 @@ func TestMapSet_Union(t *testing.T) {
 			want := maps.Clone(dataSetList[i])
 			if s != nil {
 				s.Range(func(x int) (cont bool) {
-					want[x] = true
+					want[x] = struct{}{}
 					return true
 				})
 			}
@@ -383,13 +413,18 @@ func TestMapSet_Union(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&s=%s", sliceToName(tc.data), setToString(tc.s)), func(t *testing.T) {
-			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
-			ms.Union(tc.s)
-			if setWrong(ms, tc.want) {
-				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
-			}
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&s=%s",
+				sliceToName(tc.data), setToString(tc.s)),
+			func(t *testing.T) {
+				ms := mapset.New[int](0, IntSDAPtr(&tc.data))
+				ms.Union(tc.s)
+				if setWrong(ms, tc.want) {
+					t.Errorf("got %s; want %s",
+						setToString(ms), mapKeyToString(tc.want))
+				}
+			},
+		)
 	}
 }
 
@@ -409,14 +444,14 @@ func TestMapSet_Intersect(t *testing.T) {
 	testCases := make([]struct {
 		data []int
 		s    set.Set[int]
-		want map[int]bool
+		want map[int]struct{}
 	}, len(dataList)*len(setList))
 	var idx int
 	for i, data := range dataList {
 		for _, s := range setList {
 			testCases[idx].data = data
 			testCases[idx].s = s
-			var want map[int]bool
+			var want map[int]struct{}
 			if s != nil {
 				want = maps.Clone(dataSetList[i])
 				for x := range want {
@@ -425,7 +460,7 @@ func TestMapSet_Intersect(t *testing.T) {
 					}
 				}
 			} else {
-				want = map[int]bool{}
+				want = map[int]struct{}{}
 			}
 			testCases[idx].want = want
 			idx++
@@ -433,13 +468,18 @@ func TestMapSet_Intersect(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&s=%s", sliceToName(tc.data), setToString(tc.s)), func(t *testing.T) {
-			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
-			ms.Intersect(tc.s)
-			if setWrong(ms, tc.want) {
-				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
-			}
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&s=%s",
+				sliceToName(tc.data), setToString(tc.s)),
+			func(t *testing.T) {
+				ms := mapset.New[int](0, IntSDAPtr(&tc.data))
+				ms.Intersect(tc.s)
+				if setWrong(ms, tc.want) {
+					t.Errorf("got %s; want %s",
+						setToString(ms), mapKeyToString(tc.want))
+				}
+			},
+		)
 	}
 }
 
@@ -459,7 +499,7 @@ func TestMapSet_Subtract(t *testing.T) {
 	testCases := make([]struct {
 		data []int
 		s    set.Set[int]
-		want map[int]bool
+		want map[int]struct{}
 	}, len(dataList)*len(setList))
 	var idx int
 	for i, data := range dataList {
@@ -479,13 +519,18 @@ func TestMapSet_Subtract(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&s=%s", sliceToName(tc.data), setToString(tc.s)), func(t *testing.T) {
-			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
-			ms.Subtract(tc.s)
-			if setWrong(ms, tc.want) {
-				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
-			}
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&s=%s",
+				sliceToName(tc.data), setToString(tc.s)),
+			func(t *testing.T) {
+				ms := mapset.New[int](0, IntSDAPtr(&tc.data))
+				ms.Subtract(tc.s)
+				if setWrong(ms, tc.want) {
+					t.Errorf("got %s; want %s",
+						setToString(ms), mapKeyToString(tc.want))
+				}
+			},
+		)
 	}
 }
 
@@ -505,24 +550,24 @@ func TestMapSet_DisjunctiveUnion(t *testing.T) {
 	testCases := make([]struct {
 		data []int
 		s    set.Set[int]
-		want map[int]bool
+		want map[int]struct{}
 	}, len(dataList)*len(setList))
 	var idx int
 	for i, data := range dataList {
 		for _, s := range setList {
 			testCases[idx].data = data
 			testCases[idx].s = s
-			var want map[int]bool
+			var want map[int]struct{}
 			if s != nil {
-				want = make(map[int]bool, len(data)+s.Len())
+				want = make(map[int]struct{}, len(data)+s.Len())
 				for _, x := range data {
 					if !s.ContainsItem(x) {
-						want[x] = true
+						want[x] = struct{}{}
 					}
 				}
 				s.Range(func(x int) (cont bool) {
-					if !dataSetList[i][x] {
-						want[x] = true
+					if _, ok := dataSetList[i][x]; !ok {
+						want[x] = struct{}{}
 					}
 					return true
 				})
@@ -535,13 +580,18 @@ func TestMapSet_DisjunctiveUnion(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&s=%s", sliceToName(tc.data), setToString(tc.s)), func(t *testing.T) {
-			ms := mapset.New[int](0, IntSDAPtr(&tc.data))
-			ms.DisjunctiveUnion(tc.s)
-			if setWrong(ms, tc.want) {
-				t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(tc.want))
-			}
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&s=%s",
+				sliceToName(tc.data), setToString(tc.s)),
+			func(t *testing.T) {
+				ms := mapset.New[int](0, IntSDAPtr(&tc.data))
+				ms.DisjunctiveUnion(tc.s)
+				if setWrong(ms, tc.want) {
+					t.Errorf("got %s; want %s",
+						setToString(ms), mapKeyToString(tc.want))
+				}
+			},
+		)
 	}
 }
 
@@ -550,7 +600,7 @@ func TestMapSet_Clear(t *testing.T) {
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
 			ms := mapset.New[int](0, IntSDAPtr(&data))
 			ms.Clear()
-			if setWrong(ms, map[int]bool{}) {
+			if setWrong(ms, map[int]struct{}{}) {
 				t.Errorf("got %s; want {}", setToString(ms))
 			}
 		})
@@ -591,7 +641,7 @@ func mapKeyToString[V any](m map[int]V) string {
 	})
 }
 
-func setWrong(s set.Set[int], want map[int]bool) bool {
+func setWrong(s set.Set[int], want map[int]struct{}) bool {
 	if s == nil {
 		return want != nil
 	} else if want == nil || s.Len() != len(want) {

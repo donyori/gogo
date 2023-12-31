@@ -199,7 +199,7 @@ func TestGoMap_Set(t *testing.T) {
 
 func TestGoMap_Set_Panic(t *testing.T) {
 	defer func() {
-		recover()
+		_ = recover()
 	}()
 	var gm *SIGM
 	gm.Set("A", 1) // want panic here
@@ -249,7 +249,7 @@ func TestGoMap_GetAndSet(t *testing.T) {
 
 func TestGoMap_GetAndSet_Panic(t *testing.T) {
 	defer func() {
-		recover()
+		_ = recover()
 	}()
 	var gm *SIGM
 	v, p := gm.GetAndSet("A", 1) // want panic here
