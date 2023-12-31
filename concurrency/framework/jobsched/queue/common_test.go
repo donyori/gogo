@@ -97,7 +97,10 @@ func init() {
 // Its return value is a sequence of groups of jobs.
 // The less the index of the group, the earlier dequeued.
 // The jobs in the same group can be dequeued in any order.
-func makeWant(lessFn func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) bool) [][]int {
+func makeWant(lessFn func(
+	a *jobsched.MetaJob[int, jobsched.NoProperty],
+	b *jobsched.MetaJob[int, jobsched.NoProperty],
+) bool) [][]int {
 	mjs := make([]*jobsched.MetaJob[int, jobsched.NoProperty], N)
 	copy(mjs, metaJobs)
 	less := func(i, j int) bool {
@@ -120,7 +123,11 @@ func makeWant(lessFn func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) bool
 // want is a sequence of groups of jobs.
 // The less the index of the group, the earlier dequeued.
 // The jobs in the same group can be dequeued in any order.
-func testJobQueueFunc(t *testing.T, m jobsched.JobQueueMaker[int, jobsched.NoProperty], want [][]int) {
+func testJobQueueFunc(
+	t *testing.T,
+	m jobsched.JobQueueMaker[int, jobsched.NoProperty],
+	want [][]int,
+) {
 	var wantN int
 	for _, group := range want {
 		wantN += len(group)
@@ -137,7 +144,8 @@ func testJobQueueFunc(t *testing.T, m jobsched.JobQueueMaker[int, jobsched.NoPro
 				got = append(got, jq.Dequeue())
 			}
 			if len(got) != wantN || gotWrong(got, want) {
-				t.Errorf("got (len=%d) %v;\nwant (len=%d) %v", len(got), got, wantN, want)
+				t.Errorf("got (len=%d) %v;\nwant (len=%d) %v",
+					len(got), got, wantN, want)
 				if len(got) != wantN {
 					return
 				}

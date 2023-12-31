@@ -116,13 +116,16 @@ func TestSliceDynamicArray_SetFront(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("s=%s&x=%d", sliceToName(tc.data), tc.x), func(t *testing.T) {
-			sda := copySda(tc.data)
-			sda.SetFront(tc.x)
-			if sliceUnequal(sda, tc.want) {
-				t.Errorf("got %v; want %v", sda, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("s=%s&x=%d", sliceToName(tc.data), tc.x),
+			func(t *testing.T) {
+				sda := copySda(tc.data)
+				sda.SetFront(tc.x)
+				if sliceUnequal(sda, tc.want) {
+					t.Errorf("got %v; want %v", sda, tc.want)
+				}
+			},
+		)
 	}
 }
 
@@ -163,13 +166,16 @@ func TestSliceDynamicArray_SetBack(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("s=%s&x=%d", sliceToName(tc.data), tc.x), func(t *testing.T) {
-			sda := copySda(tc.data)
-			sda.SetBack(tc.x)
-			if sliceUnequal(sda, tc.want) {
-				t.Errorf("got %v; want %v", sda, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("s=%s&x=%d", sliceToName(tc.data), tc.x),
+			func(t *testing.T) {
+				sda := copySda(tc.data)
+				sda.SetBack(tc.x)
+				if sliceUnequal(sda, tc.want) {
+					t.Errorf("got %v; want %v", sda, tc.want)
+				}
+			},
+		)
 	}
 }
 
@@ -300,18 +306,21 @@ func TestSliceDynamicArray_Slice(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("begin=%d&end=%d", tc.begin, tc.end), func(t *testing.T) {
-			slice := sda.Slice(tc.begin, tc.end)
-			s := make([]int, slice.Len())
-			var i int
-			slice.Range(func(x int) (cont bool) {
-				s[i], i = x, i+1
-				return true
-			})
-			if sliceUnequal(s, tc.want) {
-				t.Errorf("got %v; want %v", s, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("begin=%d&end=%d", tc.begin, tc.end),
+			func(t *testing.T) {
+				slice := sda.Slice(tc.begin, tc.end)
+				s := make([]int, slice.Len())
+				var i int
+				slice.Range(func(x int) (cont bool) {
+					s[i], i = x, i+1
+					return true
+				})
+				if sliceUnequal(s, tc.want) {
+					t.Errorf("got %v; want %v", s, tc.want)
+				}
+			},
+		)
 	}
 }
 
@@ -352,19 +361,23 @@ func TestSliceDynamicArray_Filter(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("s=%s&filterIdx=%d", sliceToName(tc.data), tc.filterIdx), func(t *testing.T) {
-			sda := copySda(tc.data)
-			var ptrBefore, ptrAfter *[0]int
-			ptrBefore = (*[0]int)(sda)
-			sda.Filter(filterList[tc.filterIdx])
-			ptrAfter = (*[0]int)(sda)
-			if sliceUnequal(sda, tc.want) {
-				t.Errorf("got %v; want %v", sda, tc.want)
-			}
-			if ptrAfter != ptrBefore {
-				t.Error("allocated new array, not in-place")
-			}
-		})
+		t.Run(
+			fmt.Sprintf("s=%s&filterIdx=%d",
+				sliceToName(tc.data), tc.filterIdx),
+			func(t *testing.T) {
+				sda := copySda(tc.data)
+				var ptrBefore, ptrAfter *[0]int
+				ptrBefore = (*[0]int)(sda)
+				sda.Filter(filterList[tc.filterIdx])
+				ptrAfter = (*[0]int)(sda)
+				if sliceUnequal(sda, tc.want) {
+					t.Errorf("got %v; want %v", sda, tc.want)
+				}
+				if ptrAfter != ptrBefore {
+					t.Error("allocated new array, not in-place")
+				}
+			},
+		)
 	}
 }
 
@@ -400,11 +413,14 @@ func TestSliceDynamicArray_Cap(t *testing.T) {
 		if tc.sda != nil {
 			sdaCap = cap(*tc.sda)
 		}
-		t.Run(fmt.Sprintf("s=%s&cap=%d", sdaPtrToName(tc.sda), sdaCap), func(t *testing.T) {
-			if c := tc.sda.Cap(); c != tc.want {
-				t.Errorf("got %d; want %d", c, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("s=%s&cap=%d", sdaPtrToName(tc.sda), sdaCap),
+			func(t *testing.T) {
+				if c := tc.sda.Cap(); c != tc.want {
+					t.Errorf("got %d; want %d", c, tc.want)
+				}
+			},
+		)
 	}
 }
 
@@ -421,13 +437,16 @@ func TestSliceDynamicArray_Push(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("s=%s&x=%d", sliceToName(tc.data), tc.x), func(t *testing.T) {
-			sda := copySda(tc.data)
-			sda.Push(tc.x)
-			if sliceUnequal(sda, tc.want) {
-				t.Errorf("got %v; want %v", sda, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("s=%s&x=%d", sliceToName(tc.data), tc.x),
+			func(t *testing.T) {
+				sda := copySda(tc.data)
+				sda.Push(tc.x)
+				if sliceUnequal(sda, tc.want) {
+					t.Errorf("got %v; want %v", sda, tc.want)
+				}
+			},
+		)
 	}
 }
 
@@ -447,7 +466,8 @@ func TestSliceDynamicArray_Pop(t *testing.T) {
 			sda := copySda(tc.data)
 			x := sda.Pop()
 			if sliceUnequal(sda, tc.wantSda) || x != tc.wantX {
-				t.Errorf("got %v, %d; want %v, %d", sda, x, tc.wantSda, tc.wantX)
+				t.Errorf("got %v, %d; want %v, %d",
+					sda, x, tc.wantSda, tc.wantX)
 			}
 		})
 	}
@@ -494,13 +514,17 @@ func TestSliceDynamicArray_Append(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("s=%s&seq=%s", sliceToName(tc.data), sequenceToName(tc.seq)), func(t *testing.T) {
-			sda := copySda(tc.data)
-			sda.Append(tc.seq)
-			if sliceUnequal(sda, tc.want) {
-				t.Errorf("got %v; want %v", sda, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("s=%s&seq=%s",
+				sliceToName(tc.data), sequenceToName(tc.seq)),
+			func(t *testing.T) {
+				sda := copySda(tc.data)
+				sda.Append(tc.seq)
+				if sliceUnequal(sda, tc.want) {
+					t.Errorf("got %v; want %v", sda, tc.want)
+				}
+			},
+		)
 	}
 }
 
@@ -560,13 +584,16 @@ func TestSliceDynamicArray_Insert(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("s=%s&i=%d", sliceToName(tc.data), tc.i), func(t *testing.T) {
-			sda := copySda(tc.data)
-			sda.Insert(tc.i, x)
-			if sliceUnequal(sda, tc.want) {
-				t.Errorf("got %v; want %v", sda, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("s=%s&i=%d", sliceToName(tc.data), tc.i),
+			func(t *testing.T) {
+				sda := copySda(tc.data)
+				sda.Insert(tc.i, x)
+				if sliceUnequal(sda, tc.want) {
+					t.Errorf("got %v; want %v", sda, tc.want)
+				}
+			},
+		)
 	}
 }
 
@@ -589,7 +616,8 @@ func TestSliceDynamicArray_Remove(t *testing.T) {
 			sda := copySda(data)
 			x := sda.Remove(tc.i)
 			if sliceUnequal(sda, tc.wantSda) || x != tc.wantX {
-				t.Errorf("got %v, %d; want %v, %d", sda, x, tc.wantSda, tc.wantX)
+				t.Errorf("got %v, %d; want %v, %d",
+					sda, x, tc.wantSda, tc.wantX)
 			}
 		})
 	}
@@ -614,7 +642,8 @@ func TestSliceDynamicArray_RemoveWithoutOrder(t *testing.T) {
 			sda := copySda(data)
 			x := sda.RemoveWithoutOrder(tc.i)
 			if sliceUnequalWithoutOrder(sda, tc.wantSda) || x != tc.wantX {
-				t.Errorf("got %v, %d; want %v, %d", sda, x, tc.wantSda, tc.wantX)
+				t.Errorf("got %v, %d; want %v, %d",
+					sda, x, tc.wantSda, tc.wantX)
 			}
 		})
 	}
@@ -671,14 +700,17 @@ func TestSliceDynamicArray_InsertSequence(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("s=%s&i=%d&seq=%s", sliceToName(tc.data), tc.i, sequenceToName(tc.seq)),
+		t.Run(
+			fmt.Sprintf("s=%s&i=%d&seq=%s",
+				sliceToName(tc.data), tc.i, sequenceToName(tc.seq)),
 			func(t *testing.T) {
 				sda := copySda(tc.data)
 				sda.InsertSequence(tc.i, tc.seq)
 				if sliceUnequal(sda, tc.want) {
 					t.Errorf("got %v; want %v", sda, tc.want)
 				}
-			})
+			},
+		)
 	}
 }
 
@@ -703,13 +735,16 @@ func TestSliceDynamicArray_Cut(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("begin=%d&end=%d", tc.begin, tc.end), func(t *testing.T) {
-			sda := copySda(data)
-			sda.Cut(tc.begin, tc.end)
-			if sliceUnequal(sda, tc.want) {
-				t.Errorf("got %v; want %v", sda, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("begin=%d&end=%d", tc.begin, tc.end),
+			func(t *testing.T) {
+				sda := copySda(data)
+				sda.Cut(tc.begin, tc.end)
+				if sliceUnequal(sda, tc.want) {
+					t.Errorf("got %v; want %v", sda, tc.want)
+				}
+			},
+		)
 	}
 }
 
@@ -734,13 +769,16 @@ func TestSliceDynamicArray_CutWithoutOrder(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("begin=%d&end=%d", tc.begin, tc.end), func(t *testing.T) {
-			sda := copySda(data)
-			sda.CutWithoutOrder(tc.begin, tc.end)
-			if sliceUnequalWithoutOrder(sda, tc.want) {
-				t.Errorf("got %v; want %v", sda, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("begin=%d&end=%d", tc.begin, tc.end),
+			func(t *testing.T) {
+				sda := copySda(data)
+				sda.CutWithoutOrder(tc.begin, tc.end)
+				if sliceUnequalWithoutOrder(sda, tc.want) {
+					t.Errorf("got %v; want %v", sda, tc.want)
+				}
+			},
+		)
 	}
 }
 
@@ -768,13 +806,16 @@ func TestSliceDynamicArray_Extend(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("s=%s&n=%d", sliceToName(tc.data), tc.n), func(t *testing.T) {
-			sda := copySda(tc.data)
-			sda.Extend(tc.n)
-			if sliceUnequal(sda, tc.want) {
-				t.Errorf("got %v; want %v", sda, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("s=%s&n=%d", sliceToName(tc.data), tc.n),
+			func(t *testing.T) {
+				sda := copySda(tc.data)
+				sda.Extend(tc.n)
+				if sliceUnequal(sda, tc.want) {
+					t.Errorf("got %v; want %v", sda, tc.want)
+				}
+			},
+		)
 	}
 }
 
@@ -810,13 +851,16 @@ func TestSliceDynamicArray_Expand(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("s=%s&i=%d&n=%d", sliceToName(tc.data), tc.i, tc.n), func(t *testing.T) {
-			sda := copySda(tc.data)
-			sda.Expand(tc.i, tc.n)
-			if sliceUnequal(sda, tc.want) {
-				t.Errorf("got %v; want %v", sda, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("s=%s&i=%d&n=%d", sliceToName(tc.data), tc.i, tc.n),
+			func(t *testing.T) {
+				sda := copySda(tc.data)
+				sda.Expand(tc.i, tc.n)
+				if sliceUnequal(sda, tc.want) {
+					t.Errorf("got %v; want %v", sda, tc.want)
+				}
+			},
+		)
 	}
 }
 
@@ -851,16 +895,19 @@ func TestSliceDynamicArray_Reserve(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("s=%s&cap=%d", sliceToName(tc.data), tc.capacity), func(t *testing.T) {
-			sda := copySda(tc.data)
-			sda.Reserve(tc.capacity)
-			if c := cap(sda); c != tc.wantCap {
-				t.Errorf("got capacity %d; want %d", c, tc.wantCap)
-			}
-			if sliceUnequal(sda, tc.wantSda) {
-				t.Errorf("data changed; got %v; want %v", sda, tc.wantSda)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("s=%s&cap=%d", sliceToName(tc.data), tc.capacity),
+			func(t *testing.T) {
+				sda := copySda(tc.data)
+				sda.Reserve(tc.capacity)
+				if c := cap(sda); c != tc.wantCap {
+					t.Errorf("got capacity %d; want %d", c, tc.wantCap)
+				}
+				if sliceUnequal(sda, tc.wantSda) {
+					t.Errorf("data changed; got %v; want %v", sda, tc.wantSda)
+				}
+			},
+		)
 	}
 }
 
@@ -886,26 +933,29 @@ func TestSliceDynamicArray_Shrink(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("s=%s(cap=%d)", sliceToName(tc.data), cap(tc.data)), func(t *testing.T) {
-			sda := copySda(tc.data)
-			var ptrBefore, ptrAfter *[0]int
-			ptrBefore = (*[0]int)(sda)
-			sda.Shrink()
-			ptrAfter = (*[0]int)(sda)
-			if c := cap(sda); c != tc.wantCap {
-				t.Errorf("got capacity %d; want %d", c, tc.wantCap)
-			}
-			if sliceUnequal(sda, tc.data) {
-				t.Errorf("data changed; got %v; want %v", sda, tc.data)
-			}
-			if tc.isNewArray {
-				if ptrAfter == ptrBefore {
-					t.Error("should allocate a new array")
+		t.Run(
+			fmt.Sprintf("s=%s(cap=%d)", sliceToName(tc.data), cap(tc.data)),
+			func(t *testing.T) {
+				sda := copySda(tc.data)
+				var ptrBefore, ptrAfter *[0]int
+				ptrBefore = (*[0]int)(sda)
+				sda.Shrink()
+				ptrAfter = (*[0]int)(sda)
+				if c := cap(sda); c != tc.wantCap {
+					t.Errorf("got capacity %d; want %d", c, tc.wantCap)
 				}
-			} else if ptrAfter != ptrBefore {
-				t.Error("should keep using the old array")
-			}
-		})
+				if sliceUnequal(sda, tc.data) {
+					t.Errorf("data changed; got %v; want %v", sda, tc.data)
+				}
+				if tc.isNewArray {
+					if ptrAfter == ptrBefore {
+						t.Error("should allocate a new array")
+					}
+				} else if ptrAfter != ptrBefore {
+					t.Error("should keep using the old array")
+				}
+			},
+		)
 	}
 }
 

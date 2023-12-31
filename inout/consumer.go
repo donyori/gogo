@@ -73,5 +73,6 @@ type RuneConsumer interface {
 	//
 	// ConsumeRuneFunc returns the number of runes consumed and
 	// any error encountered (including io.EOF).
-	ConsumeRuneFunc(f func(r rune, size int) bool, n int64) (consumed int64, err error)
+	ConsumeRuneFunc(f func(r rune, size int) bool, n int64) (
+		consumed int64, err error)
 }

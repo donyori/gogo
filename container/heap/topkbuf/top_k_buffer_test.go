@@ -71,10 +71,13 @@ func TestNew(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k), func(t *testing.T) {
-			tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
-			checkTopKBufferByDrain(t, tkb, tc.want)
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k),
+			func(t *testing.T) {
+				tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
+				checkTopKBufferByDrain(t, tkb, tc.want)
+			},
+		)
 	}
 }
 
@@ -98,12 +101,15 @@ func TestTopKBuffer_Len(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k), func(t *testing.T) {
-			tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
-			if n := tkb.Len(); n != tc.want {
-				t.Errorf("got %d; want %d", n, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k),
+			func(t *testing.T) {
+				tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
+				if n := tkb.Len(); n != tc.want {
+					t.Errorf("got %d; want %d", n, tc.want)
+				}
+			},
+		)
 	}
 }
 
@@ -128,32 +134,38 @@ func TestTopKBuffer_Range(t *testing.T) {
 		for _, x := range tc.want {
 			counterMap[x]++
 		}
-		t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k), func(t *testing.T) {
-			tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
-			tkb.Range(func(x int) (cont bool) {
-				counterMap[x]--
-				return true
-			})
-			for x, ctr := range counterMap {
-				if ctr > 0 {
-					t.Errorf("insufficient accesses to %d", x)
-				} else if ctr < 0 {
-					t.Errorf("too many accesses to %d", x)
+		t.Run(
+			fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k),
+			func(t *testing.T) {
+				tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
+				tkb.Range(func(x int) (cont bool) {
+					counterMap[x]--
+					return true
+				})
+				for x, ctr := range counterMap {
+					if ctr > 0 {
+						t.Errorf("insufficient accesses to %d", x)
+					} else if ctr < 0 {
+						t.Errorf("too many accesses to %d", x)
+					}
 				}
-			}
-		})
+			},
+		)
 	}
 }
 
 func TestTopKBuffer_K(t *testing.T) {
 	for _, data := range dataList {
 		for k := 1; k <= maxK; k++ {
-			t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(data), k), func(t *testing.T) {
-				tkb := topkbuf.New[int](k, IntLess, IntSDAPtr(&data))
-				if got := tkb.K(); got != k {
-					t.Errorf("got %d; want %d", got, k)
-				}
-			})
+			t.Run(
+				fmt.Sprintf("data=%s&k=%d", sliceToName(data), k),
+				func(t *testing.T) {
+					tkb := topkbuf.New[int](k, IntLess, IntSDAPtr(&data))
+					if got := tkb.K(); got != k {
+						t.Errorf("got %d; want %d", got, k)
+					}
+				},
+			)
 		}
 	}
 }
@@ -183,12 +195,15 @@ func TestTopKBuffer_Add(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&k=%d&xs=%s",
-			sliceToName(tc.data), tc.k, sliceToName(tc.xs)), func(t *testing.T) {
-			tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
-			tkb.Add(tc.xs...)
-			checkTopKBufferByDrain(t, tkb, tc.want)
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&k=%d&xs=%s",
+				sliceToName(tc.data), tc.k, sliceToName(tc.xs)),
+			func(t *testing.T) {
+				tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
+				tkb.Add(tc.xs...)
+				checkTopKBufferByDrain(t, tkb, tc.want)
+			},
+		)
 	}
 }
 
@@ -209,23 +224,29 @@ func TestTopKBuffer_Drain(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k), func(t *testing.T) {
-			tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
-			if topK := tkb.Drain(); !slices.Equal(topK, tc.want) {
-				t.Errorf("got %v; want %v", topK, tc.want)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k),
+			func(t *testing.T) {
+				tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
+				if topK := tkb.Drain(); !slices.Equal(topK, tc.want) {
+					t.Errorf("got %v; want %v", topK, tc.want)
+				}
+			},
+		)
 	}
 }
 
 func TestTopKBuffer_Clear(t *testing.T) {
 	for _, data := range dataList {
 		for k := 1; k <= maxK; k++ {
-			t.Run(fmt.Sprintf("data=%s&k=%d", sliceToName(data), k), func(t *testing.T) {
-				tkb := topkbuf.New[int](k, IntLess, IntSDAPtr(&data))
-				tkb.Clear()
-				checkTopKBufferByDrain(t, tkb, nil)
-			})
+			t.Run(
+				fmt.Sprintf("data=%s&k=%d", sliceToName(data), k),
+				func(t *testing.T) {
+					tkb := topkbuf.New[int](k, IntLess, IntSDAPtr(&data))
+					tkb.Clear()
+					checkTopKBufferByDrain(t, tkb, nil)
+				},
+			)
 		}
 	}
 }

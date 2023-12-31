@@ -181,7 +181,8 @@ func TestCallerPkgFunc(t *testing.T) {
 
 	for _, rec := range records {
 		if rec.pkg != rec.wantPkg || rec.fn != rec.wantFn {
-			t.Errorf("got pkg: %s, fn: %s; want pkg: %s, fn: %s", rec.pkg, rec.fn, rec.wantPkg, rec.wantFn)
+			t.Errorf("got pkg: %s, fn: %s; want pkg: %s, fn: %s",
+				rec.pkg, rec.fn, rec.wantPkg, rec.wantFn)
 		}
 	}
 }
@@ -209,7 +210,8 @@ func TestCallerPkgFunc_DotPkg(t *testing.T) {
 
 	for _, rec := range records {
 		if rec.pkg != rec.wantPkg || rec.fn != rec.wantFn {
-			t.Errorf("got pkg: %s, fn: %s; want pkg: %s, fn: %s", rec.pkg, rec.fn, rec.wantPkg, rec.wantFn)
+			t.Errorf("got pkg: %s, fn: %s; want pkg: %s, fn: %s",
+				rec.pkg, rec.fn, rec.wantPkg, rec.wantFn)
 		}
 	}
 }

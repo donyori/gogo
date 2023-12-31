@@ -76,7 +76,9 @@ func (erose *errorReadOnlySetEqual) Contains(err error) bool {
 	return ok
 }
 
-func (erose *errorReadOnlySetEqual) Range(handler func(err error) (cont bool)) {
+func (erose *errorReadOnlySetEqual) Range(
+	handler func(err error) (cont bool),
+) {
 	for err := range erose.errSet {
 		if !handler(err) {
 			return
@@ -199,7 +201,9 @@ func (erossm *errorReadOnlySetSameMessage) Contains(err error) bool {
 	return erossm.errsSet[err.Error()] != nil
 }
 
-func (erossm *errorReadOnlySetSameMessage) Range(handler func(err error) (cont bool)) {
+func (erossm *errorReadOnlySetSameMessage) Range(
+	handler func(err error) (cont bool),
+) {
 	for _, errs := range erossm.errsSet {
 		for _, err := range errs {
 			if !handler(err) {

@@ -198,17 +198,20 @@ func (rbr *resettableBufferedReader) ConsumeRuneFunc(
 	return
 }
 
-func (rbr *resettableBufferedReader) WriteTo(w io.Writer) (n int64, err error) {
+func (rbr *resettableBufferedReader) WriteTo(w io.Writer) (
+	n int64, err error) {
 	n, err = rbr.br.WriteTo(w)
 	return n, errors.AutoWrap(err)
 }
 
-func (rbr *resettableBufferedReader) ReadLine() (line []byte, more bool, err error) {
+func (rbr *resettableBufferedReader) ReadLine() (
+	line []byte, more bool, err error) {
 	line, more, err = rbr.br.ReadLine()
 	return line, more, errors.AutoWrap(err)
 }
 
-func (rbr *resettableBufferedReader) ReadEntireLine() (line []byte, err error) {
+func (rbr *resettableBufferedReader) ReadEntireLine() (
+	line []byte, err error) {
 	var parts [][]byte
 	var n int
 	more := true
@@ -236,7 +239,8 @@ func (rbr *resettableBufferedReader) ReadEntireLine() (line []byte, err error) {
 	return
 }
 
-func (rbr *resettableBufferedReader) WriteLineTo(w io.Writer) (n int64, err error) {
+func (rbr *resettableBufferedReader) WriteLineTo(w io.Writer) (
+	n int64, err error) {
 	errList, more := errors.NewErrorList(true), true
 	for more {
 		var line []byte
@@ -271,7 +275,8 @@ func (rbr *resettableBufferedReader) Peek(n int) (data []byte, err error) {
 	return data, errors.AutoWrap(err)
 }
 
-func (rbr *resettableBufferedReader) Discard(n int) (discarded int, err error) {
+func (rbr *resettableBufferedReader) Discard(n int) (
+	discarded int, err error) {
 	discarded, err = rbr.br.Discard(n)
 	return discarded, errors.AutoWrap(err)
 }

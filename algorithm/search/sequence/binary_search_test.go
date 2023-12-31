@@ -68,8 +68,8 @@ func idValueSortLess(a, b *idValue) bool {
 	return a.id < b.id
 }
 
-const MaxValue int = 6                // The range of values in dataList is {0, 1, 2, 3, 4, 5, 6}.
-const BaseLength = (MaxValue+1)*3 + 1 // Each value is repeated 3 times, and finally, a nil *idValue is appended.
+const MaxValue int = 6                // the range of values in dataList is {0, 1, 2, 3, 4, 5, 6}
+const BaseLength = (MaxValue+1)*3 + 1 // each value is repeated 3 times, and finally, a nil *idValue is appended
 const MaxCopy int = 3
 
 // These variables are set in function init.

@@ -119,7 +119,11 @@ type errorCloser struct {
 // errors.Is(parentErr, ErrClosed) is true.
 // If not, WrapErrorCloser panics.
 // If parentErr is nil, it uses ErrClosed instead.
-func WrapErrorCloser(closer io.Closer, deviceName string, parentErr error) Closer {
+func WrapErrorCloser(
+	closer io.Closer,
+	deviceName string,
+	parentErr error,
+) Closer {
 	if closer == nil {
 		panic(errors.AutoMsg("closer is nil"))
 	}
@@ -130,7 +134,8 @@ func WrapErrorCloser(closer io.Closer, deviceName string, parentErr error) Close
 	if parentErr == nil {
 		parentErr = ErrClosed
 	} else if !errors.Is(parentErr, ErrClosed) {
-		panic(errors.AutoMsg("parentErr is neither nil nor an ErrClosed (errors.Is(parentErr, ErrClosed) returns false)"))
+		panic(errors.AutoMsg(
+			"parentErr is neither nil nor an ErrClosed (errors.Is(parentErr, ErrClosed) returns false)"))
 	}
 	return &errorCloser{
 		c:  closer,

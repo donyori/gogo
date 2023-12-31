@@ -154,7 +154,8 @@ func TestCanEncodeToPrefix(t *testing.T) {
 				}
 				prefixSet[prefix] = struct{}{}
 				// srcCase.dstStr is in lowercase as the uppercase is skipped.
-				want := strings.HasPrefix(srcCase.dstStr, strings.ToLower(prefix))
+				want := strings.HasPrefix(
+					srcCase.dstStr, strings.ToLower(prefix))
 				t.Run(
 					fmt.Sprintf(
 						"src=%s&prefix=%s&upper=%t",
@@ -163,30 +164,46 @@ func TestCanEncodeToPrefix(t *testing.T) {
 						prefixCase.upper,
 					),
 					func(t *testing.T) {
-						t.Run("srcType=[]byte&prefixType=[]byte", func(t *testing.T) {
-							got := hex.CanEncodeToPrefix(srcCase.srcBytes, prefixBytes)
-							if got != want {
-								t.Errorf("got %t; want %t", got, want)
-							}
-						})
-						t.Run("srcType=[]byte&prefixType=string", func(t *testing.T) {
-							got := hex.CanEncodeToPrefix(srcCase.srcBytes, prefix)
-							if got != want {
-								t.Errorf("got %t; want %t", got, want)
-							}
-						})
-						t.Run("srcType=string&prefixType=[]byte", func(t *testing.T) {
-							got := hex.CanEncodeToPrefix(srcCase.srcStr, prefixBytes)
-							if got != want {
-								t.Errorf("got %t; want %t", got, want)
-							}
-						})
-						t.Run("srcType=string&prefixType=string", func(t *testing.T) {
-							got := hex.CanEncodeToPrefix(srcCase.srcStr, prefix)
-							if got != want {
-								t.Errorf("got %t; want %t", got, want)
-							}
-						})
+						t.Run(
+							"srcType=[]byte&prefixType=[]byte",
+							func(t *testing.T) {
+								got := hex.CanEncodeToPrefix(
+									srcCase.srcBytes, prefixBytes)
+								if got != want {
+									t.Errorf("got %t; want %t", got, want)
+								}
+							},
+						)
+						t.Run(
+							"srcType=[]byte&prefixType=string",
+							func(t *testing.T) {
+								got := hex.CanEncodeToPrefix(
+									srcCase.srcBytes, prefix)
+								if got != want {
+									t.Errorf("got %t; want %t", got, want)
+								}
+							},
+						)
+						t.Run(
+							"srcType=string&prefixType=[]byte",
+							func(t *testing.T) {
+								got := hex.CanEncodeToPrefix(
+									srcCase.srcStr, prefixBytes)
+								if got != want {
+									t.Errorf("got %t; want %t", got, want)
+								}
+							},
+						)
+						t.Run(
+							"srcType=string&prefixType=string",
+							func(t *testing.T) {
+								got := hex.CanEncodeToPrefix(
+									srcCase.srcStr, prefix)
+								if got != want {
+									t.Errorf("got %t; want %t", got, want)
+								}
+							},
+						)
 					},
 				)
 			}
@@ -420,7 +437,8 @@ func canEncodeToBytesString2(src []byte, x string) bool {
 // based on standard library function hex.EncodeToString,
 // strings.HasPrefix, and strings.ToLower.
 func canEncodeToPrefixBytesString(src []byte, prefix string) bool {
-	return strings.HasPrefix(stdhex.EncodeToString(src), strings.ToLower(prefix))
+	return strings.HasPrefix(
+		stdhex.EncodeToString(src), strings.ToLower(prefix))
 }
 
 // makeCanEncodeToPrefixBytesStringFunctionsTestData generates data for testing
@@ -431,7 +449,10 @@ func canEncodeToPrefixBytesString(src []byte, prefix string) bool {
 // If prefixLen is greater than len(dst),
 // makeCanEncodeToPrefixBytesStringFunctionsTestData logs an error and
 // returns zero-value src, dst, prefix, and sameLen.
-func makeCanEncodeToPrefixBytesStringFunctionsTestData(tb testing.TB, prefixLen int) (
+func makeCanEncodeToPrefixBytesStringFunctionsTestData(
+	tb testing.TB,
+	prefixLen int,
+) (
 	src []byte, dst, prefix, sameLen string) {
 	dst = testEncodeLongSrcCases[0].dstStr
 	if prefixLen <= 0 {

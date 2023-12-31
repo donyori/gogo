@@ -31,12 +31,14 @@ func TestDecodedLen(t *testing.T) {
 		}
 		t.Run("dst="+tc.dstName, func(t *testing.T) {
 			t.Run("type=int", func(t *testing.T) {
-				if n := hex.DecodedLen(len(tc.dstStr)); n != len(tc.srcStr) {
+				n := hex.DecodedLen(len(tc.dstStr))
+				if n != len(tc.srcStr) {
 					t.Errorf("got %d; want %d", n, len(tc.srcStr))
 				}
 			})
 			t.Run("type=int64", func(t *testing.T) {
-				if n := hex.DecodedLen(int64(len(tc.dstStr))); n != int64(len(tc.srcStr)) {
+				n := hex.DecodedLen(int64(len(tc.dstStr)))
+				if n != int64(len(tc.srcStr)) {
 					t.Errorf("got %d; want %d", n, len(tc.srcStr))
 				}
 			})

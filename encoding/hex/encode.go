@@ -43,9 +43,14 @@ func EncodedLen[Int constraints.Integer](n Int) Int {
 //
 // Encode[[]byte](dst, src, false) is equivalent to Encode(dst, src)
 // in official package encoding/hex.
-func Encode[Bytes constraints.ByteString](dst []byte, src Bytes, upper bool) int {
+func Encode[Bytes constraints.ByteString](
+	dst []byte,
+	src Bytes,
+	upper bool,
+) int {
 	if reqLen := EncodedLen(len(src)); reqLen > len(dst) {
-		panic(errors.AutoMsg(fmt.Sprintf("dst is too small, length: %d, required: %d", len(dst), reqLen)))
+		panic(errors.AutoMsg(fmt.Sprintf(
+			"dst is too small, length: %d, required: %d", len(dst), reqLen)))
 	}
 	return encode(dst, src, upper)
 }
@@ -56,7 +61,10 @@ func Encode[Bytes constraints.ByteString](dst []byte, src Bytes, upper bool) int
 //
 // EncodeToString[[]byte](src, false) is equivalent to EncodeToString(src)
 // in official package encoding/hex.
-func EncodeToString[Bytes constraints.ByteString](src Bytes, upper bool) string {
+func EncodeToString[Bytes constraints.ByteString](
+	src Bytes,
+	upper bool,
+) string {
 	dst := make([]byte, EncodedLen(len(src)))
 	encode(dst, src, upper)
 	return string(dst)
@@ -175,7 +183,11 @@ func (enc *encoder) EncodeDst() io.Writer {
 // without checking the length of dst.
 //
 // Caller should guarantee that len(dst) >= EncodedLen(len(src)).
-func encode[Bytes constraints.ByteString](dst []byte, src Bytes, upper bool) int {
+func encode[Bytes constraints.ByteString](
+	dst []byte,
+	src Bytes,
+	upper bool,
+) int {
 	ht := lowercaseHexTable
 	if upper {
 		ht = uppercaseHexTable

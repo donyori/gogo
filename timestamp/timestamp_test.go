@@ -151,38 +151,47 @@ var testNanoTimestampCases = []struct {
 
 func TestTimestamp_String(t *testing.T) {
 	for i, tc := range testTimestampCases {
-		t.Run(fmt.Sprintf("case %d?forFormat=%+q", i, tc.forFormat), func(t *testing.T) {
-			if s := tc.timestamp.String(); s != tc.forFormat {
-				t.Errorf("got %s; want %s", s, tc.forFormat)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("case %d?forFormat=%+q", i, tc.forFormat),
+			func(t *testing.T) {
+				if s := tc.timestamp.String(); s != tc.forFormat {
+					t.Errorf("got %s; want %s", s, tc.forFormat)
+				}
+			},
+		)
 	}
 }
 
 func TestTimestamp_MarshalJSON(t *testing.T) {
 	for i, tc := range testTimestampCases {
-		t.Run(fmt.Sprintf("case %d?forFormat=%+q", i, tc.forFormat), func(t *testing.T) {
-			b, err := json.Marshal(tc.timestamp)
-			if err != nil {
-				t.Error(err)
-			} else if string(b) != tc.forFormat {
-				t.Errorf("got %s; want %s", b, tc.forFormat)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("case %d?forFormat=%+q", i, tc.forFormat),
+			func(t *testing.T) {
+				b, err := json.Marshal(tc.timestamp)
+				if err != nil {
+					t.Error(err)
+				} else if string(b) != tc.forFormat {
+					t.Errorf("got %s; want %s", b, tc.forFormat)
+				}
+			},
+		)
 	}
 }
 
 func TestTimestamp_UnmarshalJSON(t *testing.T) {
 	for i, tc := range testTimestampCases {
-		t.Run(fmt.Sprintf("case %d?forParse=%+q", i, tc.forParse), func(t *testing.T) {
-			var ts timestamp.Timestamp
-			err := json.Unmarshal(tc.forParse, &ts)
-			if err != nil {
-				t.Error(err)
-			} else if !(time.Time)(ts).Equal(time.Time(tc.timestamp)) {
-				t.Errorf("got %v; want %v", ts, tc.timestamp)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("case %d?forParse=%+q", i, tc.forParse),
+			func(t *testing.T) {
+				var ts timestamp.Timestamp
+				err := json.Unmarshal(tc.forParse, &ts)
+				if err != nil {
+					t.Error(err)
+				} else if !(time.Time)(ts).Equal(time.Time(tc.timestamp)) {
+					t.Errorf("got %v; want %v", ts, tc.timestamp)
+				}
+			},
+		)
 	}
 	t.Run("null", func(t *testing.T) {
 		testUnmarshalJsonNull[timestamp.Timestamp](t)
@@ -247,11 +256,15 @@ func testString[Ts timestampConstraint](t *testing.T, cases []struct {
 	bytes     []byte
 }) {
 	for i, tc := range cases {
-		t.Run(fmt.Sprintf("case %d?bytes=%+q", i, tc.bytes), func(t *testing.T) {
-			if s := any(tc.timestamp).(fmt.Stringer).String(); s != string(tc.bytes) {
-				t.Errorf("got %s; want %s", s, tc.bytes)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("case %d?bytes=%+q", i, tc.bytes),
+			func(t *testing.T) {
+				s := any(tc.timestamp).(fmt.Stringer).String()
+				if s != string(tc.bytes) {
+					t.Errorf("got %s; want %s", s, tc.bytes)
+				}
+			},
+		)
 	}
 }
 
@@ -260,14 +273,17 @@ func testMarshalJson[Ts timestampConstraint](t *testing.T, cases []struct {
 	bytes     []byte
 }) {
 	for i, tc := range cases {
-		t.Run(fmt.Sprintf("case %d?bytes=%+q", i, tc.bytes), func(t *testing.T) {
-			b, err := json.Marshal(tc.timestamp)
-			if err != nil {
-				t.Error(err)
-			} else if !bytes.Equal(b, tc.bytes) {
-				t.Errorf("got %s; want %s", b, tc.bytes)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("case %d?bytes=%+q", i, tc.bytes),
+			func(t *testing.T) {
+				b, err := json.Marshal(tc.timestamp)
+				if err != nil {
+					t.Error(err)
+				} else if !bytes.Equal(b, tc.bytes) {
+					t.Errorf("got %s; want %s", b, tc.bytes)
+				}
+			},
+		)
 	}
 }
 
@@ -276,15 +292,18 @@ func testUnmarshalJson[Ts timestampConstraint](t *testing.T, cases []struct {
 	bytes     []byte
 }) {
 	for i, tc := range cases {
-		t.Run(fmt.Sprintf("case %d?bytes=%+q", i, tc.bytes), func(t *testing.T) {
-			var ts Ts
-			err := json.Unmarshal(tc.bytes, &ts)
-			if err != nil {
-				t.Error(err)
-			} else if !(time.Time)(ts).Equal(time.Time(tc.timestamp)) {
-				t.Errorf("got %v; want %v", ts, tc.timestamp)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("case %d?bytes=%+q", i, tc.bytes),
+			func(t *testing.T) {
+				var ts Ts
+				err := json.Unmarshal(tc.bytes, &ts)
+				if err != nil {
+					t.Error(err)
+				} else if !(time.Time)(ts).Equal(time.Time(tc.timestamp)) {
+					t.Errorf("got %v; want %v", ts, tc.timestamp)
+				}
+			},
+		)
 	}
 	t.Run("null", func(t *testing.T) {
 		testUnmarshalJsonNull[Ts](t)

@@ -255,7 +255,8 @@ func testBruteForceSearch(t *testing.T, name string) {
 			}
 			r, found := f(t, tt, goal)
 			if found != wantFound || r != wantNode {
-				t.Errorf("got <%d, %t>; want <%d, %t>", r, found, wantNode, wantFound)
+				t.Errorf("got <%d, %t>; want <%d, %t>",
+					r, found, wantNode, wantFound)
 			}
 			checkAccessHistory(t, tt, wantHx)
 		})

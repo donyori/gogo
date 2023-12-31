@@ -59,8 +59,12 @@ func TestAffectProvidedSlice(t *testing.T) {
 	})
 }
 
-func testAffectProvidedSlice[Item constraints.Real](t *testing.T,
-	getOrderedDynamicArray func(slicePtr *[]Item) array.OrderedDynamicArray[Item]) {
+func testAffectProvidedSlice[Item constraints.Real](
+	t *testing.T,
+	getOrderedDynamicArray func(
+		slicePtr *[]Item,
+	) array.OrderedDynamicArray[Item],
+) {
 	slice := []Item{1, 2, 3, 4}
 	afterCut := []Item{1, 4}
 	afterSetFront := []Item{5, 4}
@@ -85,14 +89,18 @@ func testAffectProvidedSlice[Item constraints.Real](t *testing.T,
 	slice = []Item{1, 2}
 	oda.Push(3)
 	if !slices.Equal(slice, afterPush) {
-		t.Errorf("after reassigning slice and pushing, got %v; want %v", slice, afterPush)
+		t.Errorf("after reassigning slice and pushing, got %v; want %v",
+			slice, afterPush)
 	}
 }
 
 func TestSliceLess_Less(t *testing.T) {
-	testFloat64SliceLess(t, func(slicePtr *[]float64) array.OrderedDynamicArray[float64] {
-		return array.WrapSliceLess(slicePtr, compare.FloatLess[float64])
-	})
+	testFloat64SliceLess(
+		t,
+		func(slicePtr *[]float64) array.OrderedDynamicArray[float64] {
+			return array.WrapSliceLess(slicePtr, compare.FloatLess[float64])
+		},
+	)
 }
 
 func TestTransitiveOrderedSlice_Less(t *testing.T) {
@@ -103,24 +111,35 @@ func TestTransitiveOrderedSlice_Less(t *testing.T) {
 	oda := array.WrapTransitiveOrderedSlice(&data)
 	for i := 0; i < len(data); i++ {
 		for j := 0; j < len(data); j++ {
-			t.Run(fmt.Sprintf("i=%d(s[i]=%s)&j=%d(s[j]=%s)", i, data[i], j, data[j]), func(t *testing.T) {
-				got := oda.Less(i, j)
-				if got != (i < j) {
-					t.Errorf("got %t; want %t", got, i < j)
-				}
-			})
+			t.Run(
+				fmt.Sprintf("i=%d(s[i]=%s)&j=%d(s[j]=%s)",
+					i, data[i], j, data[j]),
+				func(t *testing.T) {
+					got := oda.Less(i, j)
+					if got != (i < j) {
+						t.Errorf("got %t; want %t", got, i < j)
+					}
+				},
+			)
 		}
 	}
 }
 
 func TestFloatSlice_Less(t *testing.T) {
-	testFloat64SliceLess(t, func(slicePtr *[]float64) array.OrderedDynamicArray[float64] {
-		return array.WrapFloatSlice(slicePtr)
-	})
+	testFloat64SliceLess(
+		t,
+		func(slicePtr *[]float64) array.OrderedDynamicArray[float64] {
+			return array.WrapFloatSlice(slicePtr)
+		},
+	)
 }
 
-func testFloat64SliceLess(t *testing.T,
-	getOrderedDynamicArray func(slicePtr *[]float64) array.OrderedDynamicArray[float64]) {
+func testFloat64SliceLess(
+	t *testing.T,
+	getOrderedDynamicArray func(
+		slicePtr *[]float64,
+	) array.OrderedDynamicArray[float64],
+) {
 	data := []float64{
 		math.NaN(), math.Inf(-1), -1.1, -1., -.1, 0.,
 		math.SmallestNonzeroFloat64, .1, 1., 1.1, math.MaxFloat64,
@@ -136,17 +155,22 @@ func testFloat64SliceLess(t *testing.T,
 	}
 	n := len(data)
 	if n != len(dataValueStr) {
-		t.Fatalf("len(data): %d, len(dataValueStr): %d, not equal, please check the test code", n, len(dataValueStr))
+		t.Fatalf("len(data): %d, len(dataValueStr): %d, not equal, please check the test code",
+			n, len(dataValueStr))
 	}
 	oda := getOrderedDynamicArray(&data)
 	for i := 0; i < n; i++ {
 		for j := 0; j < n; j++ {
-			t.Run(fmt.Sprintf("i=%d(s[i]=%s)&j=%d(s[j]=%s)", i, dataValueStr[i], j, dataValueStr[j]), func(t *testing.T) {
-				got := oda.Less(i, j)
-				if got != (i < j) {
-					t.Errorf("got %t; want %t", got, i < j)
-				}
-			})
+			t.Run(
+				fmt.Sprintf("i=%d(s[i]=%s)&j=%d(s[j]=%s)",
+					i, dataValueStr[i], j, dataValueStr[j]),
+				func(t *testing.T) {
+					got := oda.Less(i, j)
+					if got != (i < j) {
+						t.Errorf("got %t; want %t", got, i < j)
+					}
+				},
+			)
 		}
 	}
 }

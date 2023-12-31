@@ -81,7 +81,8 @@ type CommonFormat struct {
 //
 // The formatting result is as follows:
 //   - <TYPE-AND-SIZE> "<nil>", if the sequence is nil.
-//   - <TYPE-AND-SIZE> "[" <CONTENT> "]", if the sequence is non-nil (can be empty).
+//   - <TYPE-AND-SIZE> "[" <CONTENT> "]",
+//     if the sequence is non-nil (can be empty).
 //
 // where <TYPE-AND-SIZE> is as follows:
 //   - "(" <TYPE> "," <SIZE> ")", if both PrependType and PrependSize are true.
@@ -143,10 +144,13 @@ func NewDefaultSequenceFormat[Item any]() *SequenceFormat[Item] {
 //
 // and <CONTENT> is as follows:
 //   - <PREFIX> <ITEM-1> <SEPARATOR> <ITEM-2> <SEPARATOR> ... <SEPARATOR> <ITEM-N> <SUFFIX>,
-//     if the map has at least two key-value pairs and either FormatKeyFn or FormatValueFn is non-nil.
+//     if the map has at least two key-value pairs and
+//     either FormatKeyFn or FormatValueFn is non-nil.
 //   - <PREFIX> <ITEM> <SUFFIX>,
-//     if the map has only one key-value pair and either FormatKeyFn or FormatValueFn is non-nil.
-//   - "...", if the map is non-empty and both FormatKeyFn and FormatValueFn are nil.
+//     if the map has only one key-value pair and
+//     either FormatKeyFn or FormatValueFn is non-nil.
+//   - "...", if the map is non-empty and
+//     both FormatKeyFn and FormatValueFn are nil.
 //   - "" (empty), if the map is empty.
 //
 // where <ITEM> (including <ITEM-1>, <ITEM-2>, ..., <ITEM-N>) is as follows:

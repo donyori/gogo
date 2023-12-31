@@ -149,17 +149,20 @@ func (rbw *resettableBufferedWriter) MustWriteString(s string) (n int) {
 	return
 }
 
-func (rbw *resettableBufferedWriter) ReadFrom(r io.Reader) (n int64, err error) {
+func (rbw *resettableBufferedWriter) ReadFrom(r io.Reader) (
+	n int64, err error) {
 	n, err = rbw.bw.ReadFrom(r)
 	return n, errors.AutoWrap(err)
 }
 
-func (rbw *resettableBufferedWriter) Printf(format string, args ...any) (n int, err error) {
+func (rbw *resettableBufferedWriter) Printf(format string, args ...any) (
+	n int, err error) {
 	n, err = fmt.Fprintf(rbw.bw, format, args...)
 	return n, errors.AutoWrap(err)
 }
 
-func (rbw *resettableBufferedWriter) MustPrintf(format string, args ...any) (n int) {
+func (rbw *resettableBufferedWriter) MustPrintf(format string, args ...any) (
+	n int) {
 	n, err := fmt.Fprintf(rbw.bw, format, args...)
 	if err != nil {
 		panic(NewWritePanic(errors.AutoWrap(err)))

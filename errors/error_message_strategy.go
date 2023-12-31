@@ -54,6 +54,10 @@ func (i ErrorMessageStrategy) Valid() bool {
 // Otherwise, it does nothing.
 func (i ErrorMessageStrategy) MustValid() {
 	if !i.Valid() {
-		panic(AutoMsgCustom("unknown message strategy: "+strconv.FormatInt(int64(i), 10), -1, 1))
+		panic(AutoMsgCustom(
+			"unknown message strategy: "+strconv.FormatInt(int64(i), 10),
+			-1,
+			1,
+		))
 	}
 }

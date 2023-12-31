@@ -36,7 +36,9 @@ import (
 // If format is nil, it uses default format options
 // as returned by NewDefaultSequenceFormat instead.
 func FormatSliceToString[S constraints.Slice[Item], Item any](
-	s S, format *SequenceFormat[Item]) (result string, err error) {
+	s S,
+	format *SequenceFormat[Item],
+) (result string, err error) {
 	result, err = formatSequenceToString(
 		format,
 		reflect.TypeOf(s).String(),
@@ -56,7 +58,9 @@ func FormatSliceToString[S constraints.Slice[Item], Item any](
 // MustFormatSliceToString is like FormatSliceToString
 // but panics when encountering an error.
 func MustFormatSliceToString[S constraints.Slice[Item], Item any](
-	s S, format *SequenceFormat[Item]) string {
+	s S,
+	format *SequenceFormat[Item],
+) string {
 	result, err := FormatSliceToString(s, format)
 	if err != nil {
 		panic(errors.AutoWrap(err))
@@ -72,7 +76,8 @@ func MustFormatSliceToString[S constraints.Slice[Item], Item any](
 // If format is nil, it uses default format options
 // as returned by NewDefaultSequenceFormat instead.
 func FormatSequenceToString[Item any](
-	s sequence.Sequence[Item], format *SequenceFormat[Item],
+	s sequence.Sequence[Item],
+	format *SequenceFormat[Item],
 ) (result string, err error) {
 	var size int
 	var rangeFn func(handler func(x Item) (cont bool))
@@ -91,8 +96,10 @@ func FormatSequenceToString[Item any](
 
 // MustFormatSequenceToString is like FormatSequenceToString
 // but panics when encountering an error.
-func MustFormatSequenceToString[Item any](s sequence.Sequence[Item],
-	format *SequenceFormat[Item]) string {
+func MustFormatSequenceToString[Item any](
+	s sequence.Sequence[Item],
+	format *SequenceFormat[Item],
+) string {
 	result, err := FormatSequenceToString(s, format)
 	if err != nil {
 		panic(errors.AutoWrap(err))

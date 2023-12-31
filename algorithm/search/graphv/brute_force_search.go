@@ -150,9 +150,11 @@ func DFS[Vertex any](itf AccessVertex[Vertex], initArgs ...any) (
 			return
 
 		// Following code is a simplification of the procedure:
-		//  1. Pop the old adjacency list from the stack;
-		//  2. Push the updated adjacency list (adj) to the stack if it is nonempty;
-		//  3. Push the adjacency list of the current vertex (vAdj) to the stack if it is nonempty.
+		//   1. Pop the old adjacency list from the stack;
+		//   2. Push the updated adjacency list (adj)
+		//      to the stack if it is nonempty;
+		//   3. Push the adjacency list of the current vertex (vAdj)
+		//      to the stack if it is nonempty.
 		case len(adj) > 0:
 			stack[len(stack)-1].adjacency = adj // just update stack[len(stack)-1].adjacency
 		default:

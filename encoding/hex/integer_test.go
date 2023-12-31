@@ -52,7 +52,8 @@ func encodeInt64Baseline(dst []byte, x int64, upper bool, digits int) int {
 	if err != nil {
 		panic(errors.AutoWrap(err))
 	} else if n > len(dst) {
-		panic(errors.AutoMsg(fmt.Sprintf("dst is too small, len(dst): %d, need: %d", len(dst), n)))
+		panic(errors.AutoMsg(fmt.Sprintf(
+			"dst is too small, len(dst): %d, need: %d", len(dst), n)))
 	}
 	return n
 }
@@ -78,7 +79,8 @@ func encodeInt64ToStringBaseline(x int64, upper bool, digits int) string {
 
 // encodeInt64ToBaseline implements all requirements of
 // function EncodeInt64To with package fmt.
-func encodeInt64ToBaseline(w io.Writer, x int64, upper bool, digits int) (written int, err error) {
+func encodeInt64ToBaseline(w io.Writer, x int64, upper bool, digits int) (
+	written int, err error) {
 	layout := "%"
 	if digits > 0 {
 		width := digits
@@ -96,25 +98,33 @@ func encodeInt64ToBaseline(w io.Writer, x int64, upper bool, digits int) (writte
 }
 
 var testEncodeInt64Xs = [...]int64{
-	0, 1, 2, 3, 7, 8, 9, 15, 16, 31, 32, 33, 63, 64, 65, 1234567890, math.MaxInt64 - 1, math.MaxInt64,
-	-1, -2, -3, -7, -8, -9, -15, -16, -31, -32, -33, -63, -64, -65, -1234567890, math.MinInt64 + 1, math.MinInt64,
+	0, 1, 2, 3, 7, 8, 9, 15, 16, 31, 32, 33, 63, 64, 65,
+	1234567890, math.MaxInt64 - 1, math.MaxInt64,
+	-1, -2, -3, -7, -8, -9, -15, -16, -31, -32, -33, -63, -64, -65,
+	-1234567890, math.MinInt64 + 1, math.MinInt64,
 }
 
-var testEncodeIntegerDigits = [...]int{-10, -1, 0, 1, 2, 3, 4, 8, 9, 14, 15, 16, 17, 18, 500}
+var testEncodeIntegerDigits = [...]int{
+	-10, -1, 0, 1, 2, 3, 4, 8, 9, 14, 15, 16, 17, 18, 500,
+}
 
 func TestEncodeInt64(t *testing.T) {
 	for _, x := range testEncodeInt64Xs {
 		for _, upper := range []bool{false, true} {
 			for _, digits := range testEncodeIntegerDigits {
-				t.Run(fmt.Sprintf("x=%d&upper=%t&digits=%d", x, upper, digits), func(t *testing.T) {
-					length := hex.EncodeInt64DstLen(digits)
-					dst1, dst2 := make([]byte, length), make([]byte, length)
-					n1 := hex.EncodeInt64(dst1, x, upper, digits)
-					n2 := encodeInt64Baseline(dst2, x, upper, digits)
-					if n1 != n2 || !bytes.Equal(dst1[:n1], dst2[:n2]) {
-						t.Errorf("got (%d) %s; want (%d) %s", n1, dst1[:n1], n2, dst2[:n2])
-					}
-				})
+				t.Run(
+					fmt.Sprintf("x=%d&upper=%t&digits=%d", x, upper, digits),
+					func(t *testing.T) {
+						length := hex.EncodeInt64DstLen(digits)
+						dst1, dst2 := make([]byte, length), make([]byte, length)
+						n1 := hex.EncodeInt64(dst1, x, upper, digits)
+						n2 := encodeInt64Baseline(dst2, x, upper, digits)
+						if n1 != n2 || !bytes.Equal(dst1[:n1], dst2[:n2]) {
+							t.Errorf("got (%d) %s; want (%d) %s",
+								n1, dst1[:n1], n2, dst2[:n2])
+						}
+					},
+				)
 			}
 		}
 	}
@@ -124,13 +134,16 @@ func TestEncodeInt64ToString(t *testing.T) {
 	for _, x := range testEncodeInt64Xs {
 		for _, upper := range []bool{false, true} {
 			for _, digits := range testEncodeIntegerDigits {
-				t.Run(fmt.Sprintf("x=%d&upper=%t&digits=%d", x, upper, digits), func(t *testing.T) {
-					r := hex.EncodeInt64ToString(x, upper, digits)
-					want := encodeInt64ToStringBaseline(x, upper, digits)
-					if r != want {
-						t.Errorf("got %s; want %s", r, want)
-					}
-				})
+				t.Run(
+					fmt.Sprintf("x=%d&upper=%t&digits=%d", x, upper, digits),
+					func(t *testing.T) {
+						r := hex.EncodeInt64ToString(x, upper, digits)
+						want := encodeInt64ToStringBaseline(x, upper, digits)
+						if r != want {
+							t.Errorf("got %s; want %s", r, want)
+						}
+					},
+				)
 			}
 		}
 	}
@@ -141,21 +154,25 @@ func TestEncodeInt64To(t *testing.T) {
 	for _, x := range testEncodeInt64Xs {
 		for _, upper := range []bool{false, true} {
 			for _, digits := range testEncodeIntegerDigits {
-				t.Run(fmt.Sprintf("x=%d&upper=%t&digits=%d", x, upper, digits), func(t *testing.T) {
-					b1.Reset()
-					b2.Reset()
-					n1, err1 := hex.EncodeInt64To(&b1, x, upper, digits)
-					if err1 != nil {
-						t.Fatalf("written %d - %v", n1, err1)
-					}
-					n2, err2 := encodeInt64ToBaseline(&b2, x, upper, digits)
-					if err2 != nil {
-						t.Fatalf("baseline, written %d - %v", n2, err2)
-					}
-					if n1 != n2 || b1.String() != b2.String() {
-						t.Errorf("got (%d) %s; want (%d) %s", n1, b1.String(), n2, b2.String())
-					}
-				})
+				t.Run(
+					fmt.Sprintf("x=%d&upper=%t&digits=%d", x, upper, digits),
+					func(t *testing.T) {
+						b1.Reset()
+						b2.Reset()
+						n1, err1 := hex.EncodeInt64To(&b1, x, upper, digits)
+						if err1 != nil {
+							t.Fatalf("written %d - %v", n1, err1)
+						}
+						n2, err2 := encodeInt64ToBaseline(&b2, x, upper, digits)
+						if err2 != nil {
+							t.Fatalf("baseline, written %d - %v", n2, err2)
+						}
+						if n1 != n2 || b1.String() != b2.String() {
+							t.Errorf("got (%d) %s; want (%d) %s",
+								n1, b1.String(), n2, b2.String())
+						}
+					},
+				)
 			}
 		}
 	}

@@ -129,7 +129,8 @@ func TestBroadcaster_Unsubscribe(t *testing.T) {
 			ready.Done()
 			for msg := range c {
 				if idx >= NumMessage {
-					panic(fmt.Sprintf("goroutine %d, got messages more than %d", rank, NumMessage))
+					panic(fmt.Sprintf("goroutine %d, got messages more than %d",
+						rank, NumMessage))
 				}
 				recv[idx] = msg
 				idx++
@@ -169,7 +170,8 @@ func TestBroadcaster_Unsubscribe(t *testing.T) {
 	}
 	for i, n := 0, stop+len(unread); i < n; i++ {
 		if recv[i] != data[i] {
-			t.Errorf("recv[:%d] = %v; want (data[:%[1]d]) %[3]v", n, recv[:n], data[:n])
+			t.Errorf("recv[:%d] = %v; want (data[:%[1]d]) %[3]v",
+				n, recv[:n], data[:n])
 			break
 		}
 	}
@@ -181,7 +183,10 @@ func TestBroadcaster_Unsubscribe_IllegalC(t *testing.T) {
 	defer func() {
 		if e := recover(); e != nil {
 			msg, ok := e.(string)
-			if !ok || !strings.HasSuffix(msg, "c is not gotten from this broadcaster or has already unsubscribed") {
+			if !ok || !strings.HasSuffix(
+				msg,
+				"c is not gotten from this broadcaster or has already unsubscribed",
+			) {
 				t.Error(e)
 			}
 		}

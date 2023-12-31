@@ -27,13 +27,16 @@ import (
 )
 
 func TestExponentialJobQueue_Basic(t *testing.T) {
-	testJobQueueFunc(t, queue.NewExponentialJobQueueMaker[int, jobsched.NoProperty](0, 0.),
+	testJobQueueFunc(
+		t,
+		queue.NewExponentialJobQueueMaker[int, jobsched.NoProperty](0, 0.),
 		makeWant(func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) bool {
 			if a.Meta.Priority == b.Meta.Priority {
 				return a.Meta.CreationTime.Before(b.Meta.CreationTime)
 			}
 			return a.Meta.Priority > b.Meta.Priority
-		}))
+		}),
+	)
 }
 
 func TestExponentialJobQueue_StarvationFree(t *testing.T) {

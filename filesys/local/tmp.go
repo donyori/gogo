@@ -94,7 +94,8 @@ func Tmp(dir, prefix, suffix string, perm fs.FileMode) (f *os.File, err error) {
 // Calling this function simultaneously does not choose the same directory.
 //
 // The client is responsible for removing the directory when no longer needed.
-func TmpDir(dir, prefix, suffix string, perm fs.FileMode) (name string, err error) {
+func TmpDir(dir, prefix, suffix string, perm fs.FileMode) (
+	name string, err error) {
 	err = checkTmpPrefixAndSuffix(prefix, suffix)
 	if err != nil {
 		return "", errors.AutoWrap(err)

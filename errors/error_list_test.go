@@ -120,12 +120,15 @@ func TestErrorList_ToError(t *testing.T) {
 	testCases[4].err = testCases[4].el
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.el.GetList()), func(t *testing.T) {
-			err := tc.el.ToError()
-			if err != tc.err {
-				t.Errorf("got %v; want %v", err, tc.err)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("case %d?errs=%#v", i, tc.el.GetList()),
+			func(t *testing.T) {
+				err := tc.el.ToError()
+				if err != tc.err {
+					t.Errorf("got %v; want %v", err, tc.err)
+				}
+			},
+		)
 	}
 }
 
@@ -183,7 +186,8 @@ func TestErrorList_Error(t *testing.T) {
 				strs[j] = `"<nil>"`
 			}
 		}
-		testCases[i].want = fmt.Sprintf("%d errors: [%s]", len(testCases[i].errs), strings.Join(strs, ", "))
+		testCases[i].want = fmt.Sprintf("%d errors: [%s]",
+			len(testCases[i].errs), strings.Join(strs, ", "))
 	}
 
 	for i, tc := range testCases {
@@ -226,7 +230,8 @@ func TestCombine(t *testing.T) {
 					t.Errorf("got %v; want %v", list, tc.want)
 				}
 			} else if len(tc.want) > 1 {
-				t.Errorf("got %v; want multiple errors in a list: %v", err, tc.want)
+				t.Errorf("got %v; want multiple errors in a list: %v",
+					err, tc.want)
 			} else if len(tc.want) == 1 {
 				if err != tc.want[0] {
 					t.Errorf("got %v; want %v", err, tc.want[0])

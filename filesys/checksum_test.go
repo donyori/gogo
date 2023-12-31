@@ -422,7 +422,8 @@ func TestNonNilDeduplicatedHashVerifiers(t *testing.T) {
 					t.Error("return value and input have the same underlying array, but want different")
 				}
 			}
-			if !compare.AnySliceEqual(input, tc.hvs) || cap(input) != cap(tc.hvs) {
+			if !compare.AnySliceEqual(input, tc.hvs) ||
+				cap(input) != cap(tc.hvs) {
 				t.Error("input has been modified")
 			}
 		})

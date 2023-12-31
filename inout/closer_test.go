@@ -108,49 +108,59 @@ func TestMultiCloser(t *testing.T) {
 }
 
 func testMultiCloser(t *testing.T, tryAll, noError bool) {
-	t.Run(fmt.Sprintf("tryAll=%t&noError=%t", tryAll, noError), func(t *testing.T) {
-		failErr := errors.New("an error to simulate a failed call to Close")
-		closers := []io.Closer{
-			&testCloser{tb: t, err: failErr},
-			&testCloser{tb: t},
-			&testCloser{tb: t, err: failErr},
-			&testCloser{tb: t},
-		}
-		anotherCloser := &testCloser{tb: t}
-		mc := inout.NewMultiCloser(tryAll, noError, closers...)
-
-		// Before the first call to Close:
-		if mc.Closed() {
-			t.Error("mc.Closed was true before the first call to mc.Close")
-		}
-		for i, closer := range closers {
-			closed, ok := mc.CloserClosed(closer)
-			if !ok {
-				t.Errorf("the %d closer is in mc but mc.CloserClosed returned (%t, %t)", i, closed, ok)
+	t.Run(
+		fmt.Sprintf("tryAll=%t&noError=%t", tryAll, noError),
+		func(t *testing.T) {
+			failErr := errors.New("an error to simulate a failed call to Close")
+			closers := []io.Closer{
+				&testCloser{tb: t, err: failErr},
+				&testCloser{tb: t},
+				&testCloser{tb: t, err: failErr},
+				&testCloser{tb: t},
 			}
-			if closed {
-				t.Errorf("mc.CloserClosed for the %d closer was true before the first call to mc.Close", i)
+			anotherCloser := &testCloser{tb: t}
+			mc := inout.NewMultiCloser(tryAll, noError, closers...)
+
+			// Before the first call to Close:
+			if mc.Closed() {
+				t.Error("mc.Closed was true before the first call to mc.Close")
 			}
-		}
-		closed, ok := mc.CloserClosed(anotherCloser)
-		if closed || ok {
-			t.Errorf("mc.CloserClosed returned (%t, %t) for anotherCloser", closed, ok)
-		}
+			for i, closer := range closers {
+				closed, ok := mc.CloserClosed(closer)
+				if !ok {
+					t.Errorf("the %d closer is in mc but mc.CloserClosed returned (%t, %t)",
+						i, closed, ok)
+				}
+				if closed {
+					t.Errorf("mc.CloserClosed for the %d closer was true before the first call to mc.Close",
+						i)
+				}
+			}
+			closed, ok := mc.CloserClosed(anotherCloser)
+			if closed || ok {
+				t.Errorf("mc.CloserClosed returned (%t, %t) for anotherCloser",
+					closed, ok)
+			}
 
-		// First call (a failed call) to Close:
-		testMultiCloserOneCall(t, tryAll, noError, failErr, closers, anotherCloser, mc, 0)
+			// First call (a failed call) to Close:
+			testMultiCloserOneCall(
+				t, tryAll, noError, failErr, closers, anotherCloser, mc, 0)
 
-		closers[2].(*testCloser).err = nil
-		// Second call (a failed call) to Close:
-		testMultiCloserOneCall(t, tryAll, noError, failErr, closers, anotherCloser, mc, 1)
+			closers[2].(*testCloser).err = nil
+			// Second call (a failed call) to Close:
+			testMultiCloserOneCall(
+				t, tryAll, noError, failErr, closers, anotherCloser, mc, 1)
 
-		closers[0].(*testCloser).err = nil
-		// Third call (a successful call) to Close:
-		testMultiCloserOneCall(t, tryAll, noError, failErr, closers, anotherCloser, mc, 2)
+			closers[0].(*testCloser).err = nil
+			// Third call (a successful call) to Close:
+			testMultiCloserOneCall(
+				t, tryAll, noError, failErr, closers, anotherCloser, mc, 2)
 
-		// Fourth call (a call to the successfully closed mc) to Close:
-		testMultiCloserOneCall(t, tryAll, noError, failErr, closers, anotherCloser, mc, 3)
-	})
+			// Fourth call (a call to the successfully closed mc) to Close:
+			testMultiCloserOneCall(
+				t, tryAll, noError, failErr, closers, anotherCloser, mc, 3)
+		},
+	)
 }
 
 func testMultiCloserOneCall(

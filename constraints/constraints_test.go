@@ -133,7 +133,8 @@ func TestCompilePredeclaredOrdered(t *testing.T) {
 	//  predeclaredSmallest(myComplex128s)
 }
 
-func predeclaredSmallest[T constraints.PredeclaredOrdered](s []T) (r T, ok bool) {
+func predeclaredSmallest[T constraints.PredeclaredOrdered](s []T) (
+	r T, ok bool) {
 	if len(s) == 0 {
 		return
 	}

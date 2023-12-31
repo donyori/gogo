@@ -119,11 +119,15 @@ func TestPriorityQueue_Enqueue(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&xs=%s", sliceToName(tc.data), sliceToName(tc.xs)), func(t *testing.T) {
-			pq := pqueue.New[int](IntLess, IntSDAPtr(&tc.data))
-			pq.Enqueue(tc.xs...)
-			checkPriorityQueueByDequeue(t, pq, tc.want)
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&xs=%s",
+				sliceToName(tc.data), sliceToName(tc.xs)),
+			func(t *testing.T) {
+				pq := pqueue.New[int](IntLess, IntSDAPtr(&tc.data))
+				pq.Enqueue(tc.xs...)
+				checkPriorityQueueByDequeue(t, pq, tc.want)
+			},
+		)
 	}
 }
 
@@ -195,13 +199,16 @@ func TestPriorityQueue_ReplaceTop(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("data=%s&newX=%d", sliceToName(tc.data), tc.newX), func(t *testing.T) {
-			pq := pqueue.New[int](IntLess, IntSDAPtr(&tc.data))
-			if x := pq.ReplaceTop(tc.newX); x != tc.want[0] {
-				t.Errorf("got %d; want %d", x, tc.want[0])
-			}
-			checkPriorityQueueByDequeue[int](t, pq, tc.want)
-		})
+		t.Run(
+			fmt.Sprintf("data=%s&newX=%d", sliceToName(tc.data), tc.newX),
+			func(t *testing.T) {
+				pq := pqueue.New[int](IntLess, IntSDAPtr(&tc.data))
+				if x := pq.ReplaceTop(tc.newX); x != tc.want[0] {
+					t.Errorf("got %d; want %d", x, tc.want[0])
+				}
+				checkPriorityQueueByDequeue[int](t, pq, tc.want)
+			},
+		)
 	}
 }
 

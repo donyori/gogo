@@ -100,7 +100,8 @@ func TestGoMap_Filter(t *testing.T) {
 			gm := SIGM(maps.Clone(data))
 			gm.Filter(filterList[tc.filterIdx])
 			if goMapWrong(&gm, tc.want) {
-				t.Errorf("got %s; want %s", mapToString(gm), mapToString(tc.want))
+				t.Errorf("got %s; want %s",
+					mapToString(gm), mapToString(tc.want))
 			}
 		})
 	}
@@ -152,12 +153,16 @@ func TestGoMap_Get(t *testing.T) {
 			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		}
-		t.Run(fmt.Sprintf("gm=%s&key=%+q", gmPtrToName(gm), tc.k), func(t *testing.T) {
-			v, p := gm.Get(tc.k)
-			if v != tc.wantV || p != tc.wantP {
-				t.Errorf("got (%d, %t); want (%d, %t)", v, p, tc.wantV, tc.wantP)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("gm=%s&key=%+q", gmPtrToName(gm), tc.k),
+			func(t *testing.T) {
+				v, p := gm.Get(tc.k)
+				if v != tc.wantV || p != tc.wantP {
+					t.Errorf("got (%d, %t); want (%d, %t)",
+						v, p, tc.wantV, tc.wantP)
+				}
+			},
+		)
 	}
 }
 
@@ -188,12 +193,16 @@ func TestGoMap_Set(t *testing.T) {
 		} else {
 			gm = new(SIGM)
 		}
-		t.Run(fmt.Sprintf("gm=%s&key=%+q&value=%d", gmPtrToName(gm), tc.k, tc.v), func(t *testing.T) {
-			gm.Set(tc.k, tc.v)
-			if goMapWrong(gm, tc.want) {
-				t.Errorf("got %s; want %s", gmPtrToName(gm), mapToString(tc.want))
-			}
-		})
+		t.Run(
+			fmt.Sprintf("gm=%s&key=%+q&value=%d", gmPtrToName(gm), tc.k, tc.v),
+			func(t *testing.T) {
+				gm.Set(tc.k, tc.v)
+				if goMapWrong(gm, tc.want) {
+					t.Errorf("got %s; want %s",
+						gmPtrToName(gm), mapToString(tc.want))
+				}
+			},
+		)
 	}
 }
 
@@ -235,15 +244,20 @@ func TestGoMap_GetAndSet(t *testing.T) {
 		} else {
 			gm = new(SIGM)
 		}
-		t.Run(fmt.Sprintf("gm=%s&key=%+q&value=%d", gmPtrToName(gm), tc.k, tc.v), func(t *testing.T) {
-			v, p := gm.GetAndSet(tc.k, tc.v)
-			if goMapWrong(gm, tc.wantM) {
-				t.Errorf("got map %s; want %s", gmPtrToName(gm), mapToString(tc.wantM))
-			}
-			if v != tc.wantV || p != tc.wantP {
-				t.Errorf("got (%d, %t); want (%d, %t)", v, p, tc.wantV, tc.wantP)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("gm=%s&key=%+q&value=%d", gmPtrToName(gm), tc.k, tc.v),
+			func(t *testing.T) {
+				v, p := gm.GetAndSet(tc.k, tc.v)
+				if goMapWrong(gm, tc.wantM) {
+					t.Errorf("got map %s; want %s",
+						gmPtrToName(gm), mapToString(tc.wantM))
+				}
+				if v != tc.wantV || p != tc.wantP {
+					t.Errorf("got (%d, %t); want (%d, %t)",
+						v, p, tc.wantV, tc.wantP)
+				}
+			},
+		)
 	}
 }
 
@@ -285,12 +299,16 @@ func TestGoMap_SetMap(t *testing.T) {
 		} else {
 			gm = new(SIGM)
 		}
-		t.Run(fmt.Sprintf("gm=%s&m=%s", gmPtrToName(gm), gmPtrToName(tc.m)), func(t *testing.T) {
-			gm.SetMap(tc.m)
-			if goMapWrong(gm, tc.want) {
-				t.Errorf("got %s; want %s", gmPtrToName(gm), mapToString(tc.want))
-			}
-		})
+		t.Run(
+			fmt.Sprintf("gm=%s&m=%s", gmPtrToName(gm), gmPtrToName(tc.m)),
+			func(t *testing.T) {
+				gm.SetMap(tc.m)
+				if goMapWrong(gm, tc.want) {
+					t.Errorf("got %s; want %s",
+						gmPtrToName(gm), mapToString(tc.want))
+				}
+			},
+		)
 	}
 }
 
@@ -308,19 +326,22 @@ func TestGoMap_SetMap_Panic(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
-		t.Run(fmt.Sprintf("gm=%s&m=%s", gmPtrToName(gm), gmPtrToName(tc.m)), func(t *testing.T) {
-			defer func() {
-				e := recover()
-				if tc.wantPanic {
-					if e == nil {
-						t.Error("want panic but not")
+		t.Run(
+			fmt.Sprintf("gm=%s&m=%s", gmPtrToName(gm), gmPtrToName(tc.m)),
+			func(t *testing.T) {
+				defer func() {
+					e := recover()
+					if tc.wantPanic {
+						if e == nil {
+							t.Error("want panic but not")
+						}
+					} else if e != nil {
+						t.Error("panic -", e)
 					}
-				} else if e != nil {
-					t.Error("panic -", e)
-				}
-			}()
-			gm.SetMap(tc.m)
-		})
+				}()
+				gm.SetMap(tc.m)
+			},
+		)
 	}
 }
 
@@ -354,15 +375,20 @@ func TestGoMap_GetAndSetMap(t *testing.T) {
 		} else {
 			gm = new(SIGM)
 		}
-		t.Run(fmt.Sprintf("gm=%s&m=%s", gmPtrToName(gm), gmPtrToName(tc.m)), func(t *testing.T) {
-			p := gm.GetAndSetMap(tc.m)
-			if goMapWrong(gm, tc.wantM) {
-				t.Errorf("got map %s; want %s", gmPtrToName(gm), mapToString(tc.wantM))
-			}
-			if mapItfWrong(p, tc.wantP) {
-				t.Errorf("got %s; want %s", mapItfToString(p), mapToString(tc.wantP))
-			}
-		})
+		t.Run(
+			fmt.Sprintf("gm=%s&m=%s", gmPtrToName(gm), gmPtrToName(tc.m)),
+			func(t *testing.T) {
+				p := gm.GetAndSetMap(tc.m)
+				if goMapWrong(gm, tc.wantM) {
+					t.Errorf("got map %s; want %s",
+						gmPtrToName(gm), mapToString(tc.wantM))
+				}
+				if mapItfWrong(p, tc.wantP) {
+					t.Errorf("got %s; want %s",
+						mapItfToString(p), mapToString(tc.wantP))
+				}
+			},
+		)
 	}
 }
 
@@ -380,19 +406,22 @@ func TestGoMap_GetAndSetMap_Panic(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
-		t.Run(fmt.Sprintf("gm=%s&m=%s", gmPtrToName(gm), gmPtrToName(tc.m)), func(t *testing.T) {
-			defer func() {
-				if e := recover(); !tc.wantPanic && e != nil {
-					t.Error("panic -", e)
+		t.Run(
+			fmt.Sprintf("gm=%s&m=%s", gmPtrToName(gm), gmPtrToName(tc.m)),
+			func(t *testing.T) {
+				defer func() {
+					if e := recover(); !tc.wantPanic && e != nil {
+						t.Error("panic -", e)
+					}
+				}()
+				p := gm.GetAndSetMap(tc.m)
+				if tc.wantPanic {
+					t.Error("want panic but got", mapItfToString(p))
+				} else if p != nil {
+					t.Errorf("got %s; want <nil>", mapItfToString(p))
 				}
-			}()
-			p := gm.GetAndSetMap(tc.m)
-			if tc.wantPanic {
-				t.Error("want panic but got", mapItfToString(p))
-			} else if p != nil {
-				t.Errorf("got %s; want <nil>", mapItfToString(p))
-			}
-		})
+			},
+		)
 	}
 }
 
@@ -436,12 +465,16 @@ func TestGoMap_Remove(t *testing.T) {
 			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		}
-		t.Run(fmt.Sprintf("gm=%s&key=%s", gmPtrToName(gm), keysToName(tc.ks)), func(t *testing.T) {
-			gm.Remove(tc.ks...)
-			if goMapWrong(gm, tc.want) {
-				t.Errorf("got %s; want %s", gmPtrToName(gm), mapToString(tc.want))
-			}
-		})
+		t.Run(
+			fmt.Sprintf("gm=%s&key=%s", gmPtrToName(gm), keysToName(tc.ks)),
+			func(t *testing.T) {
+				gm.Remove(tc.ks...)
+				if goMapWrong(gm, tc.want) {
+					t.Errorf("got %s; want %s",
+						gmPtrToName(gm), mapToString(tc.want))
+				}
+			},
+		)
 	}
 }
 
@@ -473,15 +506,20 @@ func TestGoMap_GetAndRemove(t *testing.T) {
 			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		}
-		t.Run(fmt.Sprintf("gm=%s&key=%+q", gmPtrToName(gm), tc.k), func(t *testing.T) {
-			v, p := gm.GetAndRemove(tc.k)
-			if goMapWrong(gm, tc.wantM) {
-				t.Errorf("got map %s; want %s", gmPtrToName(gm), mapToString(tc.wantM))
-			}
-			if v != tc.wantV || p != tc.wantP {
-				t.Errorf("got (%d, %t); want (%d, %t)", v, p, tc.wantV, tc.wantP)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("gm=%s&key=%+q", gmPtrToName(gm), tc.k),
+			func(t *testing.T) {
+				v, p := gm.GetAndRemove(tc.k)
+				if goMapWrong(gm, tc.wantM) {
+					t.Errorf("got map %s; want %s",
+						gmPtrToName(gm), mapToString(tc.wantM))
+				}
+				if v != tc.wantV || p != tc.wantP {
+					t.Errorf("got (%d, %t); want (%d, %t)",
+						v, p, tc.wantV, tc.wantP)
+				}
+			},
+		)
 	}
 }
 
@@ -514,12 +552,15 @@ func TestGoMap_Clear(t *testing.T) {
 }
 
 func keysToName(keys []string) string {
-	return fmtcoll.MustFormatSliceToString(keys, &fmtcoll.SequenceFormat[string]{
-		CommonFormat: fmtcoll.CommonFormat{
-			Separator: ",",
+	return fmtcoll.MustFormatSliceToString(
+		keys,
+		&fmtcoll.SequenceFormat[string]{
+			CommonFormat: fmtcoll.CommonFormat{
+				Separator: ",",
+			},
+			FormatItemFn: fmtcoll.FprintfToFormatFunc[string]("%+q"),
 		},
-		FormatItemFn: fmtcoll.FprintfToFormatFunc[string]("%+q"),
-	})
+	)
 }
 
 func gmPtrToName(p *SIGM) string {

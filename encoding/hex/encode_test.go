@@ -59,12 +59,14 @@ func TestEncodedLen(t *testing.T) {
 		}
 		t.Run("src="+tc.srcName, func(t *testing.T) {
 			t.Run("type=int", func(t *testing.T) {
-				if n := hex.EncodedLen(len(tc.srcStr)); n != len(tc.dstStr) {
+				n := hex.EncodedLen(len(tc.srcStr))
+				if n != len(tc.dstStr) {
 					t.Errorf("got %d; want %d", n, len(tc.dstStr))
 				}
 			})
 			t.Run("type=int64", func(t *testing.T) {
-				if n := hex.EncodedLen(int64(len(tc.srcStr))); n != int64(len(tc.dstStr)) {
+				n := hex.EncodedLen(int64(len(tc.srcStr)))
+				if n != int64(len(tc.dstStr)) {
 					t.Errorf("got %d; want %d", n, len(tc.dstStr))
 				}
 			})
@@ -75,39 +77,45 @@ func TestEncodedLen(t *testing.T) {
 func TestEncode(t *testing.T) {
 	dst := make([]byte, testEncodeCasesDstMaxLen+1024)
 	for _, tc := range testEncodeCases {
-		t.Run(fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper), func(t *testing.T) {
-			t.Run("type=[]byte", func(t *testing.T) {
-				n := hex.Encode(dst, tc.srcBytes, tc.upper)
-				if string(dst[:n]) != tc.dstStr {
-					t.Errorf("got %q; want %q", dst[:n], tc.dstStr)
-				}
-			})
-			t.Run("type=string", func(t *testing.T) {
-				n := hex.Encode(dst, tc.srcStr, tc.upper)
-				if string(dst[:n]) != tc.dstStr {
-					t.Errorf("got %q; want %q", dst[:n], tc.dstStr)
-				}
-			})
-		})
+		t.Run(
+			fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper),
+			func(t *testing.T) {
+				t.Run("type=[]byte", func(t *testing.T) {
+					n := hex.Encode(dst, tc.srcBytes, tc.upper)
+					if string(dst[:n]) != tc.dstStr {
+						t.Errorf("got %q; want %q", dst[:n], tc.dstStr)
+					}
+				})
+				t.Run("type=string", func(t *testing.T) {
+					n := hex.Encode(dst, tc.srcStr, tc.upper)
+					if string(dst[:n]) != tc.dstStr {
+						t.Errorf("got %q; want %q", dst[:n], tc.dstStr)
+					}
+				})
+			},
+		)
 	}
 }
 
 func TestEncodeToString(t *testing.T) {
 	for _, tc := range testEncodeCases {
-		t.Run(fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper), func(t *testing.T) {
-			t.Run("type=[]byte", func(t *testing.T) {
-				s := hex.EncodeToString(tc.srcBytes, tc.upper)
-				if s != tc.dstStr {
-					t.Errorf("got %q; want %q", s, tc.dstStr)
-				}
-			})
-			t.Run("type=string", func(t *testing.T) {
-				s := hex.EncodeToString(tc.srcStr, tc.upper)
-				if s != tc.dstStr {
-					t.Errorf("got %q; want %q", s, tc.dstStr)
-				}
-			})
-		})
+		t.Run(
+			fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper),
+			func(t *testing.T) {
+				t.Run("type=[]byte", func(t *testing.T) {
+					s := hex.EncodeToString(tc.srcBytes, tc.upper)
+					if s != tc.dstStr {
+						t.Errorf("got %q; want %q", s, tc.dstStr)
+					}
+				})
+				t.Run("type=string", func(t *testing.T) {
+					s := hex.EncodeToString(tc.srcStr, tc.upper)
+					if s != tc.dstStr {
+						t.Errorf("got %q; want %q", s, tc.dstStr)
+					}
+				})
+			},
+		)
 	}
 }
 
@@ -117,23 +125,26 @@ func TestEncoder_Write(t *testing.T) {
 	upperEncoder := hex.NewEncoder(w, true)
 	lowerEncoder := hex.NewEncoder(w, false)
 	for _, tc := range testEncodeCases {
-		t.Run(fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper), func(t *testing.T) {
-			w.Reset()
-			var encoder hex.Encoder
-			if tc.upper {
-				encoder = upperEncoder
-			} else {
-				encoder = lowerEncoder
-			}
-			n, err := encoder.Write(tc.srcBytes)
-			if err != nil {
-				t.Fatal(err)
-			}
-			n = hex.EncodedLen(n)
-			if string(buf[:n]) != tc.dstStr {
-				t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper),
+			func(t *testing.T) {
+				w.Reset()
+				var encoder hex.Encoder
+				if tc.upper {
+					encoder = upperEncoder
+				} else {
+					encoder = lowerEncoder
+				}
+				n, err := encoder.Write(tc.srcBytes)
+				if err != nil {
+					t.Fatal(err)
+				}
+				n = hex.EncodedLen(n)
+				if string(buf[:n]) != tc.dstStr {
+					t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
+				}
+			},
+		)
 	}
 }
 
@@ -143,27 +154,30 @@ func TestEncoder_WriteByte(t *testing.T) {
 	upperEncoder := hex.NewEncoder(w, true)
 	lowerEncoder := hex.NewEncoder(w, false)
 	for _, tc := range testEncodeCases {
-		t.Run(fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper), func(t *testing.T) {
-			w.Reset()
-			var encoder hex.Encoder
-			if tc.upper {
-				encoder = upperEncoder
-			} else {
-				encoder = lowerEncoder
-			}
-			var n int
-			for _, b := range tc.srcBytes {
-				err := encoder.WriteByte(b)
-				if err != nil {
-					t.Fatalf("WriteByte(%q) - %v", b, err)
+		t.Run(
+			fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper),
+			func(t *testing.T) {
+				w.Reset()
+				var encoder hex.Encoder
+				if tc.upper {
+					encoder = upperEncoder
+				} else {
+					encoder = lowerEncoder
 				}
-				n++
-			}
-			n = hex.EncodedLen(n)
-			if string(buf[:n]) != tc.dstStr {
-				t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
-			}
-		})
+				var n int
+				for _, b := range tc.srcBytes {
+					err := encoder.WriteByte(b)
+					if err != nil {
+						t.Fatalf("WriteByte(%q) - %v", b, err)
+					}
+					n++
+				}
+				n = hex.EncodedLen(n)
+				if string(buf[:n]) != tc.dstStr {
+					t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
+				}
+			},
+		)
 	}
 }
 
@@ -173,23 +187,26 @@ func TestEncoder_WriteString(t *testing.T) {
 	upperEncoder := hex.NewEncoder(w, true)
 	lowerEncoder := hex.NewEncoder(w, false)
 	for _, tc := range testEncodeCases {
-		t.Run(fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper), func(t *testing.T) {
-			w.Reset()
-			var encoder hex.Encoder
-			if tc.upper {
-				encoder = upperEncoder
-			} else {
-				encoder = lowerEncoder
-			}
-			n, err := encoder.WriteString(tc.srcStr)
-			if err != nil {
-				t.Fatal(err)
-			}
-			n = hex.EncodedLen(n)
-			if string(buf[:n]) != tc.dstStr {
-				t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper),
+			func(t *testing.T) {
+				w.Reset()
+				var encoder hex.Encoder
+				if tc.upper {
+					encoder = upperEncoder
+				} else {
+					encoder = lowerEncoder
+				}
+				n, err := encoder.WriteString(tc.srcStr)
+				if err != nil {
+					t.Fatal(err)
+				}
+				n = hex.EncodedLen(n)
+				if string(buf[:n]) != tc.dstStr {
+					t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
+				}
+			},
+		)
 	}
 }
 
@@ -199,22 +216,25 @@ func TestEncoder_ReadFrom(t *testing.T) {
 	upperEncoder := hex.NewEncoder(w, true)
 	lowerEncoder := hex.NewEncoder(w, false)
 	for _, tc := range testEncodeCases {
-		t.Run(fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper), func(t *testing.T) {
-			w.Reset()
-			var encoder hex.Encoder
-			if tc.upper {
-				encoder = upperEncoder
-			} else {
-				encoder = lowerEncoder
-			}
-			n, err := encoder.ReadFrom(strings.NewReader(tc.srcStr))
-			if err != nil {
-				t.Fatal(err)
-			}
-			n = hex.EncodedLen(n)
-			if string(buf[:n]) != tc.dstStr {
-				t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper),
+			func(t *testing.T) {
+				w.Reset()
+				var encoder hex.Encoder
+				if tc.upper {
+					encoder = upperEncoder
+				} else {
+					encoder = lowerEncoder
+				}
+				n, err := encoder.ReadFrom(strings.NewReader(tc.srcStr))
+				if err != nil {
+					t.Fatal(err)
+				}
+				n = hex.EncodedLen(n)
+				if string(buf[:n]) != tc.dstStr {
+					t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
+				}
+			},
+		)
 	}
 }

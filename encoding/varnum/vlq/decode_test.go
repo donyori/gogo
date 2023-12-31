@@ -104,7 +104,8 @@ func TestDecodeFloat64(t *testing.T) {
 			want := uintconv.ToFloat64ByteReversal(uint64s[i])
 			if math.IsNaN(want) {
 				if !math.IsNaN(f) {
-					t.Fatalf("got %v (bits: %#016X); want NaN", f, math.Float64bits(f))
+					t.Fatalf("got %v (bits: %#016X); want NaN",
+						f, math.Float64bits(f))
 				}
 			} else if f != want {
 				t.Fatalf(

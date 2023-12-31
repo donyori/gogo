@@ -37,7 +37,9 @@ import (
 // If format is nil, it uses default format options
 // as returned by NewDefaultMapFormat instead.
 func FormatMapToString[M constraints.Map[Key, Value], Key comparable, Value any](
-	m M, format *MapFormat[Key, Value]) (result string, err error) {
+	m M,
+	format *MapFormat[Key, Value],
+) (result string, err error) {
 	result, err = formatMapToString(
 		format,
 		reflect.TypeOf(m).String(),
@@ -57,7 +59,9 @@ func FormatMapToString[M constraints.Map[Key, Value], Key comparable, Value any]
 // MustFormatMapToString is like FormatMapToString
 // but panics when encountering an error.
 func MustFormatMapToString[M constraints.Map[Key, Value], Key comparable, Value any](
-	m M, format *MapFormat[Key, Value]) string {
+	m M,
+	format *MapFormat[Key, Value],
+) string {
 	result, err := FormatMapToString(m, format)
 	if err != nil {
 		panic(errors.AutoWrap(err))
@@ -74,7 +78,8 @@ func MustFormatMapToString[M constraints.Map[Key, Value], Key comparable, Value 
 // If format is nil, it uses default format options
 // as returned by NewDefaultMapFormat instead.
 func FormatGogoMapToString[Key, Value any](
-	m mapping.Map[Key, Value], format *MapFormat[Key, Value],
+	m mapping.Map[Key, Value],
+	format *MapFormat[Key, Value],
 ) (result string, err error) {
 	var size int
 	var rangeFn func(handler func(x mapping.Entry[Key, Value]) (cont bool))
@@ -94,7 +99,9 @@ func FormatGogoMapToString[Key, Value any](
 // MustFormatGogoMapToString is like FormatGogoMapToString
 // but panics when encountering an error.
 func MustFormatGogoMapToString[Key, Value any](
-	m mapping.Map[Key, Value], format *MapFormat[Key, Value]) string {
+	m mapping.Map[Key, Value],
+	format *MapFormat[Key, Value],
+) string {
 	result, err := FormatGogoMapToString(m, format)
 	if err != nil {
 		panic(errors.AutoWrap(err))

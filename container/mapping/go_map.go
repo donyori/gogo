@@ -53,7 +53,9 @@ func (gm *GoMap[Key, Value]) Len() int {
 //
 // Its parameter handler is a function to deal with the key-value pair x
 // in the map and report whether to continue to access the next key-value pair.
-func (gm *GoMap[Key, Value]) Range(handler func(x Entry[Key, Value]) (cont bool)) {
+func (gm *GoMap[Key, Value]) Range(
+	handler func(x Entry[Key, Value]) (cont bool),
+) {
 	if gm != nil {
 		for k, v := range *gm {
 			if !handler(Entry[Key, Value]{Key: k, Value: v}) {
@@ -67,7 +69,9 @@ func (gm *GoMap[Key, Value]) Range(handler func(x Entry[Key, Value]) (cont bool)
 //
 // Its parameter filter is a function to report
 // whether to keep the key-value pair x.
-func (gm *GoMap[Key, Value]) Filter(filter func(x Entry[Key, Value]) (keep bool)) {
+func (gm *GoMap[Key, Value]) Filter(
+	filter func(x Entry[Key, Value]) (keep bool),
+) {
 	if gm != nil {
 		for k, v := range *gm {
 			if !filter(Entry[Key, Value]{Key: k, Value: v}) {
@@ -113,7 +117,8 @@ func (gm *GoMap[Key, Value]) Set(key Key, value Value) {
 // the key was present before calling GetAndSet.
 //
 // It panics if gm is nil.
-func (gm *GoMap[Key, Value]) GetAndSet(key Key, value Value) (previous Value, present bool) {
+func (gm *GoMap[Key, Value]) GetAndSet(key Key, value Value) (
+	previous Value, present bool) {
 	switch {
 	case gm == nil:
 		panic(errors.AutoMsg(nilGoMapPointerPanicMessage))
@@ -158,7 +163,8 @@ func (gm *GoMap[Key, Value]) SetMap(m Map[Key, Value]) {
 // GetAndSetMap returns nil.
 //
 // It panics if m is not nil or empty and gm is nil.
-func (gm *GoMap[Key, Value]) GetAndSetMap(m Map[Key, Value]) (previous Map[Key, Value]) {
+func (gm *GoMap[Key, Value]) GetAndSetMap(m Map[Key, Value]) (
+	previous Map[Key, Value]) {
 	if m == nil {
 		return
 	}
@@ -217,7 +223,8 @@ func (gm *GoMap[Key, Value]) Remove(key ...Key) {
 // Unlike Remove, GetAndRemove returns the previous value (if any)
 // bound to the key and an indicator present to report whether
 // the key was present before calling GetAndRemove.
-func (gm *GoMap[Key, Value]) GetAndRemove(key Key) (previous Value, present bool) {
+func (gm *GoMap[Key, Value]) GetAndRemove(key Key) (
+	previous Value, present bool) {
 	if gm != nil && len(*gm) > 0 {
 		previous, present = (*gm)[key]
 		if present {

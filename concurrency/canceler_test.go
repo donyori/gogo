@@ -98,7 +98,8 @@ func testContextCancelerFunc(t *testing.T, cancelManner int) {
 			logPrefix := fmt.Sprintf("goroutine %d, after calling Cancel, ",
 				rank)
 			testCancelerCAndCanceled(t, logPrefix, canceler, true)
-			testContextDoneErrAndCause(t, logPrefix, ctx, true, context.Canceled)
+			testContextDoneErrAndCause(
+				t, logPrefix, ctx, true, context.Canceled)
 		}(i)
 	}
 	wg.Wait()
@@ -154,7 +155,8 @@ func testContextCauseCancelerFunc(t *testing.T, cancelManner int) {
 			logPrefix := fmt.Sprintf("goroutine %d, after calling Cancel, ",
 				rank)
 			testCancelerCAndCanceled(t, logPrefix, canceler, true)
-			testContextDoneErrAndCause(t, logPrefix, ctx, true, concurrency.ErrCanceled)
+			testContextDoneErrAndCause(
+				t, logPrefix, ctx, true, concurrency.ErrCanceled)
 		}(i)
 	}
 	wg.Wait()

@@ -89,16 +89,20 @@ func TestResettableBufferedReader_ConsumeByte(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("content=%+q&n=%d", tc.content, tc.n), func(t *testing.T) {
-			br := inout.NewBufferedReader(strings.NewReader(tc.content))
-			consumed, err := br.ConsumeByte(Target, tc.n)
-			if consumed != tc.wantConsumed {
-				t.Errorf("got consumed %d; want %d", consumed, tc.wantConsumed)
-			}
-			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("got err %v; want %v", err, tc.wantErr)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("content=%+q&n=%d", tc.content, tc.n),
+			func(t *testing.T) {
+				br := inout.NewBufferedReader(strings.NewReader(tc.content))
+				consumed, err := br.ConsumeByte(Target, tc.n)
+				if consumed != tc.wantConsumed {
+					t.Errorf("got consumed %d; want %d",
+						consumed, tc.wantConsumed)
+				}
+				if !errors.Is(err, tc.wantErr) {
+					t.Errorf("got err %v; want %v", err, tc.wantErr)
+				}
+			},
+		)
 	}
 }
 
@@ -134,16 +138,20 @@ func TestResettableBufferedReader_ConsumeByteFunc(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("content=%+q&n=%d", tc.content, tc.n), func(t *testing.T) {
-			br := inout.NewBufferedReader(strings.NewReader(tc.content))
-			consumed, err := br.ConsumeByteFunc(f, tc.n)
-			if consumed != tc.wantConsumed {
-				t.Errorf("got consumed %d; want %d", consumed, tc.wantConsumed)
-			}
-			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("got err %v; want %v", err, tc.wantErr)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("content=%+q&n=%d", tc.content, tc.n),
+			func(t *testing.T) {
+				br := inout.NewBufferedReader(strings.NewReader(tc.content))
+				consumed, err := br.ConsumeByteFunc(f, tc.n)
+				if consumed != tc.wantConsumed {
+					t.Errorf("got consumed %d; want %d",
+						consumed, tc.wantConsumed)
+				}
+				if !errors.Is(err, tc.wantErr) {
+					t.Errorf("got err %v; want %v", err, tc.wantErr)
+				}
+			},
+		)
 	}
 }
 
@@ -177,16 +185,20 @@ func TestResettableBufferedReader_ConsumeRune(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("content=%+q&n=%d", tc.content, tc.n), func(t *testing.T) {
-			br := inout.NewBufferedReader(strings.NewReader(tc.content))
-			consumed, err := br.ConsumeRune(Target, tc.n)
-			if consumed != tc.wantConsumed {
-				t.Errorf("got consumed %d; want %d", consumed, tc.wantConsumed)
-			}
-			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("got err %v; want %v", err, tc.wantErr)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("content=%+q&n=%d", tc.content, tc.n),
+			func(t *testing.T) {
+				br := inout.NewBufferedReader(strings.NewReader(tc.content))
+				consumed, err := br.ConsumeRune(Target, tc.n)
+				if consumed != tc.wantConsumed {
+					t.Errorf("got consumed %d; want %d",
+						consumed, tc.wantConsumed)
+				}
+				if !errors.Is(err, tc.wantErr) {
+					t.Errorf("got err %v; want %v", err, tc.wantErr)
+				}
+			},
+		)
 	}
 }
 
@@ -233,16 +245,20 @@ func TestResettableBufferedReader_ConsumeRune_InvalidRune(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("content=%+q&n=%d", tc.content, tc.n), func(t *testing.T) {
-			br := inout.NewBufferedReader(strings.NewReader(tc.content))
-			consumed, err := br.ConsumeRune(unicode.ReplacementChar, tc.n)
-			if consumed != tc.wantConsumed {
-				t.Errorf("got consumed %d; want %d", consumed, tc.wantConsumed)
-			}
-			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("got err %v; want %v", err, tc.wantErr)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("content=%+q&n=%d", tc.content, tc.n),
+			func(t *testing.T) {
+				br := inout.NewBufferedReader(strings.NewReader(tc.content))
+				consumed, err := br.ConsumeRune(unicode.ReplacementChar, tc.n)
+				if consumed != tc.wantConsumed {
+					t.Errorf("got consumed %d; want %d",
+						consumed, tc.wantConsumed)
+				}
+				if !errors.Is(err, tc.wantErr) {
+					t.Errorf("got err %v; want %v", err, tc.wantErr)
+				}
+			},
+		)
 	}
 }
 
@@ -278,16 +294,20 @@ func TestResettableBufferedReader_ConsumeRuneFunc(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("content=%+q&n=%d", tc.content, tc.n), func(t *testing.T) {
-			br := inout.NewBufferedReader(strings.NewReader(tc.content))
-			consumed, err := br.ConsumeRuneFunc(f, tc.n)
-			if consumed != tc.wantConsumed {
-				t.Errorf("got consumed %d; want %d", consumed, tc.wantConsumed)
-			}
-			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("got err %v; want %v", err, tc.wantErr)
-			}
-		})
+		t.Run(
+			fmt.Sprintf("content=%+q&n=%d", tc.content, tc.n),
+			func(t *testing.T) {
+				br := inout.NewBufferedReader(strings.NewReader(tc.content))
+				consumed, err := br.ConsumeRuneFunc(f, tc.n)
+				if consumed != tc.wantConsumed {
+					t.Errorf("got consumed %d; want %d",
+						consumed, tc.wantConsumed)
+				}
+				if !errors.Is(err, tc.wantErr) {
+					t.Errorf("got err %v; want %v", err, tc.wantErr)
+				}
+			},
+		)
 	}
 }
 

@@ -40,7 +40,8 @@ import (
 //
 // The file is opened by os.Open;
 // the associated file descriptor has mode os.O_RDONLY.
-func Read(name string, opts *filesys.ReadOptions) (r filesys.Reader, err error) {
+func Read(name string, opts *filesys.ReadOptions) (
+	r filesys.Reader, err error) {
 	name, err = filepath.EvalSymlinks(name)
 	if err != nil {
 		return nil, errors.AutoWrap(err)

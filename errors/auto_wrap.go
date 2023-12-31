@@ -217,7 +217,12 @@ func AutoWrapSkip(err error, skip int) error {
 // If the target error message is empty,
 // it uses "<no error message>" instead.
 // If ms is invalid, it uses PrependFullFuncName instead.
-func AutoWrapCustom(err error, ms ErrorMessageStrategy, skip int, exclusions ErrorReadOnlySet) error {
+func AutoWrapCustom(
+	err error,
+	ms ErrorMessageStrategy,
+	skip int,
+	exclusions ErrorReadOnlySet,
+) error {
 	if err == nil || exclusions != nil && exclusions.Contains(err) {
 		return err
 	}
@@ -280,7 +285,8 @@ func UnwrapAllAutoWrappedErrors(err error) (error, bool) {
 // It returns the full function names and the final unwrapping result.
 //
 // If err is not an AutoWrappedError, it returns nil and err itself.
-func ListFunctionNamesInAutoWrappedErrors(err error) (names []string, root error) {
+func ListFunctionNamesInAutoWrappedErrors(err error) (
+	names []string, root error) {
 	root = err
 	for {
 		awe, ok := root.(AutoWrappedError)

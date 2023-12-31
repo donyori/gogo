@@ -24,7 +24,10 @@ import "github.com/donyori/gogo/constraints"
 // the hexadecimal representation x.
 //
 // It performs better than the comparison after encoding.
-func CanEncodeTo[Bytes1, Bytes2 constraints.ByteString](src Bytes1, x Bytes2) bool {
+func CanEncodeTo[Bytes1, Bytes2 constraints.ByteString](
+	src Bytes1,
+	x Bytes2,
+) bool {
 	n := EncodedLen(len(src))
 	if n != len(x) {
 		return false
@@ -43,7 +46,10 @@ func CanEncodeTo[Bytes1, Bytes2 constraints.ByteString](src Bytes1, x Bytes2) bo
 // the hexadecimal representation that has the specified prefix.
 //
 // It performs better than the comparison after encoding.
-func CanEncodeToPrefix[Bytes1, Bytes2 constraints.ByteString](src Bytes1, prefix Bytes2) bool {
+func CanEncodeToPrefix[Bytes1, Bytes2 constraints.ByteString](
+	src Bytes1,
+	prefix Bytes2,
+) bool {
 	n := len(prefix)
 	if n > EncodedLen(len(src)) {
 		return false

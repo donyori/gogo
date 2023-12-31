@@ -58,7 +58,8 @@ func EncodeInt64DstLen(digits int) int {
 // its length should be at least EncodeInt64DstLen(digits).
 func EncodeInt64(dst []byte, x int64, upper bool, digits int) int {
 	dstTooSmallMsgFn := func(required int) string {
-		return fmt.Sprintf("dst is too small, length: %d, required: %d", len(dst), required)
+		return fmt.Sprintf("dst is too small, length: %d, required: %d",
+			len(dst), required)
 	}
 
 	// Special cases for 0 and -0x8000000000000000 (minimum value of int64):
@@ -172,7 +173,8 @@ func EncodeInt64ToString(x int64, upper bool, digits int) string {
 // If digits is non-positive, no padding is applied.
 //
 // It returns the number of bytes written to w, and any write error encountered.
-func EncodeInt64To(w io.Writer, x int64, upper bool, digits int) (written int, err error) {
+func EncodeInt64To(w io.Writer, x int64, upper bool, digits int) (
+	written int, err error) {
 	if w == nil {
 		panic(errors.AutoMsg("w is nil"))
 	}
@@ -264,7 +266,8 @@ func EncodeInt64To(w io.Writer, x int64, upper bool, digits int) (written int, e
 // Caller should guarantee that (x != 0 || digits > 1) and
 // x != math.MinInt64 (= -0x8000000000000000).
 // These two special cases should be handled by the caller.
-func encodeInt64(buf *[int64BufferLen]byte, x int64, upper bool, digits int) (idx int) {
+func encodeInt64(buf *[int64BufferLen]byte, x int64, upper bool, digits int) (
+	idx int) {
 	ht := lowercaseHexTable
 	if upper {
 		ht = uppercaseHexTable
@@ -309,7 +312,12 @@ func encodeInt64(buf *[int64BufferLen]byte, x int64, upper bool, digits int) (id
 //
 // Caller should guarantee that w != nil, digits >= int64BufferLen,
 // and buf != nil.
-func writeSignAndLeadingZerosTo(w io.Writer, x int64, digits int, buf *[int64BufferLen]byte) (written int, err error) {
+func writeSignAndLeadingZerosTo(
+	w io.Writer,
+	x int64,
+	digits int,
+	buf *[int64BufferLen]byte,
+) (written int, err error) {
 	if x >= 0 {
 		buf[0] = '0'
 	} else {

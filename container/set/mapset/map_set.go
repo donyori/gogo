@@ -41,7 +41,10 @@ type mapSet[Item comparable] struct {
 // items are the initial items added to the set.
 //
 // New(0, nil) creates an empty set with a small starting capacity.
-func New[Item comparable](capacity int, items container.Container[Item]) set.Set[Item] {
+func New[Item comparable](
+	capacity int,
+	items container.Container[Item],
+) set.Set[Item] {
 	var n int
 	if items != nil {
 		n = items.Len()

@@ -167,5 +167,6 @@ func WrapFloatSlice[Item constraints.Float](slicePtr *[]Item) OrderedDynamicArra
 //
 // It panics if i or j is out of range.
 func (fs *floatSlice[Item]) Less(i, j int) bool {
-	return compare.FloatLess((*fs.SliceDynamicArray)[i], (*fs.SliceDynamicArray)[j])
+	return compare.FloatLess(
+		(*fs.SliceDynamicArray)[i], (*fs.SliceDynamicArray)[j])
 }

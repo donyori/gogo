@@ -435,11 +435,14 @@ func (sda *SliceDynamicArray[Item]) Clear() {
 func (sda *SliceDynamicArray[Item]) checkNonEmpty() {
 	switch {
 	case sda == nil:
-		panic(errors.AutoMsgCustom(nilSliceDynamicArrayPointerPanicMessage, -1, 1))
+		panic(errors.AutoMsgCustom(
+			nilSliceDynamicArrayPointerPanicMessage, -1, 1))
 	case *sda == nil:
-		panic(errors.AutoMsgCustom(nilSliceDynamicArrayPanicMessage, -1, 1))
+		panic(errors.AutoMsgCustom(
+			nilSliceDynamicArrayPanicMessage, -1, 1))
 	case len(*sda) == 0:
-		panic(errors.AutoMsgCustom(emptySliceDynamicArrayPanicMessage, -1, 1))
+		panic(errors.AutoMsgCustom(
+			emptySliceDynamicArrayPanicMessage, -1, 1))
 	}
 }
 

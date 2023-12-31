@@ -67,26 +67,32 @@ func TestPrintCopyrightNotice(t *testing.T) {
 			wantErr: agpl3.ErrAuthorMissing,
 		},
 		{
-			author:            Author,
-			wantNoticePattern: fmt.Sprintf(CopyrightNoticePatternLayout, "(.)+", nowYear, Author),
+			author: Author,
+			wantNoticePattern: fmt.Sprintf(
+				CopyrightNoticePatternLayout, "(.)+", nowYear, Author),
 		},
 		{
-			author:            Author,
-			source:            Source,
-			wantNoticePattern: fmt.Sprintf(CopyrightNoticeWithSourcePatternLayout, "(.)+", nowYear, Author, Source),
+			author: Author,
+			source: Source,
+			wantNoticePattern: fmt.Sprintf(
+				CopyrightNoticeWithSourcePatternLayout,
+				"(.)+", nowYear, Author, Source),
 		},
 		{
-			program:           Program,
-			year:              year,
-			author:            Author,
-			wantNoticePattern: fmt.Sprintf(CopyrightNoticePatternLayout, Program, year, Author),
+			program: Program,
+			year:    year,
+			author:  Author,
+			wantNoticePattern: fmt.Sprintf(
+				CopyrightNoticePatternLayout, Program, year, Author),
 		},
 		{
-			program:           Program,
-			year:              year,
-			author:            Author,
-			source:            Source,
-			wantNoticePattern: fmt.Sprintf(CopyrightNoticeWithSourcePatternLayout, Program, year, Author, Source),
+			program: Program,
+			year:    year,
+			author:  Author,
+			source:  Source,
+			wantNoticePattern: fmt.Sprintf(
+				CopyrightNoticeWithSourcePatternLayout,
+				Program, year, Author, Source),
 		},
 	}
 
@@ -95,10 +101,12 @@ func TestPrintCopyrightNotice(t *testing.T) {
 			tc.program, tc.year, tc.author, tc.source), func(t *testing.T) {
 			p, err := regexp.Compile(tc.wantNoticePattern)
 			if err != nil {
-				t.Fatalf("cannot compile regular expression %q", tc.wantNoticePattern)
+				t.Fatalf("cannot compile regular expression %q",
+					tc.wantNoticePattern)
 			}
 			w := new(strings.Builder)
-			n, err := agpl3.PrintCopyrightNotice(w, tc.program, tc.year, tc.author, tc.source)
+			n, err := agpl3.PrintCopyrightNotice(
+				w, tc.program, tc.year, tc.author, tc.source)
 			if wLen := w.Len(); n != wLen {
 				t.Errorf("n, got %d; want %d", n, wLen)
 			}
@@ -110,7 +118,8 @@ func TestPrintCopyrightNotice(t *testing.T) {
 			}
 			matches := p.FindStringSubmatch(w.String())
 			if matches == nil {
-				t.Fatalf("output cannot match regular expression, output:\n%s\nregular expression:\n%s", w.String(), tc.wantNoticePattern)
+				t.Fatalf("output cannot match regular expression, output:\n%s\nregular expression:\n%s",
+					w.String(), tc.wantNoticePattern)
 			}
 			if tc.program == "" {
 				if len(matches) != 4 {
@@ -118,7 +127,8 @@ func TestPrintCopyrightNotice(t *testing.T) {
 				}
 				for i := 2; i < len(matches); i++ {
 					if matches[i-1] != matches[i] {
-						t.Errorf("different program names at %d (%s) and %d (%s)", i-1, matches[i-1], i, matches[i])
+						t.Errorf("different program names at %d (%s) and %d (%s)",
+							i-1, matches[i-1], i, matches[i])
 					}
 				}
 			}
@@ -181,17 +191,21 @@ func TestResponseShowWC(t *testing.T) {
 				)
 			}
 			if n != w.Len() || n != len(tc.wantOutput) {
-				t.Errorf("n, got %d; w.Len() is %d; want %d", n, w.Len(), len(tc.wantOutput))
+				t.Errorf("n, got %d; w.Len() is %d; want %d",
+					n, w.Len(), len(tc.wantOutput))
 			}
 		})
 	}
 }
 
 func argsToName(args []string) string {
-	return fmtcoll.MustFormatSliceToString(args, &fmtcoll.SequenceFormat[string]{
-		CommonFormat: fmtcoll.CommonFormat{
-			Separator: ",",
+	return fmtcoll.MustFormatSliceToString(
+		args,
+		&fmtcoll.SequenceFormat[string]{
+			CommonFormat: fmtcoll.CommonFormat{
+				Separator: ",",
+			},
+			FormatItemFn: fmtcoll.FprintfToFormatFunc[string]("%+q"),
 		},
-		FormatItemFn: fmtcoll.FprintfToFormatFunc[string]("%+q"),
-	})
+	)
 }

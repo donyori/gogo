@@ -41,7 +41,8 @@ func TestUint64EncodedLenFunctions(t *testing.T) {
 		t.Run(fn.name, func(t *testing.T) {
 			for i, u := range uint64s {
 				t.Run(fmt.Sprintf("u=%#X", u), func(t *testing.T) {
-					if n := vlq.Uint64EncodedLen(u); n != len(encodedUint64s[i]) {
+					n := vlq.Uint64EncodedLen(u)
+					if n != len(encodedUint64s[i]) {
 						t.Errorf("got %d; want %d", n, len(encodedUint64s[i]))
 					}
 				})
@@ -111,24 +112,31 @@ func TestEncodeInt64(t *testing.T) {
 func TestFloat64EncodedLen(t *testing.T) {
 	for i, u := range uint64s {
 		f := uintconv.ToFloat64ByteReversal(u)
-		t.Run(fmt.Sprintf("f=%v(bits=%#016X)", f, math.Float64bits(f)), func(t *testing.T) {
-			if n := vlq.Float64EncodedLen(f); n != len(encodedUint64s[i]) {
-				t.Errorf("got %d; want %d", n, len(encodedUint64s[i]))
-			}
-		})
+		t.Run(
+			fmt.Sprintf("f=%v(bits=%#016X)", f, math.Float64bits(f)),
+			func(t *testing.T) {
+				n := vlq.Float64EncodedLen(f)
+				if n != len(encodedUint64s[i]) {
+					t.Errorf("got %d; want %d", n, len(encodedUint64s[i]))
+				}
+			},
+		)
 	}
 }
 
 func TestEncodeFloat64(t *testing.T) {
 	for i, u := range uint64s {
 		f := uintconv.ToFloat64ByteReversal(u)
-		t.Run(fmt.Sprintf("f=%v(bits=%#016X)", f, math.Float64bits(f)), func(t *testing.T) {
-			dst := make([]byte, 10)
-			n := vlq.EncodeFloat64(dst, f)
-			if !bytes.Equal(dst[:n], encodedUint64s[i]) {
-				t.Errorf("got %#X; want %#X", dst[:n], encodedUint64s[i])
-			}
-		})
+		t.Run(
+			fmt.Sprintf("f=%v(bits=%#016X)", f, math.Float64bits(f)),
+			func(t *testing.T) {
+				dst := make([]byte, 10)
+				n := vlq.EncodeFloat64(dst, f)
+				if !bytes.Equal(dst[:n], encodedUint64s[i]) {
+					t.Errorf("got %#X; want %#X", dst[:n], encodedUint64s[i])
+				}
+			},
+		)
 	}
 }
 

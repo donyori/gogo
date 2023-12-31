@@ -93,20 +93,24 @@ func TestAutoNewCustom(t *testing.T) {
 	// ".func1.1" is the anonymous inner function that calls function AutoNewCustom.
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?msg=%+q&ms=%s(%[3]d)&skip=%d", i, tc.msg, tc.ms, tc.skip), func(t *testing.T) {
-			func() { // use an inner function to test the "skip"
-				got := errors.AutoNewCustom(tc.msg, tc.ms, tc.skip)
-				if gotMsg := got.Error(); gotMsg != tc.wantMsg {
-					t.Errorf("got msg %q; want %q", gotMsg, tc.wantMsg)
-				}
-				unwrap := stderrors.Unwrap(got)
-				if unwrap == nil {
-					t.Fatal("Unwrap returns nil")
-				}
-				if unwrapMsg := unwrap.Error(); unwrapMsg != tc.msg {
-					t.Errorf("unwrap msg %q; want %q", unwrapMsg, tc.msg)
-				}
-			}()
-		})
+		t.Run(
+			fmt.Sprintf("case %d?msg=%+q&ms=%s(%[3]d)&skip=%d",
+				i, tc.msg, tc.ms, tc.skip),
+			func(t *testing.T) {
+				func() { // use an inner function to test the "skip"
+					got := errors.AutoNewCustom(tc.msg, tc.ms, tc.skip)
+					if gotMsg := got.Error(); gotMsg != tc.wantMsg {
+						t.Errorf("got msg %q; want %q", gotMsg, tc.wantMsg)
+					}
+					unwrap := stderrors.Unwrap(got)
+					if unwrap == nil {
+						t.Fatal("Unwrap returns nil")
+					}
+					if unwrapMsg := unwrap.Error(); unwrapMsg != tc.msg {
+						t.Errorf("unwrap msg %q; want %q", unwrapMsg, tc.msg)
+					}
+				}()
+			},
+		)
 	}
 }

@@ -26,7 +26,7 @@ type PredeclaredSignedInteger interface {
 
 // SignedInteger is a constraint for signed integers.
 // It matches any type whose underlying type is one of int, int8, int16,
-// int32 (rune), or int64.
+// int32 (rune), and int64.
 type SignedInteger interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64
 }
@@ -40,7 +40,7 @@ type PredeclaredUnsignedInteger interface {
 
 // UnsignedInteger is a constraint for unsigned integers.
 // It matches any type whose underlying type is one of uint, uint8 (byte),
-// uint16, uint32, uint64, or uintptr.
+// uint16, uint32, uint64, and uintptr.
 type UnsignedInteger interface {
 	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
 }
@@ -54,7 +54,7 @@ type PredeclaredInteger interface {
 
 // Integer is a constraint for integers.
 // It matches any type whose underlying type is one of int, int8, int16,
-// int32 (rune), int64, uint, uint8 (byte), uint16, uint32, uint64, or uintptr.
+// int32 (rune), int64, uint, uint8 (byte), uint16, uint32, uint64, and uintptr.
 type Integer interface {
 	SignedInteger | UnsignedInteger
 }
@@ -81,7 +81,7 @@ type PredeclaredReal interface {
 // Real is a constraint for real numbers.
 // It matches any type whose underlying type is one of int, int8, int16,
 // int32 (rune), int64, uint, uint8 (byte), uint16, uint32, uint64, uintptr,
-// float32, or float64.
+// float32, and float64.
 type Real interface {
 	Integer | Float
 }
@@ -108,7 +108,7 @@ type PredeclaredNumeric interface {
 // Numeric is a constraint for numerics.
 // It matches any type whose underlying type is one of int, int8, int16,
 // int32 (rune), int64, uint, uint8 (byte), uint16, uint32, uint64, uintptr,
-// float32, float64, complex64, or complex128.
+// float32, float64, complex64, and complex128.
 type Numeric interface {
 	Real | Complex
 }

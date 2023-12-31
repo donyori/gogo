@@ -85,13 +85,17 @@ func TestAutoMsgCustom(t *testing.T) {
 	// ".func1.1" is the anonymous inner function that calls function AutoMsgCustom.
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?msg=%+q&ms=%s(%[3]d)&skip=%d", i, tc.msg, tc.ms, tc.skip), func(t *testing.T) {
-			func() { // use an inner function to test the "skip"
-				s := errors.AutoMsgCustom(tc.msg, tc.ms, tc.skip)
-				if s != tc.want {
-					t.Errorf("got %q; want %q", s, tc.want)
-				}
-			}()
-		})
+		t.Run(
+			fmt.Sprintf("case %d?msg=%+q&ms=%s(%[3]d)&skip=%d",
+				i, tc.msg, tc.ms, tc.skip),
+			func(t *testing.T) {
+				func() { // use an inner function to test the "skip"
+					s := errors.AutoMsgCustom(tc.msg, tc.ms, tc.skip)
+					if s != tc.want {
+						t.Errorf("got %q; want %q", s, tc.want)
+					}
+				}()
+			},
+		)
 	}
 }

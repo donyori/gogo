@@ -222,7 +222,8 @@ func (b *broadcaster[Message]) Unsubscribe(c <-chan Message) []Message {
 	}
 	outC := b.cm[c]
 	if outC == nil {
-		panic(errors.AutoMsg("c is not gotten from this broadcaster or has already unsubscribed"))
+		panic(errors.AutoMsg(
+			"c is not gotten from this broadcaster or has already unsubscribed"))
 	}
 	close(outC)
 	delete(b.cm, c)

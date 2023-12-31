@@ -41,7 +41,8 @@ func TestChecksum(t *testing.T) {
 		filename := entry.Name()
 		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
 			name := filepath.Join(TestDataDir, filename)
-			checksums, err := lazyCalculateChecksums(name, newHashes[:len(newHashes)-2]...)
+			checksums, err := lazyCalculateChecksums(
+				name, newHashes[:len(newHashes)-2]...)
 			if err != nil {
 				t.Fatal("calculate checksums -", err)
 			}
@@ -80,7 +81,8 @@ func TestVerifyChecksum(t *testing.T) {
 		}
 		for _, tc := range testCases {
 			t.Run("hvs="+tc.hvsName, func(t *testing.T) {
-				if got := local.VerifyChecksum(nonExistFilename, tc.hvs...); got {
+				got := local.VerifyChecksum(nonExistFilename, tc.hvs...)
+				if got {
 					t.Error("got true; want false")
 				}
 			})

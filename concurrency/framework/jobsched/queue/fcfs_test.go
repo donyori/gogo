@@ -30,5 +30,6 @@ func TestFCFSJobQueue(t *testing.T) {
 	for i := range want {
 		want[i] = []int{metaJobs[i].Job}
 	}
-	testJobQueueFunc(t, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty](), want)
+	testJobQueueFunc(
+		t, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty](), want)
 }

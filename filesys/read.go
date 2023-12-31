@@ -145,7 +145,7 @@ type Reader interface {
 //
 // Use it with Read functions.
 type reader struct {
-	err  error // should be one of nil, ErrIsDir, ErrReadZip, and ErrFileReaderClosed.
+	err  error // should be one of nil, ErrIsDir, ErrReadZip, and ErrFileReaderClosed
 	br   inout.ResettableBufferedReader
 	ur   io.Reader // unbuffered reader
 	c    inout.Closer

@@ -58,7 +58,8 @@ func NewClosedError(deviceName string, parentErr error) *ClosedError {
 	if parentErr == nil {
 		parentErr = ErrClosed
 	} else if !errors.Is(parentErr, ErrClosed) {
-		panic(errors.AutoMsg("parentErr is neither nil nor an ErrClosed (errors.Is(parentErr, ErrClosed) returns false)"))
+		panic(errors.AutoMsg(
+			"parentErr is neither nil nor an ErrClosed (errors.Is(parentErr, ErrClosed) returns false)"))
 	}
 	return &ClosedError{
 		device: deviceName,
@@ -85,7 +86,8 @@ func (ce *ClosedError) Error() string {
 	} else if ce.device == "" {
 		if ce.parent != nil {
 			// This should never happen, but will act as a safeguard for later.
-			panic(errors.AutoMsg("ClosedError has an empty device but a non-nil parent"))
+			panic(errors.AutoMsg(
+				"ClosedError has an empty device but a non-nil parent"))
 		}
 		return "closer is already closed (zero-value ClosedError)"
 	}

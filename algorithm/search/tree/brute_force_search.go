@@ -115,9 +115,11 @@ func DFS[Node any](itf AccessNode[Node], initArgs ...any) (
 			return
 		}
 		// Following code is a simplification of the procedure:
-		//  1. Pop the current node from the stack;
-		//  2. Push the next sibling of the current node to the stack if exists;
-		//  3. Push the first child of the current node to the stack if exists.
+		//   1. Pop the current node from the stack;
+		//   2. Push the next sibling of the current node
+		//      to the stack if exists;
+		//   3. Push the first child of the current node
+		//      to the stack if exists.
 		ns, ok := itf.NextSibling(top.node)
 		if ok {
 			stack[len(stack)-1].node = ns // just update stack[len(stack)-1].node

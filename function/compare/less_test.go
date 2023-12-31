@@ -39,21 +39,32 @@ func TestOrderedLess(t *testing.T) {
 		{math.NaN(), math.Inf(1)}, {math.Inf(1), math.NaN()},
 		{math.NaN(), math.Inf(-1)}, {math.Inf(-1), math.NaN()},
 	}
-	stringPairs := [][2]string{{"hello", "hell"}, {"hell", "hello"}, {"hello", "hello"}}
+	stringPairs := [][2]string{
+		{"hello", "hell"},
+		{"hell", "hello"},
+		{"hello", "hello"},
+	}
 	subtestOrderedLess(t, "int", intPairs)
 	subtestOrderedLess(t, "float64", float64Pairs)
 	subtestOrderedLess(t, "string", stringPairs)
 }
 
-func subtestOrderedLess[T constraints.Ordered](t *testing.T, name string, data [][2]T) {
+func subtestOrderedLess[T constraints.Ordered](
+	t *testing.T,
+	name string,
+	data [][2]T,
+) {
 	t.Run(name, func(t *testing.T) {
 		for _, pair := range data {
 			a, b := pair[0], pair[1]
-			t.Run(fmt.Sprintf("a=%v(%[1]T)&b=%v(%[2]T)", a, b), func(t *testing.T) {
-				if got := compare.OrderedLess[T](a, b); got != (a < b) {
-					t.Errorf("got %t", got)
-				}
-			})
+			t.Run(
+				fmt.Sprintf("a=%v(%[1]T)&b=%v(%[2]T)", a, b),
+				func(t *testing.T) {
+					if got := compare.OrderedLess[T](a, b); got != (a < b) {
+						t.Errorf("got %t", got)
+					}
+				},
+			)
 		}
 	})
 }
@@ -86,7 +97,8 @@ func TestFloatLess(t *testing.T) {
 	})
 	float32Pairs := make([][2]float32, len(float64Pairs))
 	for i := range float32Pairs {
-		float32Pairs[i][0], float32Pairs[i][1] = float32(float64Pairs[i][0]), float32(float64Pairs[i][1])
+		float32Pairs[i][0] = float32(float64Pairs[i][0])
+		float32Pairs[i][1] = float32(float64Pairs[i][1])
 	}
 	t.Run("float32", func(t *testing.T) {
 		for i := range float32Pairs {

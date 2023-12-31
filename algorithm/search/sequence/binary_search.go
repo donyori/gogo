@@ -149,7 +149,10 @@ func BinarySearch[Item any](itf BinarySearchInterface[Item], goal Item) int {
 // and set goal to an arbitrary value, such as a zero value.
 //
 // Time complexity: O(log n), where n = itf.Len().
-func BinarySearchMaxLess[Item any](itf BinarySearchInterface[Item], goal Item) int {
+func BinarySearchMaxLess[Item any](
+	itf BinarySearchInterface[Item],
+	goal Item,
+) int {
 	itf.SetGoal(goal)
 	// Denote the first return value of itf.Cmp(i) as f(i).
 	// Define f(-1) < 0 and f(itf.Len()) >= 0.
@@ -189,7 +192,10 @@ func BinarySearchMaxLess[Item any](itf BinarySearchInterface[Item], goal Item) i
 // and set goal to an arbitrary value, such as a zero value.
 //
 // Time complexity: O(log n), where n = itf.Len().
-func BinarySearchMinGreater[Item any](itf BinarySearchInterface[Item], goal Item) int {
+func BinarySearchMinGreater[Item any](
+	itf BinarySearchInterface[Item],
+	goal Item,
+) int {
 	itf.SetGoal(goal)
 	// Denote the first return value of itf.Cmp(i) as f(i).
 	// Define f(-1) <= 0 and f(itf.Len()) > 0.
@@ -309,7 +315,8 @@ func (absa *arrayBinarySearchAdapter[Item]) Len() int {
 	return absa.data.Len()
 }
 
-func (absa *arrayBinarySearchAdapter[Item]) Cmp(i int) (lessEqualOrGreater int, isGoal bool) {
+func (absa *arrayBinarySearchAdapter[Item]) Cmp(i int) (
+	lessEqualOrGreater int, isGoal bool) {
 	item := absa.data.Get(i)
 	if absa.lessFn(item, absa.goal) {
 		return -1, false

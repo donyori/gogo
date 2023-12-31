@@ -173,7 +173,9 @@ func AnySliceEqual[S constraints.Slice[T], T any](a, b S) bool {
 // nilEqualToEmpty indicates whether to consider
 // a nil slice equal to a non-nil empty slice.
 func EqualToSliceEqual[S constraints.Slice[T], T any](
-	ef EqualFunc[T], nilEqualToEmpty bool) EqualFunc[S] {
+	ef EqualFunc[T],
+	nilEqualToEmpty bool,
+) EqualFunc[S] {
 	if ef == nil {
 		ef = func(a, b T) bool {
 			return AnyEqual(a, b)
@@ -243,7 +245,9 @@ func SliceEqualWithoutOrder[S constraints.Slice[T], T comparable](a, b S) bool {
 //
 // The client can instantiate it to get an EqualFunc.
 func FloatSliceEqualWithoutOrder[S constraints.Slice[T], T constraints.Float](
-	a, b S) bool {
+	a S,
+	b S,
+) bool {
 	n := len(a)
 	if n != len(b) {
 		return false
@@ -316,8 +320,10 @@ func MapEqual[M constraints.Map[K, V], K, V comparable](a, b M) bool {
 // if v1 == v2 or both v1 and v2 are NaN.
 //
 // The client can instantiate it to get an EqualFunc.
-func FloatValueMapEqual[M constraints.Map[K, V],
-	K comparable, V constraints.Float](a, b M) bool {
+func FloatValueMapEqual[M constraints.Map[K, V], K comparable, V constraints.Float](
+	a M,
+	b M,
+) bool {
 	n := len(a)
 	if n != len(b) {
 		return false
@@ -343,7 +349,9 @@ func FloatValueMapEqual[M constraints.Map[K, V],
 //
 // The client can instantiate it to get an EqualFunc.
 func AnyValueMapEqual[M constraints.Map[K, V], K comparable, V any](
-	a, b M) bool {
+	a M,
+	b M,
+) bool {
 	n := len(a)
 	if n != len(b) {
 		return false
@@ -369,7 +377,9 @@ func AnyValueMapEqual[M constraints.Map[K, V], K comparable, V any](
 // nilEqualToEmpty indicates whether to consider
 // a nil map equal to a non-nil empty map.
 func ValueEqualToMapEqual[M constraints.Map[K, V], K comparable, V any](
-	ef EqualFunc[V], nilEqualToEmpty bool) EqualFunc[M] {
+	ef EqualFunc[V],
+	nilEqualToEmpty bool,
+) EqualFunc[M] {
 	if ef == nil {
 		ef = func(a, b V) bool {
 			return AnyEqual(a, b)

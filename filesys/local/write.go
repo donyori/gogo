@@ -80,7 +80,8 @@ func WriteTrunc(
 	mkDirs bool,
 	opts *filesys.WriteOptions,
 ) (w filesys.Writer, err error) {
-	w, err = writeOpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm, mkDirs, opts)
+	w, err = writeOpenFile(
+		name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm, mkDirs, opts)
 	return w, errors.AutoWrap(err)
 }
 
@@ -104,7 +105,8 @@ func WriteAppend(
 	mkDirs bool,
 	opts *filesys.WriteOptions,
 ) (w filesys.Writer, err error) {
-	w, err = writeOpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_APPEND, perm, mkDirs, opts)
+	w, err = writeOpenFile(
+		name, os.O_WRONLY|os.O_CREATE|os.O_APPEND, perm, mkDirs, opts)
 	return w, errors.AutoWrap(err)
 }
 
@@ -128,6 +130,7 @@ func WriteExcl(
 	mkDirs bool,
 	opts *filesys.WriteOptions,
 ) (w filesys.Writer, err error) {
-	w, err = writeOpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm, mkDirs, opts)
+	w, err = writeOpenFile(
+		name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm, mkDirs, opts)
 	return w, errors.AutoWrap(err)
 }
