@@ -48,7 +48,7 @@ func TestBroadcaster_Broadcast(t *testing.T) {
 	}
 	var barriersWaitOnce [NumMessage]sync.Once
 
-	random := rand.New(rand.NewSource(10)) // use a fixed seed for debugging
+	random := rand.New(rand.NewSource(10))
 	var delayDurations [NumGoroutine][NumMessage - 1]time.Duration
 	for i := 0; i < NumGoroutine; i++ {
 		for k := 0; k < NumMessage-1; k++ {
