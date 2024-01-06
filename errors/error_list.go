@@ -226,9 +226,7 @@ func (el *errorList) Deduplicate() {
 	if n == len(el.list) {
 		return
 	}
-	for i := n; i < len(el.list); i++ {
-		el.list[i] = nil
-	}
+	clear(el.list[n:]) // avoid memory leak
 	el.list = el.list[:n]
 }
 
