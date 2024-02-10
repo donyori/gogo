@@ -42,7 +42,7 @@ func FormatMapToString[M constraints.Map[Key, Value], Key comparable, Value any]
 ) (result string, err error) {
 	result, err = formatMapToString(
 		format,
-		reflect.TypeOf(m).String(),
+		reflect.TypeFor[M]().String(),
 		m == nil,
 		len(m),
 		func(handler func(x mapping.Entry[Key, Value]) (cont bool)) {

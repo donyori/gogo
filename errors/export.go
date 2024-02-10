@@ -58,4 +58,4 @@ func Join(errs ...error) error {
 }
 
 // errorPointerType is the reflect.Type of *error.
-var errorPointerType = reflect.TypeOf((*error)(nil))
+var errorPointerType = reflect.TypeFor[*error]()

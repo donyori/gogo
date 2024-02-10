@@ -68,7 +68,7 @@ type Controller[Job, Properties, Feedback any] interface {
 type NoFeedback struct{}
 
 // noFeedbackType is the reflect.Type of NoFeedback.
-var noFeedbackType = reflect.TypeOf(NoFeedback{})
+var noFeedbackType = reflect.TypeFor[NoFeedback]()
 
 // JobHandler is a function to process a job.
 //
@@ -222,8 +222,7 @@ func New[Job, Properties, Feedback any](
 		cleanup: opts.Cleanup,
 	}
 	ctrl.lo = concurrency.NewOnce(ctrl.launchProc)
-	// Use reflect.TypeOf((*Feedback)(nil)).Elem() to work with interface types.
-	if reflect.TypeOf((*Feedback)(nil)).Elem() != noFeedbackType {
+	if reflect.TypeFor[Feedback]() != noFeedbackType {
 		bufSize := opts.FeedbackChanBufSize
 		if bufSize < 0 {
 			bufSize = 0

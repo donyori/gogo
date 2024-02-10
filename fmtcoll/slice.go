@@ -41,7 +41,7 @@ func FormatSliceToString[S constraints.Slice[Item], Item any](
 ) (result string, err error) {
 	result, err = formatSequenceToString(
 		format,
-		reflect.TypeOf(s).String(),
+		reflect.TypeFor[S]().String(),
 		s == nil,
 		len(s),
 		func(handler func(x Item) (cont bool)) {

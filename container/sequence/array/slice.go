@@ -239,7 +239,7 @@ func (sda *SliceDynamicArray[Item]) Insert(i int, x Item) {
 		sda.Push(x)
 		return
 	}
-	_ = (*sda)[i] // ensure i is valid
+	_ = (*sda)[i:] // ensure i is valid
 	*sda = slices.Insert(*sda, i, x)
 }
 
@@ -289,7 +289,7 @@ func (sda *SliceDynamicArray[Item]) InsertSequence(
 		sda.Append(s)
 		return
 	}
-	_ = (*sda)[i] // ensure i is valid
+	_ = (*sda)[i:] // ensure i is valid
 	if s == nil {
 		return
 	}
@@ -315,16 +315,14 @@ func (sda *SliceDynamicArray[Item]) InsertSequence(
 // It panics if begin or end is out of range, or begin > end.
 func (sda *SliceDynamicArray[Item]) Cut(begin, end int) {
 	sda.checkNonEmpty()
-	_ = (*sda)[begin:end] // ensure begin and end are valid
+	_ = (*sda)[begin:end:len(*sda)] // ensure begin and end are valid
 	if begin == end {
 		return
 	} else if end == len(*sda) {
 		sda.Truncate(begin)
 		return
 	}
-	copy((*sda)[begin:], (*sda)[end:])
-	clear((*sda)[len(*sda)-end+begin:]) // avoid memory leak
-	*sda = (*sda)[:len(*sda)-end+begin]
+	*sda = slices.Delete(*sda, begin, end)
 }
 
 // CutWithoutOrder removes items from argument begin (inclusive) to
@@ -333,7 +331,7 @@ func (sda *SliceDynamicArray[Item]) Cut(begin, end int) {
 // It panics if begin or end is out of range, or begin > end.
 func (sda *SliceDynamicArray[Item]) CutWithoutOrder(begin, end int) {
 	sda.checkNonEmpty()
-	_ = (*sda)[begin:end] // ensure begin and end are valid
+	_ = (*sda)[begin:end:len(*sda)] // ensure begin and end are valid
 	if begin == end {
 		return
 	} else if end == len(*sda) {
@@ -380,7 +378,7 @@ func (sda *SliceDynamicArray[Item]) Expand(i, n int) {
 		sda.Extend(n)
 		return
 	}
-	_ = (*sda)[i] // ensure i is valid
+	_ = (*sda)[i:] // ensure i is valid
 	if len(*sda)+n > cap(*sda) {
 		*sda = append(*sda, make([]Item, n)...)
 	} else {
