@@ -21,7 +21,7 @@ package mathalgo_test
 import (
 	"fmt"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/donyori/gogo/algorithm/mathalgo"
@@ -30,6 +30,9 @@ import (
 )
 
 const NumTestIntegerPrimeFactors int = 3
+
+// ChaCha8Seed is the seed for ChaCha8 used for testing.
+var ChaCha8Seed = [32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))
 
 var (
 	testIntegers          []int
@@ -148,7 +151,7 @@ func TestGCD_RandomlySelectInt(t *testing.T) {
 	const N int = 100
 	xsNameSet := make(map[string]struct{}, N)
 	xsNameSet[""] = struct{}{}
-	random := rand.New(rand.NewSource(20))
+	random := rand.New(rand.NewChaCha8(ChaCha8Seed))
 	for i := 0; i < N; i++ {
 		xs, xsName := randomlySelectInts(t, random, xsNameSet)
 		if t.Failed() {
@@ -187,7 +190,7 @@ func TestGCD_AllRandom(t *testing.T) {
 	xsNameSet := make(map[string]struct{}, N)
 	xsNameSet[""] = struct{}{}
 	var isWantMoreThan1 bool
-	random := rand.New(rand.NewSource(30))
+	random := rand.New(rand.NewChaCha8(ChaCha8Seed))
 	for i := 0; i < N; i++ {
 		xs, xsName := randomlyGenerateInts(t, random, xsNameSet)
 		if t.Failed() {
@@ -379,12 +382,12 @@ func randomlySelectInts(
 ) (xs []int, xsName string) {
 	const MaxTry int = 100
 	const MaxLen int = 64
-	xs = make([]int, 1+random.Intn(MaxLen))
+	xs = make([]int, 1+random.IntN(MaxLen))
 	_, duplicated := xsNameSet[xsName]
 	for try := 0; duplicated && try < MaxTry; try++ {
 		for i := range xs {
-			xs[i] = testIntegers[random.Intn(len(testIntegers))]
-			if random.Int31n(2) == 0 {
+			xs[i] = testIntegers[random.IntN(len(testIntegers))]
+			if random.Uint64()&1 == 0 {
 				xs[i] = -xs[i]
 			}
 		}
@@ -417,11 +420,11 @@ func randomlyGenerateInts(
 	const MaxTry int = 100
 	const MaxLen int = 4
 	const MaxX int = 127
-	xs = make([]int, 1+random.Intn(MaxLen))
+	xs = make([]int, 1+random.IntN(MaxLen))
 	_, duplicated := xsNameSet[xsName]
 	for try := 0; duplicated && try < MaxTry; try++ {
 		for i := range xs {
-			xs[i] = random.Intn(MaxX + 1)
+			xs[i] = random.IntN(MaxX + 1)
 		}
 		xsName = xsToName(xs)
 		_, duplicated = xsNameSet[xsName]

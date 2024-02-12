@@ -20,7 +20,7 @@ package local_test
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"runtime"
 	"strings"
@@ -29,6 +29,7 @@ import (
 	"unsafe"
 
 	"github.com/donyori/gogo/filesys/local"
+	"github.com/donyori/gogo/randbytes"
 )
 
 func TestCaptureStdoutToString(t *testing.T) {
@@ -77,8 +78,10 @@ func testCaptureOutputFileToString(
 	// in a system with a page size of 4096 bytes) since Linux 2.6.11;
 	// see <https://man7.org/linux/man-pages/man7/pipe.7.html>).
 	// Use 1GB to test whether the OS pipe buffer will overflow.
-	buf := make([]byte, OneGB)
-	rand.New(rand.NewSource(20)).Read(buf)
+	buf := randbytes.Make(
+		rand.NewChaCha8([32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))),
+		OneGB,
+	)
 	// Since buf is large, use package unsafe to convert buf to a string
 	// to avoid allocation and copying.
 	bufStr := unsafe.String(unsafe.SliceData(buf), len(buf))
@@ -178,8 +181,10 @@ func testCaptureOutputFileToStringConcurrent(
 	// in a system with a page size of 4096 bytes) since Linux 2.6.11;
 	// see <https://man7.org/linux/man-pages/man7/pipe.7.html>).
 	// Use 1GB to test whether the OS pipe buffer will overflow.
-	buf := make([]byte, OneGB)
-	rand.New(rand.NewSource(20)).Read(buf)
+	buf := randbytes.Make(
+		rand.NewChaCha8([32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))),
+		OneGB,
+	)
 	// Since buf is large, use package unsafe to convert buf to a string
 	// to avoid allocation and copying.
 	bufStr := unsafe.String(unsafe.SliceData(buf), len(buf))

@@ -27,7 +27,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"testing"
@@ -35,6 +35,7 @@ import (
 
 	"github.com/donyori/gogo/filesys"
 	"github.com/donyori/gogo/filesys/local"
+	"github.com/donyori/gogo/randbytes"
 )
 
 func TestWriteTrunc(t *testing.T) {
@@ -77,8 +78,10 @@ func TestWriteTrunc_MkDirs(t *testing.T) {
 }
 
 func TestWriteTrunc_TarTgz(t *testing.T) {
-	big := make([]byte, 13<<10)
-	rand.New(rand.NewSource(100)).Read(big)
+	big := randbytes.Make(
+		rand.NewChaCha8([32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))),
+		13<<10,
+	)
 	tarFiles := []tarFileNameBody{
 		{
 			name: "tardir/",
@@ -123,8 +126,10 @@ Sugar is sweet.
 }
 
 func TestWriteTrunc_Zip(t *testing.T) {
-	big := make([]byte, 13<<10)
-	rand.New(rand.NewSource(100)).Read(big)
+	big := randbytes.Make(
+		rand.NewChaCha8([32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))),
+		13<<10,
+	)
 	zipNameBodyMap := map[string][]byte{
 		"zipdir/":              nil,
 		"zipdir/zip file1.txt": []byte("This is ZIP file 1."),

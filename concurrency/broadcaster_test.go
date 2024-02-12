@@ -20,7 +20,7 @@ package concurrency_test
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"strings"
 	"sync"
 	"testing"
@@ -48,12 +48,13 @@ func TestBroadcaster_Broadcast(t *testing.T) {
 	}
 	var barriersWaitOnce [NumMessage]sync.Once
 
-	random := rand.New(rand.NewSource(10))
+	random := rand.New(rand.NewChaCha8(
+		[32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))))
 	var delayDurations [NumGoroutine][NumMessage - 1]time.Duration
 	for i := 0; i < NumGoroutine; i++ {
 		for k := 0; k < NumMessage-1; k++ {
 			delayDurations[i][k] = time.Microsecond * time.Duration(
-				random.Intn(NumGoroutine))
+				random.IntN(NumGoroutine))
 		}
 	}
 

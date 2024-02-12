@@ -21,7 +21,7 @@ package mathalgo_test
 import (
 	"fmt"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/donyori/gogo/algorithm/mathalgo"
@@ -102,7 +102,7 @@ func TestLCM_RandomlySelectInt(t *testing.T) {
 	const N int = 100
 	xsNameSet := make(map[string]struct{}, N)
 	xsNameSet[""] = struct{}{}
-	random := rand.New(rand.NewSource(20))
+	random := rand.New(rand.NewChaCha8(ChaCha8Seed))
 	for i := 0; i < N; i++ {
 		xs, xsName := randomlySelectInts(t, random, xsNameSet)
 		if t.Failed() {
@@ -141,7 +141,7 @@ func TestLCM_AllRandom(t *testing.T) {
 	xsNameSet := make(map[string]struct{}, N)
 	xsNameSet[""] = struct{}{}
 	var isWantPositive bool
-	random := rand.New(rand.NewSource(30))
+	random := rand.New(rand.NewChaCha8(ChaCha8Seed))
 	for i := 0; i < N; i++ {
 		xs, xsName := randomlyGenerateInts(t, random, xsNameSet)
 		if t.Failed() {

@@ -29,13 +29,14 @@ import (
 	_ "crypto/sha256" // link crypto.SHA256 to the binary
 	"encoding/hex"
 	"io"
-	"math/rand"
+	"math/rand/v2"
 	"path"
 	"sort"
 	"testing/fstest"
 	"time"
 
 	"github.com/donyori/gogo/errors"
+	"github.com/donyori/gogo/randbytes"
 )
 
 var (
@@ -86,9 +87,9 @@ Sugar is sweet.
 		},
 	}
 
-	big := make([]byte, 13<<10)
-	random := rand.New(rand.NewSource(100))
-	random.Read(big)
+	randomSrc := rand.NewChaCha8(
+		[32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456")))
+	big := randbytes.Make(randomSrc, 13<<10)
 	testFS["13KB.dat"] = &fstest.MapFile{
 		Data:    big,
 		Mode:    0755,
@@ -138,7 +139,7 @@ Sugar is sweet.
 	if err != nil {
 		panic(errors.AutoWrap(err))
 	}
-	err = initAddZipFileWithOffset(buf, random)
+	err = initAddZipFileWithOffset(buf, randomSrc)
 	if err != nil {
 		panic(errors.AutoWrap(err))
 	}
@@ -293,7 +294,7 @@ func initAddZipFile(buf *bytes.Buffer) error {
 	}
 	err = zw.Close()
 	if err != nil {
-		panic(err)
+		return errors.AutoWrap(err)
 	}
 	testFS["zip basic.zip"] = &fstest.MapFile{
 		Data:    copyBuffer(buf),
@@ -306,9 +307,11 @@ func initAddZipFile(buf *bytes.Buffer) error {
 // initAddZipFileWithOffset makes a ZIP archive file prepended with
 // random content, adds that file to the global variable testFS,
 // and sets the global variable testFSZipOffset.
-func initAddZipFileWithOffset(buf *bytes.Buffer, random *rand.Rand) error {
+func initAddZipFileWithOffset(buf *bytes.Buffer, randomSrc rand.Source) error {
 	buf.Reset()
-	_, err := buf.ReadFrom(io.LimitReader(random, 5<<10))
+	const Offset int = 5 << 10
+	buf.Grow(Offset)
+	_, err := randbytes.WriteN(randomSrc, buf, Offset)
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
@@ -317,7 +320,7 @@ func initAddZipFileWithOffset(buf *bytes.Buffer, random *rand.Rand) error {
 	zw.SetOffset(int64(buf.Len()))
 	err = zw.SetComment(testFSZipComment)
 	if err != nil {
-		panic(err)
+		return errors.AutoWrap(err)
 	}
 	zw.RegisterCompressor(
 		zip.Deflate,
@@ -329,18 +332,18 @@ func initAddZipFileWithOffset(buf *bytes.Buffer, random *rand.Rand) error {
 		var w io.Writer
 		w, err = zw.Create(name)
 		if err != nil {
-			panic(err)
+			return errors.AutoWrap(err)
 		} else if len(name) > 0 && name[len(name)-1] == '/' {
 			continue
 		}
 		_, err = w.Write([]byte(body))
 		if err != nil {
-			panic(err)
+			return errors.AutoWrap(err)
 		}
 	}
 	err = zw.Close()
 	if err != nil {
-		panic(err)
+		return errors.AutoWrap(err)
 	}
 	testFS[testFSZipOffsetName] = &fstest.MapFile{
 		Data:    copyBuffer(buf),

@@ -19,7 +19,7 @@
 package queue_test
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"sort"
 	"strings"
 	"testing"
@@ -70,7 +70,8 @@ func init() {
 	for i := range times {
 		times[i] = time.Date(2000, time.January, 1, 0, 0, i%60, 0, time.UTC)
 	}
-	random := rand.New(rand.NewSource(10))
+	random := rand.New(rand.NewChaCha8(
+		[32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))))
 	random.Shuffle(N, func(i, j int) {
 		priorities[i], priorities[j] = priorities[j], priorities[i]
 	})

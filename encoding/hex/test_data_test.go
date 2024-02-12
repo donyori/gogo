@@ -21,9 +21,11 @@ package hex_test
 import (
 	stdhex "encoding/hex"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"strconv"
 	"strings"
+
+	"github.com/donyori/gogo/randbytes"
 )
 
 type testEncodeCase struct {
@@ -43,8 +45,10 @@ var testEncodeLongSrcCases [2]*testEncodeCase
 
 func init() {
 	srcs := []string{"", "Hello world! 你好，世界！", ""}
-	longBytes := make([]byte, 8192)
-	rand.New(rand.NewSource(10)).Read(longBytes)
+	longBytes := randbytes.Make(
+		rand.NewChaCha8([32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))),
+		8192,
+	)
 	srcs[2] = string(longBytes)
 	uppers := []bool{false, true}
 	testEncodeCases = make([]*testEncodeCase, len(srcs)*len(uppers))
