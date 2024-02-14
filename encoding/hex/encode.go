@@ -21,6 +21,7 @@ package hex
 import (
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/donyori/gogo/constraints"
 	"github.com/donyori/gogo/errors"
@@ -53,6 +54,24 @@ func Encode[Bytes constraints.ByteString](
 			"dst is too small, length: %d, required: %d", len(dst), reqLen)))
 	}
 	return encode(dst, src, upper)
+}
+
+// AppendEncode appends the hexadecimal representation of src to dst
+// and returns the extended byte slice.
+//
+// upper indicates whether to use uppercase in hexadecimal representation.
+//
+// AppendEncode[[]byte](dst, src, false) is equivalent to
+// AppendEncode(dst, src) in official package encoding/hex.
+func AppendEncode[Bytes constraints.ByteString](
+	dst []byte,
+	src Bytes,
+	upper bool,
+) []byte {
+	n := EncodedLen(len(src))
+	dst = slices.Grow(dst, n)
+	encode(dst[len(dst):][:n], src, upper)
+	return dst[:len(dst)+n]
 }
 
 // EncodeToString returns hexadecimal encoding of src.
@@ -129,7 +148,7 @@ func (enc *encoder) WriteByte(c byte) error {
 	defer encodeBufferPool.Put(buf)
 	buf[0] = c
 	encoded := encode(buf[1:], buf[:1], enc.upper)
-	_, err := enc.w.Write(buf[1 : 1+encoded])
+	_, err := enc.w.Write(buf[1:][:encoded])
 	return errors.AutoWrap(err)
 }
 

@@ -106,7 +106,7 @@ func Append(src rand.Source, p []byte, n int) []byte {
 		return p
 	}
 	p = slices.Grow(p, n)
-	Fill(src, p[len(p):len(p)+n])
+	Fill(src, p[len(p):][:n])
 	return p[:len(p)+n]
 }
 

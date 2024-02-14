@@ -51,7 +51,7 @@ func TestFill(t *testing.T) {
 	want := Random223BytesByChaCha8[:]
 	p := make([]byte, len(want))
 	randbytes.Fill(rand.NewChaCha8(ChaCha8Seed), p)
-	if !slices.Equal(p, want) {
+	if !bytes.Equal(p, want) {
 		t.Errorf("got (len %d)\n%x\nwant (len %d)\n%x",
 			len(p), p, len(want), want)
 	}
@@ -75,7 +75,7 @@ func TestFill_NilAndEmpty(t *testing.T) {
 func TestMake(t *testing.T) {
 	want := Random223BytesByChaCha8[:]
 	got := randbytes.Make(rand.NewChaCha8(ChaCha8Seed), len(want))
-	if cap(got) != len(want) || !slices.Equal(got, want) {
+	if cap(got) != len(want) || !bytes.Equal(got, want) {
 		t.Errorf("got (len %d, cap %d)\n%x\nwant (len %d, cap %[4]d)\n%x",
 			len(got), cap(got), got, len(want), want)
 	}
@@ -95,7 +95,7 @@ func TestMakeCapacity(t *testing.T) {
 	wantCap := len(want) + 20
 	got := randbytes.MakeCapacity(
 		rand.NewChaCha8(ChaCha8Seed), len(want), wantCap)
-	if cap(got) != wantCap || !slices.Equal(got, want) {
+	if cap(got) != wantCap || !bytes.Equal(got, want) {
 		t.Errorf("got (len %d, cap %d)\n%x\nwant (len %d, cap %d)\n%x",
 			len(got), cap(got), got, len(want), wantCap, want)
 	}
@@ -125,7 +125,7 @@ func TestAppend(t *testing.T) {
 	copy(want[copy(want, p):], Random223BytesByChaCha8[:])
 	got := randbytes.Append(
 		rand.NewChaCha8(ChaCha8Seed), p, len(Random223BytesByChaCha8))
-	if !slices.Equal(got, want) {
+	if !bytes.Equal(got, want) {
 		t.Errorf("got (len %d)\n%x\nwant (len %d)\n%x",
 			len(got), got, len(want), want)
 	}
@@ -174,7 +174,7 @@ func TestAppend_ToNilAndEmpty(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := randbytes.Append(
 				rand.NewChaCha8(ChaCha8Seed), tc.p, len(want))
-			if !slices.Equal(got, want) {
+			if !bytes.Equal(got, want) {
 				t.Errorf("got (len %d)\n%x\nwant (len %d)\n%x",
 					len(got), got, len(want), want)
 			}
@@ -194,7 +194,7 @@ func TestWriteN(t *testing.T) {
 		t.Errorf("got written %d; want %d", written, len(want))
 	}
 	got := buf.Bytes()
-	if !slices.Equal(got, want) {
+	if !bytes.Equal(got, want) {
 		t.Errorf("got (len %d)\n%x\nwant (len %d)\n%x",
 			len(got), got, len(want), want)
 	}

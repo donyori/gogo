@@ -22,6 +22,7 @@ import (
 	"bytes"
 	stdhex "encoding/hex"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -94,6 +95,57 @@ func TestEncode(t *testing.T) {
 				})
 			},
 		)
+	}
+}
+
+func TestAppendEncode(t *testing.T) {
+	testCases := []struct {
+		name string
+		p    []byte
+	}{
+		{"nil", nil},
+		{"empty", []byte{}},
+		{"nonempty", []byte("Append")},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, etc := range testEncodeCases {
+				t.Run(
+					fmt.Sprintf("src=%s&upper=%t", etc.srcName, etc.upper),
+					func(t *testing.T) {
+						t.Run("type=[]byte", func(t *testing.T) {
+							dst := slices.Clone(tc.p)
+							want := string(tc.p) + etc.dstStr
+							got := hex.AppendEncode(
+								dst, etc.srcBytes, etc.upper)
+							if len(want) == 0 && (got == nil) != (tc.p == nil) {
+								if got == nil {
+									t.Errorf("got <nil>; want %q", want)
+								} else {
+									t.Errorf("got %q; want <nil>", got)
+								}
+							} else if string(got) != want {
+								t.Errorf("got %q; want %q", got, want)
+							}
+						})
+						t.Run("type=string", func(t *testing.T) {
+							dst := slices.Clone(tc.p)
+							want := string(tc.p) + etc.dstStr
+							got := hex.AppendEncode(dst, etc.srcStr, etc.upper)
+							if len(want) == 0 && (got == nil) != (tc.p == nil) {
+								if got == nil {
+									t.Errorf("got <nil>; want %q", want)
+								} else {
+									t.Errorf("got %q; want <nil>", got)
+								}
+							} else if string(got) != want {
+								t.Errorf("got %q; want %q", got, want)
+							}
+						})
+					},
+				)
+			}
+		})
 	}
 }
 

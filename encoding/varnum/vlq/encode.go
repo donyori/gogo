@@ -20,6 +20,7 @@ package vlq
 
 import (
 	"fmt"
+	"slices"
 	"sync"
 
 	"github.com/donyori/gogo/encoding/varnum/uintconv"
@@ -73,6 +74,16 @@ func EncodeUint64(dst []byte, u uint64) int {
 	return encodeUint64(dst, u)
 }
 
+// AppendEncodeUint64 appends the variable-length quantity (VLQ)
+// style encoding of the 64-bit unsigned integer u to dst
+// and returns the extended byte slice.
+func AppendEncodeUint64(dst []byte, u uint64) []byte {
+	n := Uint64EncodedLen(u)
+	dst = slices.Grow(dst, n)
+	encodeUint64(dst[len(dst):][:n], u)
+	return dst[:len(dst)+n]
+}
+
 // Int64EncodedLen returns the length of variable-length quantity (VLQ)
 // style encoding with zigzag encoding of the 64-bit signed integer i.
 //
@@ -96,6 +107,13 @@ func EncodeInt64(dst []byte, i int64) int {
 			"dst is too small, length: %d, required: %d", len(dst), reqLen)))
 	}
 	return encodeUint64(dst, u)
+}
+
+// AppendEncodeInt64 appends the variable-length quantity (VLQ)
+// style encoding of the 64-bit signed integer i with zigzag encoding to dst
+// and returns the extended byte slice.
+func AppendEncodeInt64(dst []byte, i int64) []byte {
+	return AppendEncodeUint64(dst, uintconv.FromInt64Zigzag(i))
 }
 
 // Float64EncodedLen returns the length of variable-length quantity (VLQ)
@@ -124,6 +142,15 @@ func EncodeFloat64(dst []byte, f float64) int {
 			"dst is too small, length: %d, required: %d", len(dst), reqLen)))
 	}
 	return encodeUint64(dst, u)
+}
+
+// AppendEncodeFloat64 appends the variable-length quantity (VLQ)
+// style encoding of the 64-bit floating-point number f to dst
+// and returns the extended byte slice.
+// It converts f to a 64-bit unsigned integer.
+// The integer is then byte-reversed and encoded as a regular unsigned integer.
+func AppendEncodeFloat64(dst []byte, f float64) []byte {
+	return AppendEncodeUint64(dst, uintconv.FromFloat64ByteReversal(f))
 }
 
 // bufferLen is the length of the buffer in bufferPool.

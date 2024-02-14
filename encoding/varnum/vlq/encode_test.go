@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"slices"
 	"testing"
 
 	"github.com/donyori/gogo/encoding/varnum/uintconv"
@@ -85,6 +86,31 @@ func TestEncodeUint64(t *testing.T) {
 	}
 }
 
+func TestAppendEncodeUint64(t *testing.T) {
+	testCases := []struct {
+		name string
+		p    []byte
+	}{
+		{"nil", nil},
+		{"empty", []byte{}},
+		{"nonempty", []byte("Append")},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, u := range uint64s {
+				t.Run(fmt.Sprintf("u=%#X", u), func(t *testing.T) {
+					dst := slices.Clone(tc.p)
+					want := append(slices.Clone(tc.p), encodedUint64s[i]...)
+					got := vlq.AppendEncodeUint64(dst, u)
+					if !bytes.Equal(got, want) {
+						t.Errorf("got %#X; want %#X", got, want)
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestInt64EncodedLen(t *testing.T) {
 	for i, u := range uint64s {
 		x := uintconv.ToInt64Zigzag(u)
@@ -104,6 +130,32 @@ func TestEncodeInt64(t *testing.T) {
 			n := vlq.EncodeInt64(dst, x)
 			if !bytes.Equal(dst[:n], encodedUint64s[i]) {
 				t.Errorf("got %#X; want %#X", dst[:n], encodedUint64s[i])
+			}
+		})
+	}
+}
+
+func TestAppendEncodeInt64(t *testing.T) {
+	testCases := []struct {
+		name string
+		p    []byte
+	}{
+		{"nil", nil},
+		{"empty", []byte{}},
+		{"nonempty", []byte("Append")},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, u := range uint64s {
+				x := uintconv.ToInt64Zigzag(u)
+				t.Run(fmt.Sprintf("i=%#X", x), func(t *testing.T) {
+					dst := slices.Clone(tc.p)
+					want := append(slices.Clone(tc.p), encodedUint64s[i]...)
+					got := vlq.AppendEncodeInt64(dst, x)
+					if !bytes.Equal(got, want) {
+						t.Errorf("got %#X; want %#X", got, want)
+					}
+				})
 			}
 		})
 	}
@@ -137,6 +189,35 @@ func TestEncodeFloat64(t *testing.T) {
 				}
 			},
 		)
+	}
+}
+
+func TestAppendEncodeFloat64(t *testing.T) {
+	testCases := []struct {
+		name string
+		p    []byte
+	}{
+		{"nil", nil},
+		{"empty", []byte{}},
+		{"nonempty", []byte("Append")},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for i, u := range uint64s {
+				f := uintconv.ToFloat64ByteReversal(u)
+				t.Run(
+					fmt.Sprintf("f=%v(bits=%#016X)", f, math.Float64bits(f)),
+					func(t *testing.T) {
+						dst := slices.Clone(tc.p)
+						want := append(slices.Clone(tc.p), encodedUint64s[i]...)
+						got := vlq.AppendEncodeFloat64(dst, f)
+						if !bytes.Equal(got, want) {
+							t.Errorf("got %#X; want %#X", got, want)
+						}
+					},
+				)
+			}
+		})
 	}
 }
 

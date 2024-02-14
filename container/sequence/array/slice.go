@@ -385,7 +385,7 @@ func (sda *SliceDynamicArray[Item]) Expand(i, n int) {
 		*sda = (*sda)[:len(*sda)+n]
 	}
 	copy((*sda)[i+n:], (*sda)[i:])
-	clear((*sda)[i : i+n])
+	clear((*sda)[i:][:n])
 }
 
 // Reserve requests that the capacity of the slice

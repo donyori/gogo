@@ -19,9 +19,9 @@
 package randbytes_test
 
 import (
+	"bytes"
 	"io"
 	"math/rand/v2"
-	"slices"
 	"strings"
 	"testing"
 	"testing/iotest"
@@ -57,7 +57,7 @@ func TestReader_Read(t *testing.T) {
 	} else if n != len(want) {
 		t.Errorf("got n %d; want %d", n, len(want))
 	}
-	if !slices.Equal(p, want) {
+	if !bytes.Equal(p, want) {
 		t.Errorf("got (len %d)\n%x\nwant (len %d)\n%x",
 			len(p), p, len(want), want)
 	}
@@ -70,7 +70,7 @@ func TestReader_Read_ReadByOneByte(t *testing.T) {
 	_, err := io.ReadFull(iotest.OneByteReader(reader), p)
 	if err != nil {
 		t.Error(err)
-	} else if !slices.Equal(p, want) {
+	} else if !bytes.Equal(p, want) {
 		t.Errorf("got (len %d)\n%x\nwant (len %d)\n%x",
 			len(p), p, len(want), want)
 	}
