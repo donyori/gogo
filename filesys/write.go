@@ -124,6 +124,17 @@ type Writer interface {
 	// (To test whether the error is ErrNotTar, use function errors.Is.)
 	TarWriteHeader(hdr *tar.Header) error
 
+	// TarAddFS adds the files from the specified filesystem
+	// to the tape archive.
+	// It walks the directory tree starting at the root of the filesystem
+	// adding each file to the tape archive
+	// while maintaining the directory structure.
+	//
+	// If the file is not archived by tar or is opened in raw mode,
+	// it does nothing and reports ErrNotTar.
+	// (To test whether the error is ErrNotTar, use function errors.Is.)
+	TarAddFS(fsys fs.FS) error
+
 	// ZipEnabled returns true if the file is archived by ZIP
 	// and is not opened in raw mode.
 	ZipEnabled() bool
@@ -175,6 +186,17 @@ type Writer interface {
 	// it does nothing and reports ErrNotZip.
 	// (To test whether the error is ErrNotZip, use function errors.Is.)
 	ZipCopy(f *zip.File) error
+
+	// ZipAddFS adds the files from the specified filesystem
+	// to the ZIP archive.
+	// It walks the directory tree starting at the root of the filesystem
+	// adding each file to the ZIP using deflate
+	// while maintaining the directory structure.
+	//
+	// If the writer's file is not archived by ZIP or is opened in raw mode,
+	// it does nothing and reports ErrNotZip.
+	// (To test whether the error is ErrNotZip, use function errors.Is.)
+	ZipAddFS(fsys fs.FS) error
 
 	// Options returns a copy of options used by this writer.
 	Options() *WriteOptions
@@ -550,12 +572,7 @@ func (fw *writer) TarEnabled() bool {
 }
 
 func (fw *writer) TarWriteHeader(hdr *tar.Header) error {
-	if fw.tw == nil {
-		return errors.AutoWrap(ErrNotTar)
-	} else if fw.c.Closed() {
-		return errors.AutoWrap(ErrFileWriterClosed)
-	}
-	err := fw.bw.Flush()
+	err := fw.tarCheckAndFlush()
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
@@ -570,6 +587,16 @@ func (fw *writer) TarWriteHeader(hdr *tar.Header) error {
 	}
 	fw.bw.Reset(fw.uw)
 	return nil
+}
+
+func (fw *writer) TarAddFS(fsys fs.FS) error {
+	err := fw.tarCheckAndFlush()
+	if err != nil {
+		return errors.AutoWrap(err)
+	} else if fsys == nil {
+		return nil
+	}
+	return errors.AutoWrap(fw.tw.AddFS(fsys))
 }
 
 func (fw *writer) ZipEnabled() bool {
@@ -616,6 +643,22 @@ func (fw *writer) ZipCopy(f *zip.File) error {
 	return errors.AutoWrap(fw.zw.Copy(f))
 }
 
+func (fw *writer) ZipAddFS(fsys fs.FS) error {
+	err := fw.zipCheckAndFlush()
+	if err != nil {
+		return errors.AutoWrap(err)
+	} else if fsys == nil {
+		return nil
+	}
+	err = fw.zw.AddFS(fsys)
+	if err != nil {
+		return errors.AutoWrap(err)
+	}
+	fw.uw, fw.err = zipWriteBeforeCreateErrorWriter, ErrZipWriteBeforeCreate
+	fw.bw.Reset(fw.uw)
+	return nil
+}
+
 func (fw *writer) Options() *WriteOptions {
 	opts := &WriteOptions{
 		BufSize:    fw.opts.BufSize,
@@ -630,6 +673,18 @@ func (fw *writer) Options() *WriteOptions {
 
 func (fw *writer) FileStat() (info fs.FileInfo, err error) {
 	return fw.f.Stat()
+}
+
+// tarCheckAndFlush checks whether the writer is in tar mode and not closed.
+// If so, it flushes the buffer and returns any error encountered.
+// If not, it reports the corresponding error.
+func (fw *writer) tarCheckAndFlush() error {
+	if fw.tw == nil {
+		return errors.AutoWrap(ErrNotTar)
+	} else if fw.c.Closed() {
+		return errors.AutoWrap(ErrFileWriterClosed)
+	}
+	return errors.AutoWrap(fw.bw.Flush())
 }
 
 // zipCheckAndFlush checks whether the writer is in ZIP mode and not closed.

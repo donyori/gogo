@@ -109,7 +109,19 @@ func TestWrite_TarTgz(t *testing.T) {
 			file := &WritableFileImpl{Name: name}
 			writeTarFiles(t, file)
 			if !t.Failed() {
-				testTarTgzFile(t, file)
+				testTarTgzFile(t, file, testFSTarFiles)
+			}
+		})
+	}
+}
+
+func TestWrite_TarAddFS(t *testing.T) {
+	for _, name := range append(testFSTarFilenames, testFSTgzFilenames...) {
+		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
+			file := &WritableFileImpl{Name: name}
+			writeTarFS(t, file)
+			if !t.Failed() {
+				testTarTgzFile(t, file, testTarFSRegFiles)
 			}
 		})
 	}
@@ -137,7 +149,7 @@ func TestWrite_Zip(t *testing.T) {
 			file := &WritableFileImpl{Name: "test-write.zip"}
 			writeZipFiles(t, file, tc.f)
 			if !t.Failed() {
-				testZipFile(t, file)
+				testZipFile(t, file, testFSZipFileNameBodyMap)
 			}
 		})
 	}
@@ -182,7 +194,15 @@ func TestWrite_Zip_Raw(t *testing.T) {
 		return fmt.Errorf("unknown file %q", name)
 	})
 	if !t.Failed() {
-		testZipFile(t, file)
+		testZipFile(t, file, testFSZipFileNameBodyMap)
+	}
+}
+
+func TestWrite_ZipAddFS(t *testing.T) {
+	file := &WritableFileImpl{Name: "test-write.zip"}
+	writeZipFS(t, file)
+	if !t.Failed() {
+		testZipFile(t, file, testZipFSRegFileNameBodyMap)
 	}
 }
 
@@ -468,6 +488,24 @@ func getTestCasesForTestWriteAfterClose(
 			false,
 		},
 		{
+			"TarAddFS-notTar",
+			regFile,
+			func(t *testing.T, w filesys.Writer) error {
+				return w.TarAddFS(nil)
+			},
+			filesys.ErrNotTar,
+			false,
+		},
+		{
+			"TarAddFS-isTar",
+			tarFile,
+			func(t *testing.T, w filesys.Writer) error {
+				return w.TarAddFS(nil)
+			},
+			filesys.ErrFileWriterClosed,
+			false,
+		},
+		{
 			"ZipCreate-notZip",
 			regFile,
 			func(t *testing.T, w filesys.Writer) error {
@@ -539,10 +577,28 @@ func getTestCasesForTestWriteAfterClose(
 			filesys.ErrFileWriterClosed,
 			false,
 		},
+		{
+			"ZipAddFS-notZip",
+			regFile,
+			func(t *testing.T, w filesys.Writer) error {
+				return w.ZipAddFS(nil)
+			},
+			filesys.ErrNotZip,
+			false,
+		},
+		{
+			"ZipAddFS-isZip",
+			zipFile,
+			func(t *testing.T, w filesys.Writer) error {
+				return w.ZipAddFS(nil)
+			},
+			filesys.ErrFileWriterClosed,
+			false,
+		},
 	}
 }
 
-// writeFile writes data to file using Write.
+// writeFile writes data to the specified file using Write.
 //
 // It closes file after writing.
 func writeFile(
@@ -568,9 +624,9 @@ func writeFile(
 }
 
 // writeGzFile loads data from testFS according to file.Name,
-// and then writes the data to file using Write.
+// and then writes the data to the specified file using Write.
 //
-// It returns the data written to file before gzip compression.
+// It returns the data written to the file before gzip compression.
 //
 // Caller should set file.Name before calling this function and
 // guarantee that file.Name has extension ".gz".
@@ -586,8 +642,8 @@ func writeGzFile(t *testing.T, file *WritableFileImpl) (data []byte) {
 	return
 }
 
-// writeTarFiles writes testFSTarFiles to file using Write
-// and then close the file.
+// writeTarFiles writes testFSTarFiles to the specified file using Write
+// and then closes the file.
 //
 // Caller should set file.Name before calling this function and
 // guarantee that file.Name has extension ".tar", ".tar.gz", or ".tgz".
@@ -630,11 +686,38 @@ func writeTarFiles(t *testing.T, file *WritableFileImpl) {
 	}
 }
 
-// testTarTgzFile checks file written by function writeTarFiles.
+// writeTarFS writes testTarFS to the specified file using Write
+// and then closes the file.
+//
+// Caller should set file.Name before calling this function and
+// guarantee that file.Name has extension ".tar", ".tar.gz", or ".tgz".
+func writeTarFS(t *testing.T, file *WritableFileImpl) {
+	w, err := filesys.Write(file, nil, true)
+	if err != nil {
+		t.Error("create -", err)
+		return
+	}
+	defer func(w filesys.Writer) {
+		if err := w.Close(); err != nil {
+			t.Error("close -", err)
+		}
+	}(w)
+	err = w.TarAddFS(testTarFS)
+	if err != nil {
+		t.Error("add FS -", err)
+	}
+}
+
+// testTarTgzFile checks the specified file written by
+// function writeTarFiles or writeTarFS.
 //
 // Caller should guarantee that file.Name has extension
 // ".tar", ".tar.gz", or ".tgz".
-func testTarTgzFile(t *testing.T, file *WritableFileImpl) {
+func testTarTgzFile(
+	t *testing.T,
+	file *WritableFileImpl,
+	wantFiles []fileNameBody,
+) {
 	var r io.Reader = bytes.NewReader(file.Data)
 	ext := path.Ext(file.Name)
 	if ext == ".gz" || ext == ".tgz" {
@@ -656,20 +739,20 @@ func testTarTgzFile(t *testing.T, file *WritableFileImpl) {
 		switch {
 		case err != nil:
 			if errors.Is(err, io.EOF) {
-				if i != len(testFSTarFiles) {
+				if i != len(wantFiles) {
 					t.Errorf("tar header number: %d != %d, but got EOF",
-						i, len(testFSTarFiles))
+						i, len(wantFiles))
 				}
 				return // end of archive
 			}
 			t.Errorf("read No.%d tar header - %v", i, err)
 			return
-		case i >= len(testFSTarFiles):
-			t.Error("tar headers more than", len(testFSTarFiles))
+		case i >= len(wantFiles):
+			t.Error("tar headers more than", len(wantFiles))
 			return
-		case hdr.Name != testFSTarFiles[i].name:
+		case hdr.Name != wantFiles[i].name:
 			t.Errorf("No.%d tar header name unequal - got %s; want %s",
-				i, hdr.Name, testFSTarFiles[i].name)
+				i, hdr.Name, wantFiles[i].name)
 		}
 		if hdr.FileInfo().IsDir() {
 			continue
@@ -678,21 +761,21 @@ func testTarTgzFile(t *testing.T, file *WritableFileImpl) {
 		if err != nil {
 			t.Errorf("read No.%d tar file body - %v", i, err)
 			return
-		} else if string(body) != testFSTarFiles[i].body {
+		} else if string(body) != wantFiles[i].body {
 			t.Errorf(
 				"got No.%d tar file body (len: %d)\n%s\nwant (len: %d)\n%s",
 				i,
 				len(body),
 				body,
-				len(testFSTarFiles[i].body),
-				testFSTarFiles[i].body,
+				len(wantFiles[i].body),
+				wantFiles[i].body,
 			)
 		}
 	}
 }
 
-// writeZipFiles writes testFSZipFileNameBodyMap to file using Write
-// and then close the file.
+// writeZipFiles writes testFSZipFileNameBodyMap to the specified file
+// using Write and then closes the file.
 //
 // createFn is a function that calls
 // w.ZipCreate, w.ZipCreateHeader, or w.ZipCreateRaw.
@@ -783,10 +866,44 @@ func writeZipFilesZipCopy(t *testing.T, w filesys.Writer) {
 	}
 }
 
-// testTarTgzFile checks file written by function writeZipFiles.
+// writeZipFS writes testZipFS to the specified file using Write
+// and then closes the file.
+//
+// Caller should set file.Name before calling this function and
+// guarantee that file.Name has extension ".zip".
+func writeZipFS(t *testing.T, file *WritableFileImpl) {
+	w, err := filesys.Write(
+		file,
+		&filesys.WriteOptions{
+			DeflateLv:  flate.BestCompression,
+			ZipComment: testFSZipComment,
+		},
+		true,
+	)
+	if err != nil {
+		t.Error("create -", err)
+		return
+	}
+	defer func(w filesys.Writer) {
+		if err := w.Close(); err != nil {
+			t.Error("close -", err)
+		}
+	}(w)
+	err = w.ZipAddFS(testZipFS)
+	if err != nil {
+		t.Error("add FS -", err)
+	}
+}
+
+// testTarTgzFile checks the specified file written by
+// function writeZipFiles or writeZipFS.
 //
 // Caller should guarantee that file.Name has extension ".zip".
-func testZipFile(t *testing.T, file *WritableFileImpl) {
+func testZipFile(
+	t *testing.T,
+	file *WritableFileImpl,
+	wantFileNameBodyMap map[string]string,
+) {
 	r, err := zip.NewReader(bytes.NewReader(file.Data), int64(len(file.Data)))
 	if err != nil {
 		t.Error("create zip reader -", err)
@@ -795,13 +912,13 @@ func testZipFile(t *testing.T, file *WritableFileImpl) {
 	if r.Comment != testFSZipComment {
 		t.Errorf("got comment %q; want %q", r.Comment, testFSZipComment)
 	}
-	if len(r.File) != len(testFSZipFileNameBodyMap) {
+	if len(r.File) != len(wantFileNameBodyMap) {
 		t.Errorf("got %d zip files; want %d",
-			len(r.File), len(testFSZipFileNameBodyMap))
+			len(r.File), len(wantFileNameBodyMap))
 	}
 
 	for _, file := range r.File {
-		body, ok := testFSZipFileNameBodyMap[file.Name]
+		body, ok := wantFileNameBodyMap[file.Name]
 		if !ok {
 			t.Errorf("unknown zip file %q", file.Name)
 			continue

@@ -29,8 +29,10 @@ import (
 	_ "crypto/sha256" // link crypto.SHA256 to the binary
 	"encoding/hex"
 	"io"
+	"io/fs"
 	"math/rand/v2"
 	"path"
+	"slices"
 	"sort"
 	"testing/fstest"
 	"time"
@@ -39,10 +41,16 @@ import (
 	"github.com/donyori/gogo/randbytes"
 )
 
+// fileNameBody consists of the name and content (body) of a file.
+type fileNameBody struct {
+	name string
+	body string
+}
+
 var (
 	testFS fstest.MapFS
 
-	testFSTarFiles           []struct{ name, body string }
+	testFSTarFiles           []fileNameBody
 	testFSZipFileNameBodyMap map[string]string
 
 	testFSZipOffset int64
@@ -63,6 +71,15 @@ var (
 const testFSZipOffsetName = "zip offset.zip"
 
 const testFSZipComment = "The end-of-central-directory comment 你好"
+
+// For testing methods TarAddFS and ZipAddFS of Writer.
+var (
+	testTarFS         fstest.MapFS
+	testTarFSRegFiles []fileNameBody
+
+	testZipFS                   fstest.MapFS
+	testZipFSRegFileNameBodyMap map[string]string
+)
 
 func init() {
 	testFS = fstest.MapFS{
@@ -97,7 +114,7 @@ Sugar is sweet.
 	}
 
 	bigStr := string(big)
-	testFSTarFiles = []struct{ name, body string }{
+	testFSTarFiles = []fileNameBody{
 		{"tardir/", ""},
 		{"tardir/tar file1.txt", "This is tar file 1."},
 		{"tardir/tar file2.txt", "Here is tar file 2!"},
@@ -122,6 +139,7 @@ Sugar is sweet.
 		"13KB.dat": bigStr,
 	}
 
+	initSetVarsForAddFS()
 	buf := new(bytes.Buffer)
 	err := initAddGzFile(buf, big)
 	if err != nil {
@@ -147,6 +165,71 @@ Sugar is sweet.
 	err = initMakeFSChecksumMap()
 	if err != nil {
 		panic(errors.AutoWrap(err))
+	}
+}
+
+// initSetVarsForAddFS sets the global variables
+// testTarFS, testTarFSRegFiles, testZipFS, and testZipFSRegFileNameBodyMap.
+func initSetVarsForAddFS() {
+	// The names in fstest.MapFS must not end with '/' because a directory
+	// with a name ending with '/' will be considered by fstest.MapFS
+	// to contain itself and cause fs.WalkDir to fall into an infinite loop.
+	//
+	// Therefore, for directories with name ending with '/',
+	// drop the trailing '/' and set fs.ModeDir to the mode.
+
+	testTarFS = make(fstest.MapFS, len(testFSTarFiles))
+	testTarFSRegFiles = make([]fileNameBody, 0, len(testFSTarFiles))
+	for i := range testFSTarFiles {
+		name := testFSTarFiles[i].name
+		body := testFSTarFiles[i].body
+		var data []byte
+		mode := fs.FileMode(0600)
+		if len(name) > 0 {
+			if name[len(name)-1] != '/' {
+				data = []byte(body)
+				testTarFSRegFiles = append(
+					testTarFSRegFiles, testFSTarFiles[i])
+			} else {
+				name = name[:len(name)-1]
+				mode |= fs.ModeDir
+			}
+		}
+		testTarFS[name] = &fstest.MapFile{
+			Data:    data,
+			Mode:    mode,
+			ModTime: time.Now(),
+		}
+	}
+	slices.SortFunc(testTarFSRegFiles, func(a, b fileNameBody) int {
+		if a.name < b.name {
+			return -1
+		} else if a.name > b.name {
+			return 1
+		}
+		return 0
+	})
+
+	testZipFS = make(fstest.MapFS, len(testFSZipFileNameBodyMap))
+	testZipFSRegFileNameBodyMap = make(
+		map[string]string, len(testFSZipFileNameBodyMap))
+	for name, body := range testFSZipFileNameBodyMap {
+		var data []byte
+		mode := fs.FileMode(0600)
+		if len(name) > 0 {
+			if name[len(name)-1] != '/' {
+				data = []byte(body)
+				testZipFSRegFileNameBodyMap[name] = body
+			} else {
+				name = name[:len(name)-1]
+				mode |= fs.ModeDir
+			}
+		}
+		testZipFS[name] = &fstest.MapFile{
+			Data:    data,
+			Mode:    mode,
+			ModTime: time.Now(),
+		}
 	}
 }
 

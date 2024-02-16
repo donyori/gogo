@@ -30,13 +30,18 @@ import (
 	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/donyori/gogo/filesys"
 	"github.com/donyori/gogo/filesys/local"
 	"github.com/donyori/gogo/randbytes"
 )
+
+// ChaCha8Seed is the seed for ChaCha8 used for testing.
+var ChaCha8Seed = [32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))
 
 func TestWriteTrunc(t *testing.T) {
 	tmpRoot := t.TempDir()
@@ -78,10 +83,7 @@ func TestWriteTrunc_MkDirs(t *testing.T) {
 }
 
 func TestWriteTrunc_TarTgz(t *testing.T) {
-	big := randbytes.Make(
-		rand.NewChaCha8([32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))),
-		13<<10,
-	)
+	big := randbytes.Make(rand.NewChaCha8(ChaCha8Seed), 13<<10)
 	tarFiles := []tarFileNameBody{
 		{
 			name: "tardir/",
@@ -125,11 +127,75 @@ Sugar is sweet.
 	}
 }
 
+func TestWriteTrunc_TarAddFS(t *testing.T) {
+	big := randbytes.Make(rand.NewChaCha8(ChaCha8Seed), 13<<10)
+	fsys := fstest.MapFS{
+		"tardir": &fstest.MapFile{
+			Mode:    0600 | fs.ModeDir,
+			ModTime: time.Now(),
+		},
+		"tardir/tar file1.txt": &fstest.MapFile{
+			Data:    []byte("This is tar file 1."),
+			Mode:    0600,
+			ModTime: time.Now(),
+		},
+		"tardir/tar file2.txt": &fstest.MapFile{
+			Data:    []byte("Here is tar file 2!"),
+			Mode:    0600,
+			ModTime: time.Now(),
+		},
+		"emptydir": &fstest.MapFile{
+			Mode:    0600 | fs.ModeDir,
+			ModTime: time.Now(),
+		},
+		"roses are red.txt": &fstest.MapFile{
+			Data: []byte(`Roses are red.
+  Violets are blue.
+Sugar is sweet.
+  And so are you.
+`),
+			Mode:    0600,
+			ModTime: time.Now(),
+		},
+		"13KB.dat": &fstest.MapFile{
+			Data:    big,
+			Mode:    0600,
+			ModTime: time.Now(),
+		},
+	}
+	wantTarFiles := make([]tarFileNameBody, 0, len(fsys))
+	for name, file := range fsys {
+		if !file.Mode.IsDir() {
+			wantTarFiles = append(wantTarFiles, tarFileNameBody{
+				name: name,
+				body: file.Data,
+			})
+		}
+	}
+	slices.SortFunc(wantTarFiles, func(a, b tarFileNameBody) int {
+		if a.name < b.name {
+			return -1
+		} else if a.name > b.name {
+			return 1
+		}
+		return 0
+	})
+
+	filenames := []string{"test.tar", "test.tar.gz", "test.tgz"}
+	tmpRoot := t.TempDir()
+	for _, filename := range filenames {
+		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			name := filepath.Join(tmpRoot, filename)
+			writeTarFS(t, name, fsys)
+			if !t.Failed() {
+				testTarTgzFile(t, name, wantTarFiles)
+			}
+		})
+	}
+}
+
 func TestWriteTrunc_Zip(t *testing.T) {
-	big := randbytes.Make(
-		rand.NewChaCha8([32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))),
-		13<<10,
-	)
+	big := randbytes.Make(rand.NewChaCha8(ChaCha8Seed), 13<<10)
 	zipNameBodyMap := map[string][]byte{
 		"zipdir/":              nil,
 		"zipdir/zip file1.txt": []byte("This is ZIP file 1."),
@@ -146,6 +212,56 @@ Sugar is sweet.
 	writeZipFiles(t, name, zipNameBodyMap)
 	if !t.Failed() {
 		testZipFile(t, name, zipNameBodyMap)
+	}
+}
+
+func TestWriteTrunc_ZipAddFS(t *testing.T) {
+	big := randbytes.Make(rand.NewChaCha8(ChaCha8Seed), 13<<10)
+	fsys := fstest.MapFS{
+		"zipdir": &fstest.MapFile{
+			Mode:    0600 | fs.ModeDir,
+			ModTime: time.Now(),
+		},
+		"zipdir/zip file1.txt": &fstest.MapFile{
+			Data:    []byte("This is ZIP file 1."),
+			Mode:    0600,
+			ModTime: time.Now(),
+		},
+		"zipdir/zip file2.txt": &fstest.MapFile{
+			Data:    []byte("Here is ZIP file 2!"),
+			Mode:    0600,
+			ModTime: time.Now(),
+		},
+		"emptydir": &fstest.MapFile{
+			Mode:    0600 | fs.ModeDir,
+			ModTime: time.Now(),
+		},
+		"roses are red.txt": &fstest.MapFile{
+			Data: []byte(`Roses are red.
+  Violets are blue.
+Sugar is sweet.
+  And so are you.
+`),
+			Mode:    0600,
+			ModTime: time.Now(),
+		},
+		"13KB.dat": &fstest.MapFile{
+			Data:    big,
+			Mode:    0600,
+			ModTime: time.Now(),
+		},
+	}
+	wantZipNameBodyMap := make(map[string][]byte, len(fsys))
+	for name, file := range fsys {
+		if !file.Mode.IsDir() {
+			wantZipNameBodyMap[name] = file.Data
+		}
+	}
+
+	name := filepath.Join(t.TempDir(), "test.zip")
+	writeZipFS(t, name, fsys)
+	if !t.Failed() {
+		testZipFile(t, name, wantZipNameBodyMap)
 	}
 }
 
@@ -342,7 +458,31 @@ func writeTarFiles(t *testing.T, name string, tarFiles []tarFileNameBody) {
 	}
 }
 
-// testTarTgzFile checks a tar or tgz file written by function writeTarFiles.
+// writeTarFS uses WriteTrunc to add the files
+// from the specified filesystem to a tar or tgz file.
+//
+// name is the local file name.
+//
+// Caller should guarantee that name has extension ".tar", ".tar.gz", or ".tgz".
+func writeTarFS(t *testing.T, name string, fsys fs.FS) {
+	w, err := local.WriteTrunc(name, 0600, true, nil)
+	if err != nil {
+		t.Error("create -", err)
+		return
+	}
+	defer func(w filesys.Writer) {
+		if err := w.Close(); err != nil {
+			t.Error("close -", err)
+		}
+	}(w)
+	err = w.TarAddFS(fsys)
+	if err != nil {
+		t.Error("add FS -", err)
+	}
+}
+
+// testTarTgzFile checks a tar or tgz file written by
+// function writeTarFiles or writeTarFS.
 //
 // Caller should guarantee that name has extension ".tar", ".tar.gz", or ".tgz".
 func testTarTgzFile(t *testing.T, name string, wantTarFiles []tarFileNameBody) {
@@ -462,7 +602,31 @@ func writeZipFiles(
 	}
 }
 
-// testZipFile checks a ZIP archive written by function writeZipFiles.
+// writeZipFS uses WriteTrunc to add the files
+// from the specified filesystem to a ZIP archive.
+//
+// name is the local file name.
+//
+// Caller should guarantee that name has extension ".zip".
+func writeZipFS(t *testing.T, name string, fsys fs.FS) {
+	w, err := local.WriteTrunc(name, 0600, true, nil)
+	if err != nil {
+		t.Error("create -", err)
+		return
+	}
+	defer func(w filesys.Writer) {
+		if err := w.Close(); err != nil {
+			t.Error("close -", err)
+		}
+	}(w)
+	err = w.ZipAddFS(fsys)
+	if err != nil {
+		t.Error("add FS -", err)
+	}
+}
+
+// testZipFile checks a ZIP archive written by
+// function writeZipFiles or writeZipFS.
 //
 // Caller should guarantee that name has extension ".zip".
 func testZipFile(
