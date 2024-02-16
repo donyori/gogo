@@ -204,7 +204,7 @@ func (ctrl *controller[Message]) LaunchChannelDispatcher() {
 func (ctrl *controller[Message]) launchProc() {
 	n, commMaps := len(ctrl.world.comms), ctrl.lnchCommMaps
 	ctrl.wg.Add(n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(rank int) {
 			defer ctrl.wg.Done()
 			defer func() {

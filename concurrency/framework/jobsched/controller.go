@@ -395,7 +395,7 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 			ctrl.wg.Wait()
 		}()
 	}
-	for i := 0; i < ctrl.n; i++ {
+	for i := range ctrl.n {
 		go func(rank int) { // goroutine for worker
 			defer ctrl.wg.Done()
 			defer func() {

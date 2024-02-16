@@ -104,7 +104,7 @@ func testCaptureOutputFileToString(
 					t.Fatal(err)
 				}
 			}
-			for i := 0; i < 3; i++ {
+			for i := range 3 {
 				s, err, first := f()
 				if *filePtr != backup {
 					t.Errorf("call %d - file is not restored after calling f",
@@ -214,7 +214,7 @@ func testCaptureOutputFileToStringConcurrent(
 			var wg, barrier sync.WaitGroup
 			wg.Add(n)
 			barrier.Add(n)
-			for i := 0; i < n; i++ {
+			for i := range n {
 				go func(rank int) {
 					defer wg.Done()
 					barrier.Done()

@@ -65,7 +65,7 @@ func BenchmarkUint64EncodedLenFunctions(b *testing.B) {
 		b.Run(fmt.Sprintf("u=%#X", u), func(b *testing.B) {
 			for _, fn := range fns {
 				b.Run(fn.name, func(b *testing.B) {
-					for i := 0; i < b.N; i++ {
+					for range b.N {
 						fn.f(u)
 					}
 				})

@@ -212,7 +212,7 @@ func (el *errorList) Deduplicate() {
 		return
 	}
 	set, n := make(map[string]struct{}), 0
-	for i := 0; i < len(el.list); i++ {
+	for i := range el.list {
 		x := el.list[i]
 		if x != nil {
 			errStr := x.Error()

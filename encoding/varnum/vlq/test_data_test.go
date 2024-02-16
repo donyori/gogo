@@ -52,7 +52,7 @@ func init() {
 	uint64s[52] = math.MaxUint64
 
 	encodedUint64s = make([][]byte, 53)
-	for i := 0; i < 7; i++ {
+	for i := range 7 {
 		encodedUint64s[i] = []byte{byte(uint64s[i])}
 	}
 	for i := 1; i <= len(vlq.MinUint64s); i++ {
@@ -62,7 +62,7 @@ func init() {
 				break
 			}
 			encodedUint64s[idx] = make([]byte, i+1)
-			for j := 0; j < i; j++ {
+			for j := range i {
 				if k < 3 {
 					encodedUint64s[idx][j] = 0x80
 				} else {

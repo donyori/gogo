@@ -34,7 +34,7 @@ func TestOnceCanceler(t *testing.T) {
 	testCancelerCAndCanceled(t, "before calling Cancel, ", canceler, false)
 	var wg sync.WaitGroup
 	wg.Add(N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		go func(rank int) {
 			defer wg.Done()
 			canceler.Cancel()
@@ -80,7 +80,7 @@ func testContextCancelerFunc(t *testing.T, cancelManner int) {
 	testContextDoneErrAndCause(t, logPrefix, ctx, false, nil)
 	var wg sync.WaitGroup
 	wg.Add(N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		go func(rank int) {
 			defer wg.Done()
 			switch cancelManner {
@@ -137,7 +137,7 @@ func testContextCauseCancelerFunc(t *testing.T, cancelManner int) {
 	testContextDoneErrAndCause(t, logPrefix, ctx, false, nil)
 	var wg sync.WaitGroup
 	wg.Add(N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		go func(rank int) {
 			defer wg.Done()
 			switch cancelManner {

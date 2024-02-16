@@ -74,7 +74,7 @@ func newContext[Message any](
 		worldRanks: worldRanks,
 		pubC:       make(chan *sndrMsgRxc[Message]), // no buffer here because Communicator.SendAny requires blocking
 	}
-	for i := 0; i < n; i++ {
+	for i := range n {
 		ctx.comms[i] = newCommunicator(ctx, i)
 	}
 	return ctx

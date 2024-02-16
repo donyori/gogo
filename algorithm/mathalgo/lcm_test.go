@@ -37,7 +37,7 @@ func TestLCM_2Int(t *testing.T) {
 		for _, b := range testIntegers {
 			fsA, fsB := testIntegersFactorMap[a], testIntegersFactorMap[b]
 			want := 1
-			for i := 0; i < NumTestIntegerPrimeFactors; i++ {
+			for i := range NumTestIntegerPrimeFactors {
 				if fsA[i] >= fsB[i] {
 					want *= fsA[i]
 				} else {
@@ -103,7 +103,7 @@ func TestLCM_RandomlySelectInt(t *testing.T) {
 	xsNameSet := make(map[string]struct{}, N)
 	xsNameSet[""] = struct{}{}
 	random := rand.New(rand.NewChaCha8(ChaCha8Seed))
-	for i := 0; i < N; i++ {
+	for range N {
 		xs, xsName := randomlySelectInts(t, random, xsNameSet)
 		if t.Failed() {
 			return
@@ -142,7 +142,7 @@ func TestLCM_AllRandom(t *testing.T) {
 	xsNameSet[""] = struct{}{}
 	var isWantPositive bool
 	random := rand.New(rand.NewChaCha8(ChaCha8Seed))
-	for i := 0; i < N; i++ {
+	for range N {
 		xs, xsName := randomlyGenerateInts(t, random, xsNameSet)
 		if t.Failed() {
 			return

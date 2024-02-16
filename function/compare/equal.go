@@ -107,7 +107,7 @@ func SliceEqual[S constraints.Slice[T], T comparable](a, b S) bool {
 	} else if n == 0 {
 		return (a == nil) == (b == nil)
 	}
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if a[i] != b[i] {
 			return false
 		}
@@ -131,7 +131,7 @@ func FloatSliceEqual[S constraints.Slice[T], T constraints.Float](a, b S) bool {
 	} else if n == 0 {
 		return (a == nil) == (b == nil)
 	}
-	for i := 0; i < n; i++ {
+	for i := range n {
 		// "x == x" means that x is not a NaN.
 		if a[i] != b[i] && (a[i] == a[i] || b[i] == b[i]) {
 			return false
@@ -155,7 +155,7 @@ func AnySliceEqual[S constraints.Slice[T], T any](a, b S) bool {
 	} else if n == 0 {
 		return (a == nil) == (b == nil)
 	}
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if !AnyEqual(a[i], b[i]) {
 			return false
 		}
@@ -188,7 +188,7 @@ func EqualToSliceEqual[S constraints.Slice[T], T any](
 		} else if n == 0 {
 			return nilEqualToEmpty || (a == nil) == (b == nil)
 		}
-		for i := 0; i < n; i++ {
+		for i := range n {
 			if !ef(a[i], b[i]) {
 				return false
 			}

@@ -47,7 +47,7 @@ func TestWriteTrunc(t *testing.T) {
 	tmpRoot := t.TempDir()
 	name := filepath.Join(tmpRoot, "test.txt")
 	data := []byte("test local.WriteTrunc\n")
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		func(t *testing.T, i int) {
 			w, err := local.WriteTrunc(name, 0600, true, nil)
 			if err != nil {
@@ -270,7 +270,7 @@ func TestWriteAppend(t *testing.T) {
 	tmpRoot := t.TempDir()
 	name := filepath.Join(tmpRoot, "test.txt")
 	data := []byte("test local.WriteAppend\n")
-	for i := 0; i < N; i++ {
+	for i := range N {
 		func(t *testing.T, i int) {
 			w, err := local.WriteAppend(name, 0600, true, nil)
 			if err != nil {

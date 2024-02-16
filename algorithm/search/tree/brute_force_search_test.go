@@ -241,7 +241,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 	}
 
 	tt := &treeImpl{Data: treeData}
-	for goal := 0; goal < NumTreeNode; goal++ {
+	for goal := range NumTreeNode {
 		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
 			var i int
 			for i < len(ordering) && ordering[i] != goal {
@@ -405,7 +405,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 	}
 
 	tt := &treeImpl{Data: treeData}
-	for goal := 0; goal < NumTreeNode; goal++ {
+	for goal := range NumTreeNode {
 		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
 			path := f(t, tt, goal)
 			checkPath(t, name, goal, path)

@@ -324,7 +324,7 @@ func BenchmarkCanEncodeToBytesStringFunctions(b *testing.B) {
 		b.Run(data.name, func(b *testing.B) {
 			for _, fn := range fns {
 				b.Run(fn.name, func(b *testing.B) {
-					for i := 0; i < b.N; i++ {
+					for range b.N {
 						fn.f(src, data.x)
 					}
 				})
@@ -409,7 +409,7 @@ func BenchmarkCanEncodeToPrefixBytesStringFunctions(b *testing.B) {
 		b.Run(data.name, func(b *testing.B) {
 			for _, fn := range fns {
 				b.Run(fn.name, func(b *testing.B) {
-					for i := 0; i < b.N; i++ {
+					for range b.N {
 						fn.f(src, data.prefix)
 					}
 				})

@@ -186,7 +186,7 @@ type testCase struct {
 func TestNextPermutation(t *testing.T) {
 	var testCases []testCase
 	for _, ps := range dataList {
-		for i := 0; i < len(ps)-1; i++ {
+		for i := range len(ps) - 1 {
 			testCases = append(testCases, testCase{
 				data:     ps[i],
 				wantData: ps[i+1],

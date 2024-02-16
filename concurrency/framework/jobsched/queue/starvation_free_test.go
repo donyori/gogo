@@ -58,7 +58,7 @@ func TestExponentialJobQueue_StarvationFree(t *testing.T) {
 	for i := uint(0); i < NumDequeue; i++ {
 		p := 3 + i
 		ct := baseTime.Add(time.Duration(i) * time.Millisecond)
-		for j := 0; j < N; j++ {
+		for range N {
 			jq.Enqueue(&jobsched.MetaJob[int, jobsched.NoProperty]{
 				Meta: jobsched.Meta[jobsched.NoProperty]{
 					Priority:     p,

@@ -632,7 +632,7 @@ func (comm *communicator[Message]) scatterRoot(
 	n, idx, cIdx := len(comm.ctx.comms), 0, 0
 	q, r := size/n, size%n
 	chunkLen := q + 1
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if i == r {
 			chunkLen--
 		}

@@ -361,7 +361,7 @@ func buildLongLineAndInputData() (longLine, data []byte) {
 	longLine = bytes.Repeat([]byte(RepeatingUnit), 2048)
 	data = make([]byte, (len(longLine)+1)*NumLine-1)
 	var n int
-	for i := 0; i < NumLine; i++ {
+	for i := range NumLine {
 		if i > 0 {
 			data[n], n = '\n', n+1
 		}

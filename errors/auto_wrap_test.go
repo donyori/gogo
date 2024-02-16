@@ -248,7 +248,7 @@ func getTestCasesForAutoWrapCustom(t *testing.T) []autoWrapCustomTestCase {
 	var idx int
 	for _, err := range errorList {
 		for ms := errors.ErrorMessageStrategy(-1); ms <= errors.PrependSimplePkgName+1; ms++ {
-			for skip := 0; skip <= 1; skip++ {
+			for skip := range 2 {
 				for _, excl := range exclList {
 					if idx >= len(testCases) {
 						t.Fatal("not enough test cases, please update")

@@ -290,7 +290,7 @@ func testBruteForceSearch(t *testing.T, name string) {
 	}
 
 	tg := &graphImpl{Data: undirectedGraphData}
-	for goal := 0; goal < NumUndirectedGraphVertex; goal++ {
+	for goal := range NumUndirectedGraphVertex {
 		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
 			var i int
 			for i < len(ordering) && ordering[i] != goal {
@@ -454,7 +454,7 @@ func testBruteForceSearchPath(t *testing.T, name string) {
 	}
 
 	tg := &graphImpl{Data: undirectedGraphData}
-	for goal := 0; goal < NumUndirectedGraphVertex; goal++ {
+	for goal := range NumUndirectedGraphVertex {
 		t.Run(fmt.Sprintf("goal=%d", goal), func(t *testing.T) {
 			path := f(t, tg, goal)
 			checkPath(t, name, goal, path)

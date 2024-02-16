@@ -66,7 +66,7 @@ func Tmp(dir, prefix, suffix string, perm fs.FileMode) (f *os.File, err error) {
 	}
 	prefix = filepath.Join(dir, prefix)
 	r := uint32(time.Now().UnixNano() + int64(os.Getpid())*1000)
-	for try := 0; try < 100; try++ {
+	for range 100 {
 		f, err = os.OpenFile(prefix+strconv.FormatUint(uint64(r), 36)+suffix,
 			os.O_RDWR|os.O_CREATE|os.O_EXCL, perm)
 		if err == nil || !errors.Is(err, fs.ErrExist) {
@@ -104,7 +104,7 @@ func TmpDir(dir, prefix, suffix string, perm fs.FileMode) (
 	}
 	prefix = filepath.Join(dir, prefix)
 	r := uint32(time.Now().UnixNano() + int64(os.Getpid())*1000)
-	for try := 0; try < 100; try++ {
+	for range 100 {
 		name = prefix + strconv.FormatUint(uint64(r), 36) + suffix
 		err = os.Mkdir(name, perm)
 		if err == nil {
@@ -129,12 +129,12 @@ func TmpDir(dir, prefix, suffix string, perm fs.FileMode) (
 // If a path separator is in prefix or suffix,
 // it returns ErrContainsPathSeparator.
 func checkTmpPrefixAndSuffix(prefix, suffix string) error {
-	for i := 0; i < len(prefix); i++ {
+	for i := range len(prefix) {
 		if os.IsPathSeparator(prefix[i]) {
 			return ErrContainsPathSeparator // don't wrap the error here
 		}
 	}
-	for i := 0; i < len(suffix); i++ {
+	for i := range len(suffix) {
 		if os.IsPathSeparator(suffix[i]) {
 			return ErrContainsPathSeparator // don't wrap the error here
 		}

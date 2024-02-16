@@ -225,7 +225,7 @@ func testCommunicatorSendReceiveAny23Proc(
 	r := comm.Rank()
 	switch r {
 	case 2:
-		for i := 0; i < 6; i++ {
+		for range 6 {
 			src, msg := comm.ReceiveAny()
 			checkSrcMsg(r, src, msg)
 			// t.Logf("goroutine %d, ReceiveAny - src %d, msg %d", r, src, msg)
@@ -249,7 +249,7 @@ func testCommunicatorSendReceiveAny23Proc(
 			}
 		}
 		world.Barrier()
-		for i := 0; i < 4; i++ {
+		for range 4 {
 			src, msg := comm.ReceivePublic()
 			checkSrcMsg(r, src, msg)
 		}
@@ -397,7 +397,7 @@ func TestCommunicator_Gather(t *testing.T) {
 	) {
 		r := world.Rank()
 		for _, a := range data {
-			for root := 0; root < 4; root++ {
+			for root := range 4 {
 				x, ok := world.Gather(root, a[r])
 				if !ok {
 					t.Errorf("goroutine %d, root %d, detected an unexpected cancellation signal",

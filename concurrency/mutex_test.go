@@ -135,7 +135,7 @@ func TestMutex_Fairness(t *testing.T) {
 	doneC := make(chan struct{})
 	go func() {
 		defer wg.Done()
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			time.Sleep(time.Microsecond * 100)
 			select {
 			case <-stopC:

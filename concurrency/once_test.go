@@ -38,7 +38,7 @@ func TestOnce_Do_Once(t *testing.T) {
 	})
 	var wg sync.WaitGroup
 	wg.Add(N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		go func(rank int) {
 			defer wg.Done()
 			once.Do()
@@ -61,7 +61,7 @@ func TestOnce_DoRecover_Once(t *testing.T) {
 	})
 	var wg sync.WaitGroup
 	wg.Add(N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		go func(rank int) {
 			defer wg.Done()
 			called, panicValue := once.DoRecover()
@@ -93,7 +93,7 @@ func TestOnce_Do_DoRecover_Once(t *testing.T) {
 	})
 	var wg sync.WaitGroup
 	wg.Add(N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		go func(rank int) {
 			defer wg.Done()
 			if rank&1 == 0 {
@@ -126,7 +126,7 @@ func TestOnce_Do_Panic(t *testing.T) {
 	})
 	var wg sync.WaitGroup
 	wg.Add(N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		go func(rank int) {
 			defer wg.Done()
 			defer func() {
@@ -154,7 +154,7 @@ func TestOnce_DoRecover_Panic(t *testing.T) {
 	})
 	var wg sync.WaitGroup
 	wg.Add(N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		go func(rank int) {
 			defer wg.Done()
 			defer func() {
@@ -288,7 +288,7 @@ func TestOnce_Do_Goexit(t *testing.T) {
 	})
 	var wg sync.WaitGroup
 	wg.Add(N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		go func(rank int) {
 			defer wg.Done()
 			defer func() {
@@ -315,7 +315,7 @@ func TestOnce_DoRecover_Goexit(t *testing.T) {
 	})
 	var wg sync.WaitGroup
 	wg.Add(N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		go func(rank int) {
 			defer wg.Done()
 			defer func() {
@@ -342,7 +342,7 @@ func TestOnce_Do_DoRecover_Goexit(t *testing.T) {
 	})
 	var wg sync.WaitGroup
 	wg.Add(N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		go func(rank int) {
 			defer wg.Done()
 			defer func() {

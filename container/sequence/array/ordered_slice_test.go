@@ -109,8 +109,8 @@ func TestTransitiveOrderedSlice_Less(t *testing.T) {
 		t.Fatal("unsorted data, please update")
 	}
 	oda := array.WrapTransitiveOrderedSlice(&data)
-	for i := 0; i < len(data); i++ {
-		for j := 0; j < len(data); j++ {
+	for i := range data {
+		for j := range data {
 			t.Run(
 				fmt.Sprintf("i=%d(s[i]=%s)&j=%d(s[j]=%s)",
 					i, data[i], j, data[j]),
@@ -159,8 +159,8 @@ func testFloat64SliceLess(
 			n, len(dataValueStr))
 	}
 	oda := getOrderedDynamicArray(&data)
-	for i := 0; i < n; i++ {
-		for j := 0; j < n; j++ {
+	for i := range n {
+		for j := range n {
 			t.Run(
 				fmt.Sprintf("i=%d(s[i]=%s)&j=%d(s[j]=%s)",
 					i, dataValueStr[i], j, dataValueStr[j]),

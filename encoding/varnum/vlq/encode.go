@@ -186,7 +186,7 @@ func encodeUint64(dst []byte, u uint64) int {
 		t-- // remove the prepending redundancy in typical VLQ
 		buf[n], n, t = byte(t&0x7F|0x80), n+1, t>>7
 	}
-	for i := 0; i < n; i++ {
+	for i := range n {
 		dst[i] = buf[n-1-i]
 	}
 	return n

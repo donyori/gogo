@@ -33,7 +33,7 @@ func TestTmp_Sync(t *testing.T) {
 	var wg sync.WaitGroup
 	files := make([]string, 0, N)
 	wg.Add(N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		go func(no int) {
 			defer wg.Done()
 			f, err := local.Tmp(tmpRoot, "f.", ".tmp", 0740)
@@ -74,7 +74,7 @@ func TestTmpDir_Sync(t *testing.T) {
 	var wg sync.WaitGroup
 	dirs := make([]string, 0, N)
 	wg.Add(N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		go func(no int) {
 			defer wg.Done()
 			dir, err := local.TmpDir(tmpRoot, "tmp-", "", 0700)

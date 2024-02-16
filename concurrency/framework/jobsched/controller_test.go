@@ -689,7 +689,7 @@ func TestController_SetupAndCleanup(t *testing.T) {
 	if len(prs) > 0 {
 		t.Errorf("panic %q", prs)
 	}
-	for rank := 0; rank < NumWorker; rank++ {
+	for rank := range NumWorker {
 		if gotCtr := setupCounter[rank].Load(); gotCtr != 1 {
 			t.Errorf("got setupCounter[%d] %d; want 1", rank, gotCtr)
 		}

@@ -70,7 +70,7 @@ func TestRecorder(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(NumReader + NumRecorder)
 
-	for i := 0; i < NumReader; i++ {
+	for i := range NumReader {
 		go goroutineTestRecorderReader(
 			&wg,
 			i,
@@ -83,12 +83,12 @@ func TestRecorder(t *testing.T) {
 		)
 	}
 
-	for i := 0; i < NumRecorder; i++ {
+	for i := range NumRecorder {
 		go func(rank int) {
 			defer wg.Done()
 			for round, x := range data {
-				for k := 0; k < NumReader; k++ {
-					<-readyCsList[k][round]
+				for i := range NumReader {
+					<-readyCsList[i][round]
 				}
 				rec.Record(x...)
 				close(recordedCsList[rank][round])
@@ -150,7 +150,7 @@ func goroutineTestRecorderReader(
 	var wantAll []int
 	for round, x := range data {
 		if len(x) > 0 {
-			for k := 0; k < numRecorder; k++ {
+			for range numRecorder {
 				wantAll = append(wantAll, x...)
 			}
 		}
@@ -161,8 +161,8 @@ func goroutineTestRecorderReader(
 		}
 
 		close(readyCsList[rank][round])
-		for k := 0; k < numRecorder; k++ {
-			<-recordedCsList[k][round]
+		for i := range numRecorder {
+			<-recordedCsList[i][round]
 		}
 
 		check(round, wantLastX, wantLastOK, wantAll)

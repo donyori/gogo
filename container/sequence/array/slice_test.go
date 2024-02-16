@@ -264,8 +264,8 @@ func TestSliceDynamicArray_Swap(t *testing.T) {
 		want []int
 	}, n*n)
 	var idx int
-	for i := 0; i < n; i++ {
-		for j := 0; j < n; j++ {
+	for i := range n {
+		for j := range n {
 			testCases[idx].i, testCases[idx].j = i, j
 			want := make([]int, n)
 			copy(want, data)
@@ -295,7 +295,7 @@ func TestSliceDynamicArray_Slice(t *testing.T) {
 		want       []int
 	}, n*(n+3)/2) // (n+1)+n+(n-1)+...+2 = n*((n+1)+2)/2 = n*(n+3)/2
 	var idx int
-	for begin := 0; begin < n; begin++ {
+	for begin := range n {
 		for end := begin; end <= n; end++ {
 			testCases[idx].begin, testCases[idx].end = begin, end
 			want := make([]int, end-begin)
@@ -538,7 +538,7 @@ func TestSliceDynamicArray_Truncate(t *testing.T) {
 	}, n+2)
 	testCases[0].i, testCases[0].want = -1, data
 	idx := 1
-	for i := 0; i < n; i++ {
+	for i := range n {
 		testCases[idx].i = i
 		testCases[idx].want = data[:i]
 		idx++
@@ -723,7 +723,7 @@ func TestSliceDynamicArray_Cut(t *testing.T) {
 		want       []int
 	}, n*(n+3)/2) // (n+1)+n+(n-1)+...+2 = n*((n+1)+2)/2 = n*(n+3)/2
 	var idx int
-	for begin := 0; begin < n; begin++ {
+	for begin := range n {
 		for end := begin; end <= n; end++ {
 			testCases[idx].begin, testCases[idx].end = begin, end
 			want := make([]int, n-end+begin)
@@ -757,7 +757,7 @@ func TestSliceDynamicArray_CutWithoutOrder(t *testing.T) {
 		want       []int
 	}, n*(n+3)/2) // (n+1)+n+(n-1)+...+2 = n*((n+1)+2)/2 = n*(n+3)/2
 	var idx int
-	for begin := 0; begin < n; begin++ {
+	for begin := range n {
 		for end := begin; end <= n; end++ {
 			testCases[idx].begin, testCases[idx].end = begin, end
 			want := make([]int, n-end+begin)

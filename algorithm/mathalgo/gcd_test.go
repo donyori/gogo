@@ -42,7 +42,7 @@ var (
 func init() {
 	const MaxD int = 2
 	numInts := 1
-	for i := 0; i < NumTestIntegerPrimeFactors; i++ {
+	for range NumTestIntegerPrimeFactors {
 		numInts *= MaxD + 1
 	}
 	testIntegers = make([]int, numInts)
@@ -83,7 +83,7 @@ func TestGCD_2Int(t *testing.T) {
 		for _, b := range testIntegers {
 			fsA, fsB := testIntegersFactorMap[a], testIntegersFactorMap[b]
 			want := 1
-			for i := 0; i < NumTestIntegerPrimeFactors; i++ {
+			for i := range NumTestIntegerPrimeFactors {
 				if fsA[i] <= fsB[i] {
 					want *= fsA[i]
 				} else {
@@ -152,7 +152,7 @@ func TestGCD_RandomlySelectInt(t *testing.T) {
 	xsNameSet := make(map[string]struct{}, N)
 	xsNameSet[""] = struct{}{}
 	random := rand.New(rand.NewChaCha8(ChaCha8Seed))
-	for i := 0; i < N; i++ {
+	for range N {
 		xs, xsName := randomlySelectInts(t, random, xsNameSet)
 		if t.Failed() {
 			return
@@ -191,7 +191,7 @@ func TestGCD_AllRandom(t *testing.T) {
 	xsNameSet[""] = struct{}{}
 	var isWantMoreThan1 bool
 	random := rand.New(rand.NewChaCha8(ChaCha8Seed))
-	for i := 0; i < N; i++ {
+	for range N {
 		xs, xsName := randomlyGenerateInts(t, random, xsNameSet)
 		if t.Failed() {
 			return
@@ -295,7 +295,7 @@ func TestGCD2Uint64Functions(t *testing.T) {
 		for _, b := range testIntegers {
 			fsA, fsB := testIntegersFactorMap[a], testIntegersFactorMap[b]
 			var want uint64 = 1
-			for i := 0; i < NumTestIntegerPrimeFactors; i++ {
+			for i := range NumTestIntegerPrimeFactors {
 				if fsA[i] <= fsB[i] {
 					want *= uint64(fsA[i])
 				} else {
@@ -349,7 +349,7 @@ func BenchmarkGCD2Uint64Functions(b *testing.B) {
 		b.Run(fmt.Sprintf("a=%d&b=%d", data.a, data.b), func(b *testing.B) {
 			for _, fn := range fns {
 				b.Run(fn.name, func(b *testing.B) {
-					for i := 0; i < b.N; i++ {
+					for range b.N {
 						fn.f(data.a, data.b)
 					}
 				})

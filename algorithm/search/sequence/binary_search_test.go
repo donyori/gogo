@@ -83,7 +83,7 @@ var acceptNotFound = map[int]struct{}{-1: {}}
 func init() {
 	valueCounter = make(map[int]int, MaxValue+1)
 	base := make([]*idValue, BaseLength)
-	for i := 0; i < BaseLength-1; i++ {
+	for i := range BaseLength - 1 {
 		v := i % (MaxValue + 1)
 		ctr := valueCounter[v]
 		valueCounter[v] = ctr + 1

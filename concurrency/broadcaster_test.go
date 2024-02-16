@@ -51,16 +51,16 @@ func TestBroadcaster_Broadcast(t *testing.T) {
 	random := rand.New(rand.NewChaCha8(
 		[32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))))
 	var delayDurations [NumGoroutine][NumMessage - 1]time.Duration
-	for i := 0; i < NumGoroutine; i++ {
-		for k := 0; k < NumMessage-1; k++ {
-			delayDurations[i][k] = time.Microsecond * time.Duration(
+	for i := range NumGoroutine {
+		for j := range NumMessage - 1 {
+			delayDurations[i][j] = time.Microsecond * time.Duration(
 				random.IntN(NumGoroutine))
 		}
 	}
 
 	var wg sync.WaitGroup
 	wg.Add(NumGoroutine)
-	for i := 0; i < NumGoroutine; i++ {
+	for i := range NumGoroutine {
 		go func(rank int) {
 			defer wg.Done()
 			var recv [NumMessage]int
@@ -120,7 +120,7 @@ func TestBroadcaster_Unsubscribe(t *testing.T) {
 	wg.Add(4) // 3 receivers + 1 sender
 	var ready sync.WaitGroup
 	ready.Add(3)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		// Receive all messages normally, to ensure that Unsubscribe doesn't
 		// affect other subscribers.
 		go func(rank int) {
@@ -153,7 +153,7 @@ func TestBroadcaster_Unsubscribe(t *testing.T) {
 	defer wg.Wait()
 	var recv [NumMessage]int
 	stop := NumMessage / 2
-	for i := 0; i < stop; i++ {
+	for i := range stop {
 		msg, ok := <-c
 		if !ok {
 			t.Errorf("c closed early, received messages %v", recv[:i])

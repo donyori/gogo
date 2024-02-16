@@ -37,24 +37,24 @@ func init() {
 	const N int = 3
 	errorsForErrorReadOnlySet = make([][]error, 5)
 	errorsForErrorReadOnlySet[0] = make([]error, N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		errorsForErrorReadOnlySet[0][i] = fmt.Errorf("test error %d", i)
 	}
 	errorsForErrorReadOnlySet[1] = make([]error, N*2)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		errorsForErrorReadOnlySet[1][i*2] = &errorUnwrap{errorsForErrorReadOnlySet[0][i]}
 		errorsForErrorReadOnlySet[1][i*2+1] = &errorUnwrap{errorsForErrorReadOnlySet[1][i*2]}
 	}
 	errorsForErrorReadOnlySet[2] = make([]error, N*2)
 	errorsForErrorReadOnlySet[3] = make([]error, N*2)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		errorsForErrorReadOnlySet[2][i*2] = &errorIsAlwaysTrue{errorsForErrorReadOnlySet[0][i]}
 		errorsForErrorReadOnlySet[2][i*2+1] = &errorIsAlwaysTrue{errorsForErrorReadOnlySet[1][i*2]}
 		errorsForErrorReadOnlySet[3][i*2] = &errorIsAlwaysFalse{errorsForErrorReadOnlySet[0][i]}
 		errorsForErrorReadOnlySet[3][i*2+1] = &errorIsAlwaysFalse{errorsForErrorReadOnlySet[1][i*2]}
 	}
 	errorsForErrorReadOnlySet[4] = make([]error, N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		errorsForErrorReadOnlySet[4][i] = stderrors.Join(
 			errorsForErrorReadOnlySet[1][i*2],
 			errorsForErrorReadOnlySet[3][i*2],
