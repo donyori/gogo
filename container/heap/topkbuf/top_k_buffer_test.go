@@ -21,7 +21,6 @@ package topkbuf_test
 import (
 	"fmt"
 	"slices"
-	"sort"
 	"testing"
 
 	"github.com/donyori/gogo/container/heap/topkbuf"
@@ -187,7 +186,7 @@ func TestTopKBuffer_Add(t *testing.T) {
 				testCases[idx].xs = xs
 				want := make([]int, len(data)+len(xs))
 				copy(want[copy(want, data):], xs)
-				sort.Ints(want)
+				slices.Sort(want)
 				testCases[idx].want = kSuffixAndReverse(want, k)
 				idx++
 			}
@@ -267,7 +266,7 @@ func copyAndSort(data []int) []int {
 	}
 	sorted := make([]int, len(data))
 	copy(sorted, data)
-	sort.Ints(sorted)
+	slices.Sort(sorted)
 	return sorted
 }
 

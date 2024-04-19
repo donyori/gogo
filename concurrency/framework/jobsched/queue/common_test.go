@@ -20,7 +20,7 @@ package queue_test
 
 import (
 	"math/rand/v2"
-	"sort"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -93,24 +93,24 @@ func init() {
 // makeWant uses metaJobs as the input jobs to generate the argument for
 // the parameter want of the function testJobQueueFunc.
 //
-// lessFn indicates whether job a must be dequeued before job b.
+// cmp compares two jobs for sorting.
+// It returns -1 if job a must be dequeued before job b,
+// 1 if job a must be dequeued after job b,
+// and 0 if they can be dequeued in any order.
 //
 // Its return value is a sequence of groups of jobs.
 // The less the index of the group, the earlier dequeued.
 // The jobs in the same group can be dequeued in any order.
-func makeWant(lessFn func(
+func makeWant(cmp func(
 	a *jobsched.MetaJob[int, jobsched.NoProperty],
 	b *jobsched.MetaJob[int, jobsched.NoProperty],
-) bool) [][]int {
+) int) [][]int {
 	mjs := make([]*jobsched.MetaJob[int, jobsched.NoProperty], N)
 	copy(mjs, metaJobs)
-	less := func(i, j int) bool {
-		return lessFn(mjs[i], mjs[j])
-	}
-	sort.Slice(mjs, less)
+	slices.SortFunc(mjs, cmp)
 	want := make([][]int, 0, N)
 	for i, mj := range mjs {
-		if i > 0 && !less(i-1, i) {
+		if i > 0 && cmp(mjs[i-1], mjs[i]) == 0 {
 			want[len(want)-1] = append(want[len(want)-1], mj.Job)
 		} else {
 			want = append(want, []int{mj.Job})

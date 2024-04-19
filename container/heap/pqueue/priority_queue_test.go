@@ -20,7 +20,7 @@ package pqueue_test
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"testing"
 
@@ -112,7 +112,7 @@ func TestPriorityQueue_Enqueue(t *testing.T) {
 			testCases[idx].xs = xs
 			want := make([]int, len(data)+len(xs))
 			copy(want[copy(want, data):], xs)
-			sort.Ints(want)
+			slices.Sort(want)
 			testCases[idx].want = want
 			idx++
 		}
@@ -192,7 +192,7 @@ func TestPriorityQueue_ReplaceTop(t *testing.T) {
 			testCases[idx].newX = newX
 			want := copyAndSort(data)
 			want[0] = newX
-			sort.Ints(want)
+			slices.Sort(want)
 			testCases[idx].want = want
 			idx++
 		}
@@ -238,7 +238,7 @@ func copyAndSort(data []int) []int {
 	}
 	sorted := make([]int, len(data))
 	copy(sorted, data)
-	sort.Ints(sorted)
+	slices.Sort(sorted)
 	return sorted
 }
 

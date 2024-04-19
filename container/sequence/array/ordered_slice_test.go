@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"math"
 	"slices"
-	"sort"
 	"testing"
 
 	"github.com/donyori/gogo/constraints"
@@ -105,7 +104,7 @@ func TestSliceLess_Less(t *testing.T) {
 
 func TestTransitiveOrderedSlice_Less(t *testing.T) {
 	data := []string{"Alice", "Hello world!", "ball", "中文"} // data is sorted
-	if !sort.StringsAreSorted(data) {
+	if !slices.IsSorted(data) {
 		t.Fatal("unsorted data, please update")
 	}
 	oda := array.WrapTransitiveOrderedSlice(&data)
@@ -145,7 +144,7 @@ func testFloat64SliceLess(
 		math.SmallestNonzeroFloat64, .1, 1., 1.1, math.MaxFloat64,
 		math.Inf(1),
 	} // data is sorted
-	if !sort.Float64sAreSorted(data) {
+	if !slices.IsSorted(data) {
 		t.Fatal("unsorted data, please update")
 	}
 	dataValueStr := []string{

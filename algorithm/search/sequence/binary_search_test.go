@@ -20,7 +20,7 @@ package sequence_test
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -56,16 +56,26 @@ func idValueEqual(a, b *idValue) bool {
 	return b != nil && a.id == b.id
 }
 
-func idValueSortLess(a, b *idValue) bool {
+func idValueSortCmp(a, b *idValue) int {
 	switch {
 	case a == nil:
-		return b != nil
+		if b == nil {
+			return 0
+		}
 	case b == nil:
-		return false
+		return 1
 	case a.value != b.value:
-		return a.value < b.value
+		if a.value > b.value {
+			return 1
+		}
+	case a.id != b.id:
+		if a.id > b.id {
+			return 1
+		}
+	default:
+		return 0
 	}
-	return a.id < b.id
+	return -1
 }
 
 const MaxValue int = 6                // the range of values in dataList is {0, 1, 2, 3, 4, 5, 6}
@@ -102,9 +112,7 @@ func init() {
 				copied += copy(data[copied:], base[:length])
 			}
 			if len(data) > 1 {
-				sort.Slice(data, func(i, j int) bool {
-					return idValueSortLess(data[i], data[j])
-				})
+				slices.SortFunc(data, idValueSortCmp)
 			}
 			dataList[idx], idx = data, idx+1
 		}
@@ -264,7 +272,7 @@ func acceptSetString(acceptSet map[int]struct{}) string {
 	for v := range acceptSet {
 		vs[i], i = v, i+1
 	}
-	sort.Ints(vs)
+	slices.Sort(vs)
 	var b strings.Builder
 	b.Grow(len(vs)*3 + 2)
 	b.WriteByte('[')

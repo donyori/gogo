@@ -33,7 +33,6 @@ import (
 	"math/rand/v2"
 	"path"
 	"slices"
-	"sort"
 	"testing/fstest"
 	"time"
 
@@ -461,7 +460,7 @@ func initRecordFilenames() {
 			zipIdx++
 		}
 	}
-	sort.Strings(testFSFilenames)
+	slices.Sort(testFSFilenames)
 	testFSBasicFilenames = make([]string, idx-gzIdx-tarIdx-tgzIdx-zipIdx)
 	testFSGzFilenames = make([]string, gzIdx)
 	testFSTarFilenames = make([]string, tarIdx)

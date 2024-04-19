@@ -28,7 +28,7 @@ import (
 	"io/fs"
 	"maps"
 	"path"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/donyori/gogo/errors"
@@ -613,8 +613,13 @@ func (fr *reader) ZipFiles() (files []*zip.File, err error) {
 	}
 	files = make([]*zip.File, len(fr.zr.File))
 	copy(files, fr.zr.File)
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].Name < files[j].Name
+	slices.SortFunc(files, func(a, b *zip.File) int {
+		if a.Name < b.Name {
+			return -1
+		} else if a.Name > b.Name {
+			return 1
+		}
+		return 0
 	})
 	return
 }

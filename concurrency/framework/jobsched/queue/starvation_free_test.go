@@ -30,11 +30,18 @@ func TestExponentialJobQueue_Basic(t *testing.T) {
 	testJobQueueFunc(
 		t,
 		queue.NewExponentialJobQueueMaker[int, jobsched.NoProperty](0, 0.),
-		makeWant(func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) bool {
-			if a.Meta.Priority == b.Meta.Priority {
-				return a.Meta.CreationTime.Before(b.Meta.CreationTime)
+		makeWant(func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) int {
+			switch {
+			case a.Meta.Priority > b.Meta.Priority:
+				return -1
+			case a.Meta.Priority < b.Meta.Priority:
+				return 1
+			case a.Meta.CreationTime.Before(b.Meta.CreationTime):
+				return -1
+			case a.Meta.CreationTime.After(b.Meta.CreationTime):
+				return 1
 			}
-			return a.Meta.Priority > b.Meta.Priority
+			return 0
 		}),
 	)
 }

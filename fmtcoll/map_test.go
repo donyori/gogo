@@ -21,7 +21,7 @@ package fmtcoll_test
 import (
 	"fmt"
 	"io"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -259,7 +259,7 @@ func getWantStringForFormatMapToString(
 		for key := range data {
 			keys = append(keys, key)
 		}
-		sort.Strings(keys)
+		slices.Sort(keys)
 		var b strings.Builder
 		b.WriteByte('{')
 		b.WriteString(commonFormatList[commonFormatIdx].Prefix)

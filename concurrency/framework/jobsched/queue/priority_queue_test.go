@@ -29,11 +29,18 @@ func TestPriorityFirstJobQueue(t *testing.T) {
 	testJobQueueFunc(
 		t,
 		queue.NewPriorityFirstJobQueueMaker[int, jobsched.NoProperty](),
-		makeWant(func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) bool {
-			if a.Meta.Priority == b.Meta.Priority {
-				return a.Meta.CreationTime.Before(b.Meta.CreationTime)
+		makeWant(func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) int {
+			switch {
+			case a.Meta.Priority > b.Meta.Priority:
+				return -1
+			case a.Meta.Priority < b.Meta.Priority:
+				return 1
+			case a.Meta.CreationTime.Before(b.Meta.CreationTime):
+				return -1
+			case a.Meta.CreationTime.After(b.Meta.CreationTime):
+				return 1
 			}
-			return a.Meta.Priority > b.Meta.Priority
+			return 0
 		}),
 	)
 }
@@ -42,11 +49,18 @@ func TestCreationTimeFirstJobQueue(t *testing.T) {
 	testJobQueueFunc(
 		t,
 		queue.NewCreationTimeFirstJobQueueMaker[int, jobsched.NoProperty](),
-		makeWant(func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) bool {
-			if a.Meta.CreationTime.Equal(b.Meta.CreationTime) {
-				return a.Meta.Priority > b.Meta.Priority
+		makeWant(func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) int {
+			switch {
+			case a.Meta.CreationTime.Before(b.Meta.CreationTime):
+				return -1
+			case a.Meta.CreationTime.After(b.Meta.CreationTime):
+				return 1
+			case a.Meta.Priority > b.Meta.Priority:
+				return -1
+			case a.Meta.Priority < b.Meta.Priority:
+				return 1
 			}
-			return a.Meta.CreationTime.Before(b.Meta.CreationTime)
+			return 0
 		}),
 	)
 }
@@ -69,9 +83,29 @@ func TestJobPriorityQueue(t *testing.T) {
 		}
 		return pa < pb
 	}
+	cmp := func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) int {
+		pa, pb := int(a.Meta.Priority)-100, int(b.Meta.Priority)-100
+		if pa < 0 {
+			pa = -pa
+		}
+		if pb < 0 {
+			pb = -pb
+		}
+		switch {
+		case pa < pb:
+			return -1
+		case pa > pb:
+			return 1
+		case a.Meta.CreationTime.Before(b.Meta.CreationTime):
+			return -1
+		case a.Meta.CreationTime.After(b.Meta.CreationTime):
+			return 1
+		}
+		return 0
+	}
 	testJobQueueFunc(
 		t,
 		queue.NewJobPriorityQueueMaker[int, jobsched.NoProperty](lessFn),
-		makeWant(lessFn),
+		makeWant(cmp),
 	)
 }
