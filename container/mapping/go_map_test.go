@@ -577,11 +577,23 @@ func mapToString(m SIM) string {
 		},
 		FormatKeyFn:   fmtcoll.FprintfToFormatFunc[string]("%+q"),
 		FormatValueFn: fmtcoll.FprintfToFormatFunc[int]("%d"),
-		KeyValueLess: func(key1, key2 string, value1, value2 int) bool {
-			if key1 != key2 {
-				return key1 < key2
+		CompareKeyValueFn: func(
+			key1 string,
+			value1 int,
+			key2 string,
+			value2 int,
+		) int {
+			switch {
+			case key1 < key2:
+				return -1
+			case key1 > key2:
+				return 1
+			case value1 < value2:
+				return -1
+			case value1 > value2:
+				return 1
 			}
-			return value1 < value2
+			return 0
 		},
 	})
 }
@@ -594,11 +606,23 @@ func mapItfToString(m mapping.Map[string, int]) string {
 		},
 		FormatKeyFn:   fmtcoll.FprintfToFormatFunc[string]("%+q"),
 		FormatValueFn: fmtcoll.FprintfToFormatFunc[int]("%d"),
-		KeyValueLess: func(key1, key2 string, value1, value2 int) bool {
-			if key1 != key2 {
-				return key1 < key2
+		CompareKeyValueFn: func(
+			key1 string,
+			value1 int,
+			key2 string,
+			value2 int,
+		) int {
+			switch {
+			case key1 < key2:
+				return -1
+			case key1 > key2:
+				return 1
+			case value1 < value2:
+				return -1
+			case value1 > value2:
+				return 1
 			}
-			return value1 < value2
+			return 0
 		},
 	})
 }

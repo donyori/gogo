@@ -201,7 +201,7 @@ const (
 type multiCloser struct {
 	cm   map[io.Closer]bool // Closed map, to record whether the closer is closed successfully.
 	cs   []io.Closer
-	idx  int  // Index of the last successfully closed closer. (It equals to len(cs) initially.)
+	idx  int  // Index of the last successfully closed closer. (It equals len(cs) initially.)
 	flag byte // The first bit (0x01) is the option tryAll, and the second bit (0x02) is the option noError.
 }
 

@@ -93,10 +93,11 @@ func init() {
 // makeWant uses metaJobs as the input jobs to generate the argument for
 // the parameter want of the function testJobQueueFunc.
 //
-// cmp compares two jobs for sorting.
-// It returns -1 if job a must be dequeued before job b,
-// 1 if job a must be dequeued after job b,
-// and 0 if they can be dequeued in any order.
+// cmp compares two jobs for sorting. It returns
+//
+//	-1 if job a must be dequeued before job b,
+//	 0 if job a and job b can be dequeued in any order,
+//	+1 if job a must be dequeued after job b.
 //
 // Its return value is a sequence of groups of jobs.
 // The less the index of the group, the earlier dequeued.

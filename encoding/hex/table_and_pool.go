@@ -40,7 +40,7 @@ const sourceBufferLen int = 512
 // But the bytes 0b0001_0000-0b0001_1001 bitwise or letterCaseDiff
 // gets the number byte ('0'-'9').
 // Therefore, a necessary and sufficient condition to test whether
-// a specified byte c equals to a byte x of the lowercase character table
+// a specified byte c equals a byte x of the lowercase character table
 // (lowercaseHexTable) case-insensitively, is:
 //
 //	c >= '0' && c|letterCaseDiff == x

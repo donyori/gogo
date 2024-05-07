@@ -176,18 +176,22 @@ type MapFormat[Key, Value any] struct {
 	// the content is printed as "...".
 	FormatValueFn FormatFunc[Value]
 
-	// KeyValueLess is a function to report whether the key-value pair
-	// (key1, value1) is less than (key2, value2).
+	// CompareKeyValueFn is a function to compare the key-value pairs
+	// (key1, value1) and (key2, value2) for sorting.
 	//
-	// It is used to sort the key-value pairs in the map.
+	// It returns
+	//
+	//	-1 if (key1, value1) is less than (key2, value2),
+	//	 0 if (key1, value1) equals (key2, value2),
+	//	+1 if (key1, value1) is greater than (key2, value2).
 	//
 	// It must describe a transitive ordering.
 	// Note that floating-point comparison
 	// (the < operator on float32 or float64 values)
 	// is not a transitive ordering when not-a-number (NaN) values are involved.
 	//
-	// If KeyValueLess is nil, the key-value pairs may be in random order.
-	KeyValueLess func(key1, key2 Key, value1, value2 Value) bool
+	// If CompareKeyValueFn is nil, the key-value pairs may be in random order.
+	CompareKeyValueFn func(key1 Key, value1 Value, key2 Key, value2 Value) int
 }
 
 // NewDefaultMapFormat creates a new MapFormat
@@ -199,7 +203,7 @@ type MapFormat[Key, Value any] struct {
 //   - PrependSize: true
 //   - FormatKeyFn: FprintfToFormatFunc[Key]("%v")
 //   - FormatValueFn: FprintfToFormatFunc[Value]("%v")
-//   - KeyValueLess: nil
+//   - CompareKeyValueFn: nil
 func NewDefaultMapFormat[Key, Value any]() *MapFormat[Key, Value] {
 	return &MapFormat[Key, Value]{
 		CommonFormat: CommonFormat{

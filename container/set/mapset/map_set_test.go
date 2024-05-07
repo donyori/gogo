@@ -635,8 +635,13 @@ func mapKeyToString[V any](m map[int]V) string {
 			Separator: ",",
 		},
 		FormatKeyFn: fmtcoll.FprintfToFormatFunc[int]("%d"),
-		KeyValueLess: func(key1, key2 int, _, _ V) bool {
-			return key1 < key2
+		CompareKeyValueFn: func(key1 int, _ V, key2 int, _ V) int {
+			if key1 < key2 {
+				return -1
+			} else if key1 > key2 {
+				return 1
+			}
+			return 0
 		},
 	})
 }

@@ -165,20 +165,10 @@ func formatMapContentToString[Key, Value any](
 			entries = append(entries, x)
 			return true
 		})
-		if format.KeyValueLess != nil {
-			slices.SortFunc(
-				entries,
-				func(a, b mapping.Entry[Key, Value]) int {
-					if format.KeyValueLess(
-						a.Key, b.Key, a.Value, b.Value) {
-						return -1
-					} else if format.KeyValueLess(
-						b.Key, a.Key, b.Value, a.Value) {
-						return 1
-					}
-					return 0
-				},
-			)
+		if format.CompareKeyValueFn != nil {
+			slices.SortFunc(entries, func(a, b mapping.Entry[Key, Value]) int {
+				return format.CompareKeyValueFn(a.Key, a.Value, b.Key, b.Value)
+			})
 		}
 
 		b.WriteString(format.Prefix)

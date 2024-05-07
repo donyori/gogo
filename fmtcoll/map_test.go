@@ -38,15 +38,20 @@ func TestFormatMapToString(t *testing.T) {
 			tc mapTestCase,
 			dataList []map[string]*int,
 			commonFormatList []fmtcoll.CommonFormat,
-			keyValueLess func(key1 string, key2 string, _ *int, _ *int) bool,
+			compareKeyValueFn func(
+				key1 string,
+				_ *int,
+				key2 string,
+				_ *int,
+			) int,
 		) (result string, err error) {
 			return fmtcoll.FormatMapToString(
 				dataList[tc.dataIdx],
 				&fmtcoll.MapFormat[string, *int]{
-					CommonFormat:  commonFormatList[tc.commonFormatIdx],
-					FormatKeyFn:   tc.formatKeyFn,
-					FormatValueFn: tc.formatValueFn,
-					KeyValueLess:  keyValueLess,
+					CommonFormat:      commonFormatList[tc.commonFormatIdx],
+					FormatKeyFn:       tc.formatKeyFn,
+					FormatValueFn:     tc.formatValueFn,
+					CompareKeyValueFn: compareKeyValueFn,
 				},
 			)
 		},
@@ -73,7 +78,12 @@ func TestFormatGogoMapToString(t *testing.T) {
 			tc mapTestCase,
 			dataList []map[string]*int,
 			commonFormatList []fmtcoll.CommonFormat,
-			keyValueLess func(key1 string, key2 string, _ *int, _ *int) bool,
+			compareKeyValueFn func(
+				key1 string,
+				_ *int,
+				key2 string,
+				_ *int,
+			) int,
 		) (result string, err error) {
 			var m mapping.Map[string, *int]
 			if dataList[tc.dataIdx] != nil {
@@ -81,10 +91,10 @@ func TestFormatGogoMapToString(t *testing.T) {
 			}
 			return fmtcoll.FormatGogoMapToString(
 				m, &fmtcoll.MapFormat[string, *int]{
-					CommonFormat:  commonFormatList[tc.commonFormatIdx],
-					FormatKeyFn:   tc.formatKeyFn,
-					FormatValueFn: tc.formatValueFn,
-					KeyValueLess:  keyValueLess,
+					CommonFormat:      commonFormatList[tc.commonFormatIdx],
+					FormatKeyFn:       tc.formatKeyFn,
+					FormatValueFn:     tc.formatValueFn,
+					CompareKeyValueFn: compareKeyValueFn,
 				},
 			)
 		},
@@ -118,13 +128,18 @@ func testFormatMapToString(
 		tc mapTestCase,
 		dataList []map[string]*int,
 		commonFormatList []fmtcoll.CommonFormat,
-		keyValueLess func(key1, key2 string, _, _ *int) bool,
+		compareKeyValueFn func(key1 string, _ *int, key2 string, _ *int) int,
 	) (result string, err error),
 ) {
 	const Separator, Prefix, Suffix = ",", "<PREFIX>", "<SUFFIX>"
 
-	keyValueLess := func(key1, key2 string, _, _ *int) bool {
-		return key1 < key2
+	compareKeyValueFn := func(key1 string, _ *int, key2 string, _ *int) int {
+		if key1 < key2 {
+			return -1
+		} else if key1 > key2 {
+			return 1
+		}
+		return 0
 	}
 	two, three := 2, 3
 	dataList := []map[string]*int{
@@ -160,7 +175,7 @@ func testFormatMapToString(
 			name += "&formatValueFn=<nil>"
 		}
 		t.Run(name, func(t *testing.T) {
-			got, err := f(tc, dataList, commonFormatList, keyValueLess)
+			got, err := f(tc, dataList, commonFormatList, compareKeyValueFn)
 			if err != nil {
 				t.Error("err -", err)
 			} else if got != tc.want {

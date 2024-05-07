@@ -162,7 +162,7 @@ type Communicator[Message any] interface {
 	// For the root, x is the message to be broadcast.
 	// For others, x can be anything (including zero value) and is ignored.
 	//
-	// It returns the message to be broadcast (equals to x of the root)
+	// It returns the message to be broadcast (equal to x of the root)
 	// and an indicator ok.
 	// ok is false if and only if a cancellation signal is detected.
 	Broadcast(root int, x Message) (msg Message, ok bool)

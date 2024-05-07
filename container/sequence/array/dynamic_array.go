@@ -103,7 +103,7 @@ type DynamicArraySpecific[Item any] interface {
 	Reserve(capacity int)
 
 	// Shrink reduces the dynamic array to fit, i.e.,
-	// requests Cap() equals to Len().
+	// requests Cap() to be equal to Len().
 	//
 	// Note that it isn't equivalent to operations on Go slice
 	// like s[:len(s):len(s)],
