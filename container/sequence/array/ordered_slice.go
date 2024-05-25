@@ -36,13 +36,13 @@ type sliceLess[Item any] struct {
 // WrapSliceLess wraps a pointer to a Go slice with
 // github.com/donyori/gogo/function/compare.LessFunc to an OrderedDynamicArray.
 //
-// The specified LessFunc must describe a transitive ordering:
-//   - if both lessFn(a, b) and lessFn(b, c) are true, then lessFn(a, c) must be true as well.
-//   - if both lessFn(a, b) and lessFn(b, c) are false, then lessFn(a, c) must be false as well.
+// The specified LessFunc must describe a strict weak ordering.
+// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
+// for details.
 //
 // Note that floating-point comparison
 // (the < operator on float32 or float64 values)
-// is not a transitive ordering when not-a-number (NaN) values are involved.
+// is not a strict weak ordering when not-a-number (NaN) values are involved.
 //
 // Operations on the returned OrderedDynamicArray will
 // affect the provided Go slice.
@@ -66,33 +66,33 @@ func WrapSliceLess[Item any](
 // Less reports whether the item with index i must sort before
 // the item with index j.
 //
-// If the LessFunc specified by the client describes a transitive ordering,
-// then Less describes a transitive ordering as well:
-//   - if both Less(i, j) and Less(j, k) are true, then Less(i, k) must be true as well.
-//   - if both Less(i, j) and Less(j, k) are false, then Less(i, k) must be false as well.
+// If the LessFunc specified by the client describes a strict weak ordering,
+// then Less describes a strict weak ordering as well.
+// For strict weak ordering,
+// see <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>.
 //
 // Note that floating-point comparison
 // (the < operator on float32 or float64 values)
-// is not a transitive ordering when not-a-number (NaN) values are involved.
+// is not a strict weak ordering when not-a-number (NaN) values are involved.
 //
 // It panics if i or j is out of range.
 func (sl *sliceLess[Item]) Less(i, j int) bool {
 	return sl.lessFn((*sl.SliceDynamicArray)[i], (*sl.SliceDynamicArray)[j])
 }
 
-// transitiveOrderedSlice is a SliceDynamicArray that constraints its item type
-// to transitive ordered types.
+// strictWeakOrderedSlice is a SliceDynamicArray that constraints its item type
+// to strict weak ordered types.
 //
 // It implements the interface OrderedDynamicArray.
-type transitiveOrderedSlice[Item constraints.TransitiveOrdered] struct {
+type strictWeakOrderedSlice[Item constraints.StrictWeakOrdered] struct {
 	*SliceDynamicArray[Item]
 }
 
-// WrapTransitiveOrderedSlice wraps a pointer to Go slice
+// WrapStrictWeakOrderedSlice wraps a pointer to Go slice
 // to an OrderedDynamicArray.
 //
-// It requires that the items of the slice must be transitive ordered.
-// See github.com/donyori/gogo/constraints.TransitiveOrdered for details.
+// It requires that the items of the slice must be strict weak ordered.
+// See github.com/donyori/gogo/constraints.StrictWeakOrdered for details.
 //
 // Operations on the returned OrderedDynamicArray will
 // affect the provided Go slice.
@@ -100,12 +100,12 @@ type transitiveOrderedSlice[Item constraints.TransitiveOrdered] struct {
 // the returned OrderedDynamicArray.
 //
 // It panics if slicePtr is nil.
-func WrapTransitiveOrderedSlice[Item constraints.TransitiveOrdered](
+func WrapStrictWeakOrderedSlice[Item constraints.StrictWeakOrdered](
 	slicePtr *[]Item) OrderedDynamicArray[Item] {
 	if slicePtr == nil {
 		panic(errors.AutoMsg("slicePtr is nil"))
 	}
-	return &transitiveOrderedSlice[Item]{
+	return &strictWeakOrderedSlice[Item]{
 		SliceDynamicArray: (*SliceDynamicArray[Item])(slicePtr),
 	}
 }
@@ -113,16 +113,16 @@ func WrapTransitiveOrderedSlice[Item constraints.TransitiveOrdered](
 // Less reports whether the item with index i must sort before
 // the item with index j.
 //
-// Less describes a transitive ordering:
-//   - if both Less(i, j) and Less(j, k) are true, then Less(i, k) must be true as well.
-//   - if both Less(i, j) and Less(j, k) are false, then Less(i, k) must be false as well.
+// Less describes a strict weak ordering.
+// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
+// for details.
 //
 // Note that floating-point comparison
 // (the < operator on float32 or float64 values)
-// is not a transitive ordering when not-a-number (NaN) values are involved.
+// is not a strict weak ordering when not-a-number (NaN) values are involved.
 //
 // It panics if i or j is out of range.
-func (tos *transitiveOrderedSlice[Item]) Less(i, j int) bool {
+func (tos *strictWeakOrderedSlice[Item]) Less(i, j int) bool {
 	return (*tos.SliceDynamicArray)[i] < (*tos.SliceDynamicArray)[j]
 }
 
@@ -157,13 +157,13 @@ func WrapFloatSlice[Item constraints.Float](slicePtr *[]Item) OrderedDynamicArra
 // Less reports whether the item with index i must sort before
 // the item with index j.
 //
-// Less describes a transitive ordering:
-//   - if both Less(i, j) and Less(j, k) are true, then Less(i, k) must be true as well.
-//   - if both Less(i, j) and Less(j, k) are false, then Less(i, k) must be false as well.
+// Less describes a strict weak ordering.
+// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
+// for details.
 //
 // Note that floating-point comparison
 // (the < operator on float32 or float64 values)
-// is not a transitive ordering when not-a-number (NaN) values are involved.
+// is not a strict weak ordering when not-a-number (NaN) values are involved.
 //
 // It panics if i or j is out of range.
 func (fs *floatSlice[Item]) Less(i, j int) bool {

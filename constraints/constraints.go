@@ -129,29 +129,27 @@ type Ordered interface {
 	Real | ~string
 }
 
-// PredeclaredTransitiveOrdered is a constraint that matches the predeclared
-// ordered types that implement a transitive ordering, including int, int8,
+// PredeclaredStrictWeakOrdered is a constraint that matches the predeclared
+// ordered types that implement a strict weak ordering, including int, int8,
 // int16, int32 (rune), int64, uint, uint8 (byte), uint16, uint32, uint64,
 // uintptr, and string.
 //
 // An ordered type is one that supports the <, <=, >, and >= operators.
 //
-// A transitive ordering satisfies:
-//   - if both a < b and b < c are true, then a < c must be true as well.
-//   - if both a < b and b < c are false, then a < c must be false as well.
-type PredeclaredTransitiveOrdered interface {
+// For strict weak ordering,
+// see <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>.
+type PredeclaredStrictWeakOrdered interface {
 	PredeclaredInteger | string
 }
 
-// TransitiveOrdered is a constraint that matches any ordered type that
-// implements a transitive ordering.
+// StrictWeakOrdered is a constraint that matches any ordered type that
+// implements a strict weak ordering.
 //
 // An ordered type is one that supports the <, <=, >, and >= operators.
 //
-// A transitive ordering satisfies:
-//   - if both a < b and b < c are true, then a < c must be true as well.
-//   - if both a < b and b < c are false, then a < c must be false as well.
-type TransitiveOrdered interface {
+// For strict weak ordering,
+// see <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>.
+type StrictWeakOrdered interface {
 	Integer | ~string
 }
 

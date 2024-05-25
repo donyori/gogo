@@ -185,10 +185,14 @@ type MapFormat[Key, Value any] struct {
 	//	 0 if (key1, value1) equals (key2, value2),
 	//	+1 if (key1, value1) is greater than (key2, value2).
 	//
-	// It must describe a transitive ordering.
+	// It must describe a strict weak ordering.
+	// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
+	// for details.
+	//
 	// Note that floating-point comparison
 	// (the < operator on float32 or float64 values)
-	// is not a transitive ordering when not-a-number (NaN) values are involved.
+	// is not a strict weak ordering
+	// when not-a-number (NaN) values are involved.
 	//
 	// If CompareKeyValueFn is nil, the key-value pairs may be in random order.
 	CompareKeyValueFn func(key1 Key, value1 Value, key2 Key, value2 Value) int

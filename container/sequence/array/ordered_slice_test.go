@@ -39,11 +39,11 @@ func TestAffectProvidedSlice(t *testing.T) {
 		)
 	})
 
-	t.Run("transitiveOrderedSlice", func(t *testing.T) {
+	t.Run("strictWeakOrderedSlice", func(t *testing.T) {
 		testAffectProvidedSlice(
 			t,
 			func(slicePtr *[]int) array.OrderedDynamicArray[int] {
-				return array.WrapTransitiveOrderedSlice(slicePtr)
+				return array.WrapStrictWeakOrderedSlice(slicePtr)
 			},
 		)
 	})
@@ -102,12 +102,12 @@ func TestSliceLess_Less(t *testing.T) {
 	)
 }
 
-func TestTransitiveOrderedSlice_Less(t *testing.T) {
+func TestStrictWeakOrderedSlice_Less(t *testing.T) {
 	data := []string{"Alice", "Hello world!", "ball", "中文"} // data is sorted
 	if !slices.IsSorted(data) {
 		t.Fatal("unsorted data, please update")
 	}
-	oda := array.WrapTransitiveOrderedSlice(&data)
+	oda := array.WrapStrictWeakOrderedSlice(&data)
 	for i := range data {
 		for j := range data {
 			t.Run(

@@ -66,13 +66,13 @@ type topKBuffer[Item any] struct {
 // The buffer holds the top-k greatest items.
 //
 // lessFn is a function to report whether a < b.
-// It must describe a transitive ordering:
-//   - if both lessFn(a, b) and lessFn(b, c) are true, then lessFn(a, c) must be true as well.
-//   - if both lessFn(a, b) and lessFn(b, c) are false, then lessFn(a, c) must be false as well.
+// It must describe a strict weak ordering.
+// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
+// for details.
 //
 // Note that floating-point comparison
 // (the < operator on float32 or float64 values)
-// is not a transitive ordering when not-a-number (NaN) values are involved.
+// is not a strict weak ordering when not-a-number (NaN) values are involved.
 //
 // data is the initial items added to the buffer.
 //

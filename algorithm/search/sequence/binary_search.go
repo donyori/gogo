@@ -47,14 +47,11 @@ type BinarySearchInterface[Item any] interface {
 	// and the indicator reports whether the item with index i
 	// is the search goal (only valid when the returned integer is 0).
 	//
-	// The returned integer is 0
-	// if the item with index i is equal to the search goal.
+	// The returned integer is
 	//
-	// The returned integer is positive
-	// if the item with index i is greater than the search goal.
-	//
-	// The returned integer is negative
-	// if the item with index i is less than the search goal.
+	//	-1 if the item with index i is less than the search goal,
+	//	 0 if the item with index i is equal to the search goal,
+	//	+1 if the item with index i is greater than the search goal.
 	//
 	// It panics if i is out of range.
 	Cmp(i int) (lessEqualOrGreater int, isGoal bool)
@@ -66,8 +63,8 @@ type BinarySearchInterface[Item any] interface {
 // itf must be sorted in ascending order!
 // (If itf is in descending order,
 // you can change the behavior of your itf.Cmp such that
-// it returns a positive integer if the item is less than the search goal,
-// and returns a negative integer if the item is greater than the search goal.)
+// it returns +1 if the item is less than the search goal,
+// and returns -1 if the item is greater than the search goal.)
 // This function won't check whether itf is sorted.
 // You must sort itf before calling this function,
 // otherwise, goal may not be found as expected.
@@ -132,8 +129,8 @@ func BinarySearch[Item any](itf BinarySearchInterface[Item], goal Item) int {
 // itf must be sorted in ascending order!
 // (If itf is in descending order,
 // you can change the behavior of your itf.Cmp such that
-// it returns a positive integer if the item is less than the search goal,
-// and returns a negative integer if the item is greater than the search goal,
+// it returns +1 if the item is less than the search goal,
+// and returns -1 if the item is greater than the search goal,
 // and then use function BinarySearchMinGreater instead of this function.)
 // This function won't check whether itf is sorted.
 // You must sort itf before calling this function,
@@ -175,8 +172,8 @@ func BinarySearchMaxLess[Item any](
 // itf must be sorted in ascending order!
 // (If itf is in descending order,
 // you can change the behavior of your itf.Cmp such that
-// it returns a positive integer if the item is less than the search goal,
-// and returns a negative integer if the item is greater than the search goal,
+// it returns +1 if the item is less than the search goal,
+// and returns -1 if the item is greater than the search goal,
 // and then use function BinarySearchMaxLess instead of this function.)
 // This function won't check whether itf is sorted.
 // You must sort itf before calling this function,
@@ -230,13 +227,13 @@ func BinarySearchMinGreater[Item any](
 // item and goal are considered equal,
 // and the first return value of method Cmp is 0.
 //
-// lessFn must describe a transitive ordering:
-//   - if both lessFn(a, b) and lessFn(b, c) are true, then lessFn(a, c) must be true as well.
-//   - if both lessFn(a, b) and lessFn(b, c) are false, then lessFn(a, c) must be false as well.
+// lessFn must describe a strict weak ordering.
+// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
+// for details.
 //
 // Note that floating-point comparison
 // (the < operator on float32 or float64 values)
-// is not a transitive ordering when not-a-number (NaN) values are involved.
+// is not a strict weak ordering when not-a-number (NaN) values are involved.
 //
 // The field equalFn is an additional function to test
 // whether an item is the search goal.
@@ -269,13 +266,13 @@ type arrayBinarySearchAdapter[Item any] struct {
 // item and goal are considered equal,
 // and the first return value of method Cmp is 0.
 //
-// lessFn must describe a transitive ordering:
-//   - if both lessFn(a, b) and lessFn(b, c) are true, then lessFn(a, c) must be true as well.
-//   - if both lessFn(a, b) and lessFn(b, c) are false, then lessFn(a, c) must be false as well.
+// lessFn must describe a strict weak ordering.
+// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
+// for details.
 //
 // Note that floating-point comparison
 // (the < operator on float32 or float64 values)
-// is not a transitive ordering when not-a-number (NaN) values are involved.
+// is not a strict weak ordering when not-a-number (NaN) values are involved.
 //
 // WrapArrayLessEqual panics if lessFn is nil.
 //

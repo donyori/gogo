@@ -22,12 +22,14 @@ import "github.com/donyori/gogo/constraints"
 
 // LessFunc is a function to test whether a < b.
 //
-// To use LessFunc in cases where a transitive ordering is required,
-// such as sorting, it must implement a transitive ordering.
+// To use LessFunc in cases where a strict weak ordering is required,
+// such as sorting, it must implement a strict weak ordering.
+// For strict weak ordering,
+// see <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>.
 //
 // Note that floating-point comparison
 // (the < operator on float32 or float64 values)
-// is not a transitive ordering when not-a-number (NaN) values are involved.
+// is not a strict weak ordering when not-a-number (NaN) values are involved.
 type LessFunc[T any] func(a, b T) bool
 
 // Not returns a negative function to test whether !(a < b).
@@ -60,8 +62,8 @@ func (lf LessFunc[T]) ToEqual() EqualFunc[T] {
 //
 // Note that floating-point comparison
 // (the < operator on float32 or float64 values)
-// is not a transitive ordering when not-a-number (NaN) values are involved.
-// If a transitive ordering is required (such as sorting),
+// is not a strict weak ordering when not-a-number (NaN) values are involved.
+// If a strict weak ordering is required (such as sorting),
 // use the function FloatLess for floating-point numbers.
 func OrderedLess[T constraints.Ordered](a, b T) bool {
 	return a < b
@@ -70,9 +72,9 @@ func OrderedLess[T constraints.Ordered](a, b T) bool {
 // FloatLess is a generic function to test whether a < b
 // for floating-point numbers.
 //
-// It implements a transitive ordering:
-//   - if both FloatLess(a, b) and FloatLess(b, c) are true, then FloatLess(a, c) must be true as well.
-//   - if both FloatLess(a, b) and FloatLess(b, c) are false, then FloatLess(a, c) must be false as well.
+// It implements a strict weak ordering.
+// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
+// for details.
 //
 // It treats NaN values as less than any others.
 //

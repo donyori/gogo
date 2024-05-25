@@ -30,13 +30,14 @@ type Interface interface {
 	// Less reports whether the item with index i
 	// is less than the item with index j.
 	//
-	// Less must describe a transitive ordering:
-	//   - if both Less(i, j) and Less(j, k) are true, then Less(i, k) must be true as well.
-	//   - if both Less(i, j) and Less(j, k) are false, then Less(i, k) must be false as well.
+	// Less must describe a strict weak ordering.
+	// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
+	// for details.
 	//
 	// Note that floating-point comparison
 	// (the < operator on float32 or float64 values)
-	// is not a transitive ordering when not-a-number (NaN) values are involved.
+	// is not a strict weak ordering
+	// when not-a-number (NaN) values are involved.
 	//
 	// It panics if i or j is out of range.
 	Less(i, j int) bool

@@ -104,13 +104,14 @@ type jobPriorityQueueMaker[Job, Properties any] struct {
 	//
 	// The "less" the job, the higher its priority, and the earlier dequeued.
 	//
-	// lessFn must describe a transitive ordering:
-	//   - if both lessFn(a, b) and lessFn(b, c) are true, then lessFn(a, c) must be true as well.
-	//   - if both lessFn(a, b) and lessFn(b, c) are false, then lessFn(a, c) must be false as well.
+	// lessFn must describe a strict weak ordering.
+	// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
+	// for details.
 	//
 	// Note that floating-point comparison
 	// (the < operator on float32 or float64 values)
-	// is not a transitive ordering when not-a-number (NaN) values are involved.
+	// is not a strict weak ordering
+	// when not-a-number (NaN) values are involved.
 	//
 	// The framework guarantees that arguments passed to lessFn are never nil
 	// and have a non-zero creation time in their meta information.
@@ -124,13 +125,13 @@ type jobPriorityQueueMaker[Job, Properties any] struct {
 // The priority of jobs is determined by the function lessFn.
 // The "less" the job, the higher its priority, and the earlier dequeued.
 //
-// lessFn must describe a transitive ordering:
-//   - if both lessFn(a, b) and lessFn(b, c) are true, then lessFn(a, c) must be true as well.
-//   - if both lessFn(a, b) and lessFn(b, c) are false, then lessFn(a, c) must be false as well.
+// lessFn must describe a strict weak ordering.
+// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
+// for details.
 //
 // Note that floating-point comparison
 // (the < operator on float32 or float64 values)
-// is not a transitive ordering when not-a-number (NaN) values are involved.
+// is not a strict weak ordering when not-a-number (NaN) values are involved.
 //
 // The framework guarantees that arguments passed to lessFn are never nil
 // and have a non-zero creation time in their meta information.
