@@ -110,7 +110,7 @@ func (npbsi *nextPermutationBinarySearchInterface) Len() int {
 	return npbsi.data.Len() - npbsi.begin
 }
 
-// Cmp compares the item with index i in the sequence and the search goal.
+// Compare compares the item with index i in the sequence and the search goal.
 //
 // It returns (-1, false) if the item is greater than the goal
 // (in this case, the item is treated as "less" than
@@ -120,7 +120,7 @@ func (npbsi *nextPermutationBinarySearchInterface) Len() int {
 // the item is "greater" than the goal in the binary search algorithm).
 //
 // It panics if i is out of range.
-func (npbsi *nextPermutationBinarySearchInterface) Cmp(i int) (
+func (npbsi *nextPermutationBinarySearchInterface) Compare(i int) (
 	lessEqualOrGreater int, isGoal bool) {
 	if npbsi.data.Less(npbsi.goal, i+npbsi.begin) {
 		return -1, false
