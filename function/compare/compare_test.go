@@ -27,7 +27,7 @@ import (
 	"github.com/donyori/gogo/function/compare"
 )
 
-func TestOrderedLess(t *testing.T) {
+func TestOrderedCompare(t *testing.T) {
 	intPairs := [][2]int{{1, 2}, {2, 1}, {1, 1}}
 	float64Pairs := [][2]float64{
 		{0.0, NegZero64},
@@ -45,12 +45,12 @@ func TestOrderedLess(t *testing.T) {
 		{"hell", "hello"},
 		{"hello", "hello"},
 	}
-	subtestOrderedLess(t, "int", intPairs)
-	subtestOrderedLess(t, "float64", float64Pairs)
-	subtestOrderedLess(t, "string", stringPairs)
+	subtestOrderedCompare(t, "int", intPairs)
+	subtestOrderedCompare(t, "float64", float64Pairs)
+	subtestOrderedCompare(t, "string", stringPairs)
 }
 
-func subtestOrderedLess[T constraints.Ordered](
+func subtestOrderedCompare[T constraints.Ordered](
 	t *testing.T,
 	name string,
 	data [][2]T,
@@ -58,11 +58,17 @@ func subtestOrderedLess[T constraints.Ordered](
 	t.Run(name, func(t *testing.T) {
 		for _, pair := range data {
 			a, b := pair[0], pair[1]
+			var want int
+			if a < b {
+				want = -1
+			} else if a > b {
+				want = 1
+			}
 			t.Run(
 				fmt.Sprintf("a=%v(%[1]T)&b=%v(%[2]T)", a, b),
 				func(t *testing.T) {
-					if got := compare.OrderedLess(a, b); got != (a < b) {
-						t.Errorf("got %t", got)
+					if got := compare.OrderedCompare(a, b); got != want {
+						t.Errorf("got %d; want %d", got, want)
 					}
 				},
 			)
@@ -70,7 +76,7 @@ func subtestOrderedLess[T constraints.Ordered](
 	})
 }
 
-func TestFloatLess(t *testing.T) {
+func TestFloatCompare(t *testing.T) {
 	float32Pairs := [][2]float32{
 		{0.0, NegZero32},
 		{0.0, 0.5}, {1.0, 0.5}, {0.5, 0.5},
@@ -85,9 +91,10 @@ func TestFloatLess(t *testing.T) {
 	t.Run("float32", func(t *testing.T) {
 		for i := range float32Pairs {
 			a, b := float32Pairs[i][0], float32Pairs[i][1]
+			want := cmp.Compare(a, b)
 			t.Run(fmt.Sprintf("a=%.1f&b=%.1f", a, b), func(t *testing.T) {
-				if got := compare.FloatLess(a, b); got != cmp.Less(a, b) {
-					t.Errorf("got %t", got)
+				if got := compare.FloatCompare(a, b); got != want {
+					t.Errorf("got %d; want %d", got, want)
 				}
 			})
 		}
@@ -107,46 +114,34 @@ func TestFloatLess(t *testing.T) {
 	t.Run("float64", func(t *testing.T) {
 		for i := range float64Pairs {
 			a, b := float64Pairs[i][0], float64Pairs[i][1]
+			want := cmp.Compare(a, b)
 			t.Run(fmt.Sprintf("a=%.1f&b=%.1f", a, b), func(t *testing.T) {
-				if got := compare.FloatLess(a, b); got != cmp.Less(a, b) {
-					t.Errorf("got %t", got)
+				if got := compare.FloatCompare(a, b); got != want {
+					t.Errorf("got %d; want %d", got, want)
 				}
 			})
 		}
 	})
 }
 
-func TestLessFunc_Not(t *testing.T) {
-	less := compare.LessFunc[int](compare.OrderedLess[int])
-	nLess := less.Not()
+func TestCompareFunc_Reverse(t *testing.T) {
+	f := compare.CompareFunc[int](compare.OrderedCompare[int])
+	rf := f.Reverse()
 	intPairs := [][2]int{{1, 2}, {2, 1}, {1, 1}}
 	for _, pair := range intPairs {
 		a, b := pair[0], pair[1]
+		want := f(b, a)
 		t.Run(fmt.Sprintf("a=%d&b=%d", a, b), func(t *testing.T) {
-			if got := nLess(a, b); got != !(a < b) {
-				t.Errorf("got %t", got)
+			if got := rf(a, b); got != want {
+				t.Errorf("got %d; want %d", got, want)
 			}
 		})
 	}
 }
 
-func TestLessFunc_Reverse(t *testing.T) {
-	less := compare.LessFunc[int](compare.OrderedLess[int])
-	rLess := less.Reverse()
-	intPairs := [][2]int{{1, 2}, {2, 1}, {1, 1}}
-	for _, pair := range intPairs {
-		a, b := pair[0], pair[1]
-		t.Run(fmt.Sprintf("a=%d&b=%d", a, b), func(t *testing.T) {
-			if got := rLess(a, b); got != (b < a) {
-				t.Errorf("got %t", got)
-			}
-		})
-	}
-}
-
-func TestLessFunc_ToEqual(t *testing.T) {
-	less := compare.LessFunc[int](compare.OrderedLess[int])
-	eq := less.ToEqual()
+func TestCompareFunc_ToEqual(t *testing.T) {
+	f := compare.CompareFunc[int](compare.OrderedCompare[int])
+	eq := f.ToEqual()
 	intPairs := [][2]int{{1, 2}, {2, 1}, {1, 1}}
 	for _, pair := range intPairs {
 		a, b := pair[0], pair[1]
@@ -158,16 +153,15 @@ func TestLessFunc_ToEqual(t *testing.T) {
 	}
 }
 
-func TestLessFunc_ToCompare(t *testing.T) {
-	less := compare.LessFunc[int](compare.OrderedLess[int])
-	f := less.ToCompare()
+func TestCompareFunc_ToLess(t *testing.T) {
+	f := compare.CompareFunc[int](compare.OrderedCompare[int])
+	less := f.ToLess()
 	intPairs := [][2]int{{1, 2}, {2, 1}, {1, 1}}
 	for _, pair := range intPairs {
 		a, b := pair[0], pair[1]
-		want := cmp.Compare(a, b)
 		t.Run(fmt.Sprintf("a=%d&b=%d", a, b), func(t *testing.T) {
-			if got := f(a, b); got != want {
-				t.Errorf("got %d; want %d", got, want)
+			if got := less(a, b); got != (a < b) {
+				t.Errorf("got %t", got)
 			}
 		})
 	}

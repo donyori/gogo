@@ -20,7 +20,6 @@ package compare_test
 
 import (
 	"fmt"
-	"math"
 	"reflect"
 	"testing"
 
@@ -39,6 +38,7 @@ func TestAnyEqual(t *testing.T) {
 		{1., 1.},
 		{1, 1.},
 		{1., 1},
+		{0., NegZero64},
 	}
 	for _, pair := range pairs {
 		t.Run(
@@ -72,6 +72,7 @@ func TestEqualFunc_Not_AnyEqual(t *testing.T) {
 		{1., 1.},
 		{1, 1.},
 		{1., 1},
+		{0., NegZero64},
 	}
 	for _, pair := range pairs {
 		t.Run(
@@ -97,24 +98,26 @@ func TestEqual(t *testing.T) {
 	subtestEqual(t, "type=int", []int{1, 2, 3})
 	subtestEqual(t, "type=float64", []float64{
 		1., 2., 3.,
-		0., math.SmallestNonzeroFloat64, math.MaxFloat64, math.Inf(1),
-		-math.SmallestNonzeroFloat64, -math.MaxFloat64, math.Inf(-1),
+		0., SmallestNonzeroFloat64, MaxFloat64, Inf64,
+		-SmallestNonzeroFloat64, -MaxFloat64, NegInf64,
 	})
 	subtestEqual(t, "type=string", []string{"1", "2", "3"})
 
 	subtestPairs(
 		t,
-		"type=float64&NaN",
+		"type=float64&NaN&-0.0",
 		compare.Equal[float64],
-		nil,
 		[][2]float64{
-			{math.NaN(), math.NaN()},
-			{0., math.NaN()},
-			{math.NaN(), 0.},
-			{math.Inf(1), math.NaN()},
-			{math.NaN(), math.Inf(1)},
-			{math.Inf(-1), math.NaN()},
-			{math.NaN(), math.Inf(-1)},
+			{0., NegZero64},
+		},
+		[][2]float64{
+			{NaN64A, NaN64A},
+			{NaN64A, NaN64B},
+			{NaN64B, NaN64B},
+			{NaN64A, 0.},
+			{NaN64A, NegZero64},
+			{NaN64A, Inf64},
+			{NaN64A, NegInf64},
 		},
 	)
 }
@@ -129,27 +132,27 @@ func subtestEqual[T comparable](t *testing.T, name string, data []T) {
 }
 
 func TestFloatEqual(t *testing.T) {
-	subtestFloatEqual(t, "type=float32", []float32{
-		1., 2., float32(math.NaN()),
-		0., math.SmallestNonzeroFloat32, math.MaxFloat32, float32(math.Inf(1)),
-		-math.SmallestNonzeroFloat32, -math.MaxFloat32, float32(math.Inf(-1)),
+	subtestFloatEqual(t, "type=float32", [][]float32{
+		{1.}, {2.},
+		{NaN32A, NaN32B},
+		{0., NegZero32},
+		{SmallestNonzeroFloat32}, {MaxFloat32}, {Inf32},
+		{-SmallestNonzeroFloat32}, {-MaxFloat32}, {NegInf32},
 	})
-	subtestFloatEqual(t, "type=float64", []float64{
-		1., 2., math.NaN(),
-		0., math.SmallestNonzeroFloat64, math.MaxFloat64, math.Inf(1),
-		-math.SmallestNonzeroFloat64, -math.MaxFloat64, math.Inf(-1),
+	subtestFloatEqual(t, "type=float64", [][]float64{
+		{1.}, {2.},
+		{NaN64A, NaN64B},
+		{0., NegZero64},
+		{SmallestNonzeroFloat64}, {MaxFloat64}, {Inf64},
+		{-SmallestNonzeroFloat64}, {-MaxFloat64}, {NegInf64},
 	})
 }
 
 func subtestFloatEqual[T constraints.Float](
 	t *testing.T,
 	name string,
-	data []T,
+	eqGroups [][]T,
 ) {
-	eqGroups := make([][]T, len(data))
-	for i := range eqGroups {
-		eqGroups[i] = []T{data[i]}
-	}
 	eqPairs, neqPairs := mkEqNeqPairs(eqGroups, 0, 0)
 	subtestPairs(t, name, compare.FloatEqual[T], eqPairs, neqPairs)
 }
@@ -167,20 +170,20 @@ var (
 
 func init() {
 	float64sNonemptyEqGroups = [][][]float64{
-		{{1., math.Inf(1), 3., 4.}},     // even length - 1
-		{{1., math.Inf(1), 2., 4.}},     // even length - 2
-		{{1., math.Inf(1), 3., 4., 5.}}, // odd length - 1
-		{{1., math.Inf(1), 2., 4., 5.}}, // odd length - 2
+		{{1., Inf64, 3., 4.}},     // even length - 1
+		{{1., Inf64, 2., 4.}},     // even length - 2
+		{{1., Inf64, 3., 4., 5.}}, // odd length - 1
+		{{1., Inf64, 2., 4., 5.}}, // odd length - 2
 	}
 	float64sWithNaNNonemptyEqGroups = [][][]float64{
-		{{1., math.Inf(1), 3., 4.}},                                    // even length - 1
-		{{1., math.Inf(1), 2., 4.}},                                    // even length - 2
-		{{1., math.Inf(1), 3., math.NaN()}},                            // even length - 3
-		{{math.NaN(), math.NaN(), math.NaN(), math.NaN()}},             // even length - 4
-		{{1., math.Inf(1), 3., 4., 5.}},                                // odd length - 1
-		{{1., math.Inf(1), 2., 4., 5.}},                                // odd length - 2
-		{{1., math.Inf(1), 3., math.NaN(), 5.}},                        // odd length - 3
-		{{math.NaN(), math.NaN(), math.NaN(), math.NaN(), math.NaN()}}, // odd length - 4
+		{{1., Inf64, 3., 4.}},                      // even length - 1
+		{{1., Inf64, 2., 4.}},                      // even length - 2
+		{{1., Inf64, 3., NaN64A}},                  // even length - 3
+		{{NaN64A, NaN64A, NaN64A, NaN64A}},         // even length - 4
+		{{1., Inf64, 3., 4., 5.}},                  // odd length - 1
+		{{1., Inf64, 2., 4., 5.}},                  // odd length - 2
+		{{1., Inf64, 3., NaN64A, 5.}},              // odd length - 3
+		{{NaN64A, NaN64A, NaN64A, NaN64A, NaN64A}}, // odd length - 4
 	}
 
 	intsEqPairs, intsNeqPairs = mkEqNeqPairs([][][]int{
@@ -240,8 +243,8 @@ func init() {
 		{1, 2, '3', byte('4')},
 	}, [2][]any{
 		// NaN != NaN.
-		{math.NaN()},
-		{math.NaN()},
+		{NaN64A},
+		{NaN64A},
 	})
 }
 
@@ -251,11 +254,11 @@ func TestSliceEqual(t *testing.T) {
 	subtestSliceEqual(t, "type=[]string", stringsEqPairs, stringsNeqPairs)
 
 	subtestSliceEqual(t, "type=[]float64&NaN", nil, [][2][]float64{
-		{{math.NaN()}, {math.NaN()}},
-		{{math.NaN(), math.NaN()}, {math.NaN(), math.NaN()}},
-		{{1., 2., math.NaN()}, {1., 2., math.NaN()}},
-		{{math.NaN(), 1.}, {math.NaN(), 1.}},
-		{{math.Inf(1), math.NaN()}, {math.Inf(1), math.NaN()}},
+		{{NaN64A}, {NaN64A}},
+		{{NaN64A, NaN64A}, {NaN64A, NaN64A}},
+		{{1., 2., NaN64A}, {1., 2., NaN64A}},
+		{{NaN64A, 1.}, {NaN64A, 1.}},
+		{{Inf64, NaN64A}, {Inf64, NaN64A}},
 	})
 }
 
@@ -373,9 +376,9 @@ func TestSliceEqualWithoutOrder(t *testing.T) {
 			{{1., 1., 1.}},
 			{{1., 1., 2.}, {1., 2., 1.}, {2., 1., 1.}},
 			{
-				{1., math.Inf(1), math.Inf(1)},
-				{math.Inf(1), 1., math.Inf(1)},
-				{math.Inf(1), math.Inf(1), 1.},
+				{1., Inf64, Inf64},
+				{Inf64, 1., Inf64},
+				{Inf64, Inf64, 1.},
 			},
 		},
 		0,
@@ -415,14 +418,14 @@ func TestSliceEqualWithoutOrder(t *testing.T) {
 	)
 
 	subtestSliceEqualWithoutOrder(t, "type=[]float64&NaN", nil, [][2][]float64{
-		{{math.NaN()}, {math.NaN()}},
-		{{math.NaN(), math.NaN()}, {math.NaN(), math.NaN()}},
-		{{1., 1., math.NaN()}, {1., 1., math.NaN()}},
-		{{1., 1., math.NaN()}, {1., math.NaN(), 1.}},
-		{{math.NaN(), 1.}, {math.NaN(), 1.}},
-		{{math.NaN(), 1.}, {1., math.NaN()}},
-		{{math.Inf(1), math.NaN()}, {math.Inf(1), math.NaN()}},
-		{{math.Inf(1), math.NaN()}, {math.NaN(), math.Inf(1)}},
+		{{NaN64A}, {NaN64A}},
+		{{NaN64A, NaN64A}, {NaN64A, NaN64A}},
+		{{1., 1., NaN64A}, {1., 1., NaN64A}},
+		{{1., 1., NaN64A}, {1., NaN64A, 1.}},
+		{{NaN64A, 1.}, {NaN64A, 1.}},
+		{{NaN64A, 1.}, {1., NaN64A}},
+		{{Inf64, NaN64A}, {Inf64, NaN64A}},
+		{{Inf64, NaN64A}, {NaN64A, Inf64}},
 	})
 }
 
@@ -441,30 +444,30 @@ func TestFloatSliceEqualWithoutOrder(t *testing.T) {
 		{nil},
 		{{}},
 		{{1.}},
-		{{math.Inf(1)}},
-		{{math.NaN()}},
+		{{Inf64}},
+		{{NaN64A}},
 		{{1., 1.}},
 		{{1., 2.}, {2., 1.}},
-		{{1., math.NaN()}, {math.NaN(), 1.}},
-		{{math.NaN(), math.NaN()}},
+		{{1., NaN64A}, {NaN64A, 1.}},
+		{{NaN64A, NaN64A}},
 		{{1., 1., 1.}},
 		{{1., 1., 2.}, {1., 2., 1.}, {2., 1., 1.}},
 		{
-			{1., math.Inf(1), math.Inf(1)},
-			{math.Inf(1), 1., math.Inf(1)},
-			{math.Inf(1), math.Inf(1), 1.},
+			{1., Inf64, Inf64},
+			{Inf64, 1., Inf64},
+			{Inf64, Inf64, 1.},
 		},
 		{
-			{math.Inf(1), math.Inf(1), math.NaN()},
-			{math.Inf(1), math.NaN(), math.Inf(1)},
-			{math.NaN(), math.Inf(1), math.Inf(1)},
+			{Inf64, Inf64, NaN64A},
+			{Inf64, NaN64A, Inf64},
+			{NaN64A, Inf64, Inf64},
 		},
 		{
-			{1., math.NaN(), math.NaN()},
-			{math.NaN(), 1., math.NaN()},
-			{math.NaN(), math.NaN(), 1.},
+			{1., NaN64A, NaN64A},
+			{NaN64A, 1., NaN64A},
+			{NaN64A, NaN64A, 1.},
 		},
-		{{math.NaN(), math.NaN(), math.NaN()}},
+		{{NaN64A, NaN64A, NaN64A}},
 	}, 0, 0)
 	f32EqPairs := make([][2][]float32, len(f64EqPairs))
 	for i := range f64EqPairs {
@@ -522,40 +525,40 @@ func init() {
 		{{"": 0.}},
 		{{"A": 1.}},
 		{{"A": 2.}},
-		{{"A": math.Inf(1)}},
+		{{"A": Inf64}},
 		{{"B": 1.}},
 		{{"A": 1., "B": 1.}},
 		{{"A": 1., "B": 2.}},
-		{{"A": 1., "B": math.Inf(1)}},
-		{{"A": math.Inf(1), "B": math.Inf(1)}},
+		{{"A": 1., "B": Inf64}},
+		{{"A": Inf64, "B": Inf64}},
 		{{"A": 1., "B": 1., "C": 1.}},
-		{{"A": 1., "B": 1., "C": math.Inf(-1)}},
-		{{"A": 1., "B": math.Inf(1), "C": 1.}},
-		{{"A": 1., "B": math.Inf(1), "C": math.Inf(-1)}},
+		{{"A": 1., "B": 1., "C": NegInf64}},
+		{{"A": 1., "B": Inf64, "C": 1.}},
+		{{"A": 1., "B": Inf64, "C": NegInf64}},
 	}
 	stringToFloat64WithNaNNonemptyEqGroups = [][]map[string]float64{
 		{{"": 0.}},
 		{{"A": 1.}},
 		{{"A": 2.}},
-		{{"A": math.Inf(1)}},
-		{{"A": math.NaN()}},
+		{{"A": Inf64}},
+		{{"A": NaN64A}},
 		{{"B": 1.}},
 		{{"A": 1., "B": 1.}},
 		{{"A": 1., "B": 2.}},
-		{{"A": 1., "B": math.Inf(1)}},
-		{{"A": math.Inf(1), "B": math.Inf(1)}},
-		{{"A": 1., "B": math.NaN()}},
-		{{"A": math.NaN(), "B": math.NaN()}},
+		{{"A": 1., "B": Inf64}},
+		{{"A": Inf64, "B": Inf64}},
+		{{"A": 1., "B": NaN64A}},
+		{{"A": NaN64A, "B": NaN64A}},
 		{{"A": 1., "B": 1., "C": 1.}},
-		{{"A": 1., "B": 1., "C": math.Inf(-1)}},
-		{{"A": 1., "B": 1., "C": math.NaN()}},
-		{{"A": 1., "B": math.Inf(1), "C": 1.}},
-		{{"A": 1., "B": math.Inf(1), "C": math.Inf(-1)}},
-		{{"A": 1., "B": math.Inf(1), "C": math.NaN()}},
-		{{"A": 1., "B": math.NaN(), "C": 1.}},
-		{{"A": 1., "B": math.NaN(), "C": math.Inf(-1)}},
-		{{"A": 1., "B": math.NaN(), "C": math.NaN()}},
-		{{"A": math.NaN(), "B": math.NaN(), "C": math.NaN()}},
+		{{"A": 1., "B": 1., "C": NegInf64}},
+		{{"A": 1., "B": 1., "C": NaN64A}},
+		{{"A": 1., "B": Inf64, "C": 1.}},
+		{{"A": 1., "B": Inf64, "C": NegInf64}},
+		{{"A": 1., "B": Inf64, "C": NaN64A}},
+		{{"A": 1., "B": NaN64A, "C": 1.}},
+		{{"A": 1., "B": NaN64A, "C": NegInf64}},
+		{{"A": 1., "B": NaN64A, "C": NaN64A}},
+		{{"A": NaN64A, "B": NaN64A, "C": NaN64A}},
 	}
 
 	stringToIntEqPairs, stringToIntNeqPairs = mkEqNeqPairs([][]map[string]int{
@@ -628,8 +631,8 @@ func init() {
 		{"A": 1, "B": 2, "C": '3', "D": byte('4')},
 	}, [2]map[string]any{
 		// NaN != NaN.
-		{"A": math.NaN()},
-		{"A": math.NaN()},
+		{"A": NaN64A},
+		{"A": NaN64A},
 	})
 }
 
@@ -658,11 +661,11 @@ func TestMapEqual(t *testing.T) {
 		"type=map[string]float64&NaN",
 		nil,
 		[][2]map[string]float64{
-			{{"A": math.NaN()}, {"A": math.NaN()}},
-			{{"A": math.NaN(), "B": math.NaN()}, {"A": math.NaN(), "B": math.NaN()}},
-			{{"A": 1., "B": math.NaN()}, {"A": 1., "B": math.NaN()}},
-			{{"A": math.Inf(1), "B": math.NaN()}, {"A": math.Inf(1), "B": math.NaN()}},
-			{{"A": math.NaN(), "B": math.Inf(1)}, {"A": math.NaN(), "B": math.Inf(1)}},
+			{{"A": NaN64A}, {"A": NaN64A}},
+			{{"A": NaN64A, "B": NaN64A}, {"A": NaN64A, "B": NaN64A}},
+			{{"A": 1., "B": NaN64A}, {"A": 1., "B": NaN64A}},
+			{{"A": Inf64, "B": NaN64A}, {"A": Inf64, "B": NaN64A}},
+			{{"A": NaN64A, "B": Inf64}, {"A": NaN64A, "B": Inf64}},
 		},
 	)
 }

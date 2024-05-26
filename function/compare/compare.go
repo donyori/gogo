@@ -20,9 +20,13 @@ package compare
 
 import "github.com/donyori/gogo/constraints"
 
-// LessFunc is a function to test whether a < b.
+// CompareFunc is a function that returns
 //
-// To use LessFunc in cases where a strict weak ordering is required,
+//	-1 if a is less than b,
+//	 0 if a equals b,
+//	+1 if a is greater than b.
+//
+// To use CompareFunc in cases where a strict weak ordering is required,
 // such as sorting, it must implement a strict weak ordering.
 // For strict weak ordering,
 // see <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>.
@@ -30,72 +34,88 @@ import "github.com/donyori/gogo/constraints"
 // Note that floating-point comparison
 // (the < operator on float32 or float64 values)
 // is not a strict weak ordering when not-a-number (NaN) values are involved.
-type LessFunc[T any] func(a, b T) bool
+type CompareFunc[T any] func(a, b T) int
 
-// Not returns a negative function to test whether !(a < b).
-func (lf LessFunc[T]) Not() LessFunc[T] {
-	return func(a, b T) bool {
-		return !lf(a, b)
-	}
-}
-
-// Reverse returns a reverse function to test whether b < a.
-func (lf LessFunc[T]) Reverse() LessFunc[T] {
-	return func(a, b T) bool {
-		return lf(b, a)
+// Reverse returns a reverse function that returns
+//
+//	-1 if a is greater than b,
+//	 0 if a equals b,
+//	+1 if a is less than b.
+func (cf CompareFunc[T]) Reverse() CompareFunc[T] {
+	return func(a, b T) int {
+		return -cf(a, b)
 	}
 }
 
 // ToEqual returns an EqualFunc to test whether a == b.
 // The returned function reports true if and only if
 //
-//	!(less(a, b) || less(b, a))
-func (lf LessFunc[T]) ToEqual() EqualFunc[T] {
+//	compare(a, b) == 0
+func (cf CompareFunc[T]) ToEqual() EqualFunc[T] {
 	return func(a, b T) bool {
-		return !(lf(a, b) || lf(b, a))
+		return cf(a, b) == 0
 	}
 }
 
-// ToCompare returns a CompareFunc that returns
+// ToLess returns a LessFunc to test whether a < b.
+// The returned function reports true if and only if
 //
-//	-1 if less(a, b),
-//	+1 if less(b, a),
+//	compare(a, b) < 0
+func (cf CompareFunc[T]) ToLess() LessFunc[T] {
+	return func(a, b T) bool {
+		return cf(a, b) < 0
+	}
+}
+
+// OrderedCompare is a generic function that returns
+//
+//	-1 if a < b,
+//	+1 if a > b,
 //	 0 otherwise.
-func (lf LessFunc[T]) ToCompare() CompareFunc[T] {
-	return func(a, b T) int {
-		if lf(a, b) {
-			return -1
-		} else if lf(b, a) {
-			return 1
-		}
-		return 0
-	}
-}
-
-// OrderedLess is a generic function to test whether a < b.
 //
-// The client can instantiate it to get a LessFunc.
+// The client can instantiate it to get a CompareFunc.
 //
 // Note that floating-point comparison
 // (the < operator on float32 or float64 values)
 // is not a strict weak ordering when not-a-number (NaN) values are involved.
 // If a strict weak ordering is required (such as sorting),
-// use the function FloatLess for floating-point numbers.
-func OrderedLess[T constraints.Ordered](a, b T) bool {
-	return a < b
+// use the function FloatCompare for floating-point numbers.
+func OrderedCompare[T constraints.Ordered](a, b T) int {
+	if a < b {
+		return -1
+	} else if a > b {
+		return 1
+	}
+	return 0
 }
 
-// FloatLess is a generic function to test whether a < b
-// for floating-point numbers.
+// FloatCompare is a generic function that returns
+//
+//	-1 if a < b, or a is a NaN and b is not a NaN,
+//	+1 if a > b, or a is not a NaN and b is a NaN,
+//	 0 otherwise (a == b or both a and b are NaN).
 //
 // It implements a strict weak ordering.
 // See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
 // for details.
 //
 // It treats NaN values as less than any others.
+// A NaN is considered equal to a NaN, and -0.0 is equal to 0.0.
 //
-// The client can instantiate it to get a LessFunc.
-func FloatLess[T constraints.Float](a, b T) bool {
+// The client can instantiate it to get a CompareFunc.
+func FloatCompare[T constraints.Float](a, b T) int {
 	// "x != x" means that x is a NaN.
-	return a < b || (a != a && b == b)
+	switch {
+	case a < b:
+		return -1
+	case a > b:
+		return 1
+	case a != a:
+		if b == b {
+			return -1
+		}
+	case b != b:
+		return 1
+	}
+	return 0
 }
