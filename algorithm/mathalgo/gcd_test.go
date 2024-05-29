@@ -501,7 +501,7 @@ func gcd2Uint64SteinAnother(a, b uint64) uint64 {
 }
 
 // gcd2Uint64BruteForce finds the greatest common divisor of
-// two non-zero 64-bit unsigned integers a and b by testing
+// two nonzero 64-bit unsigned integers a and b by testing
 // the value from min(a, b) to zero, one by one.
 //
 // Caller should guarantee that both a and b are not zero.
@@ -517,7 +517,7 @@ func gcd2Uint64BruteForce(a, b uint64) uint64 {
 }
 
 // gcd2Uint64Euclidean calculates the greatest common divisor of
-// two non-zero 64-bit unsigned integers a and b with the Euclidean algorithm
+// two nonzero 64-bit unsigned integers a and b with the Euclidean algorithm
 // (also known as Euclid's algorithm).
 //
 // Caller should guarantee that both a and b are not zero.

@@ -47,7 +47,7 @@ type exponentialJobQueueMaker[Job, Properties any] struct {
 // The priority of jobs increases exponentially.
 //
 // n is the number of goroutines to process jobs.
-// If n is non-positive, runtime.NumCPU() is used instead.
+// If n is nonpositive, runtime.NumCPU() is used instead.
 //
 // b is the base of the exponent.
 // The greater b is, the faster the priority of jobs increases.

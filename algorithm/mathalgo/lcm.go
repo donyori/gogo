@@ -22,14 +22,14 @@ import "github.com/donyori/gogo/constraints"
 
 // LCM calculates the least common multiple of the integers xs.
 //
-// The least common multiple of non-zero integers is the smallest
+// The least common multiple of nonzero integers is the smallest
 // positive integer that is divisible by each of the integers.
 // In particular, if there is at least one zero,
 // the least common multiple is considered zero,
 // since zero is the only common multiple of zero and other integers.
 //
 // According to the above definition,
-// LCM always returns a non-negative value,
+// LCM always returns a nonnegative value,
 // and it returns 0 if and only if len(xs) is 0 or
 // there is at least one 0 in xs.
 func LCM[Int constraints.Integer](xs ...Int) Int {

@@ -33,14 +33,24 @@ import "github.com/donyori/gogo/constraints"
 type LessFunc[T any] func(a, b T) bool
 
 // Not returns a negative function to test whether !(a < b).
+//
+// It returns nil if this LessFunc is nil.
 func (lf LessFunc[T]) Not() LessFunc[T] {
+	if lf == nil {
+		return nil
+	}
 	return func(a, b T) bool {
 		return !lf(a, b)
 	}
 }
 
 // Reverse returns a reverse function to test whether b < a.
+//
+// It returns nil if this LessFunc is nil.
 func (lf LessFunc[T]) Reverse() LessFunc[T] {
+	if lf == nil {
+		return nil
+	}
 	return func(a, b T) bool {
 		return lf(b, a)
 	}
@@ -50,7 +60,12 @@ func (lf LessFunc[T]) Reverse() LessFunc[T] {
 // The returned function reports true if and only if
 //
 //	!(less(a, b) || less(b, a))
+//
+// ToEqual returns nil if this LessFunc is nil.
 func (lf LessFunc[T]) ToEqual() EqualFunc[T] {
+	if lf == nil {
+		return nil
+	}
 	return func(a, b T) bool {
 		return !(lf(a, b) || lf(b, a))
 	}
@@ -61,7 +76,12 @@ func (lf LessFunc[T]) ToEqual() EqualFunc[T] {
 //	-1 if less(a, b),
 //	+1 if less(b, a),
 //	 0 otherwise.
+//
+// ToCompare returns nil if this LessFunc is nil.
 func (lf LessFunc[T]) ToCompare() CompareFunc[T] {
+	if lf == nil {
+		return nil
+	}
 	return func(a, b T) int {
 		if lf(a, b) {
 			return -1

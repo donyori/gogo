@@ -57,7 +57,7 @@ type Recorder[Message any] interface {
 // NewRecorder creates a new Recorder.
 //
 // capacity is the number of messages the Recorder can hold initially.
-// If capacity is non-positive, the Recorder does not reserve initial space.
+// If capacity is nonpositive, the Recorder does not reserve initial space.
 func NewRecorder[Message any](capacity int) Recorder[Message] {
 	rec := new(recorder[Message])
 	if capacity > 0 {

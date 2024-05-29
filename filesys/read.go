@@ -38,7 +38,7 @@ import (
 // ReadOptions are options for Read functions.
 type ReadOptions struct {
 	// Size of the buffer for reading the file at least.
-	// Non-positive values for using default value.
+	// Nonpositive values for using default value.
 	BufSize int
 
 	// Offset of the file to read, in bytes,
@@ -47,7 +47,7 @@ type ReadOptions struct {
 	Offset int64
 
 	// Limit of the file to read, in bytes.
-	// Non-positive values for no limit.
+	// Nonpositive values for no limit.
 	Limit int64
 
 	// True if not to decompress when the file is compressed by gzip or bzip2,
@@ -165,7 +165,7 @@ type reader struct {
 // To ensure that this function and the returned reader can work as expected,
 // the input file must not be operated by anyone else
 // before closing the returned reader.
-// If the option Offset is non-zero and the file is not an io.Seeker,
+// If the option Offset is nonzero and the file is not an io.Seeker,
 // the file must be ready to be read from the beginning.
 //
 // closeFile indicates whether the reader should close the file

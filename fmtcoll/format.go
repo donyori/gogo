@@ -47,7 +47,7 @@ type CommonFormat struct {
 	//
 	// Suffix is the string inserted after the last item.
 	//
-	// Prefix and Suffix are used only if the collection is non-empty
+	// Prefix and Suffix are used only if the collection is nonempty
 	// and the collection content is not omitted.
 	//
 	// Separator is used only if the collection has at least two items
@@ -95,7 +95,7 @@ type CommonFormat struct {
 //     if the sequence has at least two items and FormatItemFn is non-nil.
 //   - <PREFIX> <ITEM> <SUFFIX>,
 //     if the sequence has only one item and FormatItemFn is non-nil.
-//   - "...", if the sequence is non-empty and FormatItemFn is nil.
+//   - "...", if the sequence is nonempty and FormatItemFn is nil.
 //   - "" (empty), if the sequence is empty.
 type SequenceFormat[Item any] struct {
 	CommonFormat
@@ -104,7 +104,7 @@ type SequenceFormat[Item any] struct {
 	// It returns any error encountered.
 	//
 	// If FormatItemFn is nil, the sequence content is omitted.
-	// In this case, if the sequence is non-empty,
+	// In this case, if the sequence is nonempty,
 	// the content is printed as "...".
 	FormatItemFn FormatFunc[Item]
 }
@@ -149,7 +149,7 @@ func NewDefaultSequenceFormat[Item any]() *SequenceFormat[Item] {
 //   - <PREFIX> <ITEM> <SUFFIX>,
 //     if the map has only one key-value pair and
 //     either FormatKeyFn or FormatValueFn is non-nil.
-//   - "...", if the map is non-empty and
+//   - "...", if the map is nonempty and
 //     both FormatKeyFn and FormatValueFn are nil.
 //   - "" (empty), if the map is empty.
 //
@@ -164,7 +164,7 @@ type MapFormat[Key, Value any] struct {
 	// It returns any error encountered.
 	//
 	// If FormatKeyFn is nil, the key is omitted.
-	// If both the key and value are omitted and the map is non-empty,
+	// If both the key and value are omitted and the map is nonempty,
 	// the content is printed as "...".
 	FormatKeyFn FormatFunc[Key]
 
@@ -172,7 +172,7 @@ type MapFormat[Key, Value any] struct {
 	// It returns any error encountered.
 	//
 	// If FormatValueFn is nil, the value is omitted.
-	// If both the key and value are omitted and the map is non-empty,
+	// If both the key and value are omitted and the map is nonempty,
 	// the content is printed as "...".
 	FormatValueFn FormatFunc[Value]
 

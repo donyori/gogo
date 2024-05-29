@@ -77,7 +77,7 @@ type AccessPath[Node any] interface {
 	//
 	// Its parameter is the path from the search root to
 	// the current node to examine.
-	// path must be non-empty.
+	// path must be nonempty.
 	//
 	// It returns two indicators:
 	//   found - to report whether the specified node is the search goal;

@@ -28,7 +28,12 @@ import (
 type EqualFunc[T any] func(a, b T) bool
 
 // Not returns a negative function to test whether !(a == b).
+//
+// It returns nil if this EqualFunc is nil.
 func (ef EqualFunc[T]) Not() EqualFunc[T] {
+	if ef == nil {
+		return nil
+	}
 	return func(a, b T) bool {
 		return !ef(a, b)
 	}
@@ -170,11 +175,11 @@ func AnySliceEqual[S constraints.Slice[T], T any](a, b S) bool {
 // It uses ef to test the equality of the slice items.
 // If ef is nil, it uses AnyEqual instead.
 //
-// nilEqualToEmpty indicates whether to consider
+// nilEqualsEmpty indicates whether to consider
 // a nil slice equal to a non-nil empty slice.
 func EqualToSliceEqual[S constraints.Slice[T], T any](
 	ef EqualFunc[T],
-	nilEqualToEmpty bool,
+	nilEqualsEmpty bool,
 ) EqualFunc[S] {
 	if ef == nil {
 		ef = func(a, b T) bool {
@@ -186,7 +191,7 @@ func EqualToSliceEqual[S constraints.Slice[T], T any](
 		if n != len(b) {
 			return false
 		} else if n == 0 {
-			return nilEqualToEmpty || (a == nil) == (b == nil)
+			return nilEqualsEmpty || (a == nil) == (b == nil)
 		}
 		for i := range n {
 			if !ef(a[i], b[i]) {
@@ -374,11 +379,11 @@ func AnyValueMapEqual[M constraints.Map[K, V], K comparable, V any](
 // and ef to test the equality of the map values.
 // If ef is nil, it uses AnyEqual instead.
 //
-// nilEqualToEmpty indicates whether to consider
+// nilEqualsEmpty indicates whether to consider
 // a nil map equal to a non-nil empty map.
 func ValueEqualToMapEqual[M constraints.Map[K, V], K comparable, V any](
 	ef EqualFunc[V],
-	nilEqualToEmpty bool,
+	nilEqualsEmpty bool,
 ) EqualFunc[M] {
 	if ef == nil {
 		ef = func(a, b V) bool {
@@ -390,7 +395,7 @@ func ValueEqualToMapEqual[M constraints.Map[K, V], K comparable, V any](
 		if n != len(b) {
 			return false
 		} else if n == 0 {
-			return nilEqualToEmpty || (a == nil) == (b == nil)
+			return nilEqualsEmpty || (a == nil) == (b == nil)
 		}
 		for k, v1 := range a {
 			v2, ok := b[k]

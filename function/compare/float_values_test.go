@@ -25,7 +25,7 @@ import "math"
 // Floating-point limit values.
 // Max is the largest finite value representable by the type.
 // SmallestNonzero is the smallest positive,
-// non-zero value representable by the type.
+// nonzero value representable by the type.
 const (
 	MaxFloat32             = math.MaxFloat32
 	SmallestNonzeroFloat32 = math.SmallestNonzeroFloat32
@@ -96,9 +96,11 @@ func initCheckNegZeros() {
 // It panics if something is wrong.
 func initCheckInfs() {
 	switch {
-	case Inf32 <= math.MaxFloat32, !math.IsInf(float64(Inf32), 1):
+	// !(x > y) is not equivalent to (x <= y) when NaN values are involved.
+	case !(Inf32 > MaxFloat32), !math.IsInf(float64(Inf32), 1):
 		panic("Inf32 is not positive infinity")
-	case NegInf32 >= -math.MaxFloat32, !math.IsInf(float64(NegInf32), -1):
+	// !(x < y) is not equivalent to (x >= y) when NaN values are involved.
+	case !(NegInf32 < -MaxFloat32), !math.IsInf(float64(NegInf32), -1):
 		panic("NegInf32 is not negative infinity")
 	case !math.IsInf(Inf64, 1):
 		panic("Inf64 is not positive infinity")

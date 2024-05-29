@@ -49,7 +49,7 @@ func EncodeInt64DstLen(digits int) int {
 // (excluding the negative sign "-").
 // It pads with leading zeros after the sign (if any)
 // if the length is not enough.
-// If digits is non-positive, no padding is applied.
+// If digits is nonpositive, no padding is applied.
 //
 // It returns the number of bytes written into dst.
 //
@@ -123,7 +123,7 @@ func EncodeInt64(dst []byte, x int64, upper bool, digits int) int {
 // (excluding the negative sign "-").
 // It pads with leading zeros after the sign (if any)
 // if the length is not enough.
-// If digits is non-positive, no padding is applied.
+// If digits is nonpositive, no padding is applied.
 func EncodeInt64ToString(x int64, upper bool, digits int) string {
 	// Special cases for 0 and -0x8000000000000000 (minimum value of int64):
 	if x == 0 && digits <= 1 {
@@ -170,7 +170,7 @@ func EncodeInt64ToString(x int64, upper bool, digits int) string {
 // (excluding the negative sign "-").
 // It pads with leading zeros after the sign (if any)
 // if the length is not enough.
-// If digits is non-positive, no padding is applied.
+// If digits is nonpositive, no padding is applied.
 //
 // It returns the number of bytes written to w, and any write error encountered.
 func EncodeInt64To(w io.Writer, x int64, upper bool, digits int) (
@@ -250,7 +250,7 @@ func EncodeInt64To(w io.Writer, x int64, upper bool, digits int) (
 // (excluding the negative sign "-").
 // It pads with leading zeros after the sign (if any)
 // if the length is not enough.
-// If digits is non-positive, no padding is applied.
+// If digits is nonpositive, no padding is applied.
 // In addition, if digits is not less than int64BufferLen,
 // no padding is applied in this function,
 // and only the hexadecimal representation of x

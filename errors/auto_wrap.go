@@ -71,7 +71,7 @@ type AutoWrappedError interface {
 type autoWrappedError struct {
 	err      error                // the wrapped error, must be non-nil
 	ms       ErrorMessageStrategy // the error message strategy, must be valid
-	fullFunc string               // the full function name, must be non-empty and legal
+	fullFunc string               // the full function name, must be nonempty and legal
 }
 
 var _ AutoWrappedError = (*autoWrappedError)(nil)

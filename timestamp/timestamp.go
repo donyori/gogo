@@ -506,8 +506,8 @@ func timestampToTime(tsType timestampType, ts []byte) (t time.Time, err error) {
 // Caller should guarantee that tsType is valid.
 func timeToTimestamp(tsType timestampType, t time.Time) []byte {
 	intPart := t.Unix()
-	sign := 1                  // sign = 1 for non-negative values, -1 for negative values.
-	fracPart := t.Nanosecond() // Nanosecond() always returns non-negative value, so adjust as follows:
+	sign := 1                  // sign = 1 for nonnegative values, -1 for negative values.
+	fracPart := t.Nanosecond() // Nanosecond() always returns nonnegative value, so adjust as follows:
 	if intPart < 0 {
 		sign = -sign
 		if fracPart != 0 {

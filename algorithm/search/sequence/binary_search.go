@@ -323,13 +323,13 @@ func (absa *arrayBinarySearchAdapter[Item]) Compare(i int) (
 	return 0, absa.equalFn == nil || absa.equalFn(item, absa.goal)
 }
 
-// avg returns the average of two non-negative integers a and b.
+// avg returns the average of two nonnegative integers a and b.
 //
 // It avoids overflow when computing the average.
 //
 // The return value (denoted by c) satisfies a <= c < b.
 //
-// Caller should guarantee that a and b are non-negative.
+// Caller should guarantee that a and b are nonnegative.
 func avg(a, b int) int {
 	return int(uint(a+b) >> 1)
 }

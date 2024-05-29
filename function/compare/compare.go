@@ -41,7 +41,12 @@ type CompareFunc[T any] func(a, b T) int
 //	-1 if a is greater than b,
 //	 0 if a equals b,
 //	+1 if a is less than b.
+//
+// Reverse returns nil if this CompareFunc is nil.
 func (cf CompareFunc[T]) Reverse() CompareFunc[T] {
+	if cf == nil {
+		return nil
+	}
 	return func(a, b T) int {
 		return -cf(a, b)
 	}
@@ -51,7 +56,12 @@ func (cf CompareFunc[T]) Reverse() CompareFunc[T] {
 // The returned function reports true if and only if
 //
 //	compare(a, b) == 0
+//
+// ToEqual returns nil if this CompareFunc is nil.
 func (cf CompareFunc[T]) ToEqual() EqualFunc[T] {
+	if cf == nil {
+		return nil
+	}
 	return func(a, b T) bool {
 		return cf(a, b) == 0
 	}
@@ -61,7 +71,12 @@ func (cf CompareFunc[T]) ToEqual() EqualFunc[T] {
 // The returned function reports true if and only if
 //
 //	compare(a, b) < 0
+//
+// ToLess returns nil if this CompareFunc is nil.
 func (cf CompareFunc[T]) ToLess() LessFunc[T] {
+	if cf == nil {
+		return nil
+	}
 	return func(a, b T) bool {
 		return cf(a, b) < 0
 	}

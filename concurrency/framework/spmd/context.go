@@ -58,7 +58,7 @@ type context[Message any] struct {
 // Only for function New.
 //
 // The caller (function New) must guarantee that
-// worldRanks is non-nil and non-empty,
+// worldRanks is non-nil and nonempty,
 // has no duplicates and no out-of-range items,
 // and cannot be modified by others (such as the caller of function New).
 func newContext[Message any](

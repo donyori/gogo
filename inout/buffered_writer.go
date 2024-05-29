@@ -79,7 +79,7 @@ func NewBufferedWriter(w io.Writer) ResettableBufferedWriter {
 // NewBufferedWriterSize creates a ResettableBufferedWriter on w,
 // whose buffer has at least the specified size.
 //
-// If size is non-positive, it uses the default size (4096) instead.
+// If size is nonpositive, it uses the default size (4096) instead.
 //
 // If w is a ResettableBufferedWriter with a large enough buffer,
 // it returns w directly.

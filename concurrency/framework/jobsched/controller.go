@@ -113,7 +113,7 @@ type FeedbackHandler[Feedback any] func(
 // Options are options for creating Controller.
 type Options[Job, Properties, Feedback any] struct {
 	// The number of worker goroutines to process jobs.
-	// Non-positive values for using max(1, runtime.NumCPU()-2).
+	// Nonpositive values for using max(1, runtime.NumCPU()-2).
 	NumWorker int
 
 	// The maker to create a new job queue.
@@ -122,7 +122,7 @@ type Options[Job, Properties, Feedback any] struct {
 	JobQueueMaker JobQueueMaker[Job, Properties]
 
 	// The buffer size of the feedback channel.
-	// Non-positive values for no buffer.
+	// Nonpositive values for no buffer.
 	// Only take effect when the type of feedback is not NoFeedback.
 	FeedbackChanBufSize int
 

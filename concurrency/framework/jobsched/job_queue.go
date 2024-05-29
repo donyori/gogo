@@ -37,7 +37,7 @@ type JobQueue[Job, Properties any] interface {
 	// Enqueue adds metaJob into the queue.
 	//
 	// The framework guarantees that all items in metaJob are never nil
-	// and have a non-zero creation time in their meta information.
+	// and have a nonzero creation time in their meta information.
 	Enqueue(metaJob ...*MetaJob[Job, Properties])
 
 	// Dequeue removes and returns a job in the queue.

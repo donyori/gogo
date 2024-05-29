@@ -93,7 +93,7 @@ type Broadcaster[Message any] interface {
 // NewBroadcaster creates a new Broadcaster.
 //
 // dfltBufSize is the default buffer size for the new broadcaster.
-// Non-positive values for no buffer.
+// Nonpositive values for no buffer.
 func NewBroadcaster[Message any](dfltBufSize int) Broadcaster[Message] {
 	if dfltBufSize < 0 {
 		dfltBufSize = 0

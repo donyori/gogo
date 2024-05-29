@@ -62,6 +62,9 @@ func TestAnyEqual(t *testing.T) {
 
 func TestEqualFunc_Not_AnyEqual(t *testing.T) {
 	neq := compare.AnyEqual.Not()
+	if neq == nil {
+		t.Fatal("got nil EqualFunc")
+	}
 	pairs := [][2]any{
 		{nil, nil},
 		{1, nil},
@@ -92,6 +95,18 @@ func TestEqualFunc_Not_AnyEqual(t *testing.T) {
 			t.Error("got false; want true")
 		}
 	})
+}
+
+func TestEqualFunc_Not_Nil(t *testing.T) {
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	neq := compare.EqualFunc[int](nil).Not()
+	if neq != nil {
+		t.Error("got non-nil EqualFunc")
+	}
 }
 
 func TestEqual(t *testing.T) {
@@ -332,7 +347,7 @@ func TestEqualToSliceEqual_FloatEqual_Float64(t *testing.T) {
 		} else {
 			eqPairs, neqPairs = float64sWithNaNEqPairs, float64sWithNaNNeqPairs
 		}
-		subtestPairs(t, fmt.Sprintf("nilEqualToEmpty=%t", nilEqToEmpty),
+		subtestPairs(t, fmt.Sprintf("nilEqualsEmpty=%t", nilEqToEmpty),
 			toSlice, eqPairs, neqPairs)
 	}
 }
@@ -348,7 +363,7 @@ func TestEqualToSliceEqual_NilEf_Float64(t *testing.T) {
 		} else {
 			eqPairs, neqPairs = float64sEqPairs, float64sNeqPairs
 		}
-		subtestPairs(t, fmt.Sprintf("nilEqualToEmpty=%t", nilEqToEmpty),
+		subtestPairs(t, fmt.Sprintf("nilEqualsEmpty=%t", nilEqToEmpty),
 			toSlice, eqPairs, neqPairs)
 	}
 }
@@ -773,7 +788,7 @@ func TestValueEqualToMapEqual_FloatEqual_Float64(t *testing.T) {
 			eqPairs = stringToFloat64WithNaNEqPairs
 			neqPairs = stringToFloat64WithNaNNeqPairs
 		}
-		subtestPairs(t, fmt.Sprintf("nilEqualToEmpty=%t", nilEqToEmpty),
+		subtestPairs(t, fmt.Sprintf("nilEqualsEmpty=%t", nilEqToEmpty),
 			toMap, eqPairs, neqPairs)
 	}
 }
@@ -790,7 +805,7 @@ func TestValueEqualToMapEqual_NilEf_Float64(t *testing.T) {
 		} else {
 			eqPairs, neqPairs = stringToFloat64EqPairs, stringToFloat64NeqPairs
 		}
-		subtestPairs(t, fmt.Sprintf("nilEqualToEmpty=%t", nilEqToEmpty),
+		subtestPairs(t, fmt.Sprintf("nilEqualsEmpty=%t", nilEqToEmpty),
 			toMap, eqPairs, neqPairs)
 	}
 }

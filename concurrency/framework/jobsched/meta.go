@@ -30,7 +30,7 @@ type NoProperty = struct{}
 // Meta contains the meta information of a job,
 // including its priority, creation time, and any custom properties.
 type Meta[Properties any] struct {
-	// The priority of the job, a non-negative integer.
+	// The priority of the job, a nonnegative integer.
 	//
 	// The greater the value, the higher the priority.
 	// The default value 0 corresponds to the lowest priority.

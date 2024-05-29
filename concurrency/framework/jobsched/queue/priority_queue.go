@@ -114,7 +114,7 @@ type jobPriorityQueueMaker[Job, Properties any] struct {
 	// when not-a-number (NaN) values are involved.
 	//
 	// The framework guarantees that arguments passed to lessFn are never nil
-	// and have a non-zero creation time in their meta information.
+	// and have a nonzero creation time in their meta information.
 	lessFn compare.LessFunc[*jobsched.MetaJob[Job, Properties]]
 }
 
@@ -134,7 +134,7 @@ type jobPriorityQueueMaker[Job, Properties any] struct {
 // is not a strict weak ordering when not-a-number (NaN) values are involved.
 //
 // The framework guarantees that arguments passed to lessFn are never nil
-// and have a non-zero creation time in their meta information.
+// and have a nonzero creation time in their meta information.
 //
 // NewJobPriorityQueueMaker panics if lessFn is nil.
 func NewJobPriorityQueueMaker[Job, Properties any](

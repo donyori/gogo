@@ -49,7 +49,7 @@ type WritableFile interface {
 // WriteOptions are options for Write functions.
 type WriteOptions struct {
 	// Size of the buffer for writing the file at least.
-	// Non-positive values for using default value.
+	// Nonpositive values for using default value.
 	BufSize int
 
 	// True if not to compress the file with gzip and not to archive the file
@@ -72,7 +72,7 @@ type WriteOptions struct {
 	// It should be used when the ZIP data is appended to an existing file,
 	// such as a binary executable.
 	//
-	// Non-positive values are ignored.
+	// Nonpositive values are ignored.
 	ZipOffset int64
 
 	// The end-of-central-directory comment field of the ZIP archive.

@@ -127,6 +127,9 @@ func TestFloatCompare(t *testing.T) {
 func TestCompareFunc_Reverse(t *testing.T) {
 	f := compare.CompareFunc[int](compare.OrderedCompare[int])
 	rf := f.Reverse()
+	if rf == nil {
+		t.Fatal("got nil CompareFunc")
+	}
 	intPairs := [][2]int{{1, 2}, {2, 1}, {1, 1}}
 	for _, pair := range intPairs {
 		a, b := pair[0], pair[1]
@@ -139,9 +142,24 @@ func TestCompareFunc_Reverse(t *testing.T) {
 	}
 }
 
+func TestCompareFunc_Reverse_Nil(t *testing.T) {
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	rf := compare.CompareFunc[int](nil).Reverse()
+	if rf != nil {
+		t.Error("got non-nil CompareFunc")
+	}
+}
+
 func TestCompareFunc_ToEqual(t *testing.T) {
 	f := compare.CompareFunc[int](compare.OrderedCompare[int])
 	eq := f.ToEqual()
+	if eq == nil {
+		t.Fatal("got nil EqualFunc")
+	}
 	intPairs := [][2]int{{1, 2}, {2, 1}, {1, 1}}
 	for _, pair := range intPairs {
 		a, b := pair[0], pair[1]
@@ -153,9 +171,24 @@ func TestCompareFunc_ToEqual(t *testing.T) {
 	}
 }
 
+func TestCompareFunc_ToEqual_Nil(t *testing.T) {
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	eq := compare.CompareFunc[int](nil).ToEqual()
+	if eq != nil {
+		t.Error("got non-nil EqualFunc")
+	}
+}
+
 func TestCompareFunc_ToLess(t *testing.T) {
 	f := compare.CompareFunc[int](compare.OrderedCompare[int])
 	less := f.ToLess()
+	if less == nil {
+		t.Fatal("got nil LessFunc")
+	}
 	intPairs := [][2]int{{1, 2}, {2, 1}, {1, 1}}
 	for _, pair := range intPairs {
 		a, b := pair[0], pair[1]
@@ -164,5 +197,17 @@ func TestCompareFunc_ToLess(t *testing.T) {
 				t.Errorf("got %t", got)
 			}
 		})
+	}
+}
+
+func TestCompareFunc_ToLess_Nil(t *testing.T) {
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	less := compare.CompareFunc[int](nil).ToLess()
+	if less != nil {
+		t.Error("got non-nil LessFunc")
 	}
 }

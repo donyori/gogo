@@ -51,7 +51,7 @@ var groupIDPattern = regexp.MustCompile(`[a-z0-9][a-z0-9_]*`)
 // New creates a Controller for a new job.
 //
 // n is the number of goroutines to process the job.
-// If n is non-positive, runtime.NumCPU() is used instead.
+// If n is nonpositive, runtime.NumCPU() is used instead.
 //
 // biz is the business handler for the job.
 // It panics if biz is nil.

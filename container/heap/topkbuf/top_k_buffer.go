@@ -76,14 +76,14 @@ type topKBuffer[Item any] struct {
 //
 // data is the initial items added to the buffer.
 //
-// It panics if k is non-positive or lessFn is nil.
+// It panics if k is nonpositive or lessFn is nil.
 func New[Item any](
 	k int,
 	lessFn compare.LessFunc[Item],
 	data container.Container[Item],
 ) TopKBuffer[Item] {
 	if k <= 0 {
-		panic(errors.AutoMsg(fmt.Sprintf("k (%d) is non-positive", k)))
+		panic(errors.AutoMsg(fmt.Sprintf("k (%d) is nonpositive", k)))
 	} else if lessFn == nil {
 		panic(errors.AutoMsg("lessFn is nil"))
 	}
