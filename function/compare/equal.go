@@ -39,6 +39,22 @@ func (ef EqualFunc[T]) Not() EqualFunc[T] {
 	}
 }
 
+// Reflexive returns an EqualFunc that guarantees
+// the reflexivity of the equality relation.
+// The returned function considers that
+// all elements that are not equal to themselves
+// (such as not-a-number (NaN) values of floating-point numbers) are equal.
+//
+// It returns nil if this EqualFunc is nil.
+func (ef EqualFunc[T]) Reflexive() EqualFunc[T] {
+	if ef == nil {
+		return nil
+	}
+	return func(a, b T) bool {
+		return ef(a, b) || !ef(a, a) && !ef(b, b)
+	}
+}
+
 // Equal is a generic function to test whether a == b.
 //
 // The client can instantiate it to get an EqualFunc.
@@ -49,6 +65,19 @@ func Equal[T comparable](a, b T) bool {
 	return a == b
 }
 
+// ReflexiveEqual is a generic function to test whether a equals b.
+// In particular, it considers that
+// all elements that are not equal to themselves
+// (such as not-a-number (NaN) values of floating-point numbers) are equal.
+// Therefore, this equality relation is reflexive.
+//
+// The client can instantiate it to get an EqualFunc.
+//
+// To just test whether a == b, use function Equal.
+func ReflexiveEqual[T comparable](a, b T) bool {
+	return a == b || a != a && b != b
+}
+
 // FloatEqual is a generic function that returns true
 // if a == b or both a and b are NaN.
 //
@@ -56,7 +85,7 @@ func Equal[T comparable](a, b T) bool {
 //
 // To just test whether a == b, use function Equal.
 func FloatEqual[T constraints.Float](a, b T) bool {
-	return a == b || a != a && b != b // "x != x" means that x is a NaN
+	return ReflexiveEqual(a, b) // "x != x" means that x is a NaN
 }
 
 // AnyEqual is a prefab EqualFunc performing as follows:

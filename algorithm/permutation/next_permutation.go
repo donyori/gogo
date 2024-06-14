@@ -68,7 +68,7 @@ func NextPermutation(itf Interface) bool {
 		data:  itf,
 		begin: i + 1,
 	}
-	j := npbsi.begin + sequence.BinarySearchMaxLess[int](npbsi, i) // find the last item greater than data[i]
+	j := npbsi.begin + sequence.BinarySearchMaxLess(npbsi, i) // find the last item greater than data[i]
 	itf.Swap(i, j)
 	for i, j = i+1, itf.Len()-1; i < j; i, j = i+1, j-1 {
 		itf.Swap(i, j)

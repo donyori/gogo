@@ -25,29 +25,31 @@ import (
 
 	"github.com/donyori/gogo/constraints"
 	"github.com/donyori/gogo/function/compare"
+	"github.com/donyori/gogo/internal/floats"
 )
 
 func TestOrderedCompare(t *testing.T) {
 	intPairs := [][2]int{{1, 2}, {2, 1}, {1, 1}}
 	float64Pairs := [][2]float64{
-		{0.0, NegZero64},
+		{0.0, floats.NegZero64},
 		{0.0, 0.5}, {1.0, 0.5}, {0.5, 0.5},
-		{NaN64A, 0.0}, {0.0, NaN64A}, {NaN64A, NaN64B},
-		{Inf64, 0.0}, {NegInf64, 0.0},
-		{0.0, Inf64}, {0.0, NegInf64},
-		{Inf64, Inf64}, {Inf64, NegInf64},
-		{NegInf64, Inf64}, {NegInf64, NegInf64},
-		{NaN64A, Inf64}, {Inf64, NaN64A},
-		{NaN64A, NegInf64}, {NegInf64, NaN64A},
+		{floats.NaN64A, 0.0}, {0.0, floats.NaN64A},
+		{floats.NaN64A, floats.NaN64B},
+		{floats.Inf64, 0.0}, {floats.NegInf64, 0.0},
+		{0.0, floats.Inf64}, {0.0, floats.NegInf64},
+		{floats.Inf64, floats.Inf64}, {floats.Inf64, floats.NegInf64},
+		{floats.NegInf64, floats.Inf64}, {floats.NegInf64, floats.NegInf64},
+		{floats.NaN64A, floats.Inf64}, {floats.Inf64, floats.NaN64A},
+		{floats.NaN64A, floats.NegInf64}, {floats.NegInf64, floats.NaN64A},
 	}
 	stringPairs := [][2]string{
 		{"hello", "hell"},
 		{"hell", "hello"},
 		{"hello", "hello"},
 	}
-	subtestOrderedCompare(t, "int", intPairs)
-	subtestOrderedCompare(t, "float64", float64Pairs)
-	subtestOrderedCompare(t, "string", stringPairs)
+	subtestOrderedCompare(t, "type=int", intPairs)
+	subtestOrderedCompare(t, "type=float64", float64Pairs)
+	subtestOrderedCompare(t, "type=string", stringPairs)
 }
 
 func subtestOrderedCompare[T constraints.Ordered](
@@ -78,42 +80,41 @@ func subtestOrderedCompare[T constraints.Ordered](
 
 func TestFloatCompare(t *testing.T) {
 	float32Pairs := [][2]float32{
-		{0.0, NegZero32},
+		{0.0, floats.NegZero32},
 		{0.0, 0.5}, {1.0, 0.5}, {0.5, 0.5},
-		{NaN32A, 0.0}, {0.0, NaN32A}, {NaN32A, NaN32B},
-		{Inf32, 0.0}, {NegInf32, 0.0},
-		{0.0, Inf32}, {0.0, NegInf32},
-		{Inf32, Inf32}, {Inf32, NegInf32},
-		{NegInf32, Inf32}, {NegInf32, NegInf32},
-		{NaN32A, Inf32}, {Inf32, NaN32A},
-		{NaN32A, NegInf32}, {NegInf32, NaN32A},
+		{floats.NaN32A, 0.0}, {0.0, floats.NaN32A},
+		{floats.NaN32A, floats.NaN32B},
+		{floats.Inf32, 0.0}, {floats.NegInf32, 0.0},
+		{0.0, floats.Inf32}, {0.0, floats.NegInf32},
+		{floats.Inf32, floats.Inf32}, {floats.Inf32, floats.NegInf32},
+		{floats.NegInf32, floats.Inf32}, {floats.NegInf32, floats.NegInf32},
+		{floats.NaN32A, floats.Inf32}, {floats.Inf32, floats.NaN32A},
+		{floats.NaN32A, floats.NegInf32}, {floats.NegInf32, floats.NaN32A},
 	}
-	t.Run("float32", func(t *testing.T) {
-		for i := range float32Pairs {
-			a, b := float32Pairs[i][0], float32Pairs[i][1]
-			want := cmp.Compare(a, b)
-			t.Run(fmt.Sprintf("a=%.1f&b=%.1f", a, b), func(t *testing.T) {
-				if got := compare.FloatCompare(a, b); got != want {
-					t.Errorf("got %d; want %d", got, want)
-				}
-			})
-		}
-	})
-
 	float64Pairs := [][2]float64{
-		{0.0, NegZero64},
+		{0.0, floats.NegZero64},
 		{0.0, 0.5}, {1.0, 0.5}, {0.5, 0.5},
-		{NaN64A, 0.0}, {0.0, NaN64A}, {NaN64A, NaN64B},
-		{Inf64, 0.0}, {NegInf64, 0.0},
-		{0.0, Inf64}, {0.0, NegInf64},
-		{Inf64, Inf64}, {Inf64, NegInf64},
-		{NegInf64, Inf64}, {NegInf64, NegInf64},
-		{NaN64A, Inf64}, {Inf64, NaN64A},
-		{NaN64A, NegInf64}, {NegInf64, NaN64A},
+		{floats.NaN64A, 0.0}, {0.0, floats.NaN64A},
+		{floats.NaN64A, floats.NaN64B},
+		{floats.Inf64, 0.0}, {floats.NegInf64, 0.0},
+		{0.0, floats.Inf64}, {0.0, floats.NegInf64},
+		{floats.Inf64, floats.Inf64}, {floats.Inf64, floats.NegInf64},
+		{floats.NegInf64, floats.Inf64}, {floats.NegInf64, floats.NegInf64},
+		{floats.NaN64A, floats.Inf64}, {floats.Inf64, floats.NaN64A},
+		{floats.NaN64A, floats.NegInf64}, {floats.NegInf64, floats.NaN64A},
 	}
-	t.Run("float64", func(t *testing.T) {
-		for i := range float64Pairs {
-			a, b := float64Pairs[i][0], float64Pairs[i][1]
+	subtestFloatCompare(t, "type=float32", float32Pairs)
+	subtestFloatCompare(t, "type=float64", float64Pairs)
+}
+
+func subtestFloatCompare[T constraints.Float](
+	t *testing.T,
+	name string,
+	data [][2]T,
+) {
+	t.Run(name, func(t *testing.T) {
+		for _, pair := range data {
+			a, b := pair[0], pair[1]
 			want := cmp.Compare(a, b)
 			t.Run(fmt.Sprintf("a=%.1f&b=%.1f", a, b), func(t *testing.T) {
 				if got := compare.FloatCompare(a, b); got != want {
@@ -133,7 +134,12 @@ func TestCompareFunc_Reverse(t *testing.T) {
 	intPairs := [][2]int{{1, 2}, {2, 1}, {1, 1}}
 	for _, pair := range intPairs {
 		a, b := pair[0], pair[1]
-		want := f(b, a)
+		var want int
+		if a < b {
+			want = 1
+		} else if a > b {
+			want = -1
+		}
 		t.Run(fmt.Sprintf("a=%d&b=%d", a, b), func(t *testing.T) {
 			if got := rf(a, b); got != want {
 				t.Errorf("got %d; want %d", got, want)
