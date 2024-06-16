@@ -20,10 +20,8 @@ package array
 
 import "github.com/donyori/gogo/container/sequence"
 
-// Array is an interface representing a direct-access sequence.
-type Array[Item any] interface {
-	sequence.Sequence[Item]
-
+// ArraySpecific is an interface that groups the array-specific methods.
+type ArraySpecific[Item any] interface {
 	// Get returns the item with index i.
 	//
 	// It panics if i is out of range.
@@ -46,15 +44,22 @@ type Array[Item any] interface {
 	Slice(begin, end int) Array[Item]
 }
 
+// Array is an interface representing a direct-access sequence.
+type Array[Item any] interface {
+	sequence.Sequence[Item]
+	ArraySpecific[Item]
+}
+
 // OrderedArray is an interface representing a direct-access sequence
 // that can be sorted by integer index.
 //
 // It conforms to interface sort.Interface.
 type OrderedArray[Item any] interface {
-	Array[Item]
+	sequence.OrderedSequence[Item]
+	ArraySpecific[Item]
 
-	// Less reports whether the item with index i must sort before
-	// the item with index j.
+	// Less reports whether the item with index i
+	// is less than the item with index j.
 	//
 	// Less must describe a strict weak ordering.
 	// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
@@ -67,4 +72,22 @@ type OrderedArray[Item any] interface {
 	//
 	// It panics if i or j is out of range.
 	Less(i, j int) bool
+
+	// Compare returns
+	//
+	//	-1 if the item with index i is less than the item with index j,
+	//	 0 if the item with index i equals the item with index j,
+	//	+1 if the item with index i is greater than the item with index j.
+	//
+	// Compare must describe a strict weak ordering.
+	// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
+	// for details.
+	//
+	// Note that floating-point comparison
+	// (the < operator on float32 or float64 values)
+	// is not a strict weak ordering
+	// when not-a-number (NaN) values are involved.
+	//
+	// It panics if i or j is out of range.
+	Compare(i, j int) int
 }

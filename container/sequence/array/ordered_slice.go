@@ -19,24 +19,33 @@
 package array
 
 import (
+	"slices"
+
 	"github.com/donyori/gogo/constraints"
 	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/function/compare"
 )
 
-// sliceLess combines SliceDynamicArray and
-// github.com/donyori/gogo/function/compare.LessFunc.
+// sliceOrderedDynamicArray combines SliceDynamicArray,
+// github.com/donyori/gogo/function/compare.LessFunc,
+// and github.com/donyori/gogo/function/compare.CompareFunc.
 //
 // It implements the interface OrderedDynamicArray.
-type sliceLess[Item any] struct {
+type sliceOrderedDynamicArray[Item any] struct {
 	*SliceDynamicArray[Item]
 	lessFn compare.LessFunc[Item]
+	cmpFn  compare.CompareFunc[Item]
 }
 
-// WrapSliceLess wraps a pointer to a Go slice with
-// github.com/donyori/gogo/function/compare.LessFunc to an OrderedDynamicArray.
+var _ OrderedDynamicArray[any] = (*sliceOrderedDynamicArray[any])(nil)
+
+// WrapSlice wraps a pointer to a Go slice with
+// github.com/donyori/gogo/function/compare.LessFunc and
+// github.com/donyori/gogo/function/compare.CompareFunc
+// to an OrderedDynamicArray.
 //
-// The specified LessFunc must describe a strict weak ordering.
+// The specified LessFunc and CompareFunc must be consistent,
+// and describe a strict weak ordering.
 // See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
 // for details.
 //
@@ -49,43 +58,34 @@ type sliceLess[Item any] struct {
 // Operations on the Go slice will also affect
 // the returned OrderedDynamicArray.
 //
-// It panics if slicePtr or lessFn is nil.
-func WrapSliceLess[Item any](
-	slicePtr *[]Item, lessFn compare.LessFunc[Item]) OrderedDynamicArray[Item] {
-	if slicePtr == nil {
-		panic(errors.AutoMsg("slicePtr is nil"))
-	} else if lessFn == nil {
-		panic(errors.AutoMsg("lessFn is nil"))
+// If the slice pointer is nil,
+// WrapSlice creates an empty slice and uses the pointer to it.
+//
+// If one of the LessFunc and CompareFunc is nil,
+// WrapSlice generates it from the other
+// (via LessFunc.ToCompare and CompareFunc.ToLess).
+// If both of them are nil, WrapSlice panics.
+func WrapSlice[Item any](
+	slicePtr *[]Item,
+	lessFn compare.LessFunc[Item],
+	cmpFn compare.CompareFunc[Item],
+) OrderedDynamicArray[Item] {
+	if lessFn == nil {
+		if cmpFn == nil {
+			panic(errors.AutoMsg("both lessFn and cmpFn are nil"))
+		}
+		lessFn = cmpFn.ToLess()
+	} else if cmpFn == nil {
+		cmpFn = lessFn.ToCompare()
 	}
-	return &sliceLess[Item]{
+	if slicePtr == nil {
+		slicePtr = new([]Item)
+	}
+	return &sliceOrderedDynamicArray[Item]{
 		SliceDynamicArray: (*SliceDynamicArray[Item])(slicePtr),
 		lessFn:            lessFn,
+		cmpFn:             cmpFn,
 	}
-}
-
-// Less reports whether the item with index i must sort before
-// the item with index j.
-//
-// If the LessFunc specified by the client describes a strict weak ordering,
-// then Less describes a strict weak ordering as well.
-// For strict weak ordering,
-// see <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>.
-//
-// Note that floating-point comparison
-// (the < operator on float32 or float64 values)
-// is not a strict weak ordering when not-a-number (NaN) values are involved.
-//
-// It panics if i or j is out of range.
-func (sl *sliceLess[Item]) Less(i, j int) bool {
-	return sl.lessFn((*sl.SliceDynamicArray)[i], (*sl.SliceDynamicArray)[j])
-}
-
-// strictWeakOrderedSlice is a SliceDynamicArray that constraints its item type
-// to strict weak ordered types.
-//
-// It implements the interface OrderedDynamicArray.
-type strictWeakOrderedSlice[Item constraints.StrictWeakOrdered] struct {
-	*SliceDynamicArray[Item]
 }
 
 // WrapStrictWeakOrderedSlice wraps a pointer to Go slice
@@ -99,39 +99,12 @@ type strictWeakOrderedSlice[Item constraints.StrictWeakOrdered] struct {
 // Operations on the Go slice will also affect
 // the returned OrderedDynamicArray.
 //
-// It panics if slicePtr is nil.
+// If the slice pointer is nil,
+// WrapStrictWeakOrderedSlice creates an empty slice and uses the pointer to it.
 func WrapStrictWeakOrderedSlice[Item constraints.StrictWeakOrdered](
-	slicePtr *[]Item) OrderedDynamicArray[Item] {
-	if slicePtr == nil {
-		panic(errors.AutoMsg("slicePtr is nil"))
-	}
-	return &strictWeakOrderedSlice[Item]{
-		SliceDynamicArray: (*SliceDynamicArray[Item])(slicePtr),
-	}
-}
-
-// Less reports whether the item with index i must sort before
-// the item with index j.
-//
-// Less describes a strict weak ordering.
-// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
-// for details.
-//
-// Note that floating-point comparison
-// (the < operator on float32 or float64 values)
-// is not a strict weak ordering when not-a-number (NaN) values are involved.
-//
-// It panics if i or j is out of range.
-func (tos *strictWeakOrderedSlice[Item]) Less(i, j int) bool {
-	return (*tos.SliceDynamicArray)[i] < (*tos.SliceDynamicArray)[j]
-}
-
-// floatSlice is a SliceDynamicArray that constraints its item type
-// to floating-point numbers.
-//
-// It implements the interface OrderedDynamicArray.
-type floatSlice[Item constraints.Float] struct {
-	*SliceDynamicArray[Item]
+	slicePtr *[]Item,
+) OrderedDynamicArray[Item] {
+	return WrapSlice(slicePtr, compare.OrderedLess, compare.OrderedCompare)
 }
 
 // WrapFloatSlice wraps a pointer to Go slice to an OrderedDynamicArray.
@@ -139,34 +112,82 @@ type floatSlice[Item constraints.Float] struct {
 // It requires that the items of the slice must be floating-point numbers.
 // See github.com/donyori/gogo/constraints.Float for details.
 //
+// The returned OrderedDynamicArray treats NaN values as less than any others.
+//
 // Operations on the returned OrderedDynamicArray will
 // affect the provided Go slice.
 // Operations on the Go slice will also affect
 // the returned OrderedDynamicArray.
 //
-// It panics if slicePtr is nil.
-func WrapFloatSlice[Item constraints.Float](slicePtr *[]Item) OrderedDynamicArray[Item] {
-	if slicePtr == nil {
-		panic(errors.AutoMsg("slicePtr is nil"))
-	}
-	return &floatSlice[Item]{
-		SliceDynamicArray: (*SliceDynamicArray[Item])(slicePtr),
-	}
+// If the slice pointer is nil,
+// WrapFloatSlice creates an empty slice and uses the pointer to it.
+func WrapFloatSlice[Item constraints.Float](
+	slicePtr *[]Item,
+) OrderedDynamicArray[Item] {
+	return WrapSlice(slicePtr, compare.FloatLess, compare.FloatCompare)
 }
 
-// Less reports whether the item with index i must sort before
-// the item with index j.
-//
-// Less describes a strict weak ordering.
-// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
-// for details.
-//
-// Note that floating-point comparison
-// (the < operator on float32 or float64 values)
-// is not a strict weak ordering when not-a-number (NaN) values are involved.
-//
-// It panics if i or j is out of range.
-func (fs *floatSlice[Item]) Less(i, j int) bool {
-	return compare.FloatLess(
-		(*fs.SliceDynamicArray)[i], (*fs.SliceDynamicArray)[j])
+func (soda *sliceOrderedDynamicArray[Item]) Min() Item {
+	soda.checkNonempty()
+	m := (*soda.SliceDynamicArray)[0]
+	for i := 1; i < len(*soda.SliceDynamicArray); i++ {
+		if soda.lessFn((*soda.SliceDynamicArray)[i], m) {
+			m = (*soda.SliceDynamicArray)[i]
+		}
+	}
+	return m
+}
+
+func (soda *sliceOrderedDynamicArray[Item]) Max() Item {
+	soda.checkNonempty()
+	m := (*soda.SliceDynamicArray)[0]
+	for i := 1; i < len(*soda.SliceDynamicArray); i++ {
+		if soda.lessFn(m, (*soda.SliceDynamicArray)[i]) {
+			m = (*soda.SliceDynamicArray)[i]
+		}
+	}
+	return m
+}
+
+func (soda *sliceOrderedDynamicArray[Item]) IsSorted() bool {
+	for i := len(*soda.SliceDynamicArray) - 1; i > 0; i-- {
+		if soda.lessFn(
+			(*soda.SliceDynamicArray)[i],
+			(*soda.SliceDynamicArray)[i-1],
+		) {
+			return false
+		}
+	}
+	return true
+}
+
+func (soda *sliceOrderedDynamicArray[Item]) Sort() {
+	slices.SortFunc(*soda.SliceDynamicArray, soda.cmpFn)
+}
+
+func (soda *sliceOrderedDynamicArray[Item]) SortStable() {
+	slices.SortStableFunc(*soda.SliceDynamicArray, soda.cmpFn)
+}
+
+func (soda *sliceOrderedDynamicArray[Item]) Less(i, j int) bool {
+	soda.checkNonempty()
+	return soda.lessFn(
+		(*soda.SliceDynamicArray)[i],
+		(*soda.SliceDynamicArray)[j],
+	)
+}
+
+func (soda *sliceOrderedDynamicArray[Item]) Compare(i, j int) int {
+	soda.checkNonempty()
+	return soda.cmpFn(
+		(*soda.SliceDynamicArray)[i],
+		(*soda.SliceDynamicArray)[j],
+	)
+}
+
+// checkNonempty panics if the wrapped slice is nil or empty.
+func (soda *sliceOrderedDynamicArray[Item]) checkNonempty() {
+	if len(*soda.SliceDynamicArray) == 0 {
+		panic(errors.AutoMsgCustom("OrderedDynamicArray[...] is empty", -1, 1))
+	}
 }

@@ -113,7 +113,7 @@ func New[Item any](
 	}
 	pq := &priorityQueue[Item]{
 		odaHeapAdapter[Item]{
-			Oda: array.WrapSliceLess(&dataCopy, lessFn),
+			ODA: array.WrapSlice(&dataCopy, lessFn, nil),
 		},
 	}
 	heap.Init(pq.oha)
@@ -134,16 +134,16 @@ func (pq *priorityQueue[Item]) Len() int {
 // The client should do read-only operations on x
 // to avoid corrupting the priority queue.
 func (pq *priorityQueue[Item]) Range(handler func(x Item) (cont bool)) {
-	pq.oha.Oda.Range(handler)
+	pq.oha.ODA.Range(handler)
 }
 
 func (pq *priorityQueue[Item]) Cap() int {
-	return pq.oha.Oda.Cap()
+	return pq.oha.ODA.Cap()
 }
 
 func (pq *priorityQueue[Item]) Enqueue(x ...Item) {
 	if pq.oha.Len() < len(x) {
-		pq.oha.Oda.Append((*array.SliceDynamicArray[Item])(&x))
+		pq.oha.ODA.Append((*array.SliceDynamicArray[Item])(&x))
 		heap.Init(pq.oha)
 	} else {
 		for _, item := range x {
@@ -163,48 +163,48 @@ func (pq *priorityQueue[Item]) Top() Item {
 	if pq.oha.Len() == 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))
 	}
-	return pq.oha.Oda.Front()
+	return pq.oha.ODA.Front()
 }
 
 func (pq *priorityQueue[Item]) ReplaceTop(newX Item) Item {
 	if pq.oha.Len() == 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))
 	}
-	pq.oha.Oda.SetFront(newX)
+	pq.oha.ODA.SetFront(newX)
 	heap.Fix(pq.oha, 0)
-	return pq.oha.Oda.Front()
+	return pq.oha.ODA.Front()
 }
 
 func (pq *priorityQueue[Item]) Clear() {
-	pq.oha.Oda.Clear()
+	pq.oha.ODA.Clear()
 }
 
 // odaHeapAdapter wraps
 // github.com/donyori/gogo/container/sequence/array.OrderedDynamicArray
 // to fit the interface container/heap.Interface.
 type odaHeapAdapter[Item any] struct {
-	Oda array.OrderedDynamicArray[Item]
+	ODA array.OrderedDynamicArray[Item]
 }
 
 func (oha odaHeapAdapter[Item]) Len() int {
-	if oha.Oda == nil {
+	if oha.ODA == nil {
 		return 0
 	}
-	return oha.Oda.Len()
+	return oha.ODA.Len()
 }
 
 func (oha odaHeapAdapter[Item]) Less(i, j int) bool {
-	return oha.Oda.Less(i, j)
+	return oha.ODA.Less(i, j)
 }
 
 func (oha odaHeapAdapter[Item]) Swap(i, j int) {
-	oha.Oda.Swap(i, j)
+	oha.ODA.Swap(i, j)
 }
 
 func (oha odaHeapAdapter[Item]) Push(x any) {
-	oha.Oda.Push(x.(Item))
+	oha.ODA.Push(x.(Item))
 }
 
 func (oha odaHeapAdapter[Item]) Pop() any {
-	return oha.Oda.Pop()
+	return oha.ODA.Pop()
 }

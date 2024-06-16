@@ -49,3 +49,31 @@ type Sequence[Item any] interface {
 	// Reverse turns items in the sequence the other way round.
 	Reverse()
 }
+
+// OrderedSequence is an interface representing a sequence that can be sorted.
+type OrderedSequence[Item any] interface {
+	Sequence[Item]
+
+	// Min returns the first smallest item in the sequence.
+	//
+	// It panics if the sequence is nil or empty.
+	Min() Item
+
+	// Max returns the first largest item in the sequence.
+	//
+	// It panics if the sequence is nil or empty.
+	Max() Item
+
+	// IsSorted reports whether the sequence is sorted in ascending order.
+	//
+	// If the sequence is empty, IsSorted returns true.
+	IsSorted() bool
+
+	// Sort sorts the sequence in ascending order.
+	// This sort is not guaranteed to be stable.
+	Sort()
+
+	// SortStable sorts the sequence in ascending order
+	// while keeping the original order of equal elements.
+	SortStable()
+}

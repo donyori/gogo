@@ -73,7 +73,7 @@ func (sda *SliceDynamicArray[Item]) Range(handler func(x Item) (cont bool)) {
 //
 // It panics if the slice is nil or empty.
 func (sda *SliceDynamicArray[Item]) Front() Item {
-	sda.checkNonEmpty()
+	sda.checkNonempty()
 	return (*sda)[0]
 }
 
@@ -81,7 +81,7 @@ func (sda *SliceDynamicArray[Item]) Front() Item {
 //
 // It panics if the slice is nil or empty.
 func (sda *SliceDynamicArray[Item]) SetFront(x Item) {
-	sda.checkNonEmpty()
+	sda.checkNonempty()
 	(*sda)[0] = x
 }
 
@@ -89,7 +89,7 @@ func (sda *SliceDynamicArray[Item]) SetFront(x Item) {
 //
 // It panics if the slice is nil or empty.
 func (sda *SliceDynamicArray[Item]) Back() Item {
-	sda.checkNonEmpty()
+	sda.checkNonempty()
 	return (*sda)[len(*sda)-1]
 }
 
@@ -97,7 +97,7 @@ func (sda *SliceDynamicArray[Item]) Back() Item {
 //
 // It panics if the slice is nil or empty.
 func (sda *SliceDynamicArray[Item]) SetBack(x Item) {
-	sda.checkNonEmpty()
+	sda.checkNonempty()
 	(*sda)[len(*sda)-1] = x
 }
 
@@ -112,7 +112,7 @@ func (sda *SliceDynamicArray[Item]) Reverse() {
 //
 // It panics if i is out of range.
 func (sda *SliceDynamicArray[Item]) Get(i int) Item {
-	sda.checkNonEmpty()
+	sda.checkNonempty()
 	return (*sda)[i]
 }
 
@@ -120,7 +120,7 @@ func (sda *SliceDynamicArray[Item]) Get(i int) Item {
 //
 // It panics if i is out of range.
 func (sda *SliceDynamicArray[Item]) Set(i int, x Item) {
-	sda.checkNonEmpty()
+	sda.checkNonempty()
 	(*sda)[i] = x
 }
 
@@ -128,7 +128,7 @@ func (sda *SliceDynamicArray[Item]) Set(i int, x Item) {
 //
 // It panics if i or j is out of range.
 func (sda *SliceDynamicArray[Item]) Swap(i, j int) {
-	sda.checkNonEmpty()
+	sda.checkNonempty()
 	(*sda)[i], (*sda)[j] = (*sda)[j], (*sda)[i]
 }
 
@@ -137,7 +137,7 @@ func (sda *SliceDynamicArray[Item]) Swap(i, j int) {
 //
 // It panics if begin or end is out of range, or begin > end.
 func (sda *SliceDynamicArray[Item]) Slice(begin, end int) Array[Item] {
-	sda.checkNonEmpty()
+	sda.checkNonempty()
 	s := (*sda)[begin:end:end]
 	return &s
 }
@@ -185,7 +185,7 @@ func (sda *SliceDynamicArray[Item]) Push(x Item) {
 //
 // It panics if the slice is nil or empty.
 func (sda *SliceDynamicArray[Item]) Pop() Item {
-	sda.checkNonEmpty()
+	sda.checkNonempty()
 	back := len(*sda) - 1
 	x := (*sda)[back]
 	clear((*sda)[back:]) // avoid memory leak
@@ -247,7 +247,7 @@ func (sda *SliceDynamicArray[Item]) Insert(i int, x Item) {
 //
 // It panics if i is out of range, i.e., i < 0 or i >= Len().
 func (sda *SliceDynamicArray[Item]) Remove(i int) Item {
-	sda.checkNonEmpty()
+	sda.checkNonempty()
 	back := len(*sda) - 1
 	if i == back {
 		return sda.Pop()
@@ -264,7 +264,7 @@ func (sda *SliceDynamicArray[Item]) Remove(i int) Item {
 //
 // It panics if i is out of range, i.e., i < 0 or i >= Len().
 func (sda *SliceDynamicArray[Item]) RemoveWithoutOrder(i int) Item {
-	sda.checkNonEmpty()
+	sda.checkNonempty()
 	x := (*sda)[i]
 	back := len(*sda) - 1
 	if i != back {
@@ -314,7 +314,7 @@ func (sda *SliceDynamicArray[Item]) InsertSequence(
 //
 // It panics if begin or end is out of range, or begin > end.
 func (sda *SliceDynamicArray[Item]) Cut(begin, end int) {
-	sda.checkNonEmpty()
+	sda.checkNonempty()
 	_ = (*sda)[begin:end:len(*sda)] // ensure begin and end are valid
 	if begin == end {
 		return
@@ -330,7 +330,7 @@ func (sda *SliceDynamicArray[Item]) Cut(begin, end int) {
 //
 // It panics if begin or end is out of range, or begin > end.
 func (sda *SliceDynamicArray[Item]) CutWithoutOrder(begin, end int) {
-	sda.checkNonEmpty()
+	sda.checkNonempty()
 	_ = (*sda)[begin:end:len(*sda)] // ensure begin and end are valid
 	if begin == end {
 		return
@@ -429,8 +429,8 @@ func (sda *SliceDynamicArray[Item]) Clear() {
 	}
 }
 
-// checkNonEmpty panics if sda is nil, *sda is nil, or len(*sda) is 0.
-func (sda *SliceDynamicArray[Item]) checkNonEmpty() {
+// checkNonempty panics if sda is nil, *sda is nil, or len(*sda) is 0.
+func (sda *SliceDynamicArray[Item]) checkNonempty() {
 	switch {
 	case sda == nil:
 		panic(errors.AutoMsgCustom(
