@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/donyori/gogo/encoding/varnum/uintconv"
+	"github.com/donyori/gogo/internal/floats"
 )
 
 var float64Uint64ByteReversalPair = []struct {
@@ -43,13 +44,13 @@ var float64Uint64ByteReversalPair = []struct {
 	{-0.1, 0x9A9999999999B9BF},
 	{-0.2, 0x9A9999999999C9BF},
 	{-1.1, 0x9A9999999999F1BF},
-	{math.MaxFloat64, 0xFFFFFFFFFFFFEF7F},
-	{math.SmallestNonzeroFloat64, 0x0100000000000000},
-	{-math.MaxFloat64, 0xFFFFFFFFFFFFEFFF},
-	{-math.SmallestNonzeroFloat64, 0x0100000000000080},
-	{math.NaN(), 0x010000000000F87F},
-	{math.Inf(1), 0xF07F},
-	{math.Inf(-1), 0xF0FF},
+	{floats.MaxFloat64, 0xFFFFFFFFFFFFEF7F},
+	{floats.SmallestNonzeroFloat64, 0x0100000000000000},
+	{-floats.MaxFloat64, 0xFFFFFFFFFFFFEFFF},
+	{-floats.SmallestNonzeroFloat64, 0x0100000000000080},
+	{floats.NaN64A, 0x010000000000F87F},
+	{floats.Inf64, 0xF07F},
+	{floats.NegInf64, 0xF0FF},
 }
 
 func TestFromFloat64ByteReversal(t *testing.T) {
