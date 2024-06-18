@@ -115,7 +115,12 @@ func NewBufferedReaderSize(r io.Reader, size int) ResettableBufferedReader {
 		return &resettableBufferedReader{bufio.NewReaderSize(br.br, size)}
 	}
 	br, ok := r.(*bufio.Reader)
-	if !ok || br.Size() < size {
+	if !ok || br == nil || br.Size() < size {
+		if ok && br == nil {
+			// If r is a nil *bufio.Reader, avoid panicking here.
+			// Panic should occur when reading.
+			r = nil
+		}
 		br = bufio.NewReaderSize(r, size)
 	}
 	return &resettableBufferedReader{br}
@@ -259,7 +264,7 @@ func (rbr *resettableBufferedReader) WriteLineTo(w io.Writer) (
 			return n, errors.AutoWrap(errList.ToError())
 		}
 	}
-	return // err must be nil.
+	return // err must be nil
 }
 
 func (rbr *resettableBufferedReader) Size() int {
@@ -282,5 +287,8 @@ func (rbr *resettableBufferedReader) Discard(n int) (
 }
 
 func (rbr *resettableBufferedReader) Reset(r io.Reader) {
+	if rbr == r {
+		return // do nothing if the resettableBufferedReader is reset to itself
+	}
 	rbr.br.Reset(r)
 }

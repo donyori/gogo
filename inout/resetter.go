@@ -32,6 +32,9 @@ type Resetter interface {
 // switches to read from the reader r.
 type ReaderResetter interface {
 	// Reset resets all states and switches to read from r.
+	//
+	// In particular,
+	// Reset may do nothing if the ReaderResetter is reset to itself.
 	Reset(r io.Reader)
 }
 
@@ -41,5 +44,8 @@ type ReaderResetter interface {
 type WriterResetter interface {
 	// Reset discards any unflushed data, resets all states,
 	// and switches to write to w.
+	//
+	// In particular,
+	// Reset may do nothing if the WriterResetter is reset to itself.
 	Reset(w io.Writer)
 }

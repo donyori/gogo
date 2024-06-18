@@ -38,6 +38,8 @@ func TestNewBufferedReaderSize(t *testing.T) {
 	br64 := inout.NewBufferedReaderSize(r, 64)
 	br128 := inout.NewBufferedReaderSize(r, 128)
 	br256 := inout.NewBufferedReaderSize(r, 256)
+	var nBufR *bufio.Reader
+	var nbr inout.BufferedReader
 	const Size128 int = 128
 
 	testCases := []struct {
@@ -58,6 +60,9 @@ func TestNewBufferedReaderSize(t *testing.T) {
 		{name: "on br128", r: br128, argSize: Size128, wantAsSelf: true},
 		{name: "on br256", r: br256, argSize: Size128, wantAsSelf: true},
 		{name: "on r?size=0", r: r, argSize: 0, wantSize: inout.MinReadBufferSize},
+		{name: "on <nil>", argSize: Size128, wantSize: Size128},
+		{name: "on nBufR", r: nBufR, argSize: Size128, wantSize: Size128},
+		{name: "on nbr", r: nbr, argSize: Size128, wantSize: Size128},
 	}
 
 	for _, tc := range testCases {
@@ -93,6 +98,8 @@ func TestNewBufferedWriterSize(t *testing.T) {
 	bw64 := inout.NewBufferedWriterSize(w, 64)
 	bw128 := inout.NewBufferedWriterSize(w, 128)
 	bw256 := inout.NewBufferedWriterSize(w, 256)
+	var nBufW *bufio.Writer
+	var nbw inout.BufferedWriter
 	const Size128 int = 128
 
 	testCases := []struct {
@@ -113,6 +120,9 @@ func TestNewBufferedWriterSize(t *testing.T) {
 		{name: "on bw128", w: bw128, argSize: Size128, wantAsSelf: true},
 		{name: "on bw256", w: bw256, argSize: Size128, wantAsSelf: true},
 		{name: "on w?size=0", w: w, argSize: 0, wantSize: inout.DefaultBufferSize},
+		{name: "on <nil>", argSize: Size128, wantSize: Size128},
+		{name: "on nBufW", w: nBufW, argSize: Size128, wantSize: Size128},
+		{name: "on nbw", w: nbw, argSize: Size128, wantSize: Size128},
 	}
 
 	for _, tc := range testCases {
