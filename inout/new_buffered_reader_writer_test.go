@@ -38,8 +38,8 @@ func TestNewBufferedReaderSize(t *testing.T) {
 	br64 := inout.NewBufferedReaderSize(r, 64)
 	br128 := inout.NewBufferedReaderSize(r, 128)
 	br256 := inout.NewBufferedReaderSize(r, 256)
-	var nBufR *bufio.Reader
-	var nbr inout.BufferedReader
+	var nBufR *bufio.Reader      // a nil *bufio.Reader
+	var nbr inout.BufferedReader // a nil inout.BufferedReader
 	const Size128 int = 128
 
 	testCases := []struct {
@@ -75,11 +75,11 @@ func TestNewBufferedReaderSize(t *testing.T) {
 				}
 			case tc.wantAsUnderlying:
 				if b.(*inout.ResettableBufferedReaderImpl).GetBufferedReader() != tc.r {
-					t.Error("underlying buffered reader not input")
+					t.Error("underlying buffered reader is not input")
 				}
 			case tc.wantAsSelf:
 				if b != tc.r {
-					t.Error("buffered reader not input")
+					t.Error("buffered reader is not input")
 				}
 			default:
 				t.Errorf("invalid test case %+v", tc)
@@ -98,8 +98,8 @@ func TestNewBufferedWriterSize(t *testing.T) {
 	bw64 := inout.NewBufferedWriterSize(w, 64)
 	bw128 := inout.NewBufferedWriterSize(w, 128)
 	bw256 := inout.NewBufferedWriterSize(w, 256)
-	var nBufW *bufio.Writer
-	var nbw inout.BufferedWriter
+	var nBufW *bufio.Writer      // a nil *bufio.Writer
+	var nbw inout.BufferedWriter // a nil inout.BufferedWriter
 	const Size128 int = 128
 
 	testCases := []struct {
@@ -135,11 +135,11 @@ func TestNewBufferedWriterSize(t *testing.T) {
 				}
 			case tc.wantAsUnderlying:
 				if b.(*inout.ResettableBufferedWriterImpl).GetBufferedWriter() != tc.w {
-					t.Error("underlying buffered writer not input")
+					t.Error("underlying buffered writer is not input")
 				}
 			case tc.wantAsSelf:
 				if b != tc.w {
-					t.Error("buffered writer not input")
+					t.Error("buffered writer is not input")
 				}
 			default:
 				t.Errorf("invalid test case %+v", tc)

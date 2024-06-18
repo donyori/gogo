@@ -30,22 +30,34 @@ type Resetter interface {
 // ReaderResetter is an interface that wraps method Reset,
 // which resets all states of its instance and
 // switches to read from the reader r.
+//
+// In particular,
+// The method Reset may do nothing if the ReaderResetter is reset to itself.
+// The reader r can be nil to reset all states and disable further reading.
 type ReaderResetter interface {
 	// Reset resets all states and switches to read from r.
 	//
 	// In particular,
 	// Reset may do nothing if the ReaderResetter is reset to itself.
+	// The reader r can be nil to reset all states and disable further reading.
 	Reset(r io.Reader)
 }
 
 // WriterResetter is an interface that wraps method Reset,
 // which discards any unflushed data, resets all states of its instance,
 // and switches to write to the writer w.
+//
+// In particular,
+// The method Reset may do nothing if the WriterResetter is reset to itself.
+// The writer w can be nil to discard unflushed data, reset all states,
+// and disable further writing.
 type WriterResetter interface {
 	// Reset discards any unflushed data, resets all states,
 	// and switches to write to w.
 	//
 	// In particular,
 	// Reset may do nothing if the WriterResetter is reset to itself.
+	// The writer w can be nil to discard unflushed data, reset all states,
+	// and disable further writing.
 	Reset(w io.Writer)
 }

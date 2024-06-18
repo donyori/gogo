@@ -72,6 +72,11 @@ type resettableBufferedWriter struct {
 
 // NewBufferedWriter creates a ResettableBufferedWriter on w,
 // whose buffer has at least the default size (4096 bytes).
+//
+// The writer w can be nil,
+// in which case NewBufferedWriter only allocates the buffer,
+// and the writer can be set later via the method Reset.
+// Note that writing before setting up a valid writer may cause panic.
 func NewBufferedWriter(w io.Writer) ResettableBufferedWriter {
 	return NewBufferedWriterSize(w, defaultBufferSize)
 }
@@ -80,6 +85,11 @@ func NewBufferedWriter(w io.Writer) ResettableBufferedWriter {
 // whose buffer has at least the specified size.
 //
 // If size is nonpositive, it uses the default size (4096) instead.
+//
+// The writer w can be nil,
+// in which case NewBufferedWriterSize only allocates the buffer,
+// and the writer can be set later via the method Reset.
+// Note that writing before setting up a valid writer may cause panic.
 //
 // If w is a ResettableBufferedWriter with a large enough buffer,
 // it returns w directly.

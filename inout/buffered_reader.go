@@ -94,6 +94,11 @@ type resettableBufferedReader struct {
 
 // NewBufferedReader creates a ResettableBufferedReader on r,
 // whose buffer has at least the default size (4096 bytes).
+//
+// The reader r can be nil,
+// in which case NewBufferedReader only allocates the buffer,
+// and the reader can be set later via the method Reset.
+// Note that reading before setting up a valid reader may cause panic.
 func NewBufferedReader(r io.Reader) ResettableBufferedReader {
 	return NewBufferedReaderSize(r, defaultBufferSize)
 }
@@ -102,6 +107,11 @@ func NewBufferedReader(r io.Reader) ResettableBufferedReader {
 // whose buffer has at least the specified size.
 //
 // If size is less than 16, it uses 16 instead.
+//
+// The reader r can be nil,
+// in which case NewBufferedReaderSize only allocates the buffer,
+// and the reader can be set later via the method Reset.
+// Note that reading before setting up a valid reader may cause panic.
 //
 // If r is a ResettableBufferedReader with a large enough buffer,
 // it returns r directly.
