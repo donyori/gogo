@@ -661,7 +661,10 @@ func tarHeaderIsDir(hdr *tar.Header) bool {
 // errorReader implements io.Reader and io.WriterTo.
 // Its methods always return 0 and report the specified error.
 type errorReader struct {
-	// Error reported by methods Read and WriteTo.
+	// err is the error reported by methods Read and WriteTo.
+	//
+	// In particular, if err is io.EOF,
+	// its method WriteTo returns (0, nil) instead of (0, io.EOF).
 	err error
 }
 
@@ -670,6 +673,9 @@ func (er *errorReader) Read([]byte) (n int, err error) {
 }
 
 func (er *errorReader) WriteTo(io.Writer) (n int64, err error) {
+	if errors.Is(er.err, io.EOF) {
+		return 0, nil
+	}
 	return 0, errors.AutoWrap(er.err)
 }
 

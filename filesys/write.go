@@ -740,7 +740,10 @@ func (fw *writer) zipCreateFunc(
 // errorWriter implements io.Writer and io.ReaderFrom.
 // Its methods always return 0 and report the specified error.
 type errorWriter struct {
-	// Error reported by methods Write and ReadFrom.
+	// err is the error reported by methods Write and ReadFrom.
+	//
+	// In particular, if err is io.EOF,
+	// its method ReadFrom returns (0, nil) instead of (0, io.EOF).
 	err error
 }
 
@@ -749,6 +752,9 @@ func (ew *errorWriter) Write([]byte) (n int, err error) {
 }
 
 func (ew *errorWriter) ReadFrom(io.Reader) (n int64, err error) {
+	if errors.Is(ew.err, io.EOF) {
+		return 0, nil
+	}
 	return 0, errors.AutoWrap(ew.err)
 }
 
