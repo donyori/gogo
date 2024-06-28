@@ -113,7 +113,7 @@ func (tkb *topKBuffer[Item]) Len() int {
 
 // Range accesses the items in the buffer.
 // Each item is accessed once.
-// The order of the access may not be ascending or descending.
+// The order of access may not be ascending or descending.
 //
 // Its parameter handler is a function to deal with the item x in the
 // buffer and report whether to continue to access the next item.

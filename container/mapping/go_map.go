@@ -49,7 +49,7 @@ func (gm *GoMap[Key, Value]) Len() int {
 
 // Range accesses the key-value pairs in the map.
 // Each key-value pair is accessed once.
-// The order of the access is random.
+// The order of access is random.
 //
 // Its parameter handler is a function to deal with the key-value pair x
 // in the map and report whether to continue to access the next key-value pair.

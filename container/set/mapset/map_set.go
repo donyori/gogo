@@ -74,7 +74,7 @@ func (ms *mapSet[Item]) Len() int {
 
 // Range accesses the items in the set.
 // Each item is accessed once.
-// The order of the access is random.
+// The order of access is random.
 //
 // Its parameter handler is a function to deal with the item x in the
 // set and report whether to continue to access the next item.

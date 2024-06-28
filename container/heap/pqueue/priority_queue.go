@@ -126,7 +126,7 @@ func (pq *priorityQueue[Item]) Len() int {
 
 // Range accesses the items in the queue.
 // Each item is accessed once.
-// The order of the access may not involve priority.
+// The order of access may not involve priority.
 //
 // Its parameter handler is a function to deal with the item x in the
 // queue and report whether to continue to access the next item.
