@@ -46,17 +46,21 @@ type AutoWrappedError interface {
 	Root() error
 
 	// FullFunction returns the full function name
-	// (i.e., the package path-qualified function name)
-	// recorded in this error.
+	// (i.e., the package path-qualified function name;
+	// e.g., encoding/json.Marshal) recorded in this error.
 	FullFunction() string
 
-	// FullPackage returns the full package name recorded in this error.
+	// FullPackage returns the full package name (e.g., encoding/json)
+	// recorded in this error.
 	FullPackage() string
 
-	// SimpleFunction returns the simple function name recorded in this error.
+	// SimpleFunction returns the simple function name
+	// (e.g., Marshal, rather than encoding/json.Marshal or json.Marshal)
+	// recorded in this error.
 	SimpleFunction() string
 
-	// SimplePackage returns the simple package name recorded in this error.
+	// SimplePackage returns the simple package name
+	// (e.g., json, rather than encoding/json) recorded in this error.
 	SimplePackage() string
 
 	// MessageStrategy returns the strategy for auto-generating error messages
@@ -154,7 +158,7 @@ func (awe *autoWrappedError) private() {}
 var defaultExclusionSet = NewErrorReadOnlySetIs(io.EOF)
 
 // AutoWrap wraps err by prepending the full function name
-// (i.e., the package path-qualified function name)
+// (i.e., the package path-qualified function name; e.g., encoding/json.Marshal)
 // of its caller to the error message of err.
 //
 // In particular, if err is an AutoWrappedError,
@@ -174,7 +178,7 @@ func AutoWrap(err error) error {
 }
 
 // AutoWrapSkip wraps err by prepending the full function name
-// (i.e., the package path-qualified function name)
+// (i.e., the package path-qualified function name; e.g., encoding/json.Marshal)
 // of the caller to the error message of err.
 //
 // In particular, if err is an AutoWrappedError,

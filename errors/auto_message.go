@@ -26,7 +26,8 @@ import (
 )
 
 // AutoMsg generates an error message by prepending the full function name
-// (i.e., the package path-qualified function name) of its caller to msg.
+// (i.e., the package path-qualified function name; e.g., encoding/json.Marshal)
+// of its caller to msg.
 //
 // If msg is empty, it uses "<no error message>" instead.
 func AutoMsg(msg string) string {

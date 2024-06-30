@@ -22,8 +22,8 @@ import stderrors "errors"
 
 // AutoNew creates a new error with specified error message msg,
 // and then wraps it by prepending the full function name
-// (i.e., the package path-qualified function name) of its caller
-// to that error message.
+// (i.e., the package path-qualified function name; e.g., encoding/json.Marshal)
+// of its caller to that error message.
 //
 // If msg is empty, it uses "<no error message>" instead.
 func AutoNew(msg string) error {

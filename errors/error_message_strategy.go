@@ -25,12 +25,32 @@ type ErrorMessageStrategy int8
 
 // Enumeration of supported error message strategies.
 const (
-	OriginalMsg             ErrorMessageStrategy = 1 + iota // OriginalMessage
-	PrependFullFuncName                                     // PrependFullFunctionName
-	PrependFullPkgName                                      // PrependFullPackageName
-	PrependSimpleFuncName                                   // PrependSimpleFunctionName
-	PrependSimplePkgName                                    // PrependSimplePackageName
-	maxErrorMessageStrategy                                 // ErrorMessageStrategy(6)
+	// OriginalMsg uses the error message itself.
+	OriginalMsg ErrorMessageStrategy = 1 + iota // OriginalMessage
+
+	// PrependFullFuncName adds the full function name
+	// (i.e., the package path-qualified function name;
+	// e.g., encoding/json.Marshal)
+	// before the error message.
+	PrependFullFuncName // PrependFullFunctionName
+
+	// PrependFullPkgName adds the full package name (e.g., encoding/json)
+	// before the error message.
+	PrependFullPkgName // PrependFullPackageName
+
+	// PrependSimpleFuncName adds the simple function name
+	// (e.g., Marshal, rather than encoding/json.Marshal or json.Marshal)
+	// before the error message.
+	PrependSimpleFuncName // PrependSimpleFunctionName
+
+	// PrependSimplePkgName adds the simple package name
+	// (e.g., json, rather than encoding/json)
+	// before the error message.
+	PrependSimplePkgName // PrependSimplePackageName
+
+	// maxErrorMessageStrategy is the upper bound (exclusive)
+	// of the supported error message strategies.
+	maxErrorMessageStrategy // ErrorMessageStrategy(6)
 )
 
 // Before running the following command, please make sure the numeric value
@@ -41,11 +61,17 @@ const (
 // Valid returns true if the error message strategy is known.
 //
 // Known error message strategies are shown as follows:
-//   - OriginalMsg: use the error message itself
-//   - PrependFullFuncName: add the full function name (i.e., the package path-qualified function name) before the error message
-//   - PrependFullPkgName: add the full package name before the error message
-//   - PrependSimpleFuncName: add the simple function name before the error message
-//   - PrependSimplePkgName: add the simple package name before the error message
+//   - OriginalMsg (1): use the error message itself
+//   - PrependFullFuncName (2): add the full function name
+//     (i.e., the package path-qualified function name;
+//     e.g., encoding/json.Marshal) before the error message
+//   - PrependFullPkgName (3): add the full package name
+//     (e.g., encoding/json) before the error message
+//   - PrependSimpleFuncName (4): add the simple function name
+//     (e.g., Marshal, rather than encoding/json.Marshal or json.Marshal)
+//     before the error message
+//   - PrependSimplePkgName (5): add the simple package name
+//     (e.g., json, rather than encoding/json) before the error message
 func (i ErrorMessageStrategy) Valid() bool {
 	return i > 0 && i < maxErrorMessageStrategy
 }
