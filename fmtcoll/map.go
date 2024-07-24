@@ -152,7 +152,7 @@ func formatMapToString[Key, Value any](
 }
 
 // formatMapContentToString is a subprocess of formatMapToString
-// to write the map content to the string builder b.
+// that writes the map content to the string builder b.
 func formatMapContentToString[Key, Value any](
 	b *strings.Builder,
 	format *MapFormat[Key, Value],

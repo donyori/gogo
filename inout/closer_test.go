@@ -181,7 +181,7 @@ func testMultiCloserOneCall(
 }
 
 // testMultiCloserOneCallClose is a subprocess of testMultiCloserOneCall
-// to test inout.MultiCloser.Close.
+// that tests inout.MultiCloser.Close.
 func testMultiCloserOneCallClose(
 	t *testing.T,
 	tryAll bool,
@@ -232,7 +232,7 @@ func testMultiCloserOneCallClose(
 }
 
 // testMultiCloserOneCallCloserClosed is a subprocess of testMultiCloserOneCall
-// to test inout.MultiCloser.CloserClosed after calling Close.
+// that tests inout.MultiCloser.CloserClosed after calling Close.
 func testMultiCloserOneCallCloserClosed(
 	t *testing.T,
 	tryAll bool,

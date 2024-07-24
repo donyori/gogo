@@ -833,7 +833,7 @@ func writeZipFiles(
 }
 
 // writeZipFilesZipCopy is a subprocess of writeZipFiles
-// to write the ZIP file through ZipCopy.
+// that writes the ZIP file through ZipCopy.
 func writeZipFilesZipCopy(t *testing.T, w filesys.Writer) {
 	zipFile, err := testFS.Open(testFSZipFilenames[0])
 	if err != nil {

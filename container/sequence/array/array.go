@@ -22,17 +22,17 @@ import "github.com/donyori/gogo/container/sequence"
 
 // ArraySpecific is an interface that groups the array-specific methods.
 type ArraySpecific[Item any] interface {
-	// Get returns the item with index i.
+	// Get returns the item at index i.
 	//
 	// It panics if i is out of range.
 	Get(i int) Item
 
-	// Set sets the item with index i to x.
+	// Set sets the item at index i to x.
 	//
 	// It panics if i is out of range.
 	Set(i int, x Item)
 
-	// Swap exchanges the items with indexes i and j.
+	// Swap exchanges the items at index i and index j.
 	//
 	// It panics if i or j is out of range.
 	Swap(i, j int)
@@ -58,8 +58,7 @@ type OrderedArray[Item any] interface {
 	sequence.OrderedSequence[Item]
 	ArraySpecific[Item]
 
-	// Less reports whether the item with index i
-	// is less than the item with index j.
+	// Less reports whether the item at index i is less than that at index j.
 	//
 	// Less must describe a strict weak ordering.
 	// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
@@ -75,9 +74,9 @@ type OrderedArray[Item any] interface {
 
 	// Compare returns
 	//
-	//	-1 if the item with index i is less than the item with index j,
-	//	 0 if the item with index i equals the item with index j,
-	//	+1 if the item with index i is greater than the item with index j.
+	//	-1 if the item at index i is less than that at index j,
+	//	 0 if the item at index i equals that at index j,
+	//	+1 if the item at index i is greater than that at index j.
 	//
 	// Compare must describe a strict weak ordering.
 	// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>

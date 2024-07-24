@@ -515,8 +515,8 @@ func testTarTgzFile(t *testing.T, name string, wantTarFiles []tarFileNameBody) {
 	testTar(t, tr, wantTarFiles)
 }
 
-// testTar is a subprocess of testTarTgzFile to read files
-// from the tar archive reader and check their names and bodies.
+// testTar is a subprocess of testTarTgzFile that reads files
+// from the tar archive reader and checks their names and bodies.
 func testTar(t *testing.T, r *tar.Reader, wantTarFiles []tarFileNameBody) {
 	for i := 0; ; i++ {
 		hdr, err := r.Next()

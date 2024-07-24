@@ -45,28 +45,28 @@ type DynamicArraySpecific[Item any] interface {
 	// otherwise, unknown error may occur.
 	Append(s sequence.Sequence[Item])
 
-	// Truncate removes the item with index i and all subsequent items.
+	// Truncate removes the item at index i and all subsequent items.
 	//
 	// It does nothing if i is out of range.
 	Truncate(i int)
 
-	// Insert adds x as the item with index i.
+	// Insert adds x as the item at index i.
 	//
 	// It panics if i is out of range, i.e., i < 0 or i > Len().
 	Insert(i int, x Item)
 
-	// Remove removes and returns the item with index i.
+	// Remove removes and returns the item at index i.
 	//
 	// It panics if i is out of range, i.e., i < 0 or i >= Len().
 	Remove(i int) Item
 
-	// RemoveWithoutOrder removes and returns the item with index i,
+	// RemoveWithoutOrder removes and returns the item at index i,
 	// without preserving order.
 	//
 	// It panics if i is out of range, i.e., i < 0 or i >= Len().
 	RemoveWithoutOrder(i int) Item
 
-	// InsertSequence inserts s to the front of the item with index i.
+	// InsertSequence inserts s to the front of the item at index i.
 	//
 	// It panics if i is out of range, i.e., i < 0 or i > Len().
 	//
@@ -91,7 +91,7 @@ type DynamicArraySpecific[Item any] interface {
 	// It panics if n < 0.
 	Extend(n int)
 
-	// Expand inserts n zero-value items to the front of the item with index i.
+	// Expand inserts n zero-value items to the front of the item at index i.
 	//
 	// It panics if i is out of range, i.e., i < 0 or i > Len(), or n < 0.
 	Expand(i, n int)

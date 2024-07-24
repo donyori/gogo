@@ -108,7 +108,7 @@ func (sda *SliceDynamicArray[Item]) Reverse() {
 	}
 }
 
-// Get returns the item with index i.
+// Get returns the item at index i.
 //
 // It panics if i is out of range.
 func (sda *SliceDynamicArray[Item]) Get(i int) Item {
@@ -116,7 +116,7 @@ func (sda *SliceDynamicArray[Item]) Get(i int) Item {
 	return (*sda)[i]
 }
 
-// Set sets the item with index i to x.
+// Set sets the item at index i to x.
 //
 // It panics if i is out of range.
 func (sda *SliceDynamicArray[Item]) Set(i int, x Item) {
@@ -124,7 +124,7 @@ func (sda *SliceDynamicArray[Item]) Set(i int, x Item) {
 	(*sda)[i] = x
 }
 
-// Swap exchanges the items with indexes i and j.
+// Swap exchanges the items at index i and index j.
 //
 // It panics if i or j is out of range.
 func (sda *SliceDynamicArray[Item]) Swap(i, j int) {
@@ -218,7 +218,7 @@ func (sda *SliceDynamicArray[Item]) Append(s sequence.Sequence[Item]) {
 	})
 }
 
-// Truncate removes the item with index i and all subsequent items.
+// Truncate removes the item at index i and all subsequent items.
 //
 // It does nothing if i is out of range.
 func (sda *SliceDynamicArray[Item]) Truncate(i int) {
@@ -229,7 +229,7 @@ func (sda *SliceDynamicArray[Item]) Truncate(i int) {
 	*sda = (*sda)[:i]
 }
 
-// Insert adds x as the item with index i.
+// Insert adds x as the item at index i.
 //
 // It panics if i is out of range, i.e., i < 0 or i > Len().
 func (sda *SliceDynamicArray[Item]) Insert(i int, x Item) {
@@ -243,7 +243,7 @@ func (sda *SliceDynamicArray[Item]) Insert(i int, x Item) {
 	*sda = slices.Insert(*sda, i, x)
 }
 
-// Remove removes and returns the item with index i.
+// Remove removes and returns the item at index i.
 //
 // It panics if i is out of range, i.e., i < 0 or i >= Len().
 func (sda *SliceDynamicArray[Item]) Remove(i int) Item {
@@ -259,7 +259,7 @@ func (sda *SliceDynamicArray[Item]) Remove(i int) Item {
 	return x
 }
 
-// RemoveWithoutOrder removes and returns the item with index i,
+// RemoveWithoutOrder removes and returns the item at index i,
 // without preserving order.
 //
 // It panics if i is out of range, i.e., i < 0 or i >= Len().
@@ -275,7 +275,7 @@ func (sda *SliceDynamicArray[Item]) RemoveWithoutOrder(i int) Item {
 	return x
 }
 
-// InsertSequence inserts s to the front of the item with index i.
+// InsertSequence inserts s to the front of the item at index i.
 //
 // It panics if i is out of range, i.e., i < 0 or i > Len().
 //
@@ -365,7 +365,7 @@ func (sda *SliceDynamicArray[Item]) Extend(n int) {
 	clear((*sda)[i:])
 }
 
-// Expand inserts n zero-value items to the front of the item with index i.
+// Expand inserts n zero-value items to the front of the item at index i.
 //
 // It panics if i is out of range, i.e., i < 0 or i > Len(), or n < 0.
 func (sda *SliceDynamicArray[Item]) Expand(i, n int) {

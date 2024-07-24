@@ -200,7 +200,7 @@ func TestRead_TarTgzTbz(t *testing.T) {
 }
 
 // testReadTarTgzTbz is a subprocess of TestRead_TarTgzTbz
-// to test reading a tar archive.
+// that tests reading a tar archive.
 //
 // It may use t.Fatal and t.Fatalf to stop the test.
 func testReadTarTgzTbz(
@@ -269,7 +269,7 @@ func TestRead_Zip(t *testing.T) {
 }
 
 // testReadZip is a subprocess of TestRead_Zip
-// to test reading a ZIP archive.
+// that tests reading a ZIP archive.
 //
 // It may use t.Fatal to stop the test.
 //

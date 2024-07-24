@@ -27,8 +27,7 @@ type Interface interface {
 	// Len returns the number of items in the permutation.
 	Len() int
 
-	// Less reports whether the item with index i
-	// is less than the item with index j.
+	// Less reports whether the item at index i is less than that at index j.
 	//
 	// Less must describe a strict weak ordering.
 	// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
@@ -42,7 +41,7 @@ type Interface interface {
 	// It panics if i or j is out of range.
 	Less(i, j int) bool
 
-	// Swap exchanges the items with indexes i and j.
+	// Swap exchanges the items at index i and index j.
 	//
 	// It panics if i or j is out of range.
 	Swap(i, j int)
@@ -110,7 +109,7 @@ func (npbsi *nextPermutationBinarySearchInterface) Len() int {
 	return npbsi.data.Len() - npbsi.begin
 }
 
-// Compare compares the item with index i in the sequence and the search goal.
+// Compare compares the item at index i in the sequence and the search goal.
 //
 // It returns (-1, false) if the item is greater than the goal
 // (in this case, the item is treated as "less" than

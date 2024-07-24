@@ -39,19 +39,19 @@ type BinarySearchInterface[Item any] interface {
 	// Len returns the number of items in the sequence.
 	Len() int
 
-	// Compare compares the item with index i and the search goal.
+	// Compare compares the item at index i and the search goal.
 	//
 	// It returns an integer and a boolean indicator,
-	// where the integer represents the item with index i is less than,
+	// where the integer represents the item at index i is less than,
 	// equal to, or greater than the search goal,
-	// and the indicator reports whether the item with index i
+	// and the indicator reports whether the item at index i
 	// is the search goal (only valid when the returned integer is 0).
 	//
 	// The returned integer is
 	//
-	//	-1 if the item with index i is less than the search goal,
-	//	 0 if the item with index i is equal to the search goal,
-	//	+1 if the item with index i is greater than the search goal.
+	//	-1 if the item at index i is less than the search goal,
+	//	 0 if the item at index i is equal to the search goal,
+	//	+1 if the item at index i is greater than the search goal.
 	//
 	// It panics if i is out of range.
 	Compare(i int) (lessEqualOrGreater int, isGoal bool)

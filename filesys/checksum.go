@@ -120,7 +120,7 @@ func Checksum(
 }
 
 // checksumTestDir is a subprocess of Checksum
-// to test whether the file is a directory.
+// that tests whether the file is a directory.
 func checksumTestDir(file fs.File) error {
 	info, err := file.Stat()
 	if err != nil {

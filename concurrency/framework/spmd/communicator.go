@@ -385,7 +385,7 @@ func (comm *communicator[Message]) SendAny(msg Message) int {
 	}
 }
 
-// sendAnyPoll is a subprocess of SendAny to try to
+// sendAnyPoll is a subprocess of SendAny that tries to
 // send the message to its public channel or
 // a point-to-point channel of someone else in its group,
 // without blocking.
