@@ -1120,7 +1120,7 @@ func mkEqNeqPairs[T any](eqGroups [][]T, eqExCap, neqExCap int) (
 	var eqPairsLen, neqPairsLen, eqIdx, neqIdx int
 	for i, group := range eqGroups {
 		n := len(group)
-		eqPairsLen += n * (n + 1) / 2
+		eqPairsLen += n * (n + 1) >> 1
 		for j := i + 1; j < gn; j++ {
 			neqPairsLen += n * len(eqGroups[j])
 		}

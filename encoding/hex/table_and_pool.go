@@ -59,10 +59,10 @@ var sourceBufferPool = sync.Pool{
 // encodeBufferPool is a set of temporary buffers to hold encoding results
 // that will be written to destination writers.
 //
-// The type of the buffers is *[sourceBufferLen*2]byte.
+// The type of the buffers is *[sourceBufferLen<<1]byte.
 var encodeBufferPool = sync.Pool{
 	New: func() any {
-		return new([sourceBufferLen * 2]byte)
+		return new([sourceBufferLen << 1]byte)
 	},
 }
 

@@ -40,24 +40,24 @@ func init() {
 	for i := range N {
 		errorsForErrorReadOnlySet[0][i] = fmt.Errorf("test error %d", i)
 	}
-	errorsForErrorReadOnlySet[1] = make([]error, N*2)
+	errorsForErrorReadOnlySet[1] = make([]error, N<<1)
 	for i := range N {
-		errorsForErrorReadOnlySet[1][i*2] = &errorUnwrap{errorsForErrorReadOnlySet[0][i]}
-		errorsForErrorReadOnlySet[1][i*2+1] = &errorUnwrap{errorsForErrorReadOnlySet[1][i*2]}
+		errorsForErrorReadOnlySet[1][i<<1] = &errorUnwrap{errorsForErrorReadOnlySet[0][i]}
+		errorsForErrorReadOnlySet[1][i<<1+1] = &errorUnwrap{errorsForErrorReadOnlySet[1][i<<1]}
 	}
-	errorsForErrorReadOnlySet[2] = make([]error, N*2)
-	errorsForErrorReadOnlySet[3] = make([]error, N*2)
+	errorsForErrorReadOnlySet[2] = make([]error, N<<1)
+	errorsForErrorReadOnlySet[3] = make([]error, N<<1)
 	for i := range N {
-		errorsForErrorReadOnlySet[2][i*2] = &errorIsAlwaysTrue{errorsForErrorReadOnlySet[0][i]}
-		errorsForErrorReadOnlySet[2][i*2+1] = &errorIsAlwaysTrue{errorsForErrorReadOnlySet[1][i*2]}
-		errorsForErrorReadOnlySet[3][i*2] = &errorIsAlwaysFalse{errorsForErrorReadOnlySet[0][i]}
-		errorsForErrorReadOnlySet[3][i*2+1] = &errorIsAlwaysFalse{errorsForErrorReadOnlySet[1][i*2]}
+		errorsForErrorReadOnlySet[2][i<<1] = &errorIsAlwaysTrue{errorsForErrorReadOnlySet[0][i]}
+		errorsForErrorReadOnlySet[2][i<<1+1] = &errorIsAlwaysTrue{errorsForErrorReadOnlySet[1][i<<1]}
+		errorsForErrorReadOnlySet[3][i<<1] = &errorIsAlwaysFalse{errorsForErrorReadOnlySet[0][i]}
+		errorsForErrorReadOnlySet[3][i<<1+1] = &errorIsAlwaysFalse{errorsForErrorReadOnlySet[1][i<<1]}
 	}
 	errorsForErrorReadOnlySet[4] = make([]error, N)
 	for i := range N {
 		errorsForErrorReadOnlySet[4][i] = stderrors.Join(
-			errorsForErrorReadOnlySet[1][i*2],
-			errorsForErrorReadOnlySet[3][i*2],
+			errorsForErrorReadOnlySet[1][i<<1],
+			errorsForErrorReadOnlySet[3][i<<1],
 			anotherErrorForErrorReadOnlySet,
 		)
 	}

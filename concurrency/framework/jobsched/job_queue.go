@@ -65,7 +65,7 @@ type JobQueueMaker[Job, Properties any] interface {
 // to avoid cycle import.
 
 // emptyQueuePanicMessage is the panic message
-// to indicate that the job queue is empty.
+// indicating that the job queue is empty.
 const emptyQueuePanicMessage = "job queue is empty"
 
 // fcfsJobQueue is an FCFS (first come, first served) job queue.

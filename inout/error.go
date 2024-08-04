@@ -37,8 +37,11 @@ import (
 // Therefore, the client can use errors.Is(err, ErrClosed)
 // to test whether err is a ClosedError.
 type ClosedError struct {
+	// device is the name of the closable device.
 	device string
-	parent error // Parent error, which is wrapped by this ClosedError.
+
+	// parent is the parent error, which is wrapped by this ClosedError.
+	parent error
 }
 
 // NewClosedError creates a new ClosedError
@@ -58,8 +61,8 @@ func NewClosedError(deviceName string, parentErr error) *ClosedError {
 	if parentErr == nil {
 		parentErr = ErrClosed
 	} else if !errors.Is(parentErr, ErrClosed) {
-		panic(errors.AutoMsg(
-			"parentErr is neither nil nor an ErrClosed (errors.Is(parentErr, ErrClosed) returns false)"))
+		panic(errors.AutoMsg("parentErr is neither nil nor an ErrClosed " +
+			"(errors.Is(parentErr, ErrClosed) returns false)"))
 	}
 	return &ClosedError{
 		device: deviceName,
@@ -139,6 +142,7 @@ var ErrWriterClosed = errors.AutoWrapCustom(
 //
 // It records the error that caused the panic.
 type WritePanic struct {
+	// err is the error that caused the panic.
 	err error
 }
 

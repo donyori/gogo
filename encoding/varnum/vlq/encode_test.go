@@ -231,7 +231,8 @@ func uint64EncodedLenBinarySearch(u uint64) int {
 	//            minUint64s[high] > u
 	low, high := 0, len(vlq.MinUint64s)
 	for low < high {
-		mid := (low + high) / 2
+		// low and high are small, so (low + high) cannot overflow.
+		mid := (low + high) >> 1
 		if vlq.MinUint64s[mid] < u {
 			low = mid + 1 // preserve: minUint64s[low-1] < u
 		} else if vlq.MinUint64s[mid] > u {

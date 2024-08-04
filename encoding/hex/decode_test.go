@@ -19,8 +19,11 @@
 package hex_test
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/donyori/gogo/constraints"
 	"github.com/donyori/gogo/encoding/hex"
 )
 
@@ -44,4 +47,62 @@ func TestDecodedLen(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestDecodedLen_Negative(t *testing.T) {
+	t.Run("type=int", func(t *testing.T) {
+		testDecodedLenNegative[int](t)
+	})
+	t.Run("type=int64", func(t *testing.T) {
+		testDecodedLenNegative[int64](t)
+	})
+}
+
+// testDecodedLenNegative is the common process of
+// the subtests of TestDecodedLen_Negative.
+func testDecodedLenNegative[Int constraints.SignedInteger](t *testing.T) {
+	var x Int = -1
+	defer func() {
+		if e := recover(); e != nil {
+			msg, ok := e.(string)
+			if !ok || !strings.HasSuffix(
+				msg, fmt.Sprintf("x (%d) is negative", x)) {
+				t.Error(e)
+			}
+		}
+	}()
+	got := hex.DecodedLen(x) // want panic here
+	t.Errorf("want panic but got %d (%#[1]x)", got)
+}
+
+func TestDecodedLen_Odd(t *testing.T) {
+	t.Run("type=int", func(t *testing.T) {
+		testDecodedLenOdd[int](t)
+	})
+	t.Run("type=uint", func(t *testing.T) {
+		testDecodedLenOdd[uint](t)
+	})
+	t.Run("type=int64", func(t *testing.T) {
+		testDecodedLenOdd[int64](t)
+	})
+	t.Run("type=uint64", func(t *testing.T) {
+		testDecodedLenOdd[uint64](t)
+	})
+}
+
+// testDecodedLenOdd is the common process of
+// the subtests of TestDecodedLen_Odd.
+func testDecodedLenOdd[Int constraints.Integer](t *testing.T) {
+	var x Int = 3
+	defer func() {
+		if e := recover(); e != nil {
+			msg, ok := e.(string)
+			if !ok || !strings.HasSuffix(
+				msg, fmt.Sprintf("x (%d) is odd", x)) {
+				t.Error(e)
+			}
+		}
+	}()
+	got := hex.DecodedLen(x) // want panic here
+	t.Errorf("want panic but got %d (%#[1]x)", got)
 }

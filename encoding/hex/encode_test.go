@@ -22,11 +22,13 @@ import (
 	"bytes"
 	stdhex "encoding/hex"
 	"fmt"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/donyori/gogo/constraints"
 	"github.com/donyori/gogo/encoding/hex"
 )
 
@@ -73,6 +75,67 @@ func TestEncodedLen(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestEncodedLen_Negative(t *testing.T) {
+	t.Run("type=int", func(t *testing.T) {
+		testEncodedLenNegative[int](t)
+	})
+	t.Run("type=int64", func(t *testing.T) {
+		testEncodedLenNegative[int64](t)
+	})
+}
+
+// testEncodedLenNegative is the common process of
+// the subtests of TestEncodedLen_Negative.
+func testEncodedLenNegative[Int constraints.SignedInteger](t *testing.T) {
+	var n Int = -1
+	defer func() {
+		if e := recover(); e != nil {
+			msg, ok := e.(string)
+			if !ok || !strings.HasSuffix(
+				msg, fmt.Sprintf("n (%d) is negative", n)) {
+				t.Error(e)
+			}
+		}
+	}()
+	got := hex.EncodedLen(n) // want panic here
+	t.Errorf("want panic but got %d (%#[1]x)", got)
+}
+
+func TestEncodedLen_Overflow(t *testing.T) {
+	t.Run("type=int", func(t *testing.T) {
+		var n int = math.MaxInt>>1 + 1
+		testEncodedLenOverflow(t, n)
+	})
+	t.Run("type=uint", func(t *testing.T) {
+		var n uint = math.MaxUint>>1 + 1
+		testEncodedLenOverflow(t, n)
+	})
+	t.Run("type=int64", func(t *testing.T) {
+		var n int64 = math.MaxInt64>>1 + 1
+		testEncodedLenOverflow(t, n)
+	})
+	t.Run("type=uint64", func(t *testing.T) {
+		var n uint64 = math.MaxUint64>>1 + 1
+		testEncodedLenOverflow(t, n)
+	})
+}
+
+// testEncodedLenOverflow is the common process of
+// the subtests of TestEncodedLen_Overflow.
+func testEncodedLenOverflow[Int constraints.Integer](t *testing.T, n Int) {
+	defer func() {
+		if e := recover(); e != nil {
+			msg, ok := e.(string)
+			if !ok || !strings.HasSuffix(
+				msg, fmt.Sprintf("result overflows (n: %#x)", n)) {
+				t.Error(e)
+			}
+		}
+	}()
+	got := hex.EncodedLen(n) // want panic here
+	t.Errorf("want panic but got %d (%#[1]x)", got)
 }
 
 func TestEncode(t *testing.T) {

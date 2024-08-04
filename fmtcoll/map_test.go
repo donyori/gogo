@@ -206,7 +206,7 @@ func getTestCasesForFormatMapToString(
 		return err
 	}
 
-	testCases := make([]mapTestCase, len(dataList)*len(commonFormatList)*2*2)
+	testCases := make([]mapTestCase, len(dataList)*len(commonFormatList)<<2)
 	var idx int
 	for dataIdx, data := range dataList {
 		for commonFormatIdx := range commonFormatList {

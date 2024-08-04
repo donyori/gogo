@@ -69,9 +69,9 @@ func testCaptureOutputFileToString(
 ) {
 	backup := *filePtr
 	const (
-		OneKB int = 1024
-		OneMB     = OneKB * 1024
-		OneGB     = OneMB * 1024
+		OneKB int = 1 << 10
+		OneMB     = OneKB << 10
+		OneGB     = OneMB << 10
 	)
 	// 1GB is much larger than the OS pipe buffer size
 	// (e.g., on Linux, the pipe capacity is 16 pages (i.e., 65,536 bytes
@@ -172,9 +172,9 @@ func testCaptureOutputFileToStringConcurrent(
 ) {
 	backup := *filePtr
 	const (
-		OneKB int = 1024
-		OneMB     = OneKB * 1024
-		OneGB     = OneMB * 1024
+		OneKB int = 1 << 10
+		OneMB     = OneKB << 10
+		OneGB     = OneMB << 10
 	)
 	// 1GB is much larger than the OS pipe buffer size
 	// (e.g., on Linux, the pipe capacity is 16 pages (i.e., 65,536 bytes

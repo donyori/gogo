@@ -243,7 +243,7 @@ func getTestCasesForAutoWrapCustom(t *testing.T) []autoWrapCustomTestCase {
 	exclList := []errors.ErrorReadOnlySet{nil, excl}
 	testCases := make(
 		[]autoWrapCustomTestCase,
-		len(errorList)*len(exclList)*(int(errors.PrependSimplePkgName)+3)*2,
+		len(errorList)*len(exclList)*(int(errors.PrependSimplePkgName)+3)<<1,
 	)
 	var idx int
 	for _, err := range errorList {

@@ -77,7 +77,7 @@ func init() {
 func TestGCD_2Int(t *testing.T) {
 	testCases := make([]struct {
 		a, b, want int
-	}, len(testIntegers)*len(testIntegers)*4)
+	}, len(testIntegers)*len(testIntegers)<<2)
 	var idx int
 	for _, a := range testIntegers {
 		for _, b := range testIntegers {

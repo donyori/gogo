@@ -62,8 +62,8 @@ type Controller[Job, Properties, Feedback any] interface {
 	Input(metaJob ...*MetaJob[Job, Properties]) int
 }
 
-// NoFeedback is a special case of feedback type
-// to indicate that the job handler has no feedback.
+// NoFeedback is a special case of feedback type,
+// indicating that the job handler has no feedback.
 // In this case, the framework skips the feedback handler.
 type NoFeedback struct{}
 
@@ -276,7 +276,7 @@ func RunWithoutFeedback[Job, Properties any](
 	opts *Options[Job, Properties, NoFeedback],
 	metaJob ...*MetaJob[Job, Properties],
 ) []framework.PanicRecord {
-	return Run[Job, Properties, NoFeedback](jobHandler, nil, opts, metaJob...)
+	return Run(jobHandler, nil, opts, metaJob...)
 }
 
 // controller is an implementation of interface Controller.

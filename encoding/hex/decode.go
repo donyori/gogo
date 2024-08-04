@@ -18,9 +18,21 @@
 
 package hex
 
-import "github.com/donyori/gogo/constraints"
+import (
+	"fmt"
+
+	"github.com/donyori/gogo/constraints"
+	"github.com/donyori/gogo/errors"
+)
 
 // DecodedLen returns the length of decoding of x source bytes, exactly x / 2.
+//
+// It panics if x is negative or odd.
 func DecodedLen[Int constraints.Integer](x Int) Int {
-	return x / 2
+	if x < 0 {
+		panic(errors.AutoMsg(fmt.Sprintf("x (%d) is negative", x)))
+	} else if x&1 != 0 {
+		panic(errors.AutoMsg(fmt.Sprintf("x (%d) is odd", x)))
+	}
+	return x >> 1
 }

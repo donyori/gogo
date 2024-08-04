@@ -90,7 +90,7 @@ func TestMustFormatSequenceToString_Panic(t *testing.T) {
 	testMustFormatToStringPanic(
 		t,
 		func(errorFormatItemFn fmtcoll.FormatFunc[int]) {
-			fmtcoll.MustFormatSequenceToString[int](
+			fmtcoll.MustFormatSequenceToString(
 				&array.SliceDynamicArray[int]{0},
 				&fmtcoll.SequenceFormat[int]{FormatItemFn: errorFormatItemFn},
 			)
@@ -171,7 +171,10 @@ func getTestCasesForFormatSequenceToString(
 		return err
 	}
 
-	testCases := make([]sequenceTestCase, len(dataList)*len(commonFormatList)*2)
+	testCases := make(
+		[]sequenceTestCase,
+		len(dataList)*len(commonFormatList)<<1,
+	)
 	var idx int
 	for dataIdx, data := range dataList {
 		for commonFormatIdx := range commonFormatList {

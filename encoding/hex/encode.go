@@ -28,8 +28,17 @@ import (
 )
 
 // EncodedLen returns the length of encoding of n source bytes, exactly n * 2.
+//
+// It panics if n is negative or the result overflows.
 func EncodedLen[Int constraints.Integer](n Int) Int {
-	return n * 2
+	if n < 0 {
+		panic(errors.AutoMsg(fmt.Sprintf("n (%d) is negative", n)))
+	}
+	m := n << 1
+	if m>>1 != n {
+		panic(errors.AutoMsg(fmt.Sprintf("result overflows (n: %#x)", n)))
+	}
+	return m
 }
 
 // Encode encodes src in hexadecimal representation to dst.
@@ -127,7 +136,7 @@ func NewEncoder(w io.Writer, upper bool) Encoder {
 }
 
 func (enc *encoder) Write(p []byte) (n int, err error) {
-	buf := encodeBufferPool.Get().(*[sourceBufferLen * 2]byte)
+	buf := encodeBufferPool.Get().(*[sourceBufferLen << 1]byte)
 	defer encodeBufferPool.Put(buf)
 	size := sourceBufferLen
 	for len(p) > 0 && err == nil {
@@ -144,7 +153,7 @@ func (enc *encoder) Write(p []byte) (n int, err error) {
 }
 
 func (enc *encoder) WriteByte(c byte) error {
-	buf := encodeBufferPool.Get().(*[sourceBufferLen * 2]byte)
+	buf := encodeBufferPool.Get().(*[sourceBufferLen << 1]byte)
 	defer encodeBufferPool.Put(buf)
 	buf[0] = c
 	encoded := encode(buf[1:], buf[:1], enc.upper)
@@ -153,7 +162,7 @@ func (enc *encoder) WriteByte(c byte) error {
 }
 
 func (enc *encoder) WriteString(s string) (n int, err error) {
-	buf := encodeBufferPool.Get().(*[sourceBufferLen * 2]byte)
+	buf := encodeBufferPool.Get().(*[sourceBufferLen << 1]byte)
 	defer encodeBufferPool.Put(buf)
 	size := sourceBufferLen
 	for len(s) > 0 && err == nil {

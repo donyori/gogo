@@ -30,7 +30,7 @@ import (
 // Remember to update the copy when updating fcfsJobQueue.
 
 // emptyQueuePanicMessage is the panic message
-// to indicate that the job queue is empty.
+// indicating that the job queue is empty.
 const emptyQueuePanicMessage = "job queue is empty"
 
 // fcfsJobQueueMaker is a maker for creating job queues with

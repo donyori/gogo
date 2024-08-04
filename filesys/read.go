@@ -37,24 +37,28 @@ import (
 
 // ReadOptions are options for Read functions.
 type ReadOptions struct {
-	// Size of the buffer for reading the file at least.
+	// BufSize is the size of the buffer for reading the file at least.
+	//
 	// Nonpositive values for using default value.
 	BufSize int
 
-	// Offset of the file to read, in bytes,
+	// Offset is the offset of the file to read, in bytes,
 	// relative to the origin of the file for positive values,
 	// and relative to the end of the file for negative values.
 	Offset int64
 
-	// Limit of the file to read, in bytes.
+	// Limit is the limit of the file to read, in bytes.
+	//
 	// Nonpositive values for no limit.
 	Limit int64
 
-	// True if not to decompress when the file is compressed by gzip or bzip2,
-	// and not to restore when the file is archived by tar (i.e., tape archive).
+	// Raw indicates whether to not decompress
+	// when the file is compressed by gzip or bzip2,
+	// and whether to not restore
+	// when the file is archived by tar (i.e., tape archive).
 	Raw bool
 
-	// A method-decompressor map for reading the ZIP archive.
+	// ZipDcomp is a method-decompressor map for reading the ZIP archive.
 	// These decompressors are registered to the archive/zip.Reader.
 	// (Nil decompressors are ignored.)
 	//
@@ -66,7 +70,7 @@ type ReadOptions struct {
 	// the function archive/zip.RegisterDecompressor.
 	ZipDcomp map[uint16]zip.Decompressor
 
-	// A function that wraps the reader to io.ReaderAt
+	// ZipReaderAtFunc is a function that wraps the reader to io.ReaderAt
 	// to create an archive/zip.Reader.
 	//
 	// It also returns the size that can be read, and any error encountered.

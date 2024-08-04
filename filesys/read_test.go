@@ -47,7 +47,7 @@ func TestRead_NotCloseFile(t *testing.T) {
 	if err != nil {
 		t.Fatal("create reader -", err)
 	}
-	halfSize := int64(len(testFS[Name].Data) / 2)
+	halfSize := int64(len(testFS[Name].Data) >> 1)
 	hr := io.LimitReader(r, halfSize)
 	err = iotest.TestReader(hr, testFS[Name].Data[:halfSize])
 	if err != nil {

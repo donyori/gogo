@@ -115,7 +115,7 @@ func TestBroadcaster_Unsubscribe(t *testing.T) {
 		data[i] = i
 	}
 	bcast := concurrency.NewBroadcaster[int](0)
-	c := bcast.Subscribe(NumMessage / 4)
+	c := bcast.Subscribe(NumMessage >> 2)
 	var wg sync.WaitGroup
 	wg.Add(4) // 3 receivers + 1 sender
 	var ready sync.WaitGroup
@@ -152,7 +152,7 @@ func TestBroadcaster_Unsubscribe(t *testing.T) {
 	}()
 	defer wg.Wait()
 	var recv [NumMessage]int
-	stop := NumMessage / 2
+	stop := NumMessage >> 1
 	for i := range stop {
 		msg, ok := <-c
 		if !ok {

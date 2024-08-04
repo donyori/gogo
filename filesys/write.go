@@ -48,15 +48,18 @@ type WritableFile interface {
 
 // WriteOptions are options for Write functions.
 type WriteOptions struct {
-	// Size of the buffer for writing the file at least.
+	// BufSize is the size of the buffer for writing the file at least.
+	//
 	// Nonpositive values for using default value.
 	BufSize int
 
-	// True if not to compress the file with gzip and not to archive the file
-	// with tar (i.e., tape archive) according to the file extension.
+	// Raw indicates whether to not compress the file with gzip
+	// and whether to not archive the file with tar (i.e., tape archive)
+	// according to the file extension.
 	Raw bool
 
-	// The compression level of DEFLATE.
+	// DeflateLv is the compression level of DEFLATE.
+	//
 	// It should be in the range [-2, 9].
 	// The zero value (0) stands for no compression
 	// other than the default value.
@@ -68,19 +71,23 @@ type WriteOptions struct {
 	// or ".zip" and the ZIP archive uses DEFLATE compression.
 	DeflateLv int
 
-	// The offset of the beginning of the ZIP data within the underlying writer.
+	// ZipOffset is the offset of the beginning of the ZIP data
+	// within the underlying writer.
+	//
 	// It should be used when the ZIP data is appended to an existing file,
 	// such as a binary executable.
 	//
 	// Nonpositive values are ignored.
 	ZipOffset int64
 
-	// The end-of-central-directory comment field of the ZIP archive.
+	// ZipComment is the end-of-central-directory comment field
+	// of the ZIP archive.
+	//
 	// It should be 65535 bytes at most.
 	// If the comment is too long, an error is reported.
 	ZipComment string
 
-	// A method-compressor map for writing the ZIP archive.
+	// ZipComp is a method-compressor map for writing the ZIP archive.
 	// These compressors are registered to the archive/zip.Writer.
 	// (Nil compressors are ignored.)
 	//

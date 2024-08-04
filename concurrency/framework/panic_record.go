@@ -23,8 +23,11 @@ import "fmt"
 // PanicRecord is a panic record, including the name of the goroutine
 // and the panic content (i.e., the argument passed to function panic).
 type PanicRecord struct {
-	Name    string // Name of the goroutine.
-	Content any    // The argument passed to function panic.
+	// Name is the name of the goroutine.
+	Name string
+
+	// Content is the argument passed to function panic.
+	Content any
 }
 
 // Error formats the panic record into a string

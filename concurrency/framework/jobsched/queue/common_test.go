@@ -47,13 +47,13 @@ var enqueueFnTestCases = []struct {
 		jq.Enqueue(metaJobs...)
 	}},
 	{"enqueue 3 parts", func(jq jobsched.JobQueue[int, jobsched.NoProperty]) {
-		i, j := N/3, N*2/3
+		i, j := N/3, N/3<<1
 		jq.Enqueue(metaJobs[:i]...)
 		jq.Enqueue(metaJobs[i:j]...)
 		jq.Enqueue(metaJobs[j:]...)
 	}},
 	{"enqueue half then one by one", func(jq jobsched.JobQueue[int, jobsched.NoProperty]) {
-		i := N / 2
+		i := N >> 1
 		jq.Enqueue(metaJobs[:i]...)
 		for _, mj := range metaJobs[i:] {
 			jq.Enqueue(mj)

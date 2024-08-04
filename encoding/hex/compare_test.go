@@ -229,13 +229,13 @@ func getPrefixAndPrefixBytes(t *testing.T, i int, prefixCase *testEncodeCase) (
 			prefixBytes = prefixCase.dstBytes[:2]
 		}
 	case 2:
-		if end := len(prefixCase.dstStr)/2 - 1; end > 0 {
+		if end := len(prefixCase.dstStr)>>1 - 1; end > 0 {
 			prefix = prefixCase.dstStr[:end]
 			prefixBytes = prefixCase.dstBytes[:end]
 		}
 	case 3:
-		prefix = prefixCase.dstStr[:len(prefixCase.dstStr)/2]
-		prefixBytes = prefixCase.dstBytes[:len(prefixCase.dstBytes)/2]
+		prefix = prefixCase.dstStr[:len(prefixCase.dstStr)>>1]
+		prefixBytes = prefixCase.dstBytes[:len(prefixCase.dstBytes)>>1]
 	case 4:
 		if end := len(prefixCase.dstStr) - 1; end > 0 {
 			prefix = prefixCase.dstStr[:end]
@@ -279,7 +279,7 @@ func TestCanEncodeToBytesStringFunctions(t *testing.T) {
 	}{
 		{"Match", dst, true},
 		{"FailSameLen", sameLen, false},
-		{"FailDiffLen", dst[:len(dst)/2], false},
+		{"FailDiffLen", dst[:len(dst)>>1], false},
 	}
 
 	for _, fn := range fns {
@@ -308,7 +308,7 @@ func BenchmarkCanEncodeToBytesStringFunctions(b *testing.B) {
 	}{
 		{"Match", dst},
 		{"FailSameLen", sameLen},
-		{"FailDiffLen", dst[:len(dst)/2]},
+		{"FailDiffLen", dst[:len(dst)>>1]},
 	}
 
 	fns := []struct {
@@ -470,7 +470,7 @@ func makeCanEncodeToPrefixBytesStringFunctionsTestData(
 
 	var b strings.Builder
 	b.Grow(prefixLen)
-	half := prefixLen / 2
+	half := prefixLen >> 1
 	if half > 0 {
 		b.WriteString(prefix[:half])
 	}

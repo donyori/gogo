@@ -30,14 +30,26 @@ import (
 
 // WritableFileImpl is an implementation of interface WritableFile, for testing.
 type WritableFileImpl struct {
-	Name    string      // Filename.
-	Data    []byte      // File contents.
-	Mode    fs.FileMode // FileInfo.Mode.
-	ModTime time.Time   // FileInfo.ModTime.
-	Sys     any         // FileInfo.Sys.
+	// Name is the filename.
+	Name string
 
+	// Data is the file content.
+	Data []byte
+
+	// Mode is the value returned by FileInfo.Mode.
+	Mode fs.FileMode
+
+	// ModTime is the value returned by FileInfo.ModTime.
+	ModTime time.Time
+
+	// Sys is the value returned by FileInfo.Sys.
+	Sys any
+
+	// closed indicates whether the file is closed.
 	closed bool
-	lock   sync.Mutex // Lock for methods Write and Close.
+
+	// lock is the lock for methods Write and Close.
+	lock sync.Mutex
 }
 
 var _ filesys.WritableFile = (*WritableFileImpl)(nil)
