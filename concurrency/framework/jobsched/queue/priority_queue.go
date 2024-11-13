@@ -55,7 +55,7 @@ func (m priorityFirstJobQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job
 				return a.Meta.CreationTime.Before(b.Meta.CreationTime)
 			}
 			return a.Meta.Priority > b.Meta.Priority
-		}, nil),
+		}, 0),
 	}
 }
 
@@ -89,7 +89,7 @@ func (m creationTimeFirstJobQueueMaker[Job, Properties]) New() jobsched.JobQueue
 				return a.Meta.Priority > b.Meta.Priority
 			}
 			return a.Meta.CreationTime.Before(b.Meta.CreationTime)
-		}, nil),
+		}, 0),
 	}
 }
 
@@ -148,7 +148,7 @@ func NewJobPriorityQueueMaker[Job, Properties any](
 
 func (m *jobPriorityQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
 	return &priorityJobQueue[Job, Properties]{
-		pq: pqueue.New(m.lessFn, nil),
+		pq: pqueue.New(m.lessFn, 0),
 	}
 }
 

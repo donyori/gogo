@@ -25,12 +25,9 @@ import (
 	"testing"
 
 	"github.com/donyori/gogo/container/heap/pqueue"
-	"github.com/donyori/gogo/container/sequence/array"
 	"github.com/donyori/gogo/fmtcoll"
 	"github.com/donyori/gogo/function/compare"
 )
-
-type IntSDAPtr = *array.SliceDynamicArray[int]
 
 var IntLess = compare.OrderedLess[int]
 
@@ -45,19 +42,52 @@ var dataList = [][]int{
 }
 
 func TestNew(t *testing.T) {
+	var n int
 	for _, data := range dataList {
-		sorted := copyAndSort(data)
-		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.New[int](IntLess, IntSDAPtr(&data))
-			checkPriorityQueueByDequeue[int](t, pq, sorted)
-		})
+		n += len(data) + 3
+	}
+
+	testCases := make([]struct {
+		data           []int
+		capacity       int
+		wantSortedData []int
+		wantInitCap    int
+	}, n)
+	var idx int
+	for _, data := range dataList {
+		for c := -1; c <= len(data)+1; c++ {
+			testCases[idx].data = data
+			testCases[idx].capacity = c
+			testCases[idx].wantSortedData = copyAndSort(data)
+			if c > 0 {
+				testCases[idx].wantInitCap = c
+			} else {
+				testCases[idx].wantInitCap = pqueue.DefaultCapacity
+			}
+			idx++
+		}
+	}
+
+	for _, tc := range testCases {
+		t.Run(
+			fmt.Sprintf("cap=%d&data=%s", tc.capacity, sliceToName(tc.data)),
+			func(t *testing.T) {
+				pq := pqueue.New(IntLess, tc.capacity)
+				if c := pq.Cap(); c != tc.wantInitCap {
+					t.Errorf("got initial capacity %d; want %d",
+						c, tc.wantInitCap)
+				}
+				pq.Enqueue(tc.data...)
+				checkPriorityQueueByDequeue(t, pq, tc.wantSortedData)
+			},
+		)
 	}
 }
 
 func TestPriorityQueue_Len(t *testing.T) {
 	for _, data := range dataList {
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.New[int](IntLess, IntSDAPtr(&data))
+			pq := newPriorityQueue(data)
 			if n := pq.Len(); n != len(data) {
 				t.Errorf("got %d; want %d", n, len(data))
 			}
@@ -72,7 +102,7 @@ func TestPriorityQueue_Range(t *testing.T) {
 			counterMap[x]++
 		}
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.New[int](IntLess, IntSDAPtr(&data))
+			pq := newPriorityQueue(data)
 			pq.Range(func(x int) (cont bool) {
 				counterMap[x]--
 				return true
@@ -88,14 +118,82 @@ func TestPriorityQueue_Range(t *testing.T) {
 	}
 }
 
+func TestPriorityQueue_Clear(t *testing.T) {
+	for _, data := range dataList {
+		t.Run("data="+sliceToName(data), func(t *testing.T) {
+			pq := newPriorityQueue(data)
+			pq.Clear()
+			checkPriorityQueueByDequeue(t, pq, nil)
+		})
+	}
+}
+
+func TestPriorityQueue_RemoveAll(t *testing.T) {
+	for _, data := range dataList {
+		t.Run("data="+sliceToName(data), func(t *testing.T) {
+			pq := newPriorityQueue(data)
+			pq.RemoveAll()
+			checkPriorityQueueByDequeue(t, pq, nil)
+		})
+	}
+}
+
 func TestPriorityQueue_Cap(t *testing.T) {
 	for _, data := range dataList {
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.New[int](IntLess, IntSDAPtr(&data))
+			pq := newPriorityQueue(data)
 			if c := pq.Cap(); c < len(data) {
 				t.Errorf("got %d; want >= %d", c, len(data))
 			}
 		})
+	}
+}
+
+func TestPriorityQueue_Reserve(t *testing.T) {
+	var n int
+	for _, data := range dataList {
+		n += len(data) + 3
+	}
+
+	testCases := make([]struct {
+		data           []int
+		capacity       int
+		wantSortedData []int
+		wantCap        int
+	}, n)
+	var idx int
+	for _, data := range dataList {
+		for c := -1; c <= len(data); c++ {
+			testCases[idx].data = data
+			testCases[idx].capacity = c
+			testCases[idx].wantSortedData = copyAndSort(data)
+			if c > 0 {
+				testCases[idx].wantCap = len(data)
+			} else {
+				testCases[idx].wantCap = max(pqueue.DefaultCapacity, len(data))
+			}
+			idx++
+		}
+		c := max(len(data)<<2, 256)
+		testCases[idx].data = data
+		testCases[idx].capacity = c
+		testCases[idx].wantSortedData = copyAndSort(data)
+		testCases[idx].wantCap = c
+		idx++
+	}
+
+	for _, tc := range testCases {
+		t.Run(
+			fmt.Sprintf("cap=%d&data=%s", tc.capacity, sliceToName(tc.data)),
+			func(t *testing.T) {
+				pq := newPriorityQueue(tc.data)
+				pq.Reserve(tc.capacity)
+				if c := pq.Cap(); c != tc.wantCap {
+					t.Errorf("got capacity %d; want %d", c, tc.wantCap)
+				}
+				checkPriorityQueueByDequeue(t, pq, tc.wantSortedData)
+			},
+		)
 	}
 }
 
@@ -123,7 +221,7 @@ func TestPriorityQueue_Enqueue(t *testing.T) {
 			fmt.Sprintf("data=%s&xs=%s",
 				sliceToName(tc.data), sliceToName(tc.xs)),
 			func(t *testing.T) {
-				pq := pqueue.New[int](IntLess, IntSDAPtr(&tc.data))
+				pq := newPriorityQueue(tc.data)
 				pq.Enqueue(tc.xs...)
 				checkPriorityQueueByDequeue(t, pq, tc.want)
 			},
@@ -138,7 +236,7 @@ func TestPriorityQueue_Dequeue(t *testing.T) {
 		}
 		sorted := copyAndSort(data)
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.New[int](IntLess, IntSDAPtr(&data))
+			pq := newPriorityQueue(data)
 			if x := pq.Dequeue(); x != sorted[0] {
 				t.Errorf("got %d; want %d", x, sorted[0])
 			}
@@ -159,7 +257,7 @@ func TestPriorityQueue_Top(t *testing.T) {
 			}
 		}
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.New[int](IntLess, IntSDAPtr(&data))
+			pq := newPriorityQueue(data)
 			if x := pq.Top(); x != minX {
 				t.Errorf("got %d; want %d", x, minX)
 			}
@@ -202,24 +300,20 @@ func TestPriorityQueue_ReplaceTop(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("data=%s&newX=%d", sliceToName(tc.data), tc.newX),
 			func(t *testing.T) {
-				pq := pqueue.New[int](IntLess, IntSDAPtr(&tc.data))
+				pq := newPriorityQueue(tc.data)
 				if x := pq.ReplaceTop(tc.newX); x != tc.want[0] {
 					t.Errorf("got %d; want %d", x, tc.want[0])
 				}
-				checkPriorityQueueByDequeue[int](t, pq, tc.want)
+				checkPriorityQueueByDequeue(t, pq, tc.want)
 			},
 		)
 	}
 }
 
-func TestPriorityQueue_Clear(t *testing.T) {
-	for _, data := range dataList {
-		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			pq := pqueue.New[int](IntLess, IntSDAPtr(&data))
-			pq.Clear()
-			checkPriorityQueueByDequeue[int](t, pq, nil)
-		})
-	}
+func newPriorityQueue(data []int) pqueue.PriorityQueue[int] {
+	pq := pqueue.New(IntLess, len(data))
+	pq.Enqueue(data...)
+	return pq
 }
 
 func sliceToName[T any](s []T) string {
@@ -281,5 +375,5 @@ func isDequeuePanicMessage(err any) bool {
 		return false
 	}
 	msg, ok := err.(string)
-	return ok && strings.HasSuffix(msg, "priority queue is empty")
+	return ok && strings.HasSuffix(msg, pqueue.EmptyQueuePanicMessage)
 }

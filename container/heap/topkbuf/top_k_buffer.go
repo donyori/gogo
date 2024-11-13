@@ -33,6 +33,7 @@ import (
 // It only guarantees that each item is accessed once.
 type TopKBuffer[Item any] interface {
 	container.Container[Item]
+	container.Clearable
 
 	// K returns the parameter K,
 	// which limits the maximum number of items the buffer can hold.
@@ -47,9 +48,6 @@ type TopKBuffer[Item any] interface {
 	//
 	// Time complexity: O(n log n), where n = tkb.Len().
 	Drain() []Item
-
-	// Clear removes all items in the buffer and asks to release the memory.
-	Clear()
 }
 
 // topKBuffer is an implementation of interface TopKBuffer,
@@ -74,37 +72,18 @@ type topKBuffer[Item any] struct {
 // (the < operator on float32 or float64 values)
 // is not a strict weak ordering when not-a-number (NaN) values are involved.
 //
-// data is the initial items added to the buffer.
-//
-// It panics if k is nonpositive or lessFn is nil.
-func New[Item any](
-	k int,
-	lessFn compare.LessFunc[Item],
-	data container.Container[Item],
-) TopKBuffer[Item] {
-	if k <= 0 {
-		panic(errors.AutoMsg(fmt.Sprintf("k (%d) is nonpositive", k)))
-	} else if lessFn == nil {
+// New panics if lessFn is nil or k is nonpositive.
+func New[Item any](lessFn compare.LessFunc[Item], k int) TopKBuffer[Item] {
+	if lessFn == nil {
 		panic(errors.AutoMsg("lessFn is nil"))
+	} else if k <= 0 {
+		panic(errors.AutoMsg(fmt.Sprintf("k (%d) is nonpositive", k)))
 	}
-	tkb := &topKBuffer[Item]{
+	return &topKBuffer[Item]{
 		k:      k,
 		lessFn: lessFn,
+		pq:     pqueue.New(lessFn, k),
 	}
-	if data != nil {
-		if data.Len() <= k {
-			tkb.pq = pqueue.New(lessFn, data)
-		} else {
-			tkb.pq = pqueue.New(lessFn, nil)
-			data.Range(func(x Item) (cont bool) {
-				tkb.Add(x)
-				return true
-			})
-		}
-	} else {
-		tkb.pq = pqueue.New(lessFn, nil)
-	}
-	return tkb
 }
 
 func (tkb *topKBuffer[Item]) Len() int {
@@ -129,6 +108,10 @@ func (tkb *topKBuffer[Item]) K() int {
 }
 
 func (tkb *topKBuffer[Item]) Add(x ...Item) {
+	if len(x) == 0 {
+		return
+	}
+	tkb.pq.Reserve(tkb.k)
 	r := tkb.k - tkb.pq.Len()
 	if len(x) <= r {
 		tkb.pq.Enqueue(x...)
@@ -143,6 +126,14 @@ func (tkb *topKBuffer[Item]) Add(x ...Item) {
 	}
 }
 
+func (tkb *topKBuffer[Item]) Clear() {
+	tkb.pq.Clear()
+}
+
+func (tkb *topKBuffer[Item]) RemoveAll() {
+	tkb.pq.RemoveAll()
+}
+
 func (tkb *topKBuffer[Item]) Drain() []Item {
 	n := tkb.pq.Len()
 	if n == 0 {
@@ -153,8 +144,4 @@ func (tkb *topKBuffer[Item]) Drain() []Item {
 		result[i] = tkb.pq.Dequeue()
 	}
 	return result
-}
-
-func (tkb *topKBuffer[Item]) Clear() {
-	tkb.pq.Clear()
 }

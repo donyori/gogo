@@ -41,6 +41,9 @@ type ArraySpecific[Item any] interface {
 	// argument end (exclusive) of the array, as an Array.
 	//
 	// It panics if begin or end is out of range, or begin > end.
+	// Note that, unlike the slice operations for Go slice,
+	// begin and end are in range if 0 <= begin <= end <= length,
+	// instead of 0 <= begin <= end <= capacity.
 	Slice(begin, end int) Array[Item]
 }
 

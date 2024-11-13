@@ -77,6 +77,66 @@ func TestGoMap_Range_NilAndEmpty(t *testing.T) {
 	}
 }
 
+func TestGoMap_Clear(t *testing.T) {
+	dataList := []SIM{
+		nil,
+		{},
+		{"A": 1},
+		{"A": 1, "B": 2},
+		{"A": 1, "B": 2, "C": 3},
+	}
+	for _, data := range dataList {
+		m := maps.Clone(data)
+		gm := (*SIGM)(&m)
+		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
+			gm.Clear()
+			if gm == nil || *gm != nil {
+				t.Errorf("got %s; want <nil>", gmPtrToName(gm))
+			}
+		})
+	}
+
+	var nilGM *SIGM
+	t.Run("gm="+gmPtrToName(nilGM), func(t *testing.T) {
+		nilGM.Clear()
+		if nilGM != nil {
+			t.Errorf("got %s; want <nil>", gmPtrToName(nilGM))
+		}
+	})
+}
+
+func TestGoMap_RemoveAll(t *testing.T) {
+	dataList := []SIM{
+		nil,
+		{},
+		{"A": 1},
+		{"A": 1, "B": 2},
+		{"A": 1, "B": 2, "C": 3},
+	}
+	for _, data := range dataList {
+		m := maps.Clone(data)
+		gm := (*SIGM)(&m)
+		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
+			gm.RemoveAll()
+			if m != nil {
+				if gm == nil || *gm == nil || len(*gm) != 0 {
+					t.Errorf("got %s; want {}", gmPtrToName(gm))
+				}
+			} else if gm == nil || *gm != nil {
+				t.Errorf("got %s; want <nil>", gmPtrToName(gm))
+			}
+		})
+	}
+
+	var nilGM *SIGM
+	t.Run("gm="+gmPtrToName(nilGM), func(t *testing.T) {
+		nilGM.RemoveAll()
+		if nilGM != nil {
+			t.Errorf("got %s; want <nil>", gmPtrToName(nilGM))
+		}
+	})
+}
+
 func TestGoMap_Filter(t *testing.T) {
 	filterList := []func(x mapping.Entry[string, int]) (keep bool){
 		func(x mapping.Entry[string, int]) (keep bool) {
@@ -521,34 +581,6 @@ func TestGoMap_GetAndRemove(t *testing.T) {
 			},
 		)
 	}
-}
-
-func TestGoMap_Clear(t *testing.T) {
-	dataList := []SIM{
-		nil,
-		{},
-		{"A": 1},
-		{"A": 1, "B": 2},
-		{"A": 1, "B": 2, "C": 3},
-	}
-	for _, data := range dataList {
-		m := maps.Clone(data)
-		gm := (*SIGM)(&m)
-		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
-			gm.Clear()
-			if gm == nil || *gm != nil {
-				t.Errorf("got %s; want <nil>", gmPtrToName(gm))
-			}
-		})
-	}
-
-	var nilGM *SIGM
-	t.Run("gm="+gmPtrToName(nilGM), func(t *testing.T) {
-		nilGM.Clear()
-		if nilGM != nil {
-			t.Errorf("got %s; want <nil>", gmPtrToName(nilGM))
-		}
-	})
 }
 
 func keysToName(keys []string) string {

@@ -60,7 +60,7 @@ func TestSliceDynamicArray_Range(t *testing.T) {
 	s := make([]int, 0, len(sda))
 	sda.Range(func(x int) (cont bool) {
 		s = append(s, x)
-		return len(s) < len(sda)/2
+		return len(s) < len(sda)>>1
 	})
 	if sliceUnequal(s, want) {
 		t.Errorf("got %v; want %v", s, want)
@@ -293,7 +293,7 @@ func TestSliceDynamicArray_Slice(t *testing.T) {
 	testCases := make([]struct {
 		begin, end int
 		want       []int
-	}, n*(n+3)/2) // (n+1)+n+(n-1)+...+2 = n*((n+1)+2)/2 = n*(n+3)/2
+	}, n*(n+3)>>1) // (n+1)+n+(n-1)+...+2 = n*((n+1)+2)/2 = n*(n+3)/2
 	var idx int
 	for begin := range n {
 		for end := begin; end <= n; end++ {
@@ -324,6 +324,132 @@ func TestSliceDynamicArray_Slice(t *testing.T) {
 	}
 }
 
+func TestSliceDynamicArray_Clear(t *testing.T) {
+	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
+	for _, data := range dataList {
+		t.Run("s="+sliceToName(data), func(t *testing.T) {
+			sda := copySda(data)
+			sda.Clear()
+			if sda != nil {
+				t.Errorf("got %v; want <nil>", sda)
+			}
+		})
+	}
+
+	var nilSDA *IntSDA
+	t.Run("s="+sdaPtrToName(nilSDA), func(t *testing.T) {
+		nilSDA.Clear()
+		if nilSDA != nil {
+			t.Errorf("got %v; want <nil>", nilSDA)
+		}
+	})
+}
+
+func TestSliceDynamicArray_RemoveAll(t *testing.T) {
+	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
+	for _, data := range dataList {
+		t.Run("s="+sliceToName(data), func(t *testing.T) {
+			sda := copySda(data)
+			sda.RemoveAll()
+			if data != nil {
+				if sda == nil || len(sda) != 0 || cap(sda) != cap(data) {
+					t.Errorf("got %v (len: %d, cap: %v); want [] (len: 0, cap: %d)",
+						sda, len(sda), cap(sda), cap(data))
+				}
+			} else if sda != nil {
+				t.Errorf("got %v; want <nil>", sda)
+			}
+		})
+	}
+
+	var nilSDA *IntSDA
+	t.Run("s="+sdaPtrToName(nilSDA), func(t *testing.T) {
+		nilSDA.RemoveAll()
+		if nilSDA != nil {
+			t.Errorf("got %v; want <nil>", nilSDA)
+		}
+	})
+}
+
+func TestSliceDynamicArray_Cap(t *testing.T) {
+	sda1 := make(IntSDA, 0, 3)
+	sda2 := IntSDA{1, 2, 3}[:1]
+	testCases := []struct {
+		sda  *IntSDA
+		want int
+	}{
+		{nil, 0},
+		{new(IntSDA), 0},
+		{&IntSDA{}, 0},
+		{&sda1, 3},
+		{&IntSDA{1}, 1},
+		{&sda2, 3},
+	}
+
+	for _, tc := range testCases {
+		var sdaCap int
+		if tc.sda != nil {
+			sdaCap = cap(*tc.sda)
+		}
+		t.Run(
+			fmt.Sprintf("s=%s&cap=%d", sdaPtrToName(tc.sda), sdaCap),
+			func(t *testing.T) {
+				if c := tc.sda.Cap(); c != tc.want {
+					t.Errorf("got %d; want %d", c, tc.want)
+				}
+			},
+		)
+	}
+}
+
+func TestSliceDynamicArray_Reserve(t *testing.T) {
+	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
+	capList := []int{-1, 0, 1, 2, 3, 4}
+
+	testCases := make([]struct {
+		data     []int
+		capacity int
+		wantSda  []int
+		wantCap  int
+	}, len(dataList)*len(capList))
+	var idx int
+	for _, data := range dataList {
+		for _, capacity := range capList {
+			testCases[idx].data = data
+			testCases[idx].capacity = capacity
+			if data != nil {
+				testCases[idx].wantSda = data
+			} else {
+				testCases[idx].wantSda = []int{}
+			}
+			testCases[idx].wantCap = capacity
+			if testCases[idx].wantCap <= 0 {
+				testCases[idx].wantCap = array.DefaultReserveCapacity
+			}
+			if testCases[idx].wantCap < cap(data) {
+				testCases[idx].wantCap = cap(data)
+			}
+			idx++
+		}
+	}
+
+	for _, tc := range testCases {
+		t.Run(
+			fmt.Sprintf("s=%s&cap=%d", sliceToName(tc.data), tc.capacity),
+			func(t *testing.T) {
+				sda := copySda(tc.data)
+				sda.Reserve(tc.capacity)
+				if c := cap(sda); c != tc.wantCap {
+					t.Errorf("got capacity %d; want %d", c, tc.wantCap)
+				}
+				if sliceUnequal(sda, tc.wantSda) {
+					t.Errorf("data changed; got %v; want %v", sda, tc.wantSda)
+				}
+			},
+		)
+	}
+}
+
 func TestSliceDynamicArray_Filter(t *testing.T) {
 	dataList := [][]int{nil, {}, {0}, {-1, 0, 1}, {-2, -1, 0, 1, 2}}
 	filterList := []func(x int) (keep bool){
@@ -331,7 +457,7 @@ func TestSliceDynamicArray_Filter(t *testing.T) {
 			return x >= 0
 		},
 		func(x int) (keep bool) {
-			return x%2 == 0
+			return x&1 == 0
 		},
 	}
 
@@ -390,37 +516,6 @@ func TestSliceDynamicArray_Filter_NilAndEmpty(t *testing.T) {
 				return true
 			})
 		})
-	}
-}
-
-func TestSliceDynamicArray_Cap(t *testing.T) {
-	sda1 := make(IntSDA, 0, 3)
-	sda2 := IntSDA{1, 2, 3}[:1]
-	testCases := []struct {
-		sda  *IntSDA
-		want int
-	}{
-		{nil, 0},
-		{new(IntSDA), 0},
-		{&IntSDA{}, 0},
-		{&sda1, 3},
-		{&IntSDA{1}, 1},
-		{&sda2, 3},
-	}
-
-	for _, tc := range testCases {
-		var sdaCap int
-		if tc.sda != nil {
-			sdaCap = cap(*tc.sda)
-		}
-		t.Run(
-			fmt.Sprintf("s=%s&cap=%d", sdaPtrToName(tc.sda), sdaCap),
-			func(t *testing.T) {
-				if c := tc.sda.Cap(); c != tc.want {
-					t.Errorf("got %d; want %d", c, tc.want)
-				}
-			},
-		)
 	}
 }
 
@@ -721,7 +816,7 @@ func TestSliceDynamicArray_Cut(t *testing.T) {
 	testCases := make([]struct {
 		begin, end int
 		want       []int
-	}, n*(n+3)/2) // (n+1)+n+(n-1)+...+2 = n*((n+1)+2)/2 = n*(n+3)/2
+	}, n*(n+3)>>1) // (n+1)+n+(n-1)+...+2 = n*((n+1)+2)/2 = n*(n+3)/2
 	var idx int
 	for begin := range n {
 		for end := begin; end <= n; end++ {
@@ -755,7 +850,7 @@ func TestSliceDynamicArray_CutWithoutOrder(t *testing.T) {
 	testCases := make([]struct {
 		begin, end int
 		want       []int
-	}, n*(n+3)/2) // (n+1)+n+(n-1)+...+2 = n*((n+1)+2)/2 = n*(n+3)/2
+	}, n*(n+3)>>1) // (n+1)+n+(n-1)+...+2 = n*((n+1)+2)/2 = n*(n+3)/2
 	var idx int
 	for begin := range n {
 		for end := begin; end <= n; end++ {
@@ -864,53 +959,6 @@ func TestSliceDynamicArray_Expand(t *testing.T) {
 	}
 }
 
-func TestSliceDynamicArray_Reserve(t *testing.T) {
-	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
-	capList := []int{-1, 0, 1, 2, 3, 4}
-
-	testCases := make([]struct {
-		data     []int
-		capacity int
-		wantSda  []int
-		wantCap  int
-	}, len(dataList)*len(capList))
-	var idx int
-	for _, data := range dataList {
-		for _, capacity := range capList {
-			testCases[idx].data = data
-			testCases[idx].capacity = capacity
-			if capacity <= cap(data) {
-				testCases[idx].wantSda = data
-				testCases[idx].wantCap = cap(data)
-			} else {
-				if data != nil {
-					testCases[idx].wantSda = data
-				} else {
-					testCases[idx].wantSda = []int{}
-				}
-				testCases[idx].wantCap = capacity
-			}
-			idx++
-		}
-	}
-
-	for _, tc := range testCases {
-		t.Run(
-			fmt.Sprintf("s=%s&cap=%d", sliceToName(tc.data), tc.capacity),
-			func(t *testing.T) {
-				sda := copySda(tc.data)
-				sda.Reserve(tc.capacity)
-				if c := cap(sda); c != tc.wantCap {
-					t.Errorf("got capacity %d; want %d", c, tc.wantCap)
-				}
-				if sliceUnequal(sda, tc.wantSda) {
-					t.Errorf("data changed; got %v; want %v", sda, tc.wantSda)
-				}
-			},
-		)
-	}
-}
-
 func TestSliceDynamicArray_Shrink(t *testing.T) {
 	dataList := [][]int{
 		nil, {}, {0}, {0, 1}, {0, 1, 2},
@@ -957,27 +1005,6 @@ func TestSliceDynamicArray_Shrink(t *testing.T) {
 			},
 		)
 	}
-}
-
-func TestSliceDynamicArray_Clear(t *testing.T) {
-	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
-	for _, data := range dataList {
-		t.Run("s="+sliceToName(data), func(t *testing.T) {
-			sda := copySda(data)
-			sda.Clear()
-			if sda != nil {
-				t.Errorf("got %v; want <nil>", sda)
-			}
-		})
-	}
-
-	var nilSDA *IntSDA
-	t.Run("s="+sdaPtrToName(nilSDA), func(t *testing.T) {
-		nilSDA.Clear()
-		if nilSDA != nil {
-			t.Errorf("got %v; want <nil>", nilSDA)
-		}
-	})
 }
 
 func sliceToName[T any](s []T) string {

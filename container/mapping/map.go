@@ -55,6 +55,7 @@ func (entry Entry[Key, Value]) String() string {
 // The modifications to the entries should not affect the map.
 type Map[Key, Value any] interface {
 	container.Container[Entry[Key, Value]]
+	container.Clearable
 	container.Filter[Entry[Key, Value]]
 
 	// Get finds the value (if any) bound to the specified key
@@ -103,9 +104,4 @@ type Map[Key, Value any] interface {
 	// bound to the key and an indicator present to report whether
 	// the key was present before calling GetAndRemove.
 	GetAndRemove(key Key) (previous Value, present bool)
-
-	// Clear unmaps all keys from their values,
-	// removes all key-value pairs in the map,
-	// and asks to release the memory.
-	Clear()
 }

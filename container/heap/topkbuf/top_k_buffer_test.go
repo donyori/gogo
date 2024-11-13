@@ -24,12 +24,9 @@ import (
 	"testing"
 
 	"github.com/donyori/gogo/container/heap/topkbuf"
-	"github.com/donyori/gogo/container/sequence/array"
 	"github.com/donyori/gogo/fmtcoll"
 	"github.com/donyori/gogo/function/compare"
 )
-
-type IntSDAPtr = *array.SliceDynamicArray[int]
 
 var IntLess = compare.OrderedLess[int]
 
@@ -71,9 +68,13 @@ func TestNew(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k),
+			fmt.Sprintf("k=%d&data=%s", tc.k, sliceToName(tc.data)),
 			func(t *testing.T) {
-				tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
+				tkb := topkbuf.New(IntLess, tc.k)
+				if k := tkb.K(); k != tc.k {
+					t.Errorf("got K %d; want %d", k, tc.k)
+				}
+				tkb.Add(tc.data...)
 				checkTopKBufferByDrain(t, tkb, tc.want)
 			},
 		)
@@ -101,9 +102,9 @@ func TestTopKBuffer_Len(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k),
+			fmt.Sprintf("k=%d&data=%s", tc.k, sliceToName(tc.data)),
 			func(t *testing.T) {
-				tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
+				tkb := newTopKBuffer(tc.k, tc.data)
 				if n := tkb.Len(); n != tc.want {
 					t.Errorf("got %d; want %d", n, tc.want)
 				}
@@ -134,9 +135,9 @@ func TestTopKBuffer_Range(t *testing.T) {
 			counterMap[x]++
 		}
 		t.Run(
-			fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k),
+			fmt.Sprintf("k=%d&data=%s", tc.k, sliceToName(tc.data)),
 			func(t *testing.T) {
-				tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
+				tkb := newTopKBuffer(tc.k, tc.data)
 				tkb.Range(func(x int) (cont bool) {
 					counterMap[x]--
 					return true
@@ -153,13 +154,43 @@ func TestTopKBuffer_Range(t *testing.T) {
 	}
 }
 
+func TestTopKBuffer_Clear(t *testing.T) {
+	for _, data := range dataList {
+		for k := 1; k <= maxK; k++ {
+			t.Run(
+				fmt.Sprintf("k=%d&data=%s", k, sliceToName(data)),
+				func(t *testing.T) {
+					tkb := newTopKBuffer(k, data)
+					tkb.Clear()
+					checkTopKBufferByDrain(t, tkb, nil)
+				},
+			)
+		}
+	}
+}
+
+func TestTopKBuffer_RemoveAll(t *testing.T) {
+	for _, data := range dataList {
+		for k := 1; k <= maxK; k++ {
+			t.Run(
+				fmt.Sprintf("k=%d&data=%s", k, sliceToName(data)),
+				func(t *testing.T) {
+					tkb := newTopKBuffer(k, data)
+					tkb.RemoveAll()
+					checkTopKBufferByDrain(t, tkb, nil)
+				},
+			)
+		}
+	}
+}
+
 func TestTopKBuffer_K(t *testing.T) {
 	for _, data := range dataList {
 		for k := 1; k <= maxK; k++ {
 			t.Run(
-				fmt.Sprintf("data=%s&k=%d", sliceToName(data), k),
+				fmt.Sprintf("k=%d&data=%s", k, sliceToName(data)),
 				func(t *testing.T) {
-					tkb := topkbuf.New[int](k, IntLess, IntSDAPtr(&data))
+					tkb := newTopKBuffer(k, data)
 					if got := tkb.K(); got != k {
 						t.Errorf("got %d; want %d", got, k)
 					}
@@ -195,10 +226,10 @@ func TestTopKBuffer_Add(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("data=%s&k=%d&xs=%s",
-				sliceToName(tc.data), tc.k, sliceToName(tc.xs)),
+			fmt.Sprintf("k=%d&data=%s&xs=%s",
+				tc.k, sliceToName(tc.data), sliceToName(tc.xs)),
 			func(t *testing.T) {
-				tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
+				tkb := newTopKBuffer(tc.k, tc.data)
 				tkb.Add(tc.xs...)
 				checkTopKBufferByDrain(t, tkb, tc.want)
 			},
@@ -224,9 +255,9 @@ func TestTopKBuffer_Drain(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("data=%s&k=%d", sliceToName(tc.data), tc.k),
+			fmt.Sprintf("k=%d&data=%s", tc.k, sliceToName(tc.data)),
 			func(t *testing.T) {
-				tkb := topkbuf.New[int](tc.k, IntLess, IntSDAPtr(&tc.data))
+				tkb := newTopKBuffer(tc.k, tc.data)
 				if topK := tkb.Drain(); !slices.Equal(topK, tc.want) {
 					t.Errorf("got %v; want %v", topK, tc.want)
 				}
@@ -235,19 +266,10 @@ func TestTopKBuffer_Drain(t *testing.T) {
 	}
 }
 
-func TestTopKBuffer_Clear(t *testing.T) {
-	for _, data := range dataList {
-		for k := 1; k <= maxK; k++ {
-			t.Run(
-				fmt.Sprintf("data=%s&k=%d", sliceToName(data), k),
-				func(t *testing.T) {
-					tkb := topkbuf.New[int](k, IntLess, IntSDAPtr(&data))
-					tkb.Clear()
-					checkTopKBufferByDrain(t, tkb, nil)
-				},
-			)
-		}
-	}
+func newTopKBuffer(k int, data []int) topkbuf.TopKBuffer[int] {
+	tkb := topkbuf.New(IntLess, k)
+	tkb.Add(data...)
+	return tkb
 }
 
 func sliceToName[T any](s []T) string {

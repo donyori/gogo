@@ -25,6 +25,7 @@ import "github.com/donyori/gogo/container"
 // Set guarantees to contain no duplicate items.
 type Set[Item any] interface {
 	container.Container[Item]
+	container.Clearable
 	container.Filter[Item]
 
 	// ContainsItem reports whether the item x is in the set.
@@ -70,7 +71,4 @@ type Set[Item any] interface {
 	//
 	//	thisSet = thisSet △ s
 	DisjunctiveUnion(s Set[Item])
-
-	// Clear removes all items in the set and asks to release the memory.
-	Clear()
 }

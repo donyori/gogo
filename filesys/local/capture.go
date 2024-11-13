@@ -108,8 +108,10 @@ func captureOutputFileToString(
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
+
 	// Read from the pipe immediately in a dedicated goroutine
 	// to avoid pipe buffer overflow.
+
 	type stringError struct {
 		s   string
 		err error

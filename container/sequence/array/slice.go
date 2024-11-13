@@ -136,30 +136,31 @@ func (sda *SliceDynamicArray[Item]) Swap(i, j int) {
 // argument end (exclusive) of the slice, as an Array.
 //
 // It panics if begin or end is out of range, or begin > end.
+// Note that, unlike the slice operations for Go slice,
+// begin and end are in range if 0 <= begin <= end <= length,
+// instead of 0 <= begin <= end <= capacity.
 func (sda *SliceDynamicArray[Item]) Slice(begin, end int) Array[Item] {
 	sda.checkNonempty()
+	// Note that (*sda)[begin:end:end] is valid for
+	// 0 <= begin <= end <= cap(*sda);
+	// but we need 0 <= begin <= end <= len(*sda).
+	_ = (*sda)[begin:end:len(*sda)] // ensure begin and end are in range
 	s := (*sda)[begin:end:end]
 	return &s
 }
 
-// Filter refines items in the slice (in-place).
+// Clear sets the slice to nil.
+func (sda *SliceDynamicArray[Item]) Clear() {
+	if sda != nil {
+		*sda = nil
+	}
+}
+
+// RemoveAll removes all items in the slice.
 //
-// Its parameter filter is a function to report whether to keep the item x.
-func (sda *SliceDynamicArray[Item]) Filter(filter func(x Item) (keep bool)) {
-	if sda == nil || len(*sda) == 0 {
-		return
-	}
-	var n int
-	for _, x := range *sda {
-		if filter(x) {
-			(*sda)[n], n = x, n+1
-		}
-	}
-	if n == len(*sda) {
-		return
-	}
-	clear((*sda)[n:]) // avoid memory leak
-	*sda = (*sda)[:n]
+// It is equivalent to Truncate(0).
+func (sda *SliceDynamicArray[Item]) RemoveAll() {
+	sda.Truncate(0)
 }
 
 // Cap returns the current capacity of the slice.
@@ -171,6 +172,37 @@ func (sda *SliceDynamicArray[Item]) Cap() int {
 		c = cap(*sda)
 	}
 	return c
+}
+
+// Reserve requires that the capacity of the slice
+// be at least the specified capacity.
+//
+// If capacity is nonpositive, Reserve uses a small capacity.
+// Reserve does nothing if the new capacity is not greater than the current.
+func (sda *SliceDynamicArray[Item]) Reserve(capacity int) {
+	if sda == nil {
+		panic(errors.AutoMsg(nilSliceDynamicArrayPointerPanicMessage))
+	} else if capacity <= 0 {
+		capacity = defaultReserveCapacity
+	}
+	if capacity <= cap(*sda) {
+		return
+	}
+	s := make(SliceDynamicArray[Item], len(*sda), capacity)
+	copy(s, *sda)
+	*sda = s
+}
+
+// Filter refines items in the slice (in-place).
+//
+// Its parameter filter is a function to report whether to keep the item x.
+func (sda *SliceDynamicArray[Item]) Filter(filter func(x Item) (keep bool)) {
+	if sda == nil || len(*sda) == 0 {
+		return
+	}
+	*sda = slices.DeleteFunc(*sda, func(x Item) bool {
+		return !filter(x)
+	})
 }
 
 // Push adds x to the back of the slice.
@@ -186,10 +218,9 @@ func (sda *SliceDynamicArray[Item]) Push(x Item) {
 // It panics if the slice is nil or empty.
 func (sda *SliceDynamicArray[Item]) Pop() Item {
 	sda.checkNonempty()
-	back := len(*sda) - 1
-	x := (*sda)[back]
-	clear((*sda)[back:]) // avoid memory leak
-	*sda = (*sda)[:back]
+	x := (*sda)[len(*sda)-1]
+	clear((*sda)[len(*sda)-1:]) // avoid memory leak
+	*sda = (*sda)[:len(*sda)-1]
 	return x
 }
 
@@ -239,7 +270,7 @@ func (sda *SliceDynamicArray[Item]) Insert(i int, x Item) {
 		sda.Push(x)
 		return
 	}
-	_ = (*sda)[i:] // ensure i is valid
+	_ = (*sda)[i:] // ensure i is in range
 	*sda = slices.Insert(*sda, i, x)
 }
 
@@ -248,14 +279,13 @@ func (sda *SliceDynamicArray[Item]) Insert(i int, x Item) {
 // It panics if i is out of range, i.e., i < 0 or i >= Len().
 func (sda *SliceDynamicArray[Item]) Remove(i int) Item {
 	sda.checkNonempty()
-	back := len(*sda) - 1
-	if i == back {
+	if i == len(*sda)-1 {
 		return sda.Pop()
 	}
 	x := (*sda)[i]
 	copy((*sda)[i:], (*sda)[i+1:])
-	clear((*sda)[back:]) // avoid memory leak
-	*sda = (*sda)[:back]
+	clear((*sda)[len(*sda)-1:]) // avoid memory leak
+	*sda = (*sda)[:len(*sda)-1]
 	return x
 }
 
@@ -266,12 +296,11 @@ func (sda *SliceDynamicArray[Item]) Remove(i int) Item {
 func (sda *SliceDynamicArray[Item]) RemoveWithoutOrder(i int) Item {
 	sda.checkNonempty()
 	x := (*sda)[i]
-	back := len(*sda) - 1
-	if i != back {
-		(*sda)[i] = (*sda)[back]
+	if i != len(*sda)-1 {
+		(*sda)[i] = (*sda)[len(*sda)-1]
 	}
-	clear((*sda)[back:]) // avoid memory leak
-	*sda = (*sda)[:back]
+	clear((*sda)[len(*sda)-1:]) // avoid memory leak
+	*sda = (*sda)[:len(*sda)-1]
 	return x
 }
 
@@ -289,7 +318,7 @@ func (sda *SliceDynamicArray[Item]) InsertSequence(
 		sda.Append(s)
 		return
 	}
-	_ = (*sda)[i:] // ensure i is valid
+	_ = (*sda)[i:] // ensure i is in range
 	if s == nil {
 		return
 	}
@@ -297,7 +326,7 @@ func (sda *SliceDynamicArray[Item]) InsertSequence(
 	if n == 0 {
 		return
 	} else if sda2, ok := s.(*SliceDynamicArray[Item]); ok {
-		*sda = slices.Insert[SliceDynamicArray[Item], Item](*sda, i, *sda2...)
+		*sda = slices.Insert(*sda, i, *sda2...)
 		return
 	}
 	*sda = append(*sda, make([]Item, n)...)
@@ -315,7 +344,7 @@ func (sda *SliceDynamicArray[Item]) InsertSequence(
 // It panics if begin or end is out of range, or begin > end.
 func (sda *SliceDynamicArray[Item]) Cut(begin, end int) {
 	sda.checkNonempty()
-	_ = (*sda)[begin:end:len(*sda)] // ensure begin and end are valid
+	_ = (*sda)[begin:end:len(*sda)] // ensure begin and end are in range
 	if begin == end {
 		return
 	} else if end == len(*sda) {
@@ -331,7 +360,7 @@ func (sda *SliceDynamicArray[Item]) Cut(begin, end int) {
 // It panics if begin or end is out of range, or begin > end.
 func (sda *SliceDynamicArray[Item]) CutWithoutOrder(begin, end int) {
 	sda.checkNonempty()
-	_ = (*sda)[begin:end:len(*sda)] // ensure begin and end are valid
+	_ = (*sda)[begin:end:len(*sda)] // ensure begin and end are in range
 	if begin == end {
 		return
 	} else if end == len(*sda) {
@@ -378,7 +407,7 @@ func (sda *SliceDynamicArray[Item]) Expand(i, n int) {
 		sda.Extend(n)
 		return
 	}
-	_ = (*sda)[i:] // ensure i is valid
+	_ = (*sda)[i:] // ensure i is in range
 	if len(*sda)+n > cap(*sda) {
 		*sda = append(*sda, make([]Item, n)...)
 	} else {
@@ -388,26 +417,8 @@ func (sda *SliceDynamicArray[Item]) Expand(i, n int) {
 	clear((*sda)[i:][:n])
 }
 
-// Reserve requests that the capacity of the slice
-// is at least the specified capacity.
-//
-// It does nothing if capacity <= Cap().
-func (sda *SliceDynamicArray[Item]) Reserve(capacity int) {
-	switch {
-	case capacity <= 0:
-		return
-	case sda == nil:
-		panic(errors.AutoMsg(nilSliceDynamicArrayPointerPanicMessage))
-	case capacity <= cap(*sda):
-		return
-	}
-	s := make(SliceDynamicArray[Item], len(*sda), capacity)
-	copy(s, *sda)
-	*sda = s
-}
-
 // Shrink reduces the slice to fit, i.e.,
-// requests Cap() to be equal to Len().
+// requires Cap() to be equal to Len().
 //
 // Note that it isn't equivalent to operations on Go slice
 // like s[:len(s):len(s)],
@@ -420,13 +431,6 @@ func (sda *SliceDynamicArray[Item]) Shrink() {
 	s := make(SliceDynamicArray[Item], len(*sda))
 	copy(s, *sda)
 	*sda = s
-}
-
-// Clear sets the slice to nil.
-func (sda *SliceDynamicArray[Item]) Clear() {
-	if sda != nil {
-		*sda = nil
-	}
 }
 
 // checkNonempty panics if sda is nil, *sda is nil, or len(*sda) is 0.
@@ -445,7 +449,18 @@ func (sda *SliceDynamicArray[Item]) checkNonempty() {
 }
 
 const (
+	// nilSliceDynamicArrayPointerPanicMessage is the panic message
+	// indicating that the SliceDynamicArray pointer is nil.
 	nilSliceDynamicArrayPointerPanicMessage = "*SliceDynamicArray[...] is nil"
-	nilSliceDynamicArrayPanicMessage        = "SliceDynamicArray[...] is nil"
-	emptySliceDynamicArrayPanicMessage      = "SliceDynamicArray[...] is empty"
+
+	// nilSliceDynamicArrayPanicMessage is the panic message
+	// indicating that the SliceDynamicArray is nil.
+	nilSliceDynamicArrayPanicMessage = "SliceDynamicArray[...] is nil"
+
+	// emptySliceDynamicArrayPanicMessage is the panic message
+	// indicating that the SliceDynamicArray is empty.
+	emptySliceDynamicArrayPanicMessage = "SliceDynamicArray[...] is empty"
 )
+
+// defaultReserveCapacity is the default capacity of the method Reserve.
+const defaultReserveCapacity int = 16

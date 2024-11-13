@@ -33,9 +33,8 @@ import (
 // It only guarantees that each item is accessed once.
 type PriorityQueue[Item any] interface {
 	container.Container[Item]
-
-	// Cap returns the current capacity of the queue.
-	Cap() int
+	container.Clearable
+	container.CapacityReservable
 
 	// Enqueue adds items x into the queue.
 	//
@@ -64,11 +63,13 @@ type PriorityQueue[Item any] interface {
 	//
 	// Time complexity: O(log n), where n = pq.Len().
 	ReplaceTop(newX Item) Item
-
-	// Clear removes all items in the queue and asks to release the memory.
-	Clear()
 }
 
+// defaultCapacity is the default capacity of the priority queue.
+const defaultCapacity int = 16
+
+// emptyQueuePanicMessage is the panic message
+// indicating that the priority queue is empty.
 const emptyQueuePanicMessage = "priority queue is empty"
 
 // priorityQueue is an implementation of interface PriorityQueue,
@@ -90,30 +91,25 @@ type priorityQueue[Item any] struct {
 // (the < operator on float32 or float64 values)
 // is not a strict weak ordering when not-a-number (NaN) values are involved.
 //
-// data is the initial items added to the queue.
+// capacity asks to allocate enough space to hold the specified number of items.
+// If capacity is nonpositive,
+// New creates a priority queue with a small starting capacity.
 //
-// It panics if lessFn is nil.
+// New panics if lessFn is nil.
 func New[Item any](
 	lessFn compare.LessFunc[Item],
-	data container.Container[Item],
+	capacity int,
 ) PriorityQueue[Item] {
 	if lessFn == nil {
 		panic(errors.AutoMsg("lessFn is nil"))
 	}
-	var dataCopy []Item
-	if data != nil {
-		n := data.Len()
-		if n > 0 {
-			dataCopy = make([]Item, 0, n)
-			data.Range(func(x Item) (cont bool) {
-				dataCopy = append(dataCopy, x)
-				return true
-			})
-		}
+	if capacity <= 0 {
+		capacity = defaultCapacity
 	}
+	s := make([]Item, 0, capacity)
 	pq := &priorityQueue[Item]{
 		odaHeapAdapter[Item]{
-			ODA: array.WrapSlice(&dataCopy, lessFn, nil),
+			ODA: array.WrapSlice(&s, lessFn, nil),
 		},
 	}
 	heap.Init(pq.oha)
@@ -137,8 +133,23 @@ func (pq *priorityQueue[Item]) Range(handler func(x Item) (cont bool)) {
 	pq.oha.ODA.Range(handler)
 }
 
+func (pq *priorityQueue[Item]) Clear() {
+	pq.oha.ODA.Clear()
+}
+
+func (pq *priorityQueue[Item]) RemoveAll() {
+	pq.oha.ODA.RemoveAll()
+}
+
 func (pq *priorityQueue[Item]) Cap() int {
 	return pq.oha.ODA.Cap()
+}
+
+func (pq *priorityQueue[Item]) Reserve(capacity int) {
+	if capacity <= 0 {
+		capacity = defaultCapacity
+	}
+	pq.oha.ODA.Reserve(capacity)
 }
 
 func (pq *priorityQueue[Item]) Enqueue(x ...Item) {
@@ -173,10 +184,6 @@ func (pq *priorityQueue[Item]) ReplaceTop(newX Item) Item {
 	pq.oha.ODA.SetFront(newX)
 	heap.Fix(pq.oha, 0)
 	return pq.oha.ODA.Front()
-}
-
-func (pq *priorityQueue[Item]) Clear() {
-	pq.oha.ODA.Clear()
 }
 
 // odaHeapAdapter wraps

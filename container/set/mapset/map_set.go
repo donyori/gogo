@@ -34,38 +34,16 @@ type mapSet[Item comparable] struct {
 // The method Range of the set accesses items in random order.
 // The access order in two calls to Range may be different.
 //
-// capacity asks to allocate enough space to hold
-// the specified number of items.
-// If capacity is negative, it is ignored.
-//
-// items are the initial items added to the set.
-//
-// New(0, nil) creates an empty set with a small starting capacity.
-func New[Item comparable](
-	capacity int,
-	items container.Container[Item],
-) set.Set[Item] {
-	var n int
-	if items != nil {
-		n = items.Len()
-	}
-	var m map[Item]struct{}
-	c := capacity
-	if c < n {
-		c = n
-	}
-	if c <= 0 {
-		m = make(map[Item]struct{})
+// capacity asks to allocate enough space to hold the specified number of items.
+// If capacity is nonpositive, New creates a set with a small starting capacity.
+func New[Item comparable](capacity int) set.Set[Item] {
+	ms := new(mapSet[Item])
+	if capacity > 0 {
+		ms.m = make(map[Item]struct{}, capacity)
 	} else {
-		m = make(map[Item]struct{}, c)
+		ms.m = make(map[Item]struct{})
 	}
-	if n > 0 {
-		items.Range(func(x Item) (cont bool) {
-			m[x] = struct{}{}
-			return true
-		})
-	}
-	return &mapSet[Item]{m: m}
+	return ms
 }
 
 func (ms *mapSet[Item]) Len() int {
@@ -84,6 +62,14 @@ func (ms *mapSet[Item]) Range(handler func(x Item) (cont bool)) {
 			return
 		}
 	}
+}
+
+func (ms *mapSet[Item]) Clear() {
+	ms.m = make(map[Item]struct{})
+}
+
+func (ms *mapSet[Item]) RemoveAll() {
+	clear(ms.m)
 }
 
 func (ms *mapSet[Item]) Filter(filter func(x Item) (keep bool)) {
@@ -185,8 +171,4 @@ func (ms *mapSet[Item]) DisjunctiveUnion(s set.Set[Item]) {
 		}
 		return true
 	})
-}
-
-func (ms *mapSet[Item]) Clear() {
-	ms.m = make(map[Item]struct{})
 }

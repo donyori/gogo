@@ -26,10 +26,9 @@ import (
 // DynamicArraySpecific is an interface that groups
 // the dynamic-array-specific methods.
 type DynamicArraySpecific[Item any] interface {
+	container.Clearable
+	container.CapacityReservable
 	container.Filter[Item]
-
-	// Cap returns the current capacity of the dynamic array.
-	Cap() int
 
 	// Push adds x to the back of the dynamic array.
 	Push(x Item)
@@ -96,24 +95,14 @@ type DynamicArraySpecific[Item any] interface {
 	// It panics if i is out of range, i.e., i < 0 or i > Len(), or n < 0.
 	Expand(i, n int)
 
-	// Reserve requests that the capacity of the dynamic array
-	// is at least the specified capacity.
-	//
-	// It does nothing if capacity <= Cap().
-	Reserve(capacity int)
-
 	// Shrink reduces the dynamic array to fit, i.e.,
-	// requests Cap() to be equal to Len().
+	// requires Cap() to be equal to Len().
 	//
 	// Note that it isn't equivalent to operations on Go slice
 	// like s[:len(s):len(s)],
 	// because it allocates a new array and copies the content
 	// if Cap() > Len().
 	Shrink()
-
-	// Clear removes all items in the dynamic array and
-	// asks to release the memory.
-	Clear()
 }
 
 // DynamicArray is an interface representing

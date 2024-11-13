@@ -65,6 +65,23 @@ func (gm *GoMap[Key, Value]) Range(
 	}
 }
 
+// Clear sets the map to nil.
+func (gm *GoMap[Key, Value]) Clear() {
+	if gm != nil {
+		*gm = nil
+	}
+}
+
+// RemoveAll unmaps all keys from their values
+// and removes all key-value pairs in the map.
+//
+// Unlike Clear, RemoveAll may keep the allocated space for future use.
+func (gm *GoMap[Key, Value]) RemoveAll() {
+	if gm != nil {
+		clear(*gm)
+	}
+}
+
 // Filter refines key-value pairs in the map.
 //
 // Its parameter filter is a function to report
@@ -236,13 +253,6 @@ func (gm *GoMap[Key, Value]) GetAndRemove(key Key) (
 	return
 }
 
-// Clear unmaps all keys from their values,
-// removes all key-value pairs in the map,
-// and asks to release the memory.
-func (gm *GoMap[Key, Value]) Clear() {
-	if gm != nil {
-		*gm = nil
-	}
-}
-
+// nilGoMapPointerPanicMessage is the panic message
+// indicating that the GoMap pointer is nil.
 const nilGoMapPointerPanicMessage = "*GoMap[...] is nil"

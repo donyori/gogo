@@ -71,7 +71,7 @@ func (m *exponentialJobQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job,
 		b:  m.b,
 		rn: 1. / float64(m.n),
 	}
-	jq.pq = pqueue.New(jq.jobLess, nil)
+	jq.pq = pqueue.New(jq.jobLess, 0)
 	return jq
 }
 
