@@ -20,6 +20,7 @@ package queue
 
 import (
 	"fmt"
+	"iter"
 	"math/bits"
 
 	"github.com/donyori/gogo/container"
@@ -106,7 +107,7 @@ func (q *queueSliceRing[Item]) Len() int {
 }
 
 func (q *queueSliceRing[Item]) Range(handler func(x Item) (cont bool)) {
-	if q.r < 0 {
+	if handler == nil || q.r < 0 {
 		return
 	} else if q.r < q.w {
 		for i := q.r; i < q.w; i++ {
@@ -126,6 +127,10 @@ func (q *queueSliceRing[Item]) Range(handler func(x Item) (cont bool)) {
 			return
 		}
 	}
+}
+
+func (q *queueSliceRing[Item]) IterItems() iter.Seq[Item] {
+	return q.Range
 }
 
 func (q *queueSliceRing[Item]) Clear() {

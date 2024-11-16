@@ -109,9 +109,45 @@ func TestPriorityQueue_Range(t *testing.T) {
 			})
 			for x, ctr := range counterMap {
 				if ctr > 0 {
-					t.Errorf("insufficient accesses to %d", x)
+					t.Error("insufficient accesses to", x)
 				} else if ctr < 0 {
-					t.Errorf("too many accesses to %d", x)
+					t.Error("too many accesses to", x)
+				}
+			}
+		})
+	}
+}
+
+func TestPriorityQueue_Range_NilHandler(t *testing.T) {
+	pq := newPriorityQueue(dataList[len(dataList)-1])
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	pq.Range(nil)
+}
+
+func TestPriorityQueue_IterItems(t *testing.T) {
+	for _, data := range dataList {
+		counterMap := make(map[int]int, len(data))
+		for _, x := range data {
+			counterMap[x]++
+		}
+		t.Run("data="+sliceToName(data), func(t *testing.T) {
+			pq := newPriorityQueue(data)
+			seq := pq.IterItems()
+			if seq == nil {
+				t.Fatal("got nil iterator")
+			}
+			for x := range seq {
+				counterMap[x]--
+			}
+			for x, ctr := range counterMap {
+				if ctr > 0 {
+					t.Error("insufficient accesses to", x)
+				} else if ctr < 0 {
+					t.Error("too many accesses to", x)
 				}
 			}
 		})
@@ -339,8 +375,11 @@ func copyAndSort(data []int) []int {
 // !!pq may be modified in this function.
 //
 // want must be sorted.
-func checkPriorityQueueByDequeue[Item comparable](t *testing.T,
-	pq pqueue.PriorityQueue[Item], want []Item) {
+func checkPriorityQueueByDequeue[Item comparable](
+	t *testing.T,
+	pq pqueue.PriorityQueue[Item],
+	want []Item,
+) {
 	var i int
 	defer func() {
 		if e := recover(); e != nil {

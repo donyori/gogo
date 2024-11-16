@@ -115,9 +115,45 @@ func TestMapSet_Range(t *testing.T) {
 			})
 			for x, ctr := range counterMap {
 				if ctr > 0 {
-					t.Errorf("insufficient accesses to %d", x)
+					t.Error("insufficient accesses to", x)
 				} else if ctr < 0 {
-					t.Errorf("too many accesses to %d", x)
+					t.Error("too many accesses to", x)
+				}
+			}
+		})
+	}
+}
+
+func TestMapSet_Range_NilHandler(t *testing.T) {
+	ms := newMapSet(dataList[len(dataList)-1])
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	ms.Range(nil)
+}
+
+func TestMapSet_IterItems(t *testing.T) {
+	for i, data := range dataList {
+		counterMap := make(map[int]int, len(dataSetList[i]))
+		for x := range dataSetList[i] {
+			counterMap[x] = 1
+		}
+		t.Run("data="+sliceToName(data), func(t *testing.T) {
+			ms := newMapSet(data)
+			seq := ms.IterItems()
+			if seq == nil {
+				t.Fatal("got nil iterator")
+			}
+			for x := range seq {
+				counterMap[x]--
+			}
+			for x, ctr := range counterMap {
+				if ctr > 0 {
+					t.Error("insufficient accesses to", x)
+				} else if ctr < 0 {
+					t.Error("too many accesses to", x)
 				}
 			}
 		})

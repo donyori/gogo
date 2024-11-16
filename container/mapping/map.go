@@ -20,6 +20,7 @@ package mapping
 
 import (
 	"fmt"
+	"iter"
 
 	"github.com/donyori/gogo/container"
 )
@@ -57,6 +58,21 @@ type Map[Key, Value any] interface {
 	container.Container[Entry[Key, Value]]
 	container.Clearable
 	container.Filter[Entry[Key, Value]]
+
+	// IterKeys returns an iterator over keys in the map.
+	//
+	// The returned iterator is always non-nil.
+	IterKeys() iter.Seq[Key]
+
+	// IterValues returns an iterator over values in the map.
+	//
+	// The returned iterator is always non-nil.
+	IterValues() iter.Seq[Value]
+
+	// IterKeyValues returns an iterator over key-value pairs in the map.
+	//
+	// The returned iterator is always non-nil.
+	IterKeyValues() iter.Seq2[Key, Value]
 
 	// Get finds the value (if any) bound to the specified key
 	// and returns that value.

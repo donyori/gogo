@@ -18,7 +18,10 @@
 
 package errors
 
-import stderrors "errors"
+import (
+	stderrors "errors"
+	"iter"
+)
 
 // ErrorReadOnlySet is a read-only set of errors.
 //
@@ -41,6 +44,12 @@ type ErrorReadOnlySet interface {
 	// and returns an indicator cont to report
 	// whether to continue the iteration.
 	Range(handler func(err error) (cont bool))
+
+	// IterErrors returns an iterator over all errors in the set.
+	// The order of iteration is consistent with the method Range.
+	//
+	// The returned iterator is always non-nil.
+	IterErrors() iter.Seq[error]
 }
 
 // errorReadOnlySetEqual is an implementation of interface ErrorReadOnlySet.
@@ -79,11 +88,17 @@ func (erose *errorReadOnlySetEqual) Contains(err error) bool {
 func (erose *errorReadOnlySetEqual) Range(
 	handler func(err error) (cont bool),
 ) {
-	for err := range erose.errSet {
-		if !handler(err) {
-			return
+	if handler != nil {
+		for err := range erose.errSet {
+			if !handler(err) {
+				return
+			}
 		}
 	}
+}
+
+func (erose *errorReadOnlySetEqual) IterErrors() iter.Seq[error] {
+	return erose.Range
 }
 
 // errorReadOnlySetEqual is an implementation of interface ErrorReadOnlySet.
@@ -128,11 +143,17 @@ func (erosi *errorReadOnlySetIs) Contains(err error) bool {
 }
 
 func (erosi *errorReadOnlySetIs) Range(handler func(err error) (cont bool)) {
-	for _, err := range erosi.errs {
-		if !handler(err) {
-			return
+	if handler != nil {
+		for _, err := range erosi.errs {
+			if !handler(err) {
+				return
+			}
 		}
 	}
+}
+
+func (erosi *errorReadOnlySetIs) IterErrors() iter.Seq[error] {
+	return erosi.Range
 }
 
 // errorReadOnlySetSameMessage is an implementation of
@@ -204,13 +225,19 @@ func (erossm *errorReadOnlySetSameMessage) Contains(err error) bool {
 func (erossm *errorReadOnlySetSameMessage) Range(
 	handler func(err error) (cont bool),
 ) {
-	for _, errs := range erossm.errsSet {
-		for _, err := range errs {
-			if !handler(err) {
-				return
+	if handler != nil {
+		for _, errs := range erossm.errsSet {
+			for _, err := range errs {
+				if !handler(err) {
+					return
+				}
 			}
 		}
 	}
+}
+
+func (erossm *errorReadOnlySetSameMessage) IterErrors() iter.Seq[error] {
+	return erossm.Range
 }
 
 // setMapV is the value for map[Type]struct{}.

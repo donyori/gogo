@@ -21,6 +21,7 @@ package errors_test
 import (
 	stderrors "errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -65,7 +66,7 @@ func TestNewErrorList(t *testing.T) {
 				t.Error("got a nil error list")
 			} else {
 				e := el.(*errors.ErrorListImpl)
-				if list := e.GetList(); errorsNotEqual(list, tc.want) {
+				if list := e.GetList(); errorsUnequal(list, tc.want) {
 					t.Errorf("got %v; want %v", list, tc.want)
 				}
 			}
@@ -99,7 +100,7 @@ func TestErrorList_Append(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
 			el := errors.NewErrorList(true).(*errors.ErrorListImpl)
 			el.Append(tc.errs...)
-			if list := el.GetList(); errorsNotEqual(list, tc.want) {
+			if list := el.GetList(); errorsUnequal(list, tc.want) {
 				t.Errorf("got %v; want %v", list, tc.want)
 			}
 		})
@@ -156,7 +157,7 @@ func TestErrorList_Deduplicate(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
 			el := errors.NewErrorList(false, tc.errs...)
 			el.Deduplicate()
-			if errorsNotEqual(el.(*errors.ErrorListImpl).GetList(), tc.want) {
+			if errorsUnequal(el.(*errors.ErrorListImpl).GetList(), tc.want) {
 				t.Errorf("el after deduplicate: %v; want %v", el, tc.want)
 			}
 		})
@@ -201,6 +202,203 @@ func TestErrorList_Error(t *testing.T) {
 	}
 }
 
+// indexError combines an index and an error,
+// for testing github.com/donyori/gogo/errors.ErrorList.
+type indexError struct {
+	i   int
+	err error
+}
+
+func TestErrorList_Range(t *testing.T) {
+	errs := slices.Clone(errorsForErrorList)
+	want := []indexError{{0, errs[0]}, {1, errs[1]}}
+	el := errors.NewErrorList(false, errs...)
+	gotData := make([]indexError, 0, len(errs))
+	el.Range(func(i int, err error) (cont bool) {
+		gotData = append(gotData, indexError{i: i, err: err})
+		return i == 0
+	})
+	if !slices.Equal(gotData, want) {
+		t.Errorf("got %v; want %v", gotData, want)
+	}
+}
+
+func TestErrorList_Range_Empty(t *testing.T) {
+	el := errors.NewErrorList(false)
+	el.Range(func(i int, err error) (cont bool) {
+		t.Errorf("handler was called, i: %d, err: %v", i, err)
+		return true
+	})
+}
+
+func TestErrorList_Range_NilHandler(t *testing.T) {
+	errs := slices.Clone(errorsForErrorList)
+	el := errors.NewErrorList(false, errs...)
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	el.Range(nil)
+}
+
+func TestErrorList_RangeBackward(t *testing.T) {
+	errs := slices.Clone(errorsForErrorList)
+	want := []indexError{{2, errs[2]}, {1, errs[1]}}
+	el := errors.NewErrorList(false, errs...)
+	gotData := make([]indexError, 0, len(errs))
+	el.RangeBackward(func(i int, err error) (cont bool) {
+		gotData = append(gotData, indexError{i: i, err: err})
+		return i == len(errs)-1
+	})
+	if !slices.Equal(gotData, want) {
+		t.Errorf("got %v; want %v", gotData, want)
+	}
+}
+
+func TestErrorList_RangeBackward_Empty(t *testing.T) {
+	el := errors.NewErrorList(false)
+	el.RangeBackward(func(i int, err error) (cont bool) {
+		t.Errorf("handler was called, i: %d, err: %v", i, err)
+		return true
+	})
+}
+
+func TestErrorList_RangeBackward_NilHandler(t *testing.T) {
+	errs := slices.Clone(errorsForErrorList)
+	el := errors.NewErrorList(false, errs...)
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	el.RangeBackward(nil)
+}
+
+func TestErrorList_IterErrors(t *testing.T) {
+	errs := slices.Clone(errorsForErrorList)
+	want := []error{errs[0], errs[1]}
+	el := errors.NewErrorList(false, errs...)
+	seq := el.IterErrors()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	gotData := make([]error, 0, len(errs))
+	for err := range seq {
+		gotData = append(gotData, err)
+		if len(gotData) >= 2 {
+			break
+		}
+	}
+	if errorsUnequal(gotData, want) {
+		t.Errorf("got %v; want %v", gotData, want)
+	}
+}
+
+func TestErrorList_IterErrors_Empty(t *testing.T) {
+	el := errors.NewErrorList(false)
+	seq := el.IterErrors()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	for err := range seq {
+		t.Error("yielded", err)
+	}
+}
+
+func TestErrorList_IterErrorsBackward(t *testing.T) {
+	errs := slices.Clone(errorsForErrorList)
+	want := []error{errs[2], errs[1]}
+	el := errors.NewErrorList(false, errs...)
+	seq := el.IterErrorsBackward()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	gotData := make([]error, 0, len(errs))
+	for err := range seq {
+		gotData = append(gotData, err)
+		if len(gotData) >= 2 {
+			break
+		}
+	}
+	if errorsUnequal(gotData, want) {
+		t.Errorf("got %v; want %v", gotData, want)
+	}
+}
+
+func TestErrorList_IterErrorsBackward_Empty(t *testing.T) {
+	el := errors.NewErrorList(false)
+	seq := el.IterErrorsBackward()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	for err := range seq {
+		t.Error("yielded", err)
+	}
+}
+
+func TestErrorList_IterIndexErrors(t *testing.T) {
+	errs := slices.Clone(errorsForErrorList)
+	want := []indexError{{0, errs[0]}, {1, errs[1]}}
+	el := errors.NewErrorList(false, errs...)
+	seq2 := el.IterIndexErrors()
+	if seq2 == nil {
+		t.Fatal("got nil iterator")
+	}
+	gotData := make([]indexError, 0, len(errs))
+	for i, err := range seq2 {
+		gotData = append(gotData, indexError{i: i, err: err})
+		if len(gotData) >= 2 {
+			break
+		}
+	}
+	if !slices.Equal(gotData, want) {
+		t.Errorf("got %v; want %v", gotData, want)
+	}
+}
+
+func TestErrorList_IterIndexErrors_Empty(t *testing.T) {
+	el := errors.NewErrorList(false)
+	seq2 := el.IterIndexErrors()
+	if seq2 == nil {
+		t.Fatal("got nil iterator")
+	}
+	for i, err := range seq2 {
+		t.Errorf("yielded %d: %v", i, err)
+	}
+}
+
+func TestErrorList_IterIndexErrorsBackward(t *testing.T) {
+	errs := slices.Clone(errorsForErrorList)
+	want := []indexError{{2, errs[2]}, {1, errs[1]}}
+	el := errors.NewErrorList(false, errs...)
+	seq2 := el.IterIndexErrorsBackward()
+	if seq2 == nil {
+		t.Fatal("got nil iterator")
+	}
+	gotData := make([]indexError, 0, len(errs))
+	for i, err := range seq2 {
+		gotData = append(gotData, indexError{i: i, err: err})
+		if len(gotData) >= 2 {
+			break
+		}
+	}
+	if !slices.Equal(gotData, want) {
+		t.Errorf("got %v; want %v", gotData, want)
+	}
+}
+
+func TestErrorList_IterIndexErrorsBackward_Empty(t *testing.T) {
+	el := errors.NewErrorList(false)
+	seq2 := el.IterIndexErrorsBackward()
+	if seq2 == nil {
+		t.Fatal("got nil iterator")
+	}
+	for i, err := range seq2 {
+		t.Errorf("yielded %d: %v", i, err)
+	}
+}
+
 func TestCombine(t *testing.T) {
 	testCases := []struct {
 		errs []error
@@ -226,7 +424,7 @@ func TestCombine(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
 			err := errors.Combine(tc.errs...)
 			if el, ok := err.(*errors.ErrorListImpl); ok {
-				if list := el.GetList(); errorsNotEqual(list, tc.want) {
+				if list := el.GetList(); errorsUnequal(list, tc.want) {
 					t.Errorf("got %v; want %v", list, tc.want)
 				}
 			} else if len(tc.want) > 1 {
@@ -245,7 +443,7 @@ func TestCombine(t *testing.T) {
 	}
 }
 
-func errorsNotEqual(errs1, errs2 []error) bool {
+func errorsUnequal(errs1, errs2 []error) bool {
 	if len(errs1) != len(errs2) {
 		return true
 	}

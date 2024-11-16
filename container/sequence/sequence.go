@@ -18,13 +18,27 @@
 
 package sequence
 
-import "github.com/donyori/gogo/container"
+import (
+	"iter"
+
+	"github.com/donyori/gogo/container"
+)
 
 // Sequence is an interface representing a general sequence.
 //
 // Its method Range accesses the items from first to last.
 type Sequence[Item any] interface {
 	container.Container[Item]
+
+	// RangeBackward is like Range,
+	// but the order of access is from last to first.
+	RangeBackward(handler func(x Item) (cont bool))
+
+	// IterItemsBackward returns an iterator over all items in the sequence,
+	// traversing it from last to first.
+	//
+	// The returned iterator is always non-nil.
+	IterItemsBackward() iter.Seq[Item]
 
 	// Front returns the first item.
 	//

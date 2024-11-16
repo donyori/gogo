@@ -18,7 +18,11 @@
 
 package mapping
 
-import "github.com/donyori/gogo/errors"
+import (
+	"iter"
+
+	"github.com/donyori/gogo/errors"
+)
 
 // GoMap is a map wrapped on Go map.
 // *GoMap implements the interface Map.
@@ -56,13 +60,21 @@ func (gm *GoMap[Key, Value]) Len() int {
 func (gm *GoMap[Key, Value]) Range(
 	handler func(x Entry[Key, Value]) (cont bool),
 ) {
-	if gm != nil {
+	if handler != nil && gm != nil {
 		for k, v := range *gm {
 			if !handler(Entry[Key, Value]{Key: k, Value: v}) {
 				return
 			}
 		}
 	}
+}
+
+// IterItems returns an iterator over all entries (key-value pairs) in the map.
+// The order of iteration is random.
+//
+// The returned iterator is always non-nil.
+func (gm *GoMap[Key, Value]) IterItems() iter.Seq[Entry[Key, Value]] {
+	return gm.Range
 }
 
 // Clear sets the map to nil.
@@ -95,6 +107,54 @@ func (gm *GoMap[Key, Value]) Filter(
 				var zero Value
 				(*gm)[k] = zero // avoid memory leak
 				delete(*gm, k)
+			}
+		}
+	}
+}
+
+// IterKeys returns an iterator over keys in the map.
+// The order of iteration is random.
+//
+// The returned iterator is always non-nil.
+func (gm *GoMap[Key, Value]) IterKeys() iter.Seq[Key] {
+	return func(yield func(Key) bool) {
+		if yield != nil && gm != nil {
+			for k := range *gm {
+				if !yield(k) {
+					return
+				}
+			}
+		}
+	}
+}
+
+// IterValues returns an iterator over values in the map.
+// The order of iteration is random.
+//
+// The returned iterator is always non-nil.
+func (gm *GoMap[Key, Value]) IterValues() iter.Seq[Value] {
+	return func(yield func(Value) bool) {
+		if yield != nil && gm != nil {
+			for _, v := range *gm {
+				if !yield(v) {
+					return
+				}
+			}
+		}
+	}
+}
+
+// IterKeyValues returns an iterator over key-value pairs in the map.
+// The order of iteration is random.
+//
+// The returned iterator is always non-nil.
+func (gm *GoMap[Key, Value]) IterKeyValues() iter.Seq2[Key, Value] {
+	return func(yield func(Key, Value) bool) {
+		if yield != nil && gm != nil {
+			for k, v := range *gm {
+				if !yield(k, v) {
+					return
+				}
 			}
 		}
 	}

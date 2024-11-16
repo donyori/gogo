@@ -19,6 +19,8 @@
 package stack
 
 import (
+	"iter"
+
 	"github.com/donyori/gogo/container"
 	"github.com/donyori/gogo/errors"
 )
@@ -78,11 +80,17 @@ func (s *stackSlice[Item]) Len() int {
 }
 
 func (s *stackSlice[Item]) Range(handler func(x Item) (cont bool)) {
-	for i := len(s.buf) - 1; i >= 0; i-- {
-		if !handler(s.buf[i]) {
-			return
+	if handler != nil {
+		for i := len(s.buf) - 1; i >= 0; i-- {
+			if !handler(s.buf[i]) {
+				return
+			}
 		}
 	}
+}
+
+func (s *stackSlice[Item]) IterItems() iter.Seq[Item] {
+	return s.Range
 }
 
 func (s *stackSlice[Item]) Clear() {

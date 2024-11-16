@@ -20,6 +20,7 @@ package pqueue
 
 import (
 	"container/heap"
+	"iter"
 
 	"github.com/donyori/gogo/container"
 	"github.com/donyori/gogo/container/sequence/array"
@@ -131,6 +132,10 @@ func (pq *priorityQueue[Item]) Len() int {
 // to avoid corrupting the priority queue.
 func (pq *priorityQueue[Item]) Range(handler func(x Item) (cont bool)) {
 	pq.oha.ODA.Range(handler)
+}
+
+func (pq *priorityQueue[Item]) IterItems() iter.Seq[Item] {
+	return pq.Range
 }
 
 func (pq *priorityQueue[Item]) Clear() {

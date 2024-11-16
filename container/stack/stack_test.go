@@ -71,6 +71,55 @@ func TestStack_Range_Empty(t *testing.T) {
 	})
 }
 
+func TestStack_Range_NilHandler(t *testing.T) {
+	data := []int{0, 1, 2, 3, 3, 4, 0, 1, 2, 3, 3, 4}
+	s := stack.New[int](0)
+	for _, x := range data {
+		s.Push(x)
+	}
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	s.Range(nil)
+}
+
+func TestStack_IterItems(t *testing.T) {
+	data := []int{0, 1, 2, 3, 3, 4, 0, 1, 2, 3, 3, 4}
+	want := []int{4, 3, 3, 2, 1, 0}
+
+	s := stack.New[int](0)
+	for _, x := range data {
+		s.Push(x)
+	}
+	seq := s.IterItems()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	gotData := make([]int, 0, len(data))
+	for x := range seq {
+		gotData = append(gotData, x)
+		if len(gotData) >= len(data)>>1 {
+			break
+		}
+	}
+	if !slices.Equal(gotData, want) {
+		t.Errorf("got %v; want %v", gotData, want)
+	}
+}
+
+func TestStack_IterItems_Empty(t *testing.T) {
+	s := stack.New[int](0)
+	seq := s.IterItems()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	for x := range seq {
+		t.Error("yielded", x)
+	}
+}
+
 func TestStack_Reserve(t *testing.T) {
 	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
 	capList := []int{-1, 0, 1, 2, 3, 4}

@@ -21,6 +21,7 @@ package mapping_test
 import (
 	"fmt"
 	"maps"
+	"slices"
 	"testing"
 
 	"github.com/donyori/gogo/container/mapping"
@@ -73,6 +74,47 @@ func TestGoMap_Range_NilAndEmpty(t *testing.T) {
 				t.Error("handler was called, x:", x)
 				return true
 			})
+		})
+	}
+}
+
+func TestGoMap_Range_NilHandler(t *testing.T) {
+	gm := SIGM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	gm.Range(nil)
+}
+
+func TestGoMap_IterItems(t *testing.T) {
+	gm := SIGM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
+	want := SIM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
+	seq := gm.IterItems()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	gotData := make(SIM, len(gm))
+	for x := range seq {
+		gotData[x.Key] = x.Value
+	}
+	if mapWrong(gotData, want) {
+		t.Errorf("got %s; want %s", mapToString(gotData), mapToString(want))
+	}
+}
+
+func TestGoMap_IterItems_NilAndEmpty(t *testing.T) {
+	gms := []*SIGM{nil, new(SIGM), {}}
+	for _, gm := range gms {
+		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
+			seq := gm.IterItems()
+			if seq == nil {
+				t.Fatal("got nil iterator")
+			}
+			for x := range seq {
+				t.Error("yielded", x)
+			}
 		})
 	}
 }
@@ -175,6 +217,90 @@ func TestGoMap_Filter_NilAndEmpty(t *testing.T) {
 				t.Error("handler was called, x:", x)
 				return true
 			})
+		})
+	}
+}
+
+func TestGoMap_IterKeys(t *testing.T) {
+	gm := SIGM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
+	want := []string{"A", "B", "C", "a", "b", "c"}
+	seq := gm.IterKeys()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	gotData := slices.Sorted(seq)
+	if !slices.Equal(gotData, want) {
+		t.Errorf("got %q; want %q", gotData, want)
+	}
+}
+
+func TestGoMap_IterKeys_NilAndEmpty(t *testing.T) {
+	gms := []*SIGM{nil, new(SIGM), {}}
+	for _, gm := range gms {
+		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
+			seq := gm.IterKeys()
+			if seq == nil {
+				t.Fatal("got nil iterator")
+			}
+			for k := range seq {
+				t.Error("yielded", k)
+			}
+		})
+	}
+}
+
+func TestGoMap_IterValues(t *testing.T) {
+	gm := SIGM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
+	want := []int{-3, -2, -1, 1, 2, 3}
+	seq := gm.IterValues()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	gotData := slices.Sorted(seq)
+	if !slices.Equal(gotData, want) {
+		t.Errorf("got %d; want %d", gotData, want)
+	}
+}
+
+func TestGoMap_IterValues_NilAndEmpty(t *testing.T) {
+	gms := []*SIGM{nil, new(SIGM), {}}
+	for _, gm := range gms {
+		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
+			seq := gm.IterValues()
+			if seq == nil {
+				t.Fatal("got nil iterator")
+			}
+			for v := range seq {
+				t.Error("yielded", v)
+			}
+		})
+	}
+}
+
+func TestGoMap_IterKeyValues(t *testing.T) {
+	gm := SIGM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
+	want := SIM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
+	seq2 := gm.IterKeyValues()
+	if seq2 == nil {
+		t.Fatal("got nil iterator")
+	}
+	gotData := maps.Collect(seq2)
+	if mapWrong(gotData, want) {
+		t.Errorf("got %s; want %s", mapToString(gotData), mapToString(want))
+	}
+}
+
+func TestGoMap_IterKeyValues_NilAndEmpty(t *testing.T) {
+	gms := []*SIGM{nil, new(SIGM), {}}
+	for _, gm := range gms {
+		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
+			seq2 := gm.IterKeyValues()
+			if seq2 == nil {
+				t.Fatal("got nil iterator")
+			}
+			for k, v := range seq2 {
+				t.Errorf("yielded %s: %d", k, v)
+			}
 		})
 	}
 }

@@ -119,6 +119,55 @@ func TestQueue_Range_Empty(t *testing.T) {
 	})
 }
 
+func TestQueue_Range_NilHandler(t *testing.T) {
+	data := []int{0, 1, 2, 3, 3, 4, 0, 1, 2, 3, 3, 4}
+	q := queue.New[int](0)
+	for _, x := range data {
+		q.Enqueue(x)
+	}
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	q.Range(nil)
+}
+
+func TestQueue_IterItems(t *testing.T) {
+	data := []int{0, 1, 2, 3, 3, 4, 0, 1, 2, 3, 3, 4}
+	want := []int{0, 1, 2, 3, 3, 4}
+
+	q := queue.New[int](0)
+	for _, x := range data {
+		q.Enqueue(x)
+	}
+	seq := q.IterItems()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	gotData := make([]int, 0, len(data))
+	for x := range seq {
+		gotData = append(gotData, x)
+		if len(gotData) >= len(data)>>1 {
+			break
+		}
+	}
+	if !slices.Equal(gotData, want) {
+		t.Errorf("got %v; want %v", gotData, want)
+	}
+}
+
+func TestQueue_IterItems_Empty(t *testing.T) {
+	q := queue.New[int](0)
+	seq := q.IterItems()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	for x := range seq {
+		t.Error("yielded", x)
+	}
+}
+
 func TestQueue_Reserve(t *testing.T) {
 	dataList := [][]int{
 		nil,

@@ -19,6 +19,7 @@
 package errors
 
 import (
+	"iter"
 	"strconv"
 	"strings"
 )
@@ -60,6 +61,35 @@ type ErrorList interface {
 	// err (the error value), and returns an indicator cont to report
 	// whether to continue the iteration.
 	Range(handler func(i int, err error) (cont bool))
+
+	// RangeBackward is like Range,
+	// but the order of access is from last to first.
+	RangeBackward(handler func(i int, err error) (cont bool))
+
+	// IterErrors returns an iterator over all errors in the list,
+	// traversing it from first to last.
+	//
+	// The returned iterator is always non-nil.
+	IterErrors() iter.Seq[error]
+
+	// IterErrorsBackward returns an iterator over all errors in the list,
+	// traversing it from last to first.
+	//
+	// The returned iterator is always non-nil.
+	IterErrorsBackward() iter.Seq[error]
+
+	// IterIndexErrors returns an iterator over index-error pairs in the list,
+	// traversing it from first to last.
+	//
+	// The returned iterator is always non-nil.
+	IterIndexErrors() iter.Seq2[int, error]
+
+	// IterIndexErrorsBackward returns an iterator
+	// over index-error pairs in the list,
+	// traversing it from last to first with descending indices.
+	//
+	// The returned iterator is always non-nil.
+	IterIndexErrorsBackward() iter.Seq2[int, error]
 
 	// Append appends err to the error list.
 	Append(err ...error)
@@ -192,11 +222,55 @@ func (el *errorList) ToError() error {
 }
 
 func (el *errorList) Range(handler func(i int, err error) (cont bool)) {
-	for i, err := range el.list {
-		if !handler(i, err) {
-			return
+	if handler != nil {
+		for i, err := range el.list {
+			if !handler(i, err) {
+				return
+			}
 		}
 	}
+}
+
+func (el *errorList) RangeBackward(handler func(i int, err error) (cont bool)) {
+	if handler != nil {
+		for i := len(el.list) - 1; i >= 0; i-- {
+			if !handler(i, el.list[i]) {
+				return
+			}
+		}
+	}
+}
+
+func (el *errorList) IterErrors() iter.Seq[error] {
+	return func(yield func(error) bool) {
+		if yield != nil {
+			for _, err := range el.list {
+				if !yield(err) {
+					return
+				}
+			}
+		}
+	}
+}
+
+func (el *errorList) IterErrorsBackward() iter.Seq[error] {
+	return func(yield func(error) bool) {
+		if yield != nil {
+			for i := len(el.list) - 1; i >= 0; i-- {
+				if !yield(el.list[i]) {
+					return
+				}
+			}
+		}
+	}
+}
+
+func (el *errorList) IterIndexErrors() iter.Seq2[int, error] {
+	return el.Range
+}
+
+func (el *errorList) IterIndexErrorsBackward() iter.Seq2[int, error] {
+	return el.RangeBackward
 }
 
 func (el *errorList) Append(err ...error) {

@@ -18,10 +18,27 @@
 
 package array
 
-import "github.com/donyori/gogo/container/sequence"
+import (
+	"iter"
+
+	"github.com/donyori/gogo/container/sequence"
+)
 
 // ArraySpecific is an interface that groups the array-specific methods.
 type ArraySpecific[Item any] interface {
+	// IterIndexItems returns an iterator over index-item pairs in the array,
+	// traversing it from first to last.
+	//
+	// The returned iterator is always non-nil.
+	IterIndexItems() iter.Seq2[int, Item]
+
+	// IterIndexItemsBackward returns an iterator
+	// over index-item pairs in the array,
+	// traversing it from last to first with descending indices.
+	//
+	// The returned iterator is always non-nil.
+	IterIndexItemsBackward() iter.Seq2[int, Item]
+
 	// Get returns the item at index i.
 	//
 	// It panics if i is out of range.

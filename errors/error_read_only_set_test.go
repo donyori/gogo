@@ -21,6 +21,7 @@ package errors_test
 import (
 	stderrors "errors"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/donyori/gogo/errors"
@@ -149,6 +150,79 @@ func TestErrorReadOnlySetEqual_Contains_Nil(t *testing.T) {
 	}
 }
 
+func TestErrorReadOnlySetEqual_Range(t *testing.T) {
+	errs := slices.Clone(errorsForErrorReadOnlySet[0])
+	counterMap := make(map[error]int, len(errs))
+	for _, err := range errs {
+		counterMap[err] = 1
+	}
+	set := errors.NewErrorReadOnlySetEqual(errs...)
+	set.Range(func(err error) (cont bool) {
+		counterMap[err]--
+		return true
+	})
+	for err, ctr := range counterMap {
+		if ctr > 0 {
+			t.Error("insufficient accesses to", err)
+		} else if ctr < 0 {
+			t.Error("too many accesses to", err)
+		}
+	}
+}
+
+func TestErrorReadOnlySetEqual_Range_Empty(t *testing.T) {
+	set := errors.NewErrorReadOnlySetEqual()
+	set.Range(func(err error) (cont bool) {
+		t.Error("handler was called, err:", err)
+		return true
+	})
+}
+
+func TestErrorReadOnlySetEqual_Range_NilHandler(t *testing.T) {
+	errs := slices.Clone(errorsForErrorReadOnlySet[0])
+	set := errors.NewErrorReadOnlySetEqual(errs...)
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	set.Range(nil)
+}
+
+func TestErrorReadOnlySetEqual_IterErrors(t *testing.T) {
+	errs := slices.Clone(errorsForErrorReadOnlySet[0])
+	counterMap := make(map[error]int, len(errs))
+	for _, err := range errs {
+		counterMap[err] = 1
+	}
+	set := errors.NewErrorReadOnlySetEqual(errs...)
+	seq := set.IterErrors()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	for err := range seq {
+		counterMap[err]--
+	}
+	for err, ctr := range counterMap {
+		if ctr > 0 {
+			t.Error("insufficient accesses to", err)
+		} else if ctr < 0 {
+			t.Error("too many accesses to", err)
+		}
+	}
+}
+
+func TestErrorReadOnlySetEqual_IterErrors_Empty(t *testing.T) {
+	set := errors.NewErrorReadOnlySetEqual()
+	seq := set.IterErrors()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	for err := range seq {
+		t.Error("yielded", err)
+	}
+}
+
 func TestErrorReadOnlySetIs_Len(t *testing.T) {
 	var setErrs []error
 	for _, errs := range errorsForErrorReadOnlySet {
@@ -241,6 +315,79 @@ func TestErrorReadOnlySetIs_Contains_Nil(t *testing.T) {
 	}
 }
 
+func TestErrorReadOnlySetIs_Range(t *testing.T) {
+	errs := slices.Clone(errorsForErrorReadOnlySet[0])
+	counterMap := make(map[error]int, len(errs))
+	for _, err := range errs {
+		counterMap[err] = 1
+	}
+	set := errors.NewErrorReadOnlySetIs(errs...)
+	set.Range(func(err error) (cont bool) {
+		counterMap[err]--
+		return true
+	})
+	for err, ctr := range counterMap {
+		if ctr > 0 {
+			t.Error("insufficient accesses to", err)
+		} else if ctr < 0 {
+			t.Error("too many accesses to", err)
+		}
+	}
+}
+
+func TestErrorReadOnlySetIs_Range_Empty(t *testing.T) {
+	set := errors.NewErrorReadOnlySetIs()
+	set.Range(func(err error) (cont bool) {
+		t.Error("handler was called, err:", err)
+		return true
+	})
+}
+
+func TestErrorReadOnlySetIs_Range_NilHandler(t *testing.T) {
+	errs := slices.Clone(errorsForErrorReadOnlySet[0])
+	set := errors.NewErrorReadOnlySetIs(errs...)
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	set.Range(nil)
+}
+
+func TestErrorReadOnlySetIs_IterErrors(t *testing.T) {
+	errs := slices.Clone(errorsForErrorReadOnlySet[0])
+	counterMap := make(map[error]int, len(errs))
+	for _, err := range errs {
+		counterMap[err] = 1
+	}
+	set := errors.NewErrorReadOnlySetIs(errs...)
+	seq := set.IterErrors()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	for err := range seq {
+		counterMap[err]--
+	}
+	for err, ctr := range counterMap {
+		if ctr > 0 {
+			t.Error("insufficient accesses to", err)
+		} else if ctr < 0 {
+			t.Error("too many accesses to", err)
+		}
+	}
+}
+
+func TestErrorReadOnlySetIs_IterErrors_Empty(t *testing.T) {
+	set := errors.NewErrorReadOnlySetIs()
+	seq := set.IterErrors()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	for err := range seq {
+		t.Error("yielded", err)
+	}
+}
+
 func TestErrorReadOnlySetSameMessage_Len(t *testing.T) {
 	var setErrs []error
 	for _, errs := range errorsForErrorReadOnlySet {
@@ -329,6 +476,79 @@ func TestErrorReadOnlySetSameMessage_Contains_Nil(t *testing.T) {
 				}
 			},
 		)
+	}
+}
+
+func TestErrorReadOnlySetSameMessage_Range(t *testing.T) {
+	errs := slices.Clone(errorsForErrorReadOnlySet[0])
+	counterMap := make(map[error]int, len(errs))
+	for _, err := range errs {
+		counterMap[err] = 1
+	}
+	set := errors.NewErrorReadOnlySetSameMessage(errs...)
+	set.Range(func(err error) (cont bool) {
+		counterMap[err]--
+		return true
+	})
+	for err, ctr := range counterMap {
+		if ctr > 0 {
+			t.Error("insufficient accesses to", err)
+		} else if ctr < 0 {
+			t.Error("too many accesses to", err)
+		}
+	}
+}
+
+func TestErrorReadOnlySetSameMessage_Range_Empty(t *testing.T) {
+	set := errors.NewErrorReadOnlySetSameMessage()
+	set.Range(func(err error) (cont bool) {
+		t.Error("handler was called, err:", err)
+		return true
+	})
+}
+
+func TestErrorReadOnlySetSameMessage_Range_NilHandler(t *testing.T) {
+	errs := slices.Clone(errorsForErrorReadOnlySet[0])
+	set := errors.NewErrorReadOnlySetSameMessage(errs...)
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	set.Range(nil)
+}
+
+func TestErrorReadOnlySetSameMessage_IterErrors(t *testing.T) {
+	errs := slices.Clone(errorsForErrorReadOnlySet[0])
+	counterMap := make(map[error]int, len(errs))
+	for _, err := range errs {
+		counterMap[err] = 1
+	}
+	set := errors.NewErrorReadOnlySetSameMessage(errs...)
+	seq := set.IterErrors()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	for err := range seq {
+		counterMap[err]--
+	}
+	for err, ctr := range counterMap {
+		if ctr > 0 {
+			t.Error("insufficient accesses to", err)
+		} else if ctr < 0 {
+			t.Error("too many accesses to", err)
+		}
+	}
+}
+
+func TestErrorReadOnlySetSameMessage_IterErrors_Empty(t *testing.T) {
+	set := errors.NewErrorReadOnlySetSameMessage()
+	seq := set.IterErrors()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	for err := range seq {
+		t.Error("yielded", err)
 	}
 }
 

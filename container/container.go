@@ -18,6 +18,8 @@
 
 package container
 
+import "iter"
+
 // Container is an interface representing a general container.
 type Container[Item any] interface {
 	// Len returns the number of items in the container.
@@ -33,4 +35,10 @@ type Container[Item any] interface {
 	// The client should do read-only operations on x
 	// to avoid corrupting the container.
 	Range(handler func(x Item) (cont bool))
+
+	// IterItems returns an iterator over all items in the container.
+	// The order of iteration is consistent with the method Range.
+	//
+	// The returned iterator is always non-nil.
+	IterItems() iter.Seq[Item]
 }

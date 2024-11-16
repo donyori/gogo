@@ -21,6 +21,7 @@ package array_test
 import (
 	"container/list"
 	"fmt"
+	"iter"
 	"slices"
 	"strings"
 	"testing"
@@ -57,13 +58,13 @@ func TestSliceDynamicArray_Len(t *testing.T) {
 func TestSliceDynamicArray_Range(t *testing.T) {
 	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
 	want := []int{0, 1, 2, 3, 4}
-	s := make([]int, 0, len(sda))
+	gotData := make([]int, 0, len(sda))
 	sda.Range(func(x int) (cont bool) {
-		s = append(s, x)
-		return len(s) < len(sda)>>1
+		gotData = append(gotData, x)
+		return len(gotData) < len(sda)>>1
 	})
-	if sliceUnequal(s, want) {
-		t.Errorf("got %v; want %v", s, want)
+	if sliceUnequal(gotData, want) {
+		t.Errorf("got %v; want %v", gotData, want)
 	}
 }
 
@@ -75,6 +76,119 @@ func TestSliceDynamicArray_Range_NilAndEmpty(t *testing.T) {
 				t.Error("handler was called, x:", x)
 				return true
 			})
+		})
+	}
+}
+
+func TestSliceDynamicArray_Range_NilHandler(t *testing.T) {
+	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	sda.Range(nil)
+}
+
+func TestSliceDynamicArray_IterItems(t *testing.T) {
+	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
+	want := []int{0, 1, 2, 3, 4}
+	seq := sda.IterItems()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	gotData := make([]int, 0, len(sda))
+	for x := range seq {
+		gotData = append(gotData, x)
+		if len(gotData) >= len(sda)>>1 {
+			break
+		}
+	}
+	if sliceUnequal(gotData, want) {
+		t.Errorf("got %v; want %v", gotData, want)
+	}
+}
+
+func TestSliceDynamicArray_IterItems_NilAndEmpty(t *testing.T) {
+	sdas := []*IntSDA{nil, new(IntSDA), {}}
+	for _, sda := range sdas {
+		t.Run("s="+sdaPtrToName(sda), func(t *testing.T) {
+			seq := sda.IterItems()
+			if seq == nil {
+				t.Fatal("got nil iterator")
+			}
+			for x := range seq {
+				t.Error("yielded", x)
+			}
+		})
+	}
+}
+
+func TestSliceDynamicArray_RangeBackward(t *testing.T) {
+	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
+	want := []int{4, 3, 2, 1, 0}
+	gotData := make([]int, 0, len(sda))
+	sda.RangeBackward(func(x int) (cont bool) {
+		gotData = append(gotData, x)
+		return len(gotData) < len(sda)>>1
+	})
+	if sliceUnequal(gotData, want) {
+		t.Errorf("got %v; want %v", gotData, want)
+	}
+}
+
+func TestSliceDynamicArray_RangeBackward_NilAndEmpty(t *testing.T) {
+	sdas := []*IntSDA{nil, new(IntSDA), {}}
+	for _, sda := range sdas {
+		t.Run("s="+sdaPtrToName(sda), func(t *testing.T) {
+			sda.RangeBackward(func(x int) (cont bool) {
+				t.Error("handler was called, x:", x)
+				return true
+			})
+		})
+	}
+}
+
+func TestSliceDynamicArray_RangeBackward_NilHandler(t *testing.T) {
+	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
+	defer func() {
+		if e := recover(); e != nil {
+			t.Error("panic -", e)
+		}
+	}()
+	sda.RangeBackward(nil)
+}
+
+func TestSliceDynamicArray_IterItemsBackward(t *testing.T) {
+	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
+	want := []int{4, 3, 2, 1, 0}
+	seq := sda.IterItemsBackward()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	gotData := make([]int, 0, len(sda))
+	for x := range seq {
+		gotData = append(gotData, x)
+		if len(gotData) >= len(sda)>>1 {
+			break
+		}
+	}
+	if sliceUnequal(gotData, want) {
+		t.Errorf("got %v; want %v", gotData, want)
+	}
+}
+
+func TestSliceDynamicArray_IterItemsBackward_NilAndEmpty(t *testing.T) {
+	sdas := []*IntSDA{nil, new(IntSDA), {}}
+	for _, sda := range sdas {
+		t.Run("s="+sdaPtrToName(sda), func(t *testing.T) {
+			seq := sda.IterItemsBackward()
+			if seq == nil {
+				t.Fatal("got nil iterator")
+			}
+			for x := range seq {
+				t.Error("yielded", x)
+			}
 		})
 	}
 }
@@ -208,6 +322,74 @@ func TestSliceDynamicArray_Reverse(t *testing.T) {
 			t.Errorf("got %v; want <nil>", nilSDA)
 		}
 	})
+}
+
+func TestSliceDynamicArray_IterIndexItems(t *testing.T) {
+	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
+	want := [][2]int{{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}
+	seq2 := sda.IterIndexItems()
+	if seq2 == nil {
+		t.Fatal("got nil iterator")
+	}
+	gotData := make([][2]int, 0, len(sda))
+	for i, x := range seq2 {
+		gotData = append(gotData, [2]int{i, x})
+		if len(gotData) >= len(sda)>>1 {
+			break
+		}
+	}
+	if sliceUnequal(gotData, want) {
+		t.Errorf("got %v; want %v", gotData, want)
+	}
+}
+
+func TestSliceDynamicArray_IterIndexItems_NilAndEmpty(t *testing.T) {
+	sdas := []*IntSDA{nil, new(IntSDA), {}}
+	for _, sda := range sdas {
+		t.Run("s="+sdaPtrToName(sda), func(t *testing.T) {
+			seq2 := sda.IterIndexItems()
+			if seq2 == nil {
+				t.Fatal("got nil iterator")
+			}
+			for i, x := range seq2 {
+				t.Errorf("yielded %d: %d", i, x)
+			}
+		})
+	}
+}
+
+func TestSliceDynamicArray_IterIndexItemsBackward(t *testing.T) {
+	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
+	want := [][2]int{{9, 4}, {8, 3}, {7, 2}, {6, 1}, {5, 0}}
+	seq2 := sda.IterIndexItemsBackward()
+	if seq2 == nil {
+		t.Fatal("got nil iterator")
+	}
+	gotData := make([][2]int, 0, len(sda))
+	for i, x := range seq2 {
+		gotData = append(gotData, [2]int{i, x})
+		if len(gotData) >= len(sda)>>1 {
+			break
+		}
+	}
+	if sliceUnequal(gotData, want) {
+		t.Errorf("got %v; want %v", gotData, want)
+	}
+}
+
+func TestSliceDynamicArray_IterIndexItemsBackward_NilAndEmpty(t *testing.T) {
+	sdas := []*IntSDA{nil, new(IntSDA), {}}
+	for _, sda := range sdas {
+		t.Run("s="+sdaPtrToName(sda), func(t *testing.T) {
+			seq2 := sda.IterIndexItemsBackward()
+			if seq2 == nil {
+				t.Fatal("got nil iterator")
+			}
+			for i, x := range seq2 {
+				t.Errorf("yielded %d: %d", i, x)
+			}
+		})
+	}
 }
 
 func TestSliceDynamicArray_Get(t *testing.T) {
@@ -1141,7 +1323,7 @@ func (s *sequenceImpl[Item]) Reverse() {
 
 func (s *sequenceImpl[Item]) Range(handler func(x Item) (cont bool)) {
 	switch {
-	case s.Len() == 0:
+	case handler == nil, s.Len() == 0:
 		return
 	case s.useFrontAndNext:
 		elem := s.linkedList.Front()
@@ -1160,4 +1342,35 @@ func (s *sequenceImpl[Item]) Range(handler func(x Item) (cont bool)) {
 			elem = elem.Prev()
 		}
 	}
+}
+
+func (s *sequenceImpl[Item]) IterItems() iter.Seq[Item] {
+	return s.Range
+}
+
+func (s *sequenceImpl[Item]) RangeBackward(handler func(x Item) (cont bool)) {
+	switch {
+	case handler == nil, s.Len() == 0:
+		return
+	case s.useFrontAndNext:
+		elem := s.linkedList.Back()
+		for elem != nil {
+			if !handler(elem.Value.(Item)) {
+				return
+			}
+			elem = elem.Prev()
+		}
+	default:
+		elem := s.linkedList.Front()
+		for elem != nil {
+			if !handler(elem.Value.(Item)) {
+				return
+			}
+			elem = elem.Next()
+		}
+	}
+}
+
+func (s *sequenceImpl[Item]) IterItemsBackward() iter.Seq[Item] {
+	return s.RangeBackward
 }

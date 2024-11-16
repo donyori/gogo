@@ -20,6 +20,7 @@ package topkbuf
 
 import (
 	"fmt"
+	"iter"
 
 	"github.com/donyori/gogo/container"
 	"github.com/donyori/gogo/container/heap/pqueue"
@@ -103,6 +104,18 @@ func (tkb *topKBuffer[Item]) Range(handler func(x Item) (cont bool)) {
 	tkb.pq.Range(handler)
 }
 
+func (tkb *topKBuffer[Item]) IterItems() iter.Seq[Item] {
+	return tkb.Range
+}
+
+func (tkb *topKBuffer[Item]) Clear() {
+	tkb.pq.Clear()
+}
+
+func (tkb *topKBuffer[Item]) RemoveAll() {
+	tkb.pq.RemoveAll()
+}
+
 func (tkb *topKBuffer[Item]) K() int {
 	return tkb.k
 }
@@ -124,14 +137,6 @@ func (tkb *topKBuffer[Item]) Add(x ...Item) {
 			tkb.pq.ReplaceTop(item)
 		}
 	}
-}
-
-func (tkb *topKBuffer[Item]) Clear() {
-	tkb.pq.Clear()
-}
-
-func (tkb *topKBuffer[Item]) RemoveAll() {
-	tkb.pq.RemoveAll()
 }
 
 func (tkb *topKBuffer[Item]) Drain() []Item {

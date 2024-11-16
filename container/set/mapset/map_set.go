@@ -19,6 +19,8 @@
 package mapset
 
 import (
+	"iter"
+
 	"github.com/donyori/gogo/container"
 	"github.com/donyori/gogo/container/set"
 )
@@ -57,11 +59,17 @@ func (ms *mapSet[Item]) Len() int {
 // Its parameter handler is a function to deal with the item x in the
 // set and report whether to continue to access the next item.
 func (ms *mapSet[Item]) Range(handler func(x Item) (cont bool)) {
-	for x := range ms.m {
-		if !handler(x) {
-			return
+	if handler != nil {
+		for x := range ms.m {
+			if !handler(x) {
+				return
+			}
 		}
 	}
+}
+
+func (ms *mapSet[Item]) IterItems() iter.Seq[Item] {
+	return ms.Range
 }
 
 func (ms *mapSet[Item]) Clear() {

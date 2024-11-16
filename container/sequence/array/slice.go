@@ -20,6 +20,7 @@ package array
 
 import (
 	"fmt"
+	"iter"
 	"slices"
 
 	"github.com/donyori/gogo/container/sequence"
@@ -60,13 +61,43 @@ func (sda *SliceDynamicArray[Item]) Len() int {
 // Its parameter handler is a function to deal with the item x in the
 // slice and report whether to continue to access the next item.
 func (sda *SliceDynamicArray[Item]) Range(handler func(x Item) (cont bool)) {
-	if sda != nil {
+	if handler != nil && sda != nil {
 		for _, x := range *sda {
 			if !handler(x) {
 				return
 			}
 		}
 	}
+}
+
+// IterItems returns an iterator over all items in the slice,
+// traversing it from first to last.
+//
+// The returned iterator is always non-nil.
+func (sda *SliceDynamicArray[Item]) IterItems() iter.Seq[Item] {
+	return sda.Range
+}
+
+// RangeBackward is like Range,
+// but the order of access is from last to first.
+func (sda *SliceDynamicArray[Item]) RangeBackward(
+	handler func(x Item) (cont bool),
+) {
+	if handler != nil && sda != nil {
+		for i := len(*sda) - 1; i >= 0; i-- {
+			if !handler((*sda)[i]) {
+				return
+			}
+		}
+	}
+}
+
+// IterItemsBackward returns an iterator over all items in the slice,
+// traversing it from last to first.
+//
+// The returned iterator is always non-nil.
+func (sda *SliceDynamicArray[Item]) IterItemsBackward() iter.Seq[Item] {
+	return sda.RangeBackward
 }
 
 // Front returns the first item.
@@ -105,6 +136,39 @@ func (sda *SliceDynamicArray[Item]) SetBack(x Item) {
 func (sda *SliceDynamicArray[Item]) Reverse() {
 	if sda != nil {
 		slices.Reverse(*sda)
+	}
+}
+
+// IterIndexItems returns an iterator over index-item pairs in the slice,
+// traversing it from first to last.
+//
+// The returned iterator is always non-nil.
+func (sda *SliceDynamicArray[Item]) IterIndexItems() iter.Seq2[int, Item] {
+	return func(yield func(int, Item) bool) {
+		if yield != nil && sda != nil {
+			for i, x := range *sda {
+				if !yield(i, x) {
+					return
+				}
+			}
+		}
+	}
+}
+
+// IterIndexItemsBackward returns an iterator
+// over index-item pairs in the slice,
+// traversing it from last to first with descending indices.
+//
+// The returned iterator is always non-nil.
+func (sda *SliceDynamicArray[Item]) IterIndexItemsBackward() iter.Seq2[int, Item] {
+	return func(yield func(int, Item) bool) {
+		if yield != nil && sda != nil {
+			for i := len(*sda) - 1; i >= 0; i-- {
+				if !yield(i, (*sda)[i]) {
+					return
+				}
+			}
+		}
 	}
 }
 

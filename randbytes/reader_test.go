@@ -40,7 +40,7 @@ func TestNewReader_NilSrc(t *testing.T) {
 		}
 		s, ok := r.(string)
 		if !ok || !strings.HasSuffix(s, "random value source is nil") {
-			t.Error("unexpected panic:", r)
+			t.Error("unexpected panic -", r)
 		}
 	}()
 	randbytes.NewReader(nil)

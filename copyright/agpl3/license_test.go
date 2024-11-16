@@ -30,7 +30,7 @@ func TestLicenseParts(t *testing.T) {
 			t.Error("wrong string")
 		}
 		if agpl3.License[agpl3.DisclaimerOfWarrantyBegin:agpl3.DisclaimerOfWarrantyEnd] != DisclaimerOfWarranty {
-			t.Error("wrong indexes")
+			t.Error("wrong indices")
 		}
 	})
 	t.Run("limitation of liability", func(t *testing.T) {
@@ -38,7 +38,7 @@ func TestLicenseParts(t *testing.T) {
 			t.Error("wrong string")
 		}
 		if agpl3.License[agpl3.LimitationOfLiabilityBegin:agpl3.LimitationOfLiabilityEnd] != LimitationOfLiability {
-			t.Error("wrong indexes")
+			t.Error("wrong indices")
 		}
 	})
 	t.Run("terms and conditions", func(t *testing.T) {
@@ -46,7 +46,7 @@ func TestLicenseParts(t *testing.T) {
 			t.Error("wrong string")
 		}
 		if agpl3.License[agpl3.TermsAndConditionsBegin:agpl3.TermsAndConditionsEnd] != TermsAndConditions {
-			t.Error("wrong indexes")
+			t.Error("wrong indices")
 		}
 	})
 }
