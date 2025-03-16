@@ -140,7 +140,7 @@ func TestLCM_AllRandom(t *testing.T) {
 	const N int = 100
 	xsNameSet := make(map[string]struct{}, N)
 	xsNameSet[""] = struct{}{}
-	var isWantPositive bool
+	var wantPositive bool
 	random := rand.New(rand.NewChaCha8(ChaCha8Seed))
 	for range N {
 		xs, xsName := randomlyGenerateInts(t, random, xsNameSet)
@@ -150,7 +150,7 @@ func TestLCM_AllRandom(t *testing.T) {
 
 		want := lcmBruteForce(xs...)
 		if want > 0 {
-			isWantPositive = true
+			wantPositive = true
 		}
 
 		t.Run("xs="+xsName, func(t *testing.T) {
@@ -161,7 +161,7 @@ func TestLCM_AllRandom(t *testing.T) {
 		})
 	}
 
-	if !isWantPositive {
+	if !wantPositive {
 		t.Error("all cases want 0")
 	}
 }

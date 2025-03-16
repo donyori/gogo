@@ -189,7 +189,7 @@ func TestGCD_AllRandom(t *testing.T) {
 	const N int = 100
 	xsNameSet := make(map[string]struct{}, N)
 	xsNameSet[""] = struct{}{}
-	var isWantMoreThan1 bool
+	var wantMoreThan1 bool
 	random := rand.New(rand.NewChaCha8(ChaCha8Seed))
 	for range N {
 		xs, xsName := randomlyGenerateInts(t, random, xsNameSet)
@@ -199,7 +199,7 @@ func TestGCD_AllRandom(t *testing.T) {
 
 		want := gcdBruteForce(xs...)
 		if want > 1 {
-			isWantMoreThan1 = true
+			wantMoreThan1 = true
 		}
 
 		t.Run("xs="+xsName, func(t *testing.T) {
@@ -210,7 +210,7 @@ func TestGCD_AllRandom(t *testing.T) {
 		})
 	}
 
-	if !isWantMoreThan1 {
+	if !wantMoreThan1 {
 		t.Error("all cases want 0 or 1")
 	}
 }

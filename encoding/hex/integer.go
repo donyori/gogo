@@ -272,9 +272,9 @@ func encodeInt64(buf *[int64BufferLen]byte, x int64, upper bool, digits int) (
 	if upper {
 		ht = uppercaseHexTable
 	}
-	var isNeg bool
+	var neg bool
 	if x < 0 {
-		isNeg = true
+		neg = true
 		x = -x
 	}
 	idx = int64BufferLen
@@ -290,7 +290,7 @@ func encodeInt64(buf *[int64BufferLen]byte, x int64, upper bool, digits int) (
 		idx--
 		buf[idx] = '0'
 	}
-	if isNeg {
+	if neg {
 		idx--
 		buf[idx] = '-'
 	}
