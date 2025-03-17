@@ -102,6 +102,15 @@ func TestGoMap_IterItems(t *testing.T) {
 	if mapWrong(gotData, want) {
 		t.Errorf("got %s; want %s", mapToString(gotData), mapToString(want))
 	}
+	// Rewind the iterator and test it again.
+	clear(gotData)
+	for x := range seq {
+		gotData[x.Key] = x.Value
+	}
+	if mapWrong(gotData, want) {
+		t.Errorf("rewind - got %s; want %s",
+			mapToString(gotData), mapToString(want))
+	}
 }
 
 func TestGoMap_IterItems_NilAndEmpty(t *testing.T) {
@@ -232,6 +241,11 @@ func TestGoMap_IterKeys(t *testing.T) {
 	if !slices.Equal(gotData, want) {
 		t.Errorf("got %q; want %q", gotData, want)
 	}
+	// Rewind the iterator and test it again.
+	gotData = slices.Sorted(seq)
+	if !slices.Equal(gotData, want) {
+		t.Errorf("rewind - got %q; want %q", gotData, want)
+	}
 }
 
 func TestGoMap_IterKeys_NilAndEmpty(t *testing.T) {
@@ -260,6 +274,11 @@ func TestGoMap_IterValues(t *testing.T) {
 	if !slices.Equal(gotData, want) {
 		t.Errorf("got %d; want %d", gotData, want)
 	}
+	// Rewind the iterator and test it again.
+	gotData = slices.Sorted(seq)
+	if !slices.Equal(gotData, want) {
+		t.Errorf("rewind - got %d; want %d", gotData, want)
+	}
 }
 
 func TestGoMap_IterValues_NilAndEmpty(t *testing.T) {
@@ -287,6 +306,12 @@ func TestGoMap_IterKeyValues(t *testing.T) {
 	gotData := maps.Collect(seq2)
 	if mapWrong(gotData, want) {
 		t.Errorf("got %s; want %s", mapToString(gotData), mapToString(want))
+	}
+	// Rewind the iterator and test it again.
+	gotData = maps.Collect(seq2)
+	if mapWrong(gotData, want) {
+		t.Errorf("rewind - got %s; want %s",
+			mapToString(gotData), mapToString(want))
 	}
 }
 

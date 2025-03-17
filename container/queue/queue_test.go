@@ -134,7 +134,7 @@ func TestQueue_Range_NilHandler(t *testing.T) {
 }
 
 func TestQueue_IterItems(t *testing.T) {
-	data := []int{0, 1, 2, 3, 3, 4, 0, 1, 2, 3, 3, 4}
+	data := []int{0, 1, 2, 3, 3, 4, 5, 6, 7, 8, 8, 9}
 	want := []int{0, 1, 2, 3, 3, 4}
 
 	q := queue.New[int](0)
@@ -154,6 +154,17 @@ func TestQueue_IterItems(t *testing.T) {
 	}
 	if !slices.Equal(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
+	}
+	// Rewind the iterator and test it again.
+	gotData = gotData[:0]
+	for x := range seq {
+		gotData = append(gotData, x)
+		if len(gotData) >= len(data)>>1 {
+			break
+		}
+	}
+	if !slices.Equal(gotData, want) {
+		t.Errorf("rewind - got %v; want %v", gotData, want)
 	}
 }
 

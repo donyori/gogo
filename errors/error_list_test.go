@@ -293,6 +293,17 @@ func TestErrorList_IterErrors(t *testing.T) {
 	if errorsUnequal(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
 	}
+	// Rewind the iterator and test it again.
+	gotData = gotData[:0]
+	for err := range seq {
+		gotData = append(gotData, err)
+		if len(gotData) >= 2 {
+			break
+		}
+	}
+	if errorsUnequal(gotData, want) {
+		t.Errorf("rewind - got %v; want %v", gotData, want)
+	}
 }
 
 func TestErrorList_IterErrors_Empty(t *testing.T) {
@@ -323,6 +334,17 @@ func TestErrorList_IterErrorsBackward(t *testing.T) {
 	}
 	if errorsUnequal(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
+	}
+	// Rewind the iterator and test it again.
+	gotData = gotData[:0]
+	for err := range seq {
+		gotData = append(gotData, err)
+		if len(gotData) >= 2 {
+			break
+		}
+	}
+	if errorsUnequal(gotData, want) {
+		t.Errorf("rewind - got %v; want %v", gotData, want)
 	}
 }
 
@@ -355,6 +377,17 @@ func TestErrorList_IterIndexErrors(t *testing.T) {
 	if !slices.Equal(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
 	}
+	// Rewind the iterator and test it again.
+	gotData = gotData[:0]
+	for i, err := range seq2 {
+		gotData = append(gotData, indexError{i: i, err: err})
+		if len(gotData) >= 2 {
+			break
+		}
+	}
+	if !slices.Equal(gotData, want) {
+		t.Errorf("rewind - got %v; want %v", gotData, want)
+	}
 }
 
 func TestErrorList_IterIndexErrors_Empty(t *testing.T) {
@@ -385,6 +418,17 @@ func TestErrorList_IterIndexErrorsBackward(t *testing.T) {
 	}
 	if !slices.Equal(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
+	}
+	// Rewind the iterator and test it again.
+	gotData = gotData[:0]
+	for i, err := range seq2 {
+		gotData = append(gotData, indexError{i: i, err: err})
+		if len(gotData) >= 2 {
+			break
+		}
+	}
+	if !slices.Equal(gotData, want) {
+		t.Errorf("rewind - got %v; want %v", gotData, want)
 	}
 }
 

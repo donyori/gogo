@@ -20,6 +20,7 @@ package topkbuf_test
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"testing"
 
@@ -193,6 +194,7 @@ func TestTopKBuffer_IterItems(t *testing.T) {
 				if seq == nil {
 					t.Fatal("got nil iterator")
 				}
+				counterMapCopy := maps.Clone(counterMap)
 				for x := range seq {
 					counterMap[x]--
 				}
@@ -201,6 +203,17 @@ func TestTopKBuffer_IterItems(t *testing.T) {
 						t.Error("insufficient accesses to", x)
 					} else if ctr < 0 {
 						t.Error("too many accesses to", x)
+					}
+				}
+				// Rewind the iterator and test it again.
+				for x := range seq {
+					counterMapCopy[x]--
+				}
+				for x, ctr := range counterMapCopy {
+					if ctr > 0 {
+						t.Error("rewind - insufficient accesses to", x)
+					} else if ctr < 0 {
+						t.Error("rewind - too many accesses to", x)
 					}
 				}
 			},

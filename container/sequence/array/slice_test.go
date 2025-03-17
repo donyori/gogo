@@ -91,7 +91,7 @@ func TestSliceDynamicArray_Range_NilHandler(t *testing.T) {
 }
 
 func TestSliceDynamicArray_IterItems(t *testing.T) {
-	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
+	sda := IntSDA{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
 	want := []int{0, 1, 2, 3, 4}
 	seq := sda.IterItems()
 	if seq == nil {
@@ -106,6 +106,17 @@ func TestSliceDynamicArray_IterItems(t *testing.T) {
 	}
 	if sliceUnequal(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
+	}
+	// Rewind the iterator and test it again.
+	gotData = gotData[:0]
+	for x := range seq {
+		gotData = append(gotData, x)
+		if len(gotData) >= len(sda)>>1 {
+			break
+		}
+	}
+	if sliceUnequal(gotData, want) {
+		t.Errorf("rewind - got %v; want %v", gotData, want)
 	}
 }
 
@@ -160,8 +171,8 @@ func TestSliceDynamicArray_RangeBackward_NilHandler(t *testing.T) {
 }
 
 func TestSliceDynamicArray_IterItemsBackward(t *testing.T) {
-	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
-	want := []int{4, 3, 2, 1, 0}
+	sda := IntSDA{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+	want := []int{9, 8, 7, 6, 5}
 	seq := sda.IterItemsBackward()
 	if seq == nil {
 		t.Fatal("got nil iterator")
@@ -175,6 +186,17 @@ func TestSliceDynamicArray_IterItemsBackward(t *testing.T) {
 	}
 	if sliceUnequal(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
+	}
+	// Rewind the iterator and test it again.
+	gotData = gotData[:0]
+	for x := range seq {
+		gotData = append(gotData, x)
+		if len(gotData) >= len(sda)>>1 {
+			break
+		}
+	}
+	if sliceUnequal(gotData, want) {
+		t.Errorf("rewind - got %v; want %v", gotData, want)
 	}
 }
 
@@ -325,7 +347,7 @@ func TestSliceDynamicArray_Reverse(t *testing.T) {
 }
 
 func TestSliceDynamicArray_IterIndexItems(t *testing.T) {
-	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
+	sda := IntSDA{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
 	want := [][2]int{{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}
 	seq2 := sda.IterIndexItems()
 	if seq2 == nil {
@@ -340,6 +362,17 @@ func TestSliceDynamicArray_IterIndexItems(t *testing.T) {
 	}
 	if sliceUnequal(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
+	}
+	// Rewind the iterator and test it again.
+	gotData = gotData[:0]
+	for i, x := range seq2 {
+		gotData = append(gotData, [2]int{i, x})
+		if len(gotData) >= len(sda)>>1 {
+			break
+		}
+	}
+	if sliceUnequal(gotData, want) {
+		t.Errorf("rewind - got %v; want %v", gotData, want)
 	}
 }
 
@@ -359,8 +392,8 @@ func TestSliceDynamicArray_IterIndexItems_NilAndEmpty(t *testing.T) {
 }
 
 func TestSliceDynamicArray_IterIndexItemsBackward(t *testing.T) {
-	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
-	want := [][2]int{{9, 4}, {8, 3}, {7, 2}, {6, 1}, {5, 0}}
+	sda := IntSDA{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+	want := [][2]int{{9, 9}, {8, 8}, {7, 7}, {6, 6}, {5, 5}}
 	seq2 := sda.IterIndexItemsBackward()
 	if seq2 == nil {
 		t.Fatal("got nil iterator")
@@ -374,6 +407,17 @@ func TestSliceDynamicArray_IterIndexItemsBackward(t *testing.T) {
 	}
 	if sliceUnequal(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
+	}
+	// Rewind the iterator and test it again.
+	gotData = gotData[:0]
+	for i, x := range seq2 {
+		gotData = append(gotData, [2]int{i, x})
+		if len(gotData) >= len(sda)>>1 {
+			break
+		}
+	}
+	if sliceUnequal(gotData, want) {
+		t.Errorf("rewind - got %v; want %v", gotData, want)
 	}
 }
 

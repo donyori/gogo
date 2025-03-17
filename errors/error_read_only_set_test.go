@@ -21,6 +21,7 @@ package errors_test
 import (
 	stderrors "errors"
 	"fmt"
+	"maps"
 	"slices"
 	"testing"
 
@@ -200,6 +201,7 @@ func TestErrorReadOnlySetEqual_IterErrors(t *testing.T) {
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+	counterMapCopy := maps.Clone(counterMap)
 	for err := range seq {
 		counterMap[err]--
 	}
@@ -208,6 +210,17 @@ func TestErrorReadOnlySetEqual_IterErrors(t *testing.T) {
 			t.Error("insufficient accesses to", err)
 		} else if ctr < 0 {
 			t.Error("too many accesses to", err)
+		}
+	}
+	// Rewind the iterator and test it again.
+	for err := range seq {
+		counterMapCopy[err]--
+	}
+	for err, ctr := range counterMapCopy {
+		if ctr > 0 {
+			t.Error("rewind - insufficient accesses to", err)
+		} else if ctr < 0 {
+			t.Error("rewind - too many accesses to", err)
 		}
 	}
 }
@@ -365,6 +378,7 @@ func TestErrorReadOnlySetIs_IterErrors(t *testing.T) {
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+	counterMapCopy := maps.Clone(counterMap)
 	for err := range seq {
 		counterMap[err]--
 	}
@@ -373,6 +387,17 @@ func TestErrorReadOnlySetIs_IterErrors(t *testing.T) {
 			t.Error("insufficient accesses to", err)
 		} else if ctr < 0 {
 			t.Error("too many accesses to", err)
+		}
+	}
+	// Rewind the iterator and test it again.
+	for err := range seq {
+		counterMapCopy[err]--
+	}
+	for err, ctr := range counterMapCopy {
+		if ctr > 0 {
+			t.Error("rewind - insufficient accesses to", err)
+		} else if ctr < 0 {
+			t.Error("rewind - too many accesses to", err)
 		}
 	}
 }
@@ -529,6 +554,7 @@ func TestErrorReadOnlySetSameMessage_IterErrors(t *testing.T) {
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+	counterMapCopy := maps.Clone(counterMap)
 	for err := range seq {
 		counterMap[err]--
 	}
@@ -537,6 +563,17 @@ func TestErrorReadOnlySetSameMessage_IterErrors(t *testing.T) {
 			t.Error("insufficient accesses to", err)
 		} else if ctr < 0 {
 			t.Error("too many accesses to", err)
+		}
+	}
+	// Rewind the iterator and test it again.
+	for err := range seq {
+		counterMapCopy[err]--
+	}
+	for err, ctr := range counterMapCopy {
+		if ctr > 0 {
+			t.Error("rewind - insufficient accesses to", err)
+		} else if ctr < 0 {
+			t.Error("rewind - too many accesses to", err)
 		}
 	}
 }

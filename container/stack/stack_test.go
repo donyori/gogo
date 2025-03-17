@@ -86,8 +86,8 @@ func TestStack_Range_NilHandler(t *testing.T) {
 }
 
 func TestStack_IterItems(t *testing.T) {
-	data := []int{0, 1, 2, 3, 3, 4, 0, 1, 2, 3, 3, 4}
-	want := []int{4, 3, 3, 2, 1, 0}
+	data := []int{0, 1, 2, 3, 3, 4, 5, 6, 7, 8, 8, 9}
+	want := []int{9, 8, 8, 7, 6, 5}
 
 	s := stack.New[int](0)
 	for _, x := range data {
@@ -106,6 +106,17 @@ func TestStack_IterItems(t *testing.T) {
 	}
 	if !slices.Equal(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
+	}
+	// Rewind the iterator and test it again.
+	gotData = gotData[:0]
+	for x := range seq {
+		gotData = append(gotData, x)
+		if len(gotData) >= len(data)>>1 {
+			break
+		}
+	}
+	if !slices.Equal(gotData, want) {
+		t.Errorf("rewind - got %v; want %v", gotData, want)
 	}
 }
 
