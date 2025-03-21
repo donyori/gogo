@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"compress/bzip2"
 	"compress/gzip"
-	"errors"
 	"fmt"
 	"io"
 	"iter"
@@ -34,6 +33,7 @@ import (
 	"testing"
 	"testing/iotest"
 
+	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/filesys"
 	"github.com/donyori/gogo/filesys/local"
 )
@@ -256,8 +256,8 @@ func testReadTarTgzTbzSeq(
 	r filesys.Reader,
 	files []tarFileNameBody,
 ) {
-	pErr := new(error)
-	seq, err := r.IterTarFiles(pErr, false)
+	outErr := errors.New("init error") // initialize as a non-nil error
+	seq, err := r.IterTarFiles(&outErr, false)
 	if err != nil {
 		t.Fatal("create iterator -", err)
 	} else if seq == nil {
@@ -268,13 +268,14 @@ func testReadTarTgzTbzSeq(
 		testTarFileReadFromR(t, r, files, i, hdr)
 		i++
 	}
-	if *pErr != nil {
-		t.Error("iteration ended with", *pErr)
+	if outErr != nil {
+		t.Error("iteration ended with", outErr)
 	} else if i != len(files) {
 		t.Errorf("tar header number: %d != %d, but iteration has ended",
 			i, len(files))
 	}
 	// Test whether the iterator is single-use.
+	prevErr := outErr
 	for hdr := range seq {
 		if hdr != nil {
 			t.Errorf("not single-use iterator; got %q", hdr.Name)
@@ -282,6 +283,9 @@ func testReadTarTgzTbzSeq(
 			t.Error("not single-use iterator; got <nil>")
 		}
 		break
+	}
+	if errorUnequal(outErr, prevErr) {
+		t.Errorf("output error changed from %v to %v", prevErr, outErr)
 	}
 }
 
@@ -294,8 +298,8 @@ func testReadTarTgzTbzSeq2(
 	r filesys.Reader,
 	files []tarFileNameBody,
 ) {
-	pErr := new(error)
-	seq2, err := r.IterIndexTarFiles(pErr, false)
+	outErr := errors.New("init error") // initialize as a non-nil error
+	seq2, err := r.IterIndexTarFiles(&outErr, false)
 	if err != nil {
 		t.Fatal("create iterator -", err)
 	} else if seq2 == nil {
@@ -309,13 +313,14 @@ func testReadTarTgzTbzSeq2(
 		testTarFileReadFromR(t, r, files, ctr, hdr)
 		ctr++
 	}
-	if *pErr != nil {
-		t.Error("iteration ended with", *pErr)
+	if outErr != nil {
+		t.Error("iteration ended with", outErr)
 	} else if ctr != len(files) {
 		t.Errorf("tar header number: %d != %d, but iteration has ended",
 			ctr, len(files))
 	}
 	// Test whether the iterator is single-use.
+	prevErr := outErr
 	for i, hdr := range seq2 {
 		if hdr != nil {
 			t.Errorf("not single-use iterator; got %d, %q", i, hdr.Name)
@@ -323,6 +328,9 @@ func testReadTarTgzTbzSeq2(
 			t.Errorf("not single-use iterator; got %d, <nil>", i)
 		}
 		break
+	}
+	if errorUnequal(outErr, prevErr) {
+		t.Errorf("output error changed from %v to %v", prevErr, outErr)
 	}
 }
 
@@ -650,4 +658,15 @@ func TarHeaderIsDir(hdr *tar.Header) bool {
 			len(hdr.Name) > 0 &&
 			hdr.Name[len(hdr.Name)-1] == '/' ||
 			hdr.FileInfo().IsDir())
+}
+
+// errorUnequal tests whether two errors are unequal.
+//
+// The errors are unwrapped by
+// github.com/donyori/gogo/errors.UnwrapAllAutoWrappedErrors
+// and then compared by "!=".
+func errorUnequal(err1, err2 error) bool {
+	err1, _ = errors.UnwrapAllAutoWrappedErrors(err1)
+	err2, _ = errors.UnwrapAllAutoWrappedErrors(err2)
+	return err1 != err2 // compare the interface directly, don't use errors.Is
 }

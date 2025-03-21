@@ -22,7 +22,6 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -32,6 +31,7 @@ import (
 	"testing"
 	"testing/iotest"
 
+	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/filesys"
 )
 
@@ -197,12 +197,12 @@ func TestReadFromFS_TarTgz_Seq(t *testing.T) {
 						}
 					}(r)
 
-					pErr := new(error)
-					seq, err := r.IterTarFiles(pErr, acceptNonLocalNames)
+					outErr := errors.New("init error") // initialize as a non-nil error
+					seq, err := r.IterTarFiles(&outErr, acceptNonLocalNames)
 					if err != nil {
 						t.Fatal("create iterator -", err)
 					}
-					testTarSeq(t, r, pErr, acceptNonLocalNames, seq)
+					testTarSeq(t, r, &outErr, acceptNonLocalNames, seq)
 				},
 			)
 		}
@@ -245,6 +245,7 @@ func testTarSeq(
 	}
 
 	// Test whether the iterator is single-use.
+	prevErr := *pErr
 	for hdr := range seq {
 		if hdr != nil {
 			t.Errorf("not single-use iterator; got %q", hdr.Name)
@@ -252,6 +253,9 @@ func testTarSeq(
 			t.Error("not single-use iterator; got <nil>")
 		}
 		break
+	}
+	if errorUnequal(*pErr, prevErr) {
+		t.Errorf("output error changed from %v to %v", prevErr, *pErr)
 	}
 }
 
@@ -272,12 +276,13 @@ func TestReadFromFS_TarTgz_Seq2(t *testing.T) {
 						}
 					}(r)
 
-					pErr := new(error)
-					seq2, err := r.IterIndexTarFiles(pErr, acceptNonLocalNames)
+					outErr := errors.New("init error") // initialize as a non-nil error
+					seq2, err := r.IterIndexTarFiles(
+						&outErr, acceptNonLocalNames)
 					if err != nil {
 						t.Fatal("create iterator -", err)
 					}
-					testTarSeq2(t, r, pErr, acceptNonLocalNames, seq2)
+					testTarSeq2(t, r, &outErr, acceptNonLocalNames, seq2)
 				},
 			)
 		}
@@ -323,6 +328,7 @@ func testTarSeq2(
 	}
 
 	// Test whether the iterator is single-use.
+	prevErr := *pErr
 	for i, hdr := range seq2 {
 		if hdr != nil {
 			t.Errorf("not single-use iterator; got %d, %q", i, hdr.Name)
@@ -330,6 +336,9 @@ func testTarSeq2(
 			t.Errorf("not single-use iterator; got %d, <nil>", i)
 		}
 		break
+	}
+	if errorUnequal(*pErr, prevErr) {
+		t.Errorf("output error changed from %v to %v", prevErr, *pErr)
 	}
 }
 
@@ -1172,4 +1181,15 @@ func testZipSeq2Sub(
 		t.Errorf("%szip file number: %d != %d, but iteration has ended",
 			prefix, ctr, len(files))
 	}
+}
+
+// errorUnequal tests whether two errors are unequal.
+//
+// The errors are unwrapped by
+// github.com/donyori/gogo/errors.UnwrapAllAutoWrappedErrors
+// and then compared by "!=".
+func errorUnequal(err1, err2 error) bool {
+	err1, _ = errors.UnwrapAllAutoWrappedErrors(err1)
+	err2, _ = errors.UnwrapAllAutoWrappedErrors(err2)
+	return err1 != err2 // compare the interface directly, don't use errors.Is
 }

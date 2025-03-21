@@ -600,6 +600,36 @@ func (fr *reader) WriteLineTo(w io.Writer) (n int64, err error) {
 	return n, errors.AutoWrap(err)
 }
 
+func (fr *reader) IterLines(pErr *error) iter.Seq[[]byte] {
+	if fr.err != nil {
+		if pErr == nil {
+			return noOpSeq
+		}
+		// Make a dedicated variable to ensure that
+		// the iterator reports the same error each time.
+		err := fr.err
+		return func(func([]byte) bool) {
+			*pErr = errors.AutoWrap(err)
+		}
+	}
+	return fr.br.IterLines(pErr)
+}
+
+func (fr *reader) IterCountLines(pErr *error) iter.Seq2[int64, []byte] {
+	if fr.err != nil {
+		if pErr == nil {
+			return noOpSeq2
+		}
+		// Make a dedicated variable to ensure that
+		// the iterator reports the same error each time.
+		err := fr.err
+		return func(func(int64, []byte) bool) {
+			*pErr = errors.AutoWrap(err)
+		}
+	}
+	return fr.br.IterCountLines(pErr)
+}
+
 func (fr *reader) Size() int {
 	return fr.br.Size()
 }

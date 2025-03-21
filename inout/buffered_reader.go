@@ -21,6 +21,7 @@ package inout
 import (
 	"bufio"
 	"io"
+	"iter"
 
 	"github.com/donyori/gogo/errors"
 )
@@ -39,6 +40,7 @@ type BufferedReader interface {
 	LineReader
 	EntireLineReader
 	LineWriterTo
+	IterativeLineReader
 
 	// Size returns the size of the underlying buffer in bytes.
 	Size() int
@@ -275,6 +277,57 @@ func (rbr *resettableBufferedReader) WriteLineTo(w io.Writer) (
 		}
 	}
 	return // err must be nil
+}
+
+func (rbr *resettableBufferedReader) IterLines(pErr *error) iter.Seq[[]byte] {
+	var readEntireLineErr error
+	return func(yield func([]byte) bool) {
+		if pErr != nil {
+			defer func(pErr *error) {
+				err := readEntireLineErr
+				if errors.Is(err, io.EOF) {
+					err = nil
+				}
+				*pErr = errors.AutoWrapSkip(err, 1) // skip = 1 to skip the inner function
+			}(pErr)
+		}
+		if readEntireLineErr != nil {
+			return
+		}
+		for {
+			var line []byte
+			line, readEntireLineErr = rbr.ReadEntireLine()
+			if readEntireLineErr != nil || yield != nil && !yield(line) {
+				return
+			}
+		}
+	}
+}
+
+func (rbr *resettableBufferedReader) IterCountLines(
+	pErr *error) iter.Seq2[int64, []byte] {
+	var readEntireLineErr error
+	return func(yield func(int64, []byte) bool) {
+		if pErr != nil {
+			defer func(pErr *error) {
+				err := readEntireLineErr
+				if errors.Is(err, io.EOF) {
+					err = nil
+				}
+				*pErr = errors.AutoWrapSkip(err, 1) // skip = 1 to skip the inner function
+			}(pErr)
+		}
+		if readEntireLineErr != nil {
+			return
+		}
+		for i := int64(0); ; i++ {
+			var line []byte
+			line, readEntireLineErr = rbr.ReadEntireLine()
+			if readEntireLineErr != nil || yield != nil && !yield(i, line) {
+				return
+			}
+		}
+	}
 }
 
 func (rbr *resettableBufferedReader) Size() int {

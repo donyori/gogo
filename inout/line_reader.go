@@ -18,7 +18,10 @@
 
 package inout
 
-import "io"
+import (
+	"io"
+	"iter"
+)
 
 // LineReader is an interface that wraps method ReadLine.
 //
@@ -90,4 +93,42 @@ type LineWriterTo interface {
 	// Even if the input ends without end-of-line bytes,
 	// the content before EOF is treated as a line.
 	WriteLineTo(w io.Writer) (n int64, err error)
+}
+
+// IterativeLineReader is an interface that groups
+// methods IterLines and IterCountLines.
+type IterativeLineReader interface {
+	// IterLines returns a single-use iterator over lines
+	// excluding the end-of-line bytes from its underlying reader.
+	//
+	// The iteration early stops when an error occurs.
+	// The content (if any) read before encountering the error
+	// is yielded as the final line.
+	// If pErr is not nil and the error is not io.EOF,
+	// the error is output to *pErr.
+	// Otherwise, the error may be unretrievable.
+	// If pErr is not nil and there is no error except for io.EOF,
+	// *pErr is set to nil after iteration.
+	//
+	// No indication or error is given if the input ends
+	// without a final line end.
+	// Even if the input ends without end-of-line bytes,
+	// the content before EOF is treated as a line.
+	//
+	// Lines yielded by the iterator are always valid.
+	// Caller can keep them safely.
+	//
+	// If any line is too long to be stored in a []byte
+	// (hardly happens in text files),
+	// the iterator may panic or report an error through pErr (if not nil).
+	//
+	// The returned iterator is always non-nil.
+	IterLines(pErr *error) iter.Seq[[]byte]
+
+	// IterCountLines returns a single-use iterator over count-line pairs
+	// from its underlying reader,
+	// where the count is the number of lines yielded previously
+	// (starting from 0) and the line excludes the end-of-line bytes.
+	// It is similar to method IterLines but with counts.
+	IterCountLines(pErr *error) iter.Seq2[int64, []byte]
 }
