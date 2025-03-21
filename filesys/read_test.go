@@ -19,11 +19,14 @@
 package filesys_test
 
 import (
+	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
+	"iter"
 	"math"
 	"strings"
 	"testing"
@@ -95,8 +98,7 @@ func TestRead_NotCloseFile_ErrorOnCreate(t *testing.T) {
 	if err == nil {
 		_ = r.Close()
 		t.Fatal("create reader - no error but offset is out of range")
-	}
-	if !strings.HasSuffix(err.Error(), fmt.Sprintf(
+	} else if !strings.HasSuffix(err.Error(), fmt.Sprintf(
 		"option Offset (%d) is out of range; file size: %d",
 		math.MaxInt64,
 		len(testFS[Name].Data),
@@ -165,30 +167,169 @@ func TestReadFromFS_TarTgz(t *testing.T) {
 								i, len(testFSTarFiles))
 						}
 						return // end of archive
+					} else if !errors.Is(err, tar.ErrInsecurePath) ||
+						hdr == nil || hdr.Name != testFSTarNonLocalFilename {
+						t.Fatalf("read No.%d tar header - %v", i, err)
 					}
-					t.Fatalf("read No.%d tar header - %v", i, err)
 				}
-				if i >= len(testFSTarFiles) {
-					t.Fatal("tar headers more than", len(testFSTarFiles))
-				}
-				if hdr.Name != testFSTarFiles[i].name {
-					t.Errorf("No.%d tar header name unequal - got %s; want %s",
-						i, hdr.Name, testFSTarFiles[i].name)
-				}
-				if filesys.TarHeaderIsDir(hdr) {
-					_, err = r.Read([]byte{})
-					if !errors.Is(err, filesys.ErrIsDir) {
-						t.Errorf("No.%d tar read file body - got %v; want %v",
-							i, err, filesys.ErrIsDir)
-					}
-				} else {
-					err = iotest.TestReader(r, []byte(testFSTarFiles[i].body))
-					if err != nil {
-						t.Errorf("No.%d tar test read - %v", i, err)
-					}
+				if testTarFile(t, r, i, hdr) {
+					return
 				}
 			}
 		})
+	}
+}
+
+func TestReadFromFS_TarTgz_Seq(t *testing.T) {
+	for _, name := range append(testFSTarFilenames, testFSTgzFilenames...) {
+		for _, acceptNonLocalNames := range []bool{false, true} {
+			t.Run(
+				fmt.Sprintf("file=%+q&acceptNonLocalNames=%t",
+					name, acceptNonLocalNames),
+				func(t *testing.T) {
+					r, err := filesys.ReadFromFS(testFS, name, nil)
+					if err != nil {
+						t.Fatal("create -", err)
+					}
+					defer func(r filesys.Reader) {
+						if err := r.Close(); err != nil {
+							t.Error("close -", err)
+						}
+					}(r)
+
+					pErr := new(error)
+					seq, err := r.IterTarFiles(pErr, acceptNonLocalNames)
+					if err != nil {
+						t.Fatal("create iterator -", err)
+					}
+					testTarSeq(t, r, pErr, acceptNonLocalNames, seq)
+				},
+			)
+		}
+	}
+}
+
+// testTarSeq is the main process of TestReadFromFS_TarTgz_Seq.
+func testTarSeq(
+	t *testing.T,
+	r filesys.Reader,
+	pErr *error,
+	acceptNonLocalNames bool,
+	seq iter.Seq[*tar.Header],
+) {
+	if seq == nil {
+		t.Error("got nil iterator")
+		return
+	}
+
+	var i int
+	for hdr := range seq {
+		if testTarFile(t, r, i, hdr) {
+			return
+		} else if !acceptNonLocalNames &&
+			hdr != nil && hdr.Name == testFSTarNonLocalFilename {
+			t.Errorf("No.%d encountered non-local name %q", i, hdr.Name)
+		}
+		i++
+	}
+	if acceptNonLocalNames {
+		if *pErr != nil {
+			t.Errorf("iteration ended with %v; want <nil>", *pErr)
+		}
+	} else if !errors.Is(*pErr, tar.ErrInsecurePath) {
+		t.Errorf("iteration ended with %v; want %v", *pErr, tar.ErrInsecurePath)
+	}
+	if *pErr == nil && i != len(testFSTarFiles) {
+		t.Errorf("tar header number: %d != %d, but iteration has ended",
+			i, len(testFSTarFiles))
+	}
+
+	// Test whether the iterator is single-use.
+	for hdr := range seq {
+		if hdr != nil {
+			t.Errorf("not single-use iterator; got %q", hdr.Name)
+		} else {
+			t.Error("not single-use iterator; got <nil>")
+		}
+		break
+	}
+}
+
+func TestReadFromFS_TarTgz_Seq2(t *testing.T) {
+	for _, name := range append(testFSTarFilenames, testFSTgzFilenames...) {
+		for _, acceptNonLocalNames := range []bool{false, true} {
+			t.Run(
+				fmt.Sprintf("file=%+q&acceptNonLocalNames=%t",
+					name, acceptNonLocalNames),
+				func(t *testing.T) {
+					r, err := filesys.ReadFromFS(testFS, name, nil)
+					if err != nil {
+						t.Fatal("create -", err)
+					}
+					defer func(r filesys.Reader) {
+						if err := r.Close(); err != nil {
+							t.Error("close -", err)
+						}
+					}(r)
+
+					pErr := new(error)
+					seq2, err := r.IterIndexTarFiles(pErr, acceptNonLocalNames)
+					if err != nil {
+						t.Fatal("create iterator -", err)
+					}
+					testTarSeq2(t, r, pErr, acceptNonLocalNames, seq2)
+				},
+			)
+		}
+	}
+}
+
+// testTarSeq2 is the main process of TestReadFromFS_TarTgz_Seq2.
+func testTarSeq2(
+	t *testing.T,
+	r filesys.Reader,
+	pErr *error,
+	acceptNonLocalNames bool,
+	seq2 iter.Seq2[int, *tar.Header],
+) {
+	if seq2 == nil {
+		t.Error("got nil iterator")
+		return
+	}
+
+	var ctr int
+	for i, hdr := range seq2 {
+		if i != ctr {
+			t.Errorf("got index %d; want %d", i, ctr)
+		}
+		if testTarFile(t, r, ctr, hdr) {
+			return
+		} else if !acceptNonLocalNames &&
+			hdr != nil && hdr.Name == testFSTarNonLocalFilename {
+			t.Errorf("No.%d encountered non-local name %q", ctr, hdr.Name)
+		}
+		ctr++
+	}
+	if acceptNonLocalNames {
+		if *pErr != nil {
+			t.Errorf("iteration ended with %v; want <nil>", *pErr)
+		}
+	} else if !errors.Is(*pErr, tar.ErrInsecurePath) {
+		t.Errorf("iteration ended with %v; want %v", *pErr, tar.ErrInsecurePath)
+	}
+	if *pErr == nil && ctr != len(testFSTarFiles) {
+		t.Errorf("tar header number: %d != %d, but iteration has ended",
+			ctr, len(testFSTarFiles))
+	}
+
+	// Test whether the iterator is single-use.
+	for i, hdr := range seq2 {
+		if hdr != nil {
+			t.Errorf("not single-use iterator; got %d, %q", i, hdr.Name)
+		} else {
+			t.Errorf("not single-use iterator; got %d, <nil>", i)
+		}
+		break
 	}
 }
 
@@ -226,6 +367,40 @@ func TestReadFromFS_Zip_Files(t *testing.T) {
 	}
 }
 
+func TestReadFromFS_Zip_Seq(t *testing.T) {
+	for _, name := range testFSZipFilenames {
+		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
+			r, err := filesys.ReadFromFS(testFS, name, nil)
+			if err != nil {
+				t.Fatal("create -", err)
+			}
+			defer func(r filesys.Reader) {
+				if err := r.Close(); err != nil {
+					t.Error("close -", err)
+				}
+			}(r)
+			testZipSeqMain(t, r)
+		})
+	}
+}
+
+func TestReadFromFS_Zip_Seq2(t *testing.T) {
+	for _, name := range testFSZipFilenames {
+		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
+			r, err := filesys.ReadFromFS(testFS, name, nil)
+			if err != nil {
+				t.Fatal("create -", err)
+			}
+			defer func(r filesys.Reader) {
+				if err := r.Close(); err != nil {
+					t.Error("close -", err)
+				}
+			}(r)
+			testZipSeq2Main(t, r)
+		})
+	}
+}
+
 func TestReadFromFS_Zip_Comment(t *testing.T) {
 	for _, name := range testFSZipFilenames {
 		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
@@ -241,9 +416,8 @@ func TestReadFromFS_Zip_Comment(t *testing.T) {
 
 			comment, err := r.ZipComment()
 			if err != nil {
-				t.Fatal("zip comment -", err)
-			}
-			if comment != testFSZipComment {
+				t.Error("zip comment -", err)
+			} else if comment != testFSZipComment {
 				t.Errorf("got %q; want %q", comment, testFSZipComment)
 			}
 		})
@@ -284,6 +458,40 @@ func TestReadFromFS_Zip_Offset_Files(t *testing.T) {
 	testZipFiles(t, r)
 }
 
+func TestReadFromFS_Zip_Offset_Seq(t *testing.T) {
+	r, err := filesys.ReadFromFS(
+		testFS,
+		testFSZipOffsetName,
+		&filesys.ReadOptions{Offset: testFSZipOffset},
+	)
+	if err != nil {
+		t.Fatal("create -", err)
+	}
+	defer func(r filesys.Reader) {
+		if err := r.Close(); err != nil {
+			t.Error("close -", err)
+		}
+	}(r)
+	testZipSeqMain(t, r)
+}
+
+func TestReadFromFS_Zip_Offset_Seq2(t *testing.T) {
+	r, err := filesys.ReadFromFS(
+		testFS,
+		testFSZipOffsetName,
+		&filesys.ReadOptions{Offset: testFSZipOffset},
+	)
+	if err != nil {
+		t.Fatal("create -", err)
+	}
+	defer func(r filesys.Reader) {
+		if err := r.Close(); err != nil {
+			t.Error("close -", err)
+		}
+	}(r)
+	testZipSeq2Main(t, r)
+}
+
 func TestReadFromFS_Zip_Offset_Comment(t *testing.T) {
 	r, err := filesys.ReadFromFS(
 		testFS,
@@ -301,9 +509,8 @@ func TestReadFromFS_Zip_Offset_Comment(t *testing.T) {
 
 	comment, err := r.ZipComment()
 	if err != nil {
-		t.Fatal("zip comment -", err)
-	}
-	if comment != testFSZipComment {
+		t.Error("zip comment -", err)
+	} else if comment != testFSZipComment {
 		t.Errorf("got %q; want %q", comment, testFSZipComment)
 	}
 }
@@ -501,6 +708,42 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 			filesys.ErrFileReaderClosed,
 		},
 		{
+			"IterTarFiles-notTar",
+			RegFile,
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.IterTarFiles(nil, false)
+				return err
+			},
+			filesys.ErrNotTar,
+		},
+		{
+			"IterTarFiles-isTar",
+			TarFile,
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.IterTarFiles(nil, false)
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"IterIndexTarFiles-notTar",
+			RegFile,
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.IterIndexTarFiles(nil, false)
+				return err
+			},
+			filesys.ErrNotTar,
+		},
+		{
+			"IterIndexTarFiles-isTar",
+			TarFile,
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.IterIndexTarFiles(nil, false)
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
 			"ZipOpen-notZip",
 			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
@@ -537,6 +780,42 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 			filesys.ErrFileReaderClosed,
 		},
 		{
+			"IterZipFiles-notZip",
+			RegFile,
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.IterZipFiles()
+				return err
+			},
+			filesys.ErrNotZip,
+		},
+		{
+			"IterZipFiles-isZip",
+			ZipFile,
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.IterZipFiles()
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
+			"IterIndexZipFiles-notZip",
+			RegFile,
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.IterIndexZipFiles()
+				return err
+			},
+			filesys.ErrNotZip,
+		},
+		{
+			"IterIndexZipFiles-isZip",
+			ZipFile,
+			func(t *testing.T, r filesys.Reader) error {
+				_, err := r.IterIndexZipFiles()
+				return err
+			},
+			filesys.ErrFileReaderClosed,
+		},
+		{
 			"ZipComment-notZip",
 			RegFile,
 			func(t *testing.T, r filesys.Reader) error {
@@ -554,6 +833,17 @@ func TestReadFromFS_AfterClose(t *testing.T) {
 			},
 			filesys.ErrFileReaderClosed,
 		},
+	}
+
+	methodNameSet := make(map[string]struct{}, len(testCases))
+	for _, tc := range testCases {
+		if _, ok := methodNameSet[tc.methodName]; ok {
+			t.Errorf("duplicate test cases for %q", tc.methodName)
+		}
+		methodNameSet[tc.methodName] = struct{}{}
+	}
+	if t.Failed() {
+		return
 	}
 
 	for _, tc := range testCases {
@@ -600,6 +890,37 @@ func testReadFromTestFS(
 	}
 }
 
+// testTarFile tests the i-th tar file.
+//
+// It reports whether to stop testing.
+func testTarFile(t *testing.T, r filesys.Reader, i int, hdr *tar.Header) (
+	stop bool) {
+	switch {
+	case i >= len(testFSTarFiles):
+		t.Error("tar headers more than", len(testFSTarFiles))
+		return true
+	case hdr == nil:
+		t.Errorf("No.%d got nil tar header", i)
+		return false
+	case hdr.Name != testFSTarFiles[i].name:
+		t.Errorf("No.%d tar header name unequal - got %q; want %q",
+			i, hdr.Name, testFSTarFiles[i].name)
+	}
+	if filesys.TarHeaderIsDir(hdr) {
+		_, err := r.Read([]byte{})
+		if !errors.Is(err, filesys.ErrIsDir) {
+			t.Errorf("No.%d tar read file body - got %v; want %v",
+				i, err, filesys.ErrIsDir)
+		}
+	} else {
+		err := iotest.TestReader(r, []byte(testFSTarFiles[i].body))
+		if err != nil {
+			t.Errorf("No.%d tar test read - %v", i, err)
+		}
+	}
+	return false
+}
+
 // testZipOpen tests filesys.Reader.ZipOpen.
 func testZipOpen(t *testing.T, r filesys.Reader) {
 	dirSet := make(map[string]struct{}, len(testFSZipFileNameBodyMap))
@@ -643,15 +964,13 @@ func testZipOpenRegularFile(
 		info, err := file.Stat()
 		if err != nil {
 			t.Fatal("stat -", err)
-		}
-		if d := info.IsDir(); d {
+		} else if d := info.IsDir(); d {
 			t.Errorf("got IsDir %t; want false", d)
 		}
 		data, err := io.ReadAll(file)
 		if err != nil {
-			t.Fatal("read -", err)
-		}
-		if string(data) != body {
+			t.Error("read -", err)
+		} else if string(data) != body {
 			t.Errorf(
 				"file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
 				len(data),
@@ -678,9 +997,8 @@ func testZipOpenDirectory(t *testing.T, r filesys.Reader, dir string) {
 		}(file)
 		info, err := file.Stat()
 		if err != nil {
-			t.Fatal("stat -", err)
-		}
-		if d := info.IsDir(); !d {
+			t.Error("stat -", err)
+		} else if d := info.IsDir(); !d {
 			t.Errorf("got IsDir %t; want true", d)
 		}
 	})
@@ -725,9 +1043,8 @@ func testZipFiles(t *testing.T, r filesys.Reader) {
 			}(rc)
 			data, err := io.ReadAll(rc)
 			if err != nil {
-				t.Fatal("read -", err)
-			}
-			if string(data) != body {
+				t.Error("read -", err)
+			} else if string(data) != body {
 				t.Errorf(
 					"file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
 					len(data),
@@ -737,5 +1054,122 @@ func testZipFiles(t *testing.T, r filesys.Reader) {
 				)
 			}
 		})
+	}
+}
+
+// testZipSeqMain is the common main process of
+// TestReadFromFS_Zip_Seq and TestReadFromFS_Zip_Offset_Seq.
+func testZipSeqMain(t *testing.T, r filesys.Reader) {
+	files, err := r.ZipFiles()
+	if err != nil {
+		t.Error("ZipFiles -", err)
+		return
+	}
+	seq, err := r.IterZipFiles()
+	if err != nil {
+		t.Error("create iterator -", err)
+		return
+	} else if seq == nil {
+		t.Error("got nil iterator")
+		return
+	}
+	testZipSeqSub(t, files, seq, false)
+	// Rewind the iterator and test it again.
+	testZipSeqSub(t, files, seq, true)
+}
+
+// testZipSeqSub is a subprocess of testZipSeqMain
+// that tests the iterator with a single call.
+func testZipSeqSub(
+	t *testing.T,
+	files []*zip.File,
+	seq iter.Seq[*zip.File],
+	isRewound bool,
+) {
+	var prefix string
+	if isRewound {
+		prefix = "rewind - "
+	}
+	var i int
+	for file := range seq {
+		if i >= len(files) {
+			t.Errorf("%szip files more than %d", prefix, len(files))
+			return
+		} else if file != files[i] {
+			file1Str := "<nil>"
+			if file != nil {
+				file1Str = fmt.Sprintf("%q(%p)", file.Name, file)
+			}
+			file2Str := "<nil>"
+			if files[i] != nil {
+				file2Str = fmt.Sprintf("%q(%p)", files[i].Name, files[i])
+			}
+			t.Errorf("%sNo.%d got %s; want %s", prefix, i, file1Str, file2Str)
+		}
+		i++
+	}
+	if i != len(files) {
+		t.Errorf("%szip file number: %d != %d, but iteration has ended",
+			prefix, i, len(files))
+	}
+}
+
+// testZipSeq2Main is the common main process of
+// TestReadFromFS_Zip_Seq2 and TestReadFromFS_Zip_Offset_Seq2.
+func testZipSeq2Main(t *testing.T, r filesys.Reader) {
+	files, err := r.ZipFiles()
+	if err != nil {
+		t.Error("ZipFiles -", err)
+		return
+	}
+	seq2, err := r.IterIndexZipFiles()
+	if err != nil {
+		t.Error("create iterator -", err)
+		return
+	} else if seq2 == nil {
+		t.Error("got nil iterator")
+		return
+	}
+	testZipSeq2Sub(t, files, seq2, false)
+	// Rewind the iterator and test it again.
+	testZipSeq2Sub(t, files, seq2, true)
+}
+
+// testZipSeq2Sub is a subprocess of testZipSeq2Main
+// that tests the iterator with a single call.
+func testZipSeq2Sub(
+	t *testing.T,
+	files []*zip.File,
+	seq2 iter.Seq2[int, *zip.File],
+	isRewound bool,
+) {
+	var prefix string
+	if isRewound {
+		prefix = "rewind - "
+	}
+	var ctr int
+	for i, file := range seq2 {
+		if i != ctr {
+			t.Errorf("%sgot index %d; want %d", prefix, i, ctr)
+		}
+		if ctr >= len(files) {
+			t.Errorf("%szip files more than %d", prefix, len(files))
+			return
+		} else if file != files[ctr] {
+			file1Str := "<nil>"
+			if file != nil {
+				file1Str = fmt.Sprintf("%q(%p)", file.Name, file)
+			}
+			file2Str := "<nil>"
+			if files[ctr] != nil {
+				file2Str = fmt.Sprintf("%q(%p)", files[ctr].Name, files[ctr])
+			}
+			t.Errorf("%sNo.%d got %s; want %s", prefix, ctr, file1Str, file2Str)
+		}
+		ctr++
+	}
+	if ctr != len(files) {
+		t.Errorf("%szip file number: %d != %d, but iteration has ended",
+			prefix, ctr, len(files))
 	}
 }

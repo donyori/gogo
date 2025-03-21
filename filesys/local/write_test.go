@@ -30,7 +30,6 @@ import (
 	"math/rand/v2"
 	"os"
 	"path/filepath"
-	"slices"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -71,9 +70,8 @@ func TestWriteTrunc(t *testing.T) {
 	}
 	got, err := os.ReadFile(name)
 	if err != nil {
-		t.Fatal("read output -", err)
-	}
-	if !bytes.Equal(got, data) {
+		t.Error("read output -", err)
+	} else if !bytes.Equal(got, data) {
 		t.Errorf("got %q; want %q", got, data)
 	}
 }
@@ -164,22 +162,39 @@ Sugar is sweet.
 		},
 	}
 	wantTarFiles := make([]tarFileNameBody, 0, len(fsys))
-	for name, file := range fsys {
-		if !file.Mode.IsDir() {
-			wantTarFiles = append(wantTarFiles, tarFileNameBody{
-				name: name,
-				body: file.Data,
-			})
-		}
+	err := fs.WalkDir(
+		fsys,
+		".",
+		func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			} else if path == "." {
+				return nil
+			}
+			nb := tarFileNameBody{name: path}
+			if d.IsDir() {
+				nb.name += "/"
+				wantTarFiles = append(wantTarFiles, nb)
+				return nil
+			}
+			file, err := fsys.Open(path)
+			if err != nil {
+				return err
+			}
+			defer func(file fs.File) {
+				_ = file.Close() // ignore error
+			}(file)
+			nb.body, err = io.ReadAll(file)
+			if err != nil {
+				return err
+			}
+			wantTarFiles = append(wantTarFiles, nb)
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatal("make wantTarFiles by fs.WalkDir -", err)
 	}
-	slices.SortFunc(wantTarFiles, func(a, b tarFileNameBody) int {
-		if a.name < b.name {
-			return -1
-		} else if a.name > b.name {
-			return 1
-		}
-		return 0
-	})
 
 	filenames := []string{"test.tar", "test.tar.gz", "test.tgz"}
 	tmpRoot := t.TempDir()
@@ -252,10 +267,38 @@ Sugar is sweet.
 		},
 	}
 	wantZipNameBodyMap := make(map[string][]byte, len(fsys))
-	for name, file := range fsys {
-		if !file.Mode.IsDir() {
-			wantZipNameBodyMap[name] = file.Data
-		}
+	err := fs.WalkDir(
+		fsys,
+		".",
+		func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			} else if path == "." {
+				return nil
+			}
+			name := path
+			if d.IsDir() {
+				name += "/"
+				wantZipNameBodyMap[name] = []byte{}
+				return nil
+			}
+			file, err := fsys.Open(path)
+			if err != nil {
+				return err
+			}
+			defer func(file fs.File) {
+				_ = file.Close() // ignore error
+			}(file)
+			body, err := io.ReadAll(file)
+			if err != nil {
+				return err
+			}
+			wantZipNameBodyMap[name] = body
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatal("make wantZipNameBodyMap by fs.WalkDir -", err)
 	}
 
 	name := filepath.Join(t.TempDir(), "test.zip")
@@ -338,9 +381,8 @@ func TestWriteExcl(t *testing.T) {
 	}
 	got, err := os.ReadFile(name)
 	if err != nil {
-		t.Fatal("read output -", err)
-	}
-	if !bytes.Equal(got, data) {
+		t.Error("read output -", err)
+	} else if !bytes.Equal(got, data) {
 		t.Errorf("got %q; want %q", got, data)
 	}
 }
@@ -389,9 +431,8 @@ func testWriteFuncMkDirs(
 		}
 		got, err := os.ReadFile(name)
 		if err != nil {
-			t.Fatal("read output -", err)
-		}
-		if !bytes.Equal(got, data) {
+			t.Error("read output -", err)
+		} else if !bytes.Equal(got, data) {
 			t.Errorf("got %q; want %q", got, data)
 		}
 	})
@@ -534,8 +575,11 @@ func testTar(t *testing.T, r *tar.Reader, wantTarFiles []tarFileNameBody) {
 		case i >= len(wantTarFiles):
 			t.Error("tar headers more than", len(wantTarFiles))
 			return
+		case hdr == nil:
+			t.Errorf("No.%d got nil tar header", i)
+			continue
 		case hdr.Name != wantTarFiles[i].name:
-			t.Errorf("No.%d tar header name unequal - got %s; want %s",
+			t.Errorf("No.%d tar header name unequal - got %q; want %q",
 				i, hdr.Name, wantTarFiles[i].name)
 		}
 		if hdr.FileInfo().IsDir() {

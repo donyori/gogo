@@ -32,6 +32,7 @@ import (
 	"io/fs"
 	"math/rand/v2"
 	"path"
+	"path/filepath"
 	"slices"
 	"testing/fstest"
 	"time"
@@ -71,16 +72,23 @@ const testFSZipOffsetName = "zip offset.zip"
 
 const testFSZipComment = "The end-of-central-directory comment 你好"
 
+const testFSTarNonLocalFilename = "/non-local file.txt"
+
 // For testing methods TarAddFS and ZipAddFS of Writer.
 var (
-	testTarFS         fstest.MapFS
-	testTarFSRegFiles []fileNameBody
+	testTarFS          fstest.MapFS
+	testTarFSWalkFiles []fileNameBody
 
-	testZipFS                   fstest.MapFS
-	testZipFSRegFileNameBodyMap map[string]string
+	testZipFS            fstest.MapFS
+	testZipFSNameBodyMap map[string]string
 )
 
 func init() {
+	if filepath.IsLocal(testFSTarNonLocalFilename) {
+		panic("testFSTarNonLocalFilename is local " +
+			"(i.e., filepath.IsLocal(testFSTarNonLocalFilename) is true)")
+	}
+
 	testFS = fstest.MapFS{
 		"file1.txt": {
 			Data:    []byte("This is File 1."),
@@ -118,6 +126,7 @@ Sugar is sweet.
 		{"tardir/tar file1.txt", "This is tar file 1."},
 		{"tardir/tar file2.txt", "Here is tar file 2!"},
 		{"emptydir/", ""},
+		{testFSTarNonLocalFilename, "This is non-local file."},
 		{"roses are red.txt", `Roses are red.
   Violets are blue.
 Sugar is sweet.
@@ -138,9 +147,16 @@ Sugar is sweet.
 		"13KB.dat": bigStr,
 	}
 
-	initSetVarsForAddFS()
+	err := initSetVarsForTarAddFS()
+	if err != nil {
+		panic(errors.AutoWrap(err))
+	}
+	err = initSetVarsForZipAddFS()
+	if err != nil {
+		panic(errors.AutoWrap(err))
+	}
 	buf := new(bytes.Buffer)
-	err := initAddGzFile(buf, big)
+	err = initAddGzFile(buf, big)
 	if err != nil {
 		panic(errors.AutoWrap(err))
 	}
@@ -167,9 +183,9 @@ Sugar is sweet.
 	}
 }
 
-// initSetVarsForAddFS sets the global variables
-// testTarFS, testTarFSRegFiles, testZipFS, and testZipFSRegFileNameBodyMap.
-func initSetVarsForAddFS() {
+// initSetVarsForTarAddFS sets the global variables
+// testTarFS and testTarFSWalkFiles.
+func initSetVarsForTarAddFS() error {
 	// The names in fstest.MapFS must not end with '/' because a directory
 	// with a name ending with '/' will be considered by fstest.MapFS
 	// to contain itself and cause fs.WalkDir to fall into an infinite loop.
@@ -178,17 +194,18 @@ func initSetVarsForAddFS() {
 	// drop the trailing '/' and set fs.ModeDir to the mode.
 
 	testTarFS = make(fstest.MapFS, len(testFSTarFiles))
-	testTarFSRegFiles = make([]fileNameBody, 0, len(testFSTarFiles))
+	testTarFSWalkFiles = make([]fileNameBody, 0, len(testFSTarFiles))
 	for i := range testFSTarFiles {
 		name := testFSTarFiles[i].name
+		if !fs.ValidPath(name) {
+			continue // skip files with invalid paths (e.g., "/non-local file.txt")
+		}
 		body := testFSTarFiles[i].body
 		var data []byte
 		mode := fs.FileMode(0600)
 		if len(name) > 0 {
 			if name[len(name)-1] != '/' {
 				data = []byte(body)
-				testTarFSRegFiles = append(
-					testTarFSRegFiles, testFSTarFiles[i])
 			} else {
 				name = name[:len(name)-1]
 				mode |= fs.ModeDir
@@ -200,25 +217,60 @@ func initSetVarsForAddFS() {
 			ModTime: time.Now(),
 		}
 	}
-	slices.SortFunc(testTarFSRegFiles, func(a, b fileNameBody) int {
-		if a.name < b.name {
-			return -1
-		} else if a.name > b.name {
-			return 1
-		}
-		return 0
-	})
+	testTarFSWalkFiles = make([]fileNameBody, 0, len(testTarFS))
+	return errors.AutoWrap(fs.WalkDir(
+		testTarFS,
+		".",
+		func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			} else if path == "." {
+				return nil
+			}
+			nb := fileNameBody{name: path}
+			if d.IsDir() {
+				nb.name += "/"
+				testTarFSWalkFiles = append(testTarFSWalkFiles, nb)
+				return nil
+			}
+			file, err := testTarFS.Open(path)
+			if err != nil {
+				return err
+			}
+			defer func(file fs.File) {
+				_ = file.Close() // ignore error
+			}(file)
+			bodyBytes, err := io.ReadAll(file)
+			if err != nil {
+				return err
+			}
+			nb.body = string(bodyBytes)
+			testTarFSWalkFiles = append(testTarFSWalkFiles, nb)
+			return nil
+		},
+	))
+}
+
+// initSetVarsForZipAddFS sets the global variables
+// testZipFS and testZipFSNameBodyMap.
+func initSetVarsForZipAddFS() error {
+	// The names in fstest.MapFS must not end with '/' because a directory
+	// with a name ending with '/' will be considered by fstest.MapFS
+	// to contain itself and cause fs.WalkDir to fall into an infinite loop.
+	//
+	// Therefore, for directories with name ending with '/',
+	// drop the trailing '/' and set fs.ModeDir to the mode.
 
 	testZipFS = make(fstest.MapFS, len(testFSZipFileNameBodyMap))
-	testZipFSRegFileNameBodyMap = make(
-		map[string]string, len(testFSZipFileNameBodyMap))
 	for name, body := range testFSZipFileNameBodyMap {
+		if !fs.ValidPath(name) {
+			continue // skip files with invalid paths (e.g., "/non-local file.txt")
+		}
 		var data []byte
 		mode := fs.FileMode(0600)
 		if len(name) > 0 {
 			if name[len(name)-1] != '/' {
 				data = []byte(body)
-				testZipFSRegFileNameBodyMap[name] = body
 			} else {
 				name = name[:len(name)-1]
 				mode |= fs.ModeDir
@@ -230,6 +282,37 @@ func initSetVarsForAddFS() {
 			ModTime: time.Now(),
 		}
 	}
+	testZipFSNameBodyMap = make(map[string]string, len(testZipFS))
+	return errors.AutoWrap(fs.WalkDir(
+		testZipFS,
+		".",
+		func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			} else if path == "." {
+				return nil
+			}
+			name := path
+			if d.IsDir() {
+				name += "/"
+				testZipFSNameBodyMap[name] = ""
+				return nil
+			}
+			file, err := testZipFS.Open(path)
+			if err != nil {
+				return err
+			}
+			defer func(file fs.File) {
+				_ = file.Close() // ignore error
+			}(file)
+			bodyBytes, err := io.ReadAll(file)
+			if err != nil {
+				return err
+			}
+			testZipFSNameBodyMap[name] = string(bodyBytes)
+			return nil
+		},
+	))
 }
 
 // initAddGzFile makes a gzip file and adds it to the global variable testFS.

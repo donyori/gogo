@@ -26,8 +26,10 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"iter"
 	"maps"
 	"path"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -103,10 +105,47 @@ type Reader interface {
 	//
 	// io.EOF is returned at the end of the input.
 	//
+	// If TarNext encounters a non-local name (as defined by filepath.IsLocal),
+	// TarNext returns the header with an tar.ErrInsecurePath error.
+	// (To test whether err is tar.ErrInsecurePath, use function errors.Is.)
+	// The client can ignore the tar.ErrInsecurePath error
+	// and use the returned header if it wants to accept non-local names.
+	//
+	// If the file is not archived by tar or is opened in raw mode,
+	// TarNext does nothing and reports ErrNotTar.
+	// (To test whether err is ErrNotTar, use function errors.Is.)
+	TarNext() (hdr *tar.Header, err error)
+
+	// IterTarFiles returns a single-use iterator
+	// over tar headers in the tar archive.
+	// The reader is automatically switched to
+	// the corresponding tar file content along with the iterator.
+	//
+	// The iteration early stops when an error occurs.
+	// If pErr is not nil and the error is not io.EOF,
+	// the error is output to *pErr.
+	// Otherwise, the error may be unretrievable.
+	// If pErr is not nil and there is no error except for io.EOF,
+	// *pErr is set to nil after iteration.
+	//
+	// acceptNonLocalNames indicates whether to accept non-local names
+	// (as defined by filepath.IsLocal).
+	// If it is true, tar.ErrInsecurePath is ignored during the iteration.
+	//
 	// If the file is not archived by tar or is opened in raw mode,
 	// it does nothing and reports ErrNotTar.
 	// (To test whether err is ErrNotTar, use function errors.Is.)
-	TarNext() (hdr *tar.Header, err error)
+	//
+	// The returned iterator is always non-nil
+	// but is a no-op iterator if err is not nil.
+	IterTarFiles(pErr *error, acceptNonLocalNames bool) (
+		seq iter.Seq[*tar.Header], err error)
+
+	// IterIndexTarFiles returns a single-use iterator
+	// over index-header pairs in the tar archive.
+	// It is similar to method IterTarFiles but with indices.
+	IterIndexTarFiles(pErr *error, acceptNonLocalNames bool) (
+		seq2 iter.Seq2[int, *tar.Header], err error)
 
 	// ZipEnabled returns true if the file is archived by ZIP
 	// and is not opened in raw mode.
@@ -129,6 +168,22 @@ type Reader interface {
 	// it does nothing and reports ErrNotZip.
 	// (To test whether the error is ErrNotZip, use function errors.Is.)
 	ZipFiles() (files []*zip.File, err error)
+
+	// IterZipFiles returns an iterator over files in the ZIP archive,
+	// traversing it in ascending order by filename.
+	//
+	// If the reader's file is not archived by ZIP or is opened in raw mode,
+	// it does nothing and reports ErrNotZip.
+	// (To test whether the error is ErrNotZip, use function errors.Is.)
+	//
+	// The returned iterator is always non-nil
+	// but is a no-op iterator if err is not nil.
+	IterZipFiles() (seq iter.Seq[*zip.File], err error)
+
+	// IterIndexZipFiles returns an iterator
+	// over index-file pairs in the ZIP archive.
+	// It is similar to method IterZipFiles but with indices.
+	IterIndexZipFiles() (seq2 iter.Seq2[int, *zip.File], err error)
 
 	// ZipComment returns the end-of-central-directory comment field
 	// of the ZIP archive.
@@ -580,8 +635,13 @@ func (fr *reader) TarNext() (hdr *tar.Header, err error) {
 		return nil, errors.AutoWrap(ErrFileReaderClosed)
 	}
 	hdr, err = fr.tr.Next()
+	if err == nil && hdr != nil && !filepath.IsLocal(hdr.Name) {
+		err = tar.ErrInsecurePath
+	}
 	switch {
-	case err != nil && !errors.Is(err, io.EOF):
+	case err != nil &&
+		!errors.Is(err, io.EOF) &&
+		!errors.Is(err, tar.ErrInsecurePath):
 		return nil, errors.AutoWrap(err)
 	case tarHeaderIsDir(hdr):
 		fr.ur, fr.err = isDirErrorReader, ErrIsDir
@@ -590,6 +650,78 @@ func (fr *reader) TarNext() (hdr *tar.Header, err error) {
 	}
 	fr.br.Reset(fr.ur)
 	return hdr, errors.AutoWrap(err)
+}
+
+func (fr *reader) IterTarFiles(pErr *error, acceptNonLocalNames bool) (
+	seq iter.Seq[*tar.Header], err error) {
+	if fr.tr == nil {
+		return noOpSeq, errors.AutoWrap(ErrNotTar)
+	} else if fr.c.Closed() {
+		return noOpSeq, errors.AutoWrap(ErrFileReaderClosed)
+	}
+	var tarNextErr error
+	return func(yield func(*tar.Header) bool) {
+		if pErr != nil {
+			defer func(pErr *error) {
+				err := tarNextErr
+				if errors.Is(err, io.EOF) ||
+					acceptNonLocalNames && errors.Is(err, tar.ErrInsecurePath) {
+					err = nil
+				}
+				*pErr = errors.AutoWrapSkip(err, 1) // skip = 1 to skip the inner function
+			}(pErr)
+		}
+		if tarNextErr != nil {
+			return
+		}
+		for {
+			var hdr *tar.Header
+			hdr, tarNextErr = fr.TarNext()
+			if acceptNonLocalNames &&
+				errors.Is(tarNextErr, tar.ErrInsecurePath) {
+				tarNextErr = nil
+			}
+			if tarNextErr != nil || yield != nil && !yield(hdr) {
+				return
+			}
+		}
+	}, nil
+}
+
+func (fr *reader) IterIndexTarFiles(pErr *error, acceptNonLocalNames bool) (
+	seq2 iter.Seq2[int, *tar.Header], err error) {
+	if fr.tr == nil {
+		return noOpSeq2, errors.AutoWrap(ErrNotTar)
+	} else if fr.c.Closed() {
+		return noOpSeq2, errors.AutoWrap(ErrFileReaderClosed)
+	}
+	var tarNextErr error
+	return func(yield func(int, *tar.Header) bool) {
+		if pErr != nil {
+			defer func(pErr *error) {
+				err := tarNextErr
+				if errors.Is(err, io.EOF) ||
+					acceptNonLocalNames && errors.Is(err, tar.ErrInsecurePath) {
+					err = nil
+				}
+				*pErr = errors.AutoWrapSkip(err, 1) // skip = 1 to skip the inner function
+			}(pErr)
+		}
+		if tarNextErr != nil {
+			return
+		}
+		for i := 0; ; i++ {
+			var hdr *tar.Header
+			hdr, tarNextErr = fr.TarNext()
+			if acceptNonLocalNames &&
+				errors.Is(tarNextErr, tar.ErrInsecurePath) {
+				tarNextErr = nil
+			}
+			if tarNextErr != nil || yield != nil && !yield(i, hdr) {
+				return
+			}
+		}
+	}, nil
 }
 
 func (fr *reader) ZipEnabled() bool {
@@ -626,6 +758,35 @@ func (fr *reader) ZipFiles() (files []*zip.File, err error) {
 		return 0
 	})
 	return
+}
+
+func (fr *reader) IterZipFiles() (seq iter.Seq[*zip.File], err error) {
+	files, err := fr.ZipFiles()
+	if err != nil || len(files) == 0 {
+		return noOpSeq, errors.AutoWrap(err)
+	}
+	return func(yield func(*zip.File) bool) {
+		for _, file := range files {
+			if !yield(file) {
+				return
+			}
+		}
+	}, nil
+}
+
+func (fr *reader) IterIndexZipFiles() (
+	seq2 iter.Seq2[int, *zip.File], err error) {
+	files, err := fr.ZipFiles()
+	if err != nil || len(files) == 0 {
+		return noOpSeq2, errors.AutoWrap(err)
+	}
+	return func(yield func(int, *zip.File) bool) {
+		for i, file := range files {
+			if !yield(i, file) {
+				return
+			}
+		}
+	}, nil
 }
 
 func (fr *reader) ZipComment() (comment string, err error) {
@@ -688,3 +849,9 @@ var (
 	readZipErrorReader = &errorReader{err: ErrReadZip}
 	closedErrorReader  = &errorReader{err: ErrFileReaderClosed}
 )
+
+// noOpSeq is a no-op iterator of type iter.Seq[V any].
+func noOpSeq[V any](func(V) bool) {}
+
+// noOpSeq2 is a no-op iterator of type iter.Seq2[K, V any].
+func noOpSeq2[K, V any](func(K, V) bool) {}

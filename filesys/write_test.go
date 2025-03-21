@@ -93,9 +93,8 @@ func TestWrite_Gz(t *testing.T) {
 			}(gr)
 			got, err := io.ReadAll(gr)
 			if err != nil {
-				t.Fatal("decompress gzip -", err)
-			}
-			if !bytes.Equal(got, data) {
+				t.Error("decompress gzip -", err)
+			} else if !bytes.Equal(got, data) {
 				t.Errorf("got (len: %d)\n%s\nwant (len: %d)\n%s",
 					len(got), got, len(data), data)
 			}
@@ -121,7 +120,7 @@ func TestWrite_TarAddFS(t *testing.T) {
 			file := &WritableFileImpl{Name: name}
 			writeTarFS(t, file)
 			if !t.Failed() {
-				testTarTgzFile(t, file, testTarFSRegFiles)
+				testTarTgzFile(t, file, testTarFSWalkFiles)
 			}
 		})
 	}
@@ -165,8 +164,7 @@ func TestWrite_Zip_Raw(t *testing.T) {
 		})
 		if err != nil {
 			t.Fatalf("create zip file %q - %v", name, err)
-		}
-		if len(name) > 0 && name[len(name)-1] == '/' {
+		} else if len(name) > 0 && name[len(name)-1] == '/' {
 			continue
 		}
 		_, err = w.Write([]byte(body))
@@ -202,7 +200,7 @@ func TestWrite_ZipAddFS(t *testing.T) {
 	file := &WritableFileImpl{Name: "test-write.zip"}
 	writeZipFS(t, file)
 	if !t.Failed() {
-		testZipFile(t, file, testZipFSRegFileNameBodyMap)
+		testZipFile(t, file, testZipFSNameBodyMap)
 	}
 }
 
@@ -266,8 +264,7 @@ func TestWrite_AfterClose(t *testing.T) {
 		_, err = w.WriteString(Input)
 		if err != nil {
 			t.Fatal("write string -", err)
-		}
-		if n := w.Buffered(); n != len(Input) {
+		} else if n := w.Buffered(); n != len(Input) {
 			t.Fatalf("got w.Buffered %d; want %d", n, len(Input))
 		}
 		err = w.Close()
@@ -750,8 +747,11 @@ func testTarTgzFile(
 		case i >= len(wantFiles):
 			t.Error("tar headers more than", len(wantFiles))
 			return
+		case hdr == nil:
+			t.Errorf("No.%d got nil tar header", i)
+			continue
 		case hdr.Name != wantFiles[i].name:
-			t.Errorf("No.%d tar header name unequal - got %s; want %s",
+			t.Errorf("No.%d tar header name unequal - got %q; want %q",
 				i, hdr.Name, wantFiles[i].name)
 		}
 		if hdr.FileInfo().IsDir() {

@@ -20,12 +20,14 @@ package local_test
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/bzip2"
 	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"math"
 	"path/filepath"
 	"strings"
@@ -170,6 +172,27 @@ func TestRead_Bz2(t *testing.T) {
 }
 
 func TestRead_TarTgzTbz(t *testing.T) {
+	testReadTarTgzTbzFunc(t, testReadTarTgzTbz)
+}
+
+func TestRead_TarTgzTbz_Seq(t *testing.T) {
+	testReadTarTgzTbzFunc(t, testReadTarTgzTbzSeq)
+}
+
+func TestRead_TarTgzTbz_Seq2(t *testing.T) {
+	testReadTarTgzTbzFunc(t, testReadTarTgzTbzSeq2)
+}
+
+// testReadTarTgzTbzFunc is the common code for testing reading a tar archive.
+//
+// f is a handler that reads from the reader r
+// and checks with the wanted result files.
+//
+// It may use t.Run to create subtests for each tar archive.
+func testReadTarTgzTbzFunc(
+	t *testing.T,
+	f func(t *testing.T, r filesys.Reader, files []tarFileNameBody),
+) {
 	for _, entry := range testFileEntries {
 		filename := entry.Name()
 		ext := filepath.Ext(filename)
@@ -194,7 +217,7 @@ func TestRead_TarTgzTbz(t *testing.T) {
 			if err != nil {
 				t.Fatal("load tar file -", err)
 			}
-			testReadTarTgzTbz(t, r, files)
+			f(t, r, files)
 		})
 	}
 }
@@ -220,29 +243,145 @@ func testReadTarTgzTbz(
 			}
 			t.Fatalf("read No.%d tar header - %v", i, err)
 		}
-		if i >= len(files) {
-			t.Fatal("tar headers more than", len(files))
-		}
-		if hdr.Name != files[i].name {
-			t.Errorf("No.%d tar header name unequal - got %s; want %s",
-				i, hdr.Name, files[i].name)
-		}
-		if TarHeaderIsDir(hdr) {
-			_, err = r.Read([]byte{})
-			if !errors.Is(err, filesys.ErrIsDir) {
-				t.Errorf("No.%d tar read file body - got %v; want %v",
-					i, err, filesys.ErrIsDir)
-			}
+		testTarFileReadFromR(t, r, files, i, hdr)
+	}
+}
+
+// testReadTarTgzTbzSeq is a subprocess of TestRead_TarTgzTbz_Seq
+// that tests reading a tar archive with the iterator method IterTarFiles.
+//
+// It may use t.Fatal to stop the test.
+func testReadTarTgzTbzSeq(
+	t *testing.T,
+	r filesys.Reader,
+	files []tarFileNameBody,
+) {
+	pErr := new(error)
+	seq, err := r.IterTarFiles(pErr, false)
+	if err != nil {
+		t.Fatal("create iterator -", err)
+	} else if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	var i int
+	for hdr := range seq {
+		testTarFileReadFromR(t, r, files, i, hdr)
+		i++
+	}
+	if *pErr != nil {
+		t.Error("iteration ended with", *pErr)
+	} else if i != len(files) {
+		t.Errorf("tar header number: %d != %d, but iteration has ended",
+			i, len(files))
+	}
+	// Test whether the iterator is single-use.
+	for hdr := range seq {
+		if hdr != nil {
+			t.Errorf("not single-use iterator; got %q", hdr.Name)
 		} else {
-			err = iotest.TestReader(r, files[i].body)
-			if err != nil {
-				t.Errorf("No.%d tar test read - %v", i, err)
-			}
+			t.Error("not single-use iterator; got <nil>")
+		}
+		break
+	}
+}
+
+// testReadTarTgzTbzSeq2 is a subprocess of TestRead_TarTgzTbz_Seq2
+// that tests reading a tar archive with the iterator method IterIndexTarFiles.
+//
+// It may use t.Fatal to stop the test.
+func testReadTarTgzTbzSeq2(
+	t *testing.T,
+	r filesys.Reader,
+	files []tarFileNameBody,
+) {
+	pErr := new(error)
+	seq2, err := r.IterIndexTarFiles(pErr, false)
+	if err != nil {
+		t.Fatal("create iterator -", err)
+	} else if seq2 == nil {
+		t.Fatal("got nil iterator")
+	}
+	var ctr int
+	for i, hdr := range seq2 {
+		if i != ctr {
+			t.Errorf("got index %d; want %d", i, ctr)
+		}
+		testTarFileReadFromR(t, r, files, ctr, hdr)
+		ctr++
+	}
+	if *pErr != nil {
+		t.Error("iteration ended with", *pErr)
+	} else if ctr != len(files) {
+		t.Errorf("tar header number: %d != %d, but iteration has ended",
+			ctr, len(files))
+	}
+	// Test whether the iterator is single-use.
+	for i, hdr := range seq2 {
+		if hdr != nil {
+			t.Errorf("not single-use iterator; got %d, %q", i, hdr.Name)
+		} else {
+			t.Errorf("not single-use iterator; got %d, <nil>", i)
+		}
+		break
+	}
+}
+
+// testTarFileReadFromR tests the i-th tar file read from the reader r.
+//
+// It may use t.Fatal to stop the test.
+func testTarFileReadFromR(
+	t *testing.T,
+	r filesys.Reader,
+	files []tarFileNameBody,
+	i int,
+	hdr *tar.Header,
+) {
+	switch {
+	case i >= len(files):
+		t.Fatal("tar headers more than", len(files))
+	case hdr == nil:
+		t.Errorf("No.%d got nil tar header", i)
+		return
+	case hdr.Name != files[i].name:
+		t.Errorf("No.%d tar header name unequal - got %q; want %q",
+			i, hdr.Name, files[i].name)
+	}
+	if TarHeaderIsDir(hdr) {
+		_, err := r.Read([]byte{})
+		if !errors.Is(err, filesys.ErrIsDir) {
+			t.Errorf("No.%d tar read file body - got %v; want %v",
+				i, err, filesys.ErrIsDir)
+		}
+	} else {
+		err := iotest.TestReader(r, files[i].body)
+		if err != nil {
+			t.Errorf("No.%d tar test read - %v", i, err)
 		}
 	}
 }
 
 func TestRead_Zip(t *testing.T) {
+	testReadZipFunc(t, testReadZip)
+}
+
+func TestRead_Zip_Seq(t *testing.T) {
+	testReadZipFunc(t, testReadZipSeqMain)
+}
+
+func TestRead_Zip_Seq2(t *testing.T) {
+	testReadZipFunc(t, testReadZipSeq2Main)
+}
+
+// testReadZipFunc is the common code for testing reading a ZIP archive.
+//
+// f is a handler that reads from the reader r
+// and checks with the wanted result fileMap.
+//
+// It may use t.Run to create subtests for each ZIP archive.
+func testReadZipFunc(
+	t *testing.T,
+	f func(t *testing.T, r filesys.Reader, fileMap map[string]*zipHeaderBody),
+) {
 	for _, entry := range testFileEntries {
 		filename := entry.Name()
 		if filepath.Ext(filename) != ".zip" {
@@ -263,7 +402,7 @@ func TestRead_Zip(t *testing.T) {
 			if err != nil {
 				t.Fatal("load zip file -", err)
 			}
-			testReadZip(t, r, fileMap)
+			f(t, r, fileMap)
 		})
 	}
 }
@@ -282,17 +421,130 @@ func testReadZip(
 	zipFiles, err := r.ZipFiles()
 	if err != nil {
 		t.Fatal("ZipFiles -", err)
-	}
-	if len(zipFiles) != len(fileMap) {
-		t.Errorf("got %d zip files; want %d",
-			len(zipFiles), len(fileMap))
+	} else if len(zipFiles) != len(fileMap) {
+		t.Errorf("got %d zip files; want %d", len(zipFiles), len(fileMap))
 	}
 	for i, file := range zipFiles {
-		if file == nil {
-			t.Errorf("No.%d zip file is nil", i)
-			continue
+		testZipFileReadFromR(t, "", "", fileMap, i, file)
+	}
+}
+
+// testReadZipSeqMain is a subprocess of TestRead_Zip_Seq
+// that tests reading a ZIP archive with the iterator method IterZipFiles.
+//
+// It may use t.Fatal to stop the test.
+//
+// It may use t.Run to create subtests for each file in the ZIP archive.
+func testReadZipSeqMain(
+	t *testing.T,
+	r filesys.Reader,
+	fileMap map[string]*zipHeaderBody,
+) {
+	seq, err := r.IterZipFiles()
+	if err != nil {
+		t.Fatal("create iterator -", err)
+	} else if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+	testReadZipSeqSub(t, fileMap, seq, false)
+	// Rewind the iterator and test it again.
+	testReadZipSeqSub(t, fileMap, seq, true)
+}
+
+// testReadZipSeqSub is a subprocess of testReadZipSeqMain
+// that tests the iterator with a single call.
+//
+// It may use t.Run to create subtests for each file in the ZIP archive.
+func testReadZipSeqSub(
+	t *testing.T,
+	fileMap map[string]*zipHeaderBody,
+	seq iter.Seq[*zip.File],
+	isRewound bool,
+) {
+	var logPrefix, subtestNameSuffix string
+	if isRewound {
+		logPrefix, subtestNameSuffix = "rewind - ", "&rewind"
+	}
+	var i int
+	for file := range seq {
+		testZipFileReadFromR(t, logPrefix, subtestNameSuffix, fileMap, i, file)
+		i++
+	}
+	if i != len(fileMap) {
+		t.Errorf("%szip file number: %d != %d, but iteration has ended",
+			logPrefix, i, len(fileMap))
+	}
+}
+
+// testReadZipSeq2Main is a subprocess of TestRead_Zip_Seq2
+// that tests reading a ZIP archive with the iterator method IterIndexZipFiles.
+//
+// It may use t.Fatal to stop the test.
+//
+// It may use t.Run to create subtests for each file in the ZIP archive.
+func testReadZipSeq2Main(
+	t *testing.T,
+	r filesys.Reader,
+	fileMap map[string]*zipHeaderBody,
+) {
+	seq2, err := r.IterIndexZipFiles()
+	if err != nil {
+		t.Fatal("create iterator -", err)
+	} else if seq2 == nil {
+		t.Fatal("got nil iterator")
+	}
+	testReadZipSeq2Sub(t, fileMap, seq2, false)
+	// Rewind the iterator and test it again.
+	testReadZipSeq2Sub(t, fileMap, seq2, true)
+}
+
+// testReadZipSeq2Sub is a subprocess of testReadZipSeq2Main
+// that tests the iterator with a single call.
+//
+// It may use t.Run to create subtests for each file in the ZIP archive.
+func testReadZipSeq2Sub(
+	t *testing.T,
+	fileMap map[string]*zipHeaderBody,
+	seq2 iter.Seq2[int, *zip.File],
+	isRewound bool,
+) {
+	var logPrefix, subtestNameSuffix string
+	if isRewound {
+		logPrefix, subtestNameSuffix = "rewind - ", "&rewind"
+	}
+	var ctr int
+	for i, file := range seq2 {
+		if i != ctr {
+			t.Errorf("%sgot index %d; want %d", logPrefix, i, ctr)
 		}
-		t.Run(fmt.Sprintf("zipFile=%+q", file.Name), func(t *testing.T) {
+		testZipFileReadFromR(
+			t, logPrefix, subtestNameSuffix, fileMap, ctr, file)
+		ctr++
+	}
+	if ctr != len(fileMap) {
+		t.Errorf("%szip file number: %d != %d, but iteration has ended",
+			logPrefix, ctr, len(fileMap))
+	}
+}
+
+// testZipFileReadFromR tests the i-th ZIP file read from the filesys.Reader.
+//
+// It may use t.Run to create subtests for each file in the ZIP archive.
+func testZipFileReadFromR(
+	t *testing.T,
+	logPrefix string,
+	subtestNameSuffix string,
+	fileMap map[string]*zipHeaderBody,
+	i int,
+	file *zip.File,
+) {
+	if file == nil {
+		t.Errorf("%sNo.%d zip file is nil", logPrefix, i)
+		return
+	}
+	t.Run(
+		fmt.Sprintf("zipFile=%+q%s", file.Name, subtestNameSuffix),
+		func(t *testing.T) {
 			hb, ok := fileMap[file.Name]
 			if !ok {
 				t.Fatalf("unknown zip file %q", file.Name)
@@ -315,9 +567,8 @@ func testReadZip(
 			}(rc)
 			data, err := io.ReadAll(rc)
 			if err != nil {
-				t.Fatal("read -", err)
-			}
-			if !bytes.Equal(data, hb.body) {
+				t.Error("read -", err)
+			} else if !bytes.Equal(data, hb.body) {
 				t.Errorf(
 					"file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
 					len(data),
@@ -326,8 +577,8 @@ func testReadZip(
 					hb.body,
 				)
 			}
-		})
-	}
+		},
+	)
 }
 
 func TestRead_Offset(t *testing.T) {
@@ -380,9 +631,8 @@ func TestRead_Offset(t *testing.T) {
 			})
 			if err == nil {
 				_ = r.Close() // ignore error
-				t.Fatal("create - no error but offset is out of range")
-			}
-			if !strings.HasSuffix(err.Error(), fmt.Sprintf(
+				t.Error("create - no error but offset is out of range")
+			} else if !strings.HasSuffix(err.Error(), fmt.Sprintf(
 				"option Offset (%d) is out of range; file size: %d",
 				offset,
 				size,
