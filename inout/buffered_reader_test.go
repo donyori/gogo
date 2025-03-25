@@ -29,6 +29,7 @@ import (
 
 	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/inout"
+	"github.com/donyori/gogo/internal/unequal"
 )
 
 func TestBufferedReader_Basic(t *testing.T) {
@@ -382,7 +383,7 @@ func TestBufferedReader_IterLines(t *testing.T) {
 		}
 		break
 	}
-	if errorUnequal(outErr, prevErr) {
+	if unequal.ErrorUnwrapAuto(outErr, prevErr) {
 		t.Errorf("output error changed from %v to %v", prevErr, outErr)
 	}
 }
@@ -423,7 +424,7 @@ func TestBufferedReader_IterCountLines(t *testing.T) {
 		}
 		break
 	}
-	if errorUnequal(outErr, prevErr) {
+	if unequal.ErrorUnwrapAuto(outErr, prevErr) {
 		t.Errorf("output error changed from %v to %v", prevErr, outErr)
 	}
 }
@@ -450,15 +451,4 @@ func buildLongLineAndInputData() (longLine, data []byte) {
 		n += copy(data[n:], longLine)
 	}
 	return
-}
-
-// errorUnequal tests whether two errors are unequal.
-//
-// The errors are unwrapped by
-// github.com/donyori/gogo/errors.UnwrapAllAutoWrappedErrors
-// and then compared by "!=".
-func errorUnequal(err1, err2 error) bool {
-	err1, _ = errors.UnwrapAllAutoWrappedErrors(err1)
-	err2, _ = errors.UnwrapAllAutoWrappedErrors(err2)
-	return err1 != err2 // compare the interface directly, don't use errors.Is
 }

@@ -33,6 +33,7 @@ import (
 
 	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/filesys"
+	"github.com/donyori/gogo/internal/unequal"
 )
 
 func TestRead_NotCloseFile(t *testing.T) {
@@ -245,6 +246,12 @@ func testTarSeq(
 	}
 
 	// Test whether the iterator is single-use.
+	testTarSeqSingleUse(t, pErr, seq)
+}
+
+// testTarSeqSingleUse is a subprocess of testTarSeq
+// that tests whether the iterator is single-use.
+func testTarSeqSingleUse(t *testing.T, pErr *error, seq iter.Seq[*tar.Header]) {
 	prevErr := *pErr
 	for hdr := range seq {
 		if hdr != nil {
@@ -254,7 +261,7 @@ func testTarSeq(
 		}
 		break
 	}
-	if errorUnequal(*pErr, prevErr) {
+	if unequal.ErrorUnwrapAuto(*pErr, prevErr) {
 		t.Errorf("output error changed from %v to %v", prevErr, *pErr)
 	}
 }
@@ -328,6 +335,16 @@ func testTarSeq2(
 	}
 
 	// Test whether the iterator is single-use.
+	testTarSeq2SingleUse(t, pErr, seq2)
+}
+
+// testTarSeq2SingleUse is a subprocess of testTarSeq2
+// that tests whether the iterator is single-use.
+func testTarSeq2SingleUse(
+	t *testing.T,
+	pErr *error,
+	seq2 iter.Seq2[int, *tar.Header],
+) {
 	prevErr := *pErr
 	for i, hdr := range seq2 {
 		if hdr != nil {
@@ -337,7 +354,7 @@ func testTarSeq2(
 		}
 		break
 	}
-	if errorUnequal(*pErr, prevErr) {
+	if unequal.ErrorUnwrapAuto(*pErr, prevErr) {
 		t.Errorf("output error changed from %v to %v", prevErr, *pErr)
 	}
 }
@@ -1181,15 +1198,4 @@ func testZipSeq2Sub(
 		t.Errorf("%szip file number: %d != %d, but iteration has ended",
 			prefix, ctr, len(files))
 	}
-}
-
-// errorUnequal tests whether two errors are unequal.
-//
-// The errors are unwrapped by
-// github.com/donyori/gogo/errors.UnwrapAllAutoWrappedErrors
-// and then compared by "!=".
-func errorUnequal(err1, err2 error) bool {
-	err1, _ = errors.UnwrapAllAutoWrappedErrors(err1)
-	err2, _ = errors.UnwrapAllAutoWrappedErrors(err2)
-	return err1 != err2 // compare the interface directly, don't use errors.Is
 }

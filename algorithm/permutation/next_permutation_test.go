@@ -19,12 +19,12 @@
 package permutation_test
 
 import (
-	"slices"
 	"sort"
 	"testing"
 
 	"github.com/donyori/gogo/algorithm/permutation"
 	"github.com/donyori/gogo/fmtcoll"
+	"github.com/donyori/gogo/internal/unequal"
 )
 
 var dataList = [][][]int{
@@ -210,7 +210,7 @@ func TestNextPermutation(t *testing.T) {
 			if more := permutation.NextPermutation(itf); more != tc.wantMore {
 				t.Errorf("return value: got %t; want %t", more, tc.wantMore)
 			}
-			if dataUnequal(data, tc.wantData) {
+			if unequal.Slice(data, tc.wantData) {
 				t.Errorf("permutation: got %v; want %v", data, tc.wantData)
 			}
 		})
@@ -224,8 +224,4 @@ func dataToName(data []int) string {
 		},
 		FormatItemFn: fmtcoll.FprintfToFormatFunc[int]("%d"),
 	})
-}
-
-func dataUnequal(a, b []int) bool {
-	return (a == nil) != (b == nil) || !slices.Equal(a, b)
 }

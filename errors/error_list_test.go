@@ -66,7 +66,7 @@ func TestNewErrorList(t *testing.T) {
 				t.Error("got a nil error list")
 			} else {
 				e := el.(*errors.ErrorListImpl)
-				if list := e.GetList(); errorsUnequal(list, tc.want) {
+				if list := e.GetList(); !slices.Equal(list, tc.want) {
 					t.Errorf("got %v; want %v", list, tc.want)
 				}
 			}
@@ -100,7 +100,7 @@ func TestErrorList_Append(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
 			el := errors.NewErrorList(true).(*errors.ErrorListImpl)
 			el.Append(tc.errs...)
-			if list := el.GetList(); errorsUnequal(list, tc.want) {
+			if list := el.GetList(); !slices.Equal(list, tc.want) {
 				t.Errorf("got %v; want %v", list, tc.want)
 			}
 		})
@@ -157,7 +157,7 @@ func TestErrorList_Deduplicate(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
 			el := errors.NewErrorList(false, tc.errs...)
 			el.Deduplicate()
-			if errorsUnequal(el.(*errors.ErrorListImpl).GetList(), tc.want) {
+			if !slices.Equal(el.(*errors.ErrorListImpl).GetList(), tc.want) {
 				t.Errorf("el after deduplicate: %v; want %v", el, tc.want)
 			}
 		})
@@ -290,7 +290,7 @@ func TestErrorList_IterErrors(t *testing.T) {
 			break
 		}
 	}
-	if errorsUnequal(gotData, want) {
+	if !slices.Equal(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
 	}
 	// Rewind the iterator and test it again.
@@ -301,7 +301,7 @@ func TestErrorList_IterErrors(t *testing.T) {
 			break
 		}
 	}
-	if errorsUnequal(gotData, want) {
+	if !slices.Equal(gotData, want) {
 		t.Errorf("rewind - got %v; want %v", gotData, want)
 	}
 }
@@ -332,7 +332,7 @@ func TestErrorList_IterErrorsBackward(t *testing.T) {
 			break
 		}
 	}
-	if errorsUnequal(gotData, want) {
+	if !slices.Equal(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
 	}
 	// Rewind the iterator and test it again.
@@ -343,7 +343,7 @@ func TestErrorList_IterErrorsBackward(t *testing.T) {
 			break
 		}
 	}
-	if errorsUnequal(gotData, want) {
+	if !slices.Equal(gotData, want) {
 		t.Errorf("rewind - got %v; want %v", gotData, want)
 	}
 }
@@ -468,7 +468,7 @@ func TestCombine(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d?errs=%#v", i, tc.errs), func(t *testing.T) {
 			err := errors.Combine(tc.errs...)
 			if el, ok := err.(*errors.ErrorListImpl); ok {
-				if list := el.GetList(); errorsUnequal(list, tc.want) {
+				if list := el.GetList(); !slices.Equal(list, tc.want) {
 					t.Errorf("got %v; want %v", list, tc.want)
 				}
 			} else if len(tc.want) > 1 {
@@ -485,16 +485,4 @@ func TestCombine(t *testing.T) {
 			}
 		})
 	}
-}
-
-func errorsUnequal(errs1, errs2 []error) bool {
-	if len(errs1) != len(errs2) {
-		return true
-	}
-	for i := range errs1 {
-		if errs1[i] != errs2[i] { // compare the interface directly, don't use errors.Is
-			return true
-		}
-	}
-	return false
 }

@@ -36,6 +36,7 @@ import (
 	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/filesys"
 	"github.com/donyori/gogo/filesys/local"
+	"github.com/donyori/gogo/internal/unequal"
 )
 
 func TestRead_Raw(t *testing.T) {
@@ -284,7 +285,7 @@ func testReadTarTgzTbzSeq(
 		}
 		break
 	}
-	if errorUnequal(outErr, prevErr) {
+	if unequal.ErrorUnwrapAuto(outErr, prevErr) {
 		t.Errorf("output error changed from %v to %v", prevErr, outErr)
 	}
 }
@@ -329,7 +330,7 @@ func testReadTarTgzTbzSeq2(
 		}
 		break
 	}
-	if errorUnequal(outErr, prevErr) {
+	if unequal.ErrorUnwrapAuto(outErr, prevErr) {
 		t.Errorf("output error changed from %v to %v", prevErr, outErr)
 	}
 }
@@ -658,15 +659,4 @@ func TarHeaderIsDir(hdr *tar.Header) bool {
 			len(hdr.Name) > 0 &&
 			hdr.Name[len(hdr.Name)-1] == '/' ||
 			hdr.FileInfo().IsDir())
-}
-
-// errorUnequal tests whether two errors are unequal.
-//
-// The errors are unwrapped by
-// github.com/donyori/gogo/errors.UnwrapAllAutoWrappedErrors
-// and then compared by "!=".
-func errorUnequal(err1, err2 error) bool {
-	err1, _ = errors.UnwrapAllAutoWrappedErrors(err1)
-	err2, _ = errors.UnwrapAllAutoWrappedErrors(err2)
-	return err1 != err2 // compare the interface directly, don't use errors.Is
 }

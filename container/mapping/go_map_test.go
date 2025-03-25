@@ -26,6 +26,7 @@ import (
 
 	"github.com/donyori/gogo/container/mapping"
 	"github.com/donyori/gogo/fmtcoll"
+	"github.com/donyori/gogo/internal/unequal"
 )
 
 type (
@@ -61,7 +62,7 @@ func TestGoMap_Range(t *testing.T) {
 		m[x.Key] = x.Value
 		return true
 	})
-	if mapWrong(m, want) {
+	if unequal.Map(m, want) {
 		t.Errorf("got %s; want %s", mapToString(m), mapToString(want))
 	}
 }
@@ -99,7 +100,7 @@ func TestGoMap_IterItems(t *testing.T) {
 	for x := range seq {
 		gotData[x.Key] = x.Value
 	}
-	if mapWrong(gotData, want) {
+	if unequal.Map(gotData, want) {
 		t.Errorf("got %s; want %s", mapToString(gotData), mapToString(want))
 	}
 	// Rewind the iterator and test it again.
@@ -107,7 +108,7 @@ func TestGoMap_IterItems(t *testing.T) {
 	for x := range seq {
 		gotData[x.Key] = x.Value
 	}
-	if mapWrong(gotData, want) {
+	if unequal.Map(gotData, want) {
 		t.Errorf("rewind - got %s; want %s",
 			mapToString(gotData), mapToString(want))
 	}
@@ -304,12 +305,12 @@ func TestGoMap_IterKeyValues(t *testing.T) {
 		t.Fatal("got nil iterator")
 	}
 	gotData := maps.Collect(seq2)
-	if mapWrong(gotData, want) {
+	if unequal.Map(gotData, want) {
 		t.Errorf("got %s; want %s", mapToString(gotData), mapToString(want))
 	}
 	// Rewind the iterator and test it again.
 	gotData = maps.Collect(seq2)
-	if mapWrong(gotData, want) {
+	if unequal.Map(gotData, want) {
 		t.Errorf("rewind - got %s; want %s",
 			mapToString(gotData), mapToString(want))
 	}
@@ -808,10 +809,6 @@ func mapItfToString(m mapping.Map[string, int]) string {
 			return 0
 		},
 	})
-}
-
-func mapWrong(m, want SIM) bool {
-	return (m == nil) != (want == nil) || !maps.Equal(m, want)
 }
 
 func goMapWrong(gm *SIGM, want SIM) bool {
