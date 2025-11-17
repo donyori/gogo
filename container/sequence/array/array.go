@@ -64,7 +64,7 @@ type ArraySpecific[Item any] interface {
 	Slice(begin, end int) Array[Item]
 }
 
-// Array is an interface representing a direct-access sequence.
+// Array is an interface that represents a direct-access sequence.
 type Array[Item any] interface {
 	sequence.Sequence[Item]
 	ArraySpecific[Item]

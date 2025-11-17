@@ -20,7 +20,7 @@ package container
 
 import "iter"
 
-// Container is an interface representing a general container.
+// Container is an interface that represents a general container.
 type Container[Item any] interface {
 	// Len returns the number of items in the container.
 	Len() int

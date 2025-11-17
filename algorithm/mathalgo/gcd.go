@@ -24,7 +24,7 @@ import (
 	"github.com/donyori/gogo/constraints"
 )
 
-// GCD calculates the greatest common divisor of the integers xs.
+// GCD calculates the greatest common divisor of the integers x.
 //
 // The greatest common divisor of integers, which are not all zero,
 // is the largest positive integer that divides each of the integers
@@ -33,19 +33,19 @@ import (
 // the greatest common divisor is considered zero.
 //
 // According to the above definition, GCD always returns a nonnegative value,
-// and it returns 0 if and only if there is no nonzero value in xs.
-func GCD[Int constraints.Integer](xs ...Int) Int {
+// and it returns 0 if and only if there is no nonzero value in x.
+func GCD[Int constraints.Integer](x ...Int) Int {
 	var i int
-	for i < len(xs) && xs[i] == 0 {
+	for i < len(x) && x[i] == 0 {
 		i++
 	}
-	if i >= len(xs) {
+	if i >= len(x) {
 		return 0
 	}
-	gcd := absIntToUint64(xs[i])
-	for i++; i < len(xs); i++ {
-		if xs[i] != 0 {
-			gcd = gcd2Uint64Stein(absIntToUint64(xs[i]), gcd)
+	gcd := absIntToUint64(x[i])
+	for i++; i < len(x); i++ {
+		if x[i] != 0 {
+			gcd = gcd2Uint64Stein(absIntToUint64(x[i]), gcd)
 		}
 	}
 	return Int(gcd)

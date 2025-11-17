@@ -170,41 +170,41 @@ func (rbw *resettableBufferedWriter) ReadFrom(r io.Reader) (
 	return n, errors.AutoWrap(err)
 }
 
-func (rbw *resettableBufferedWriter) Printf(format string, args ...any) (
+func (rbw *resettableBufferedWriter) Printf(format string, arg ...any) (
 	n int, err error) {
-	n, err = fmt.Fprintf(rbw.bw, format, args...)
+	n, err = fmt.Fprintf(rbw.bw, format, arg...)
 	return n, errors.AutoWrap(err)
 }
 
-func (rbw *resettableBufferedWriter) MustPrintf(format string, args ...any) (
+func (rbw *resettableBufferedWriter) MustPrintf(format string, arg ...any) (
 	n int) {
-	n, err := fmt.Fprintf(rbw.bw, format, args...)
+	n, err := fmt.Fprintf(rbw.bw, format, arg...)
 	if err != nil {
 		panic(NewWritePanic(errors.AutoWrap(err)))
 	}
 	return
 }
 
-func (rbw *resettableBufferedWriter) Print(args ...any) (n int, err error) {
-	n, err = fmt.Fprint(rbw.bw, args...)
+func (rbw *resettableBufferedWriter) Print(arg ...any) (n int, err error) {
+	n, err = fmt.Fprint(rbw.bw, arg...)
 	return n, errors.AutoWrap(err)
 }
 
-func (rbw *resettableBufferedWriter) MustPrint(args ...any) (n int) {
-	n, err := fmt.Fprint(rbw.bw, args...)
+func (rbw *resettableBufferedWriter) MustPrint(arg ...any) (n int) {
+	n, err := fmt.Fprint(rbw.bw, arg...)
 	if err != nil {
 		panic(NewWritePanic(errors.AutoWrap(err)))
 	}
 	return
 }
 
-func (rbw *resettableBufferedWriter) Println(args ...any) (n int, err error) {
-	n, err = fmt.Fprintln(rbw.bw, args...)
+func (rbw *resettableBufferedWriter) Println(arg ...any) (n int, err error) {
+	n, err = fmt.Fprintln(rbw.bw, arg...)
 	return n, errors.AutoWrap(err)
 }
 
-func (rbw *resettableBufferedWriter) MustPrintln(args ...any) (n int) {
-	n, err := fmt.Fprintln(rbw.bw, args...)
+func (rbw *resettableBufferedWriter) MustPrintln(arg ...any) (n int) {
+	n, err := fmt.Fprintln(rbw.bw, arg...)
 	if err != nil {
 		panic(NewWritePanic(errors.AutoWrap(err)))
 	}

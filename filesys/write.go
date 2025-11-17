@@ -503,48 +503,48 @@ func (fw *writer) ReadFrom(r io.Reader) (n int64, err error) {
 	return n, errors.AutoWrap(err)
 }
 
-func (fw *writer) Printf(format string, args ...any) (n int, err error) {
+func (fw *writer) Printf(format string, arg ...any) (n int, err error) {
 	if fw.err != nil {
 		return 0, errors.AutoWrap(fw.err)
 	}
-	n, err = fw.bw.Printf(format, args...)
+	n, err = fw.bw.Printf(format, arg...)
 	return n, errors.AutoWrap(err)
 }
 
-func (fw *writer) MustPrintf(format string, args ...any) (n int) {
-	n, err := fw.Printf(format, args...)
+func (fw *writer) MustPrintf(format string, arg ...any) (n int) {
+	n, err := fw.Printf(format, arg...)
 	if err != nil {
 		panic(inout.NewWritePanic(errors.AutoWrap(err)))
 	}
 	return
 }
 
-func (fw *writer) Print(args ...any) (n int, err error) {
+func (fw *writer) Print(arg ...any) (n int, err error) {
 	if fw.err != nil {
 		return 0, errors.AutoWrap(fw.err)
 	}
-	n, err = fw.bw.Print(args...)
+	n, err = fw.bw.Print(arg...)
 	return n, errors.AutoWrap(err)
 }
 
-func (fw *writer) MustPrint(args ...any) (n int) {
-	n, err := fw.Print(args...)
+func (fw *writer) MustPrint(arg ...any) (n int) {
+	n, err := fw.Print(arg...)
 	if err != nil {
 		panic(inout.NewWritePanic(errors.AutoWrap(err)))
 	}
 	return
 }
 
-func (fw *writer) Println(args ...any) (n int, err error) {
+func (fw *writer) Println(arg ...any) (n int, err error) {
 	if fw.err != nil {
 		return 0, errors.AutoWrap(fw.err)
 	}
-	n, err = fw.bw.Println(args...)
+	n, err = fw.bw.Println(arg...)
 	return n, errors.AutoWrap(err)
 }
 
-func (fw *writer) MustPrintln(args ...any) (n int) {
-	n, err := fw.Println(args...)
+func (fw *writer) MustPrintln(arg ...any) (n int) {
+	n, err := fw.Println(arg...)
 	if err != nil {
 		panic(inout.NewWritePanic(errors.AutoWrap(err)))
 	}

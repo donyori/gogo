@@ -220,41 +220,41 @@ func TestLCM_Type(t *testing.T) {
 	}
 }
 
-// lcmBruteForce finds the least common multiple of the integers xs
-// by testing the value from the maximum value in xs
+// lcmBruteForce finds the least common multiple of the integers x
+// by testing the value from the maximum value in x
 // to the maximum value of Int, one by one.
 //
 // The definition of the least common multiple here
 // is the same as function LCM.
 //
-// It returns 0 if len(xs) is 0.
-func lcmBruteForce[Int constraints.Integer](xs ...Int) Int {
-	if len(xs) == 0 || xs[0] == 0 {
+// It returns 0 if len(x) is 0.
+func lcmBruteForce[Int constraints.Integer](x ...Int) Int {
+	if len(x) == 0 || x[0] == 0 {
 		return 0
 	}
-	m := mathalgo.AbsIntToUint64(xs[0])
-	for i := 1; i < len(xs); i++ {
-		if xs[i] == 0 {
+	m := mathalgo.AbsIntToUint64(x[0])
+	for i := 1; i < len(x); i++ {
+		if x[i] == 0 {
 			return 0
 		}
-		x := mathalgo.AbsIntToUint64(xs[i])
-		if m < x {
-			m = x
+		t := mathalgo.AbsIntToUint64(x[i])
+		if m < t {
+			m = t
 		}
 	}
 
-	limit := getLimitAccordingToType(xs...)
+	limit := getLimitAccordingToType(x...)
 	for m < limit {
 		var i int
-		for i < len(xs) && m%mathalgo.AbsIntToUint64(xs[i]) == 0 {
+		for i < len(x) && m%mathalgo.AbsIntToUint64(x[i]) == 0 {
 			i++
 		}
-		if i >= len(xs) {
+		if i >= len(x) {
 			return Int(m)
 		}
 		m++
 	}
-	for _, x := range xs {
+	for _, x := range x {
 		if m%mathalgo.AbsIntToUint64(x) != 0 {
 			panic("lcm overflows")
 		}
@@ -265,9 +265,9 @@ func lcmBruteForce[Int constraints.Integer](xs ...Int) Int {
 // getLimitAccordingToType returns the maximum value
 // of the corresponding integer type.
 // The result is of type uint64.
-func getLimitAccordingToType[Int constraints.Integer](xs ...Int) uint64 {
+func getLimitAccordingToType[Int constraints.Integer](x ...Int) uint64 {
 	var limit uint64
-	switch any(xs).(type) {
+	switch any(x).(type) {
 	case []int:
 		limit = math.MaxInt
 	case []int8:
@@ -290,7 +290,7 @@ func getLimitAccordingToType[Int constraints.Integer](xs ...Int) uint64 {
 		limit = math.MaxUint64
 	default:
 		// This should never happen, but will act as a safeguard for later.
-		panic("type of xs is unacceptable")
+		panic("type of x is unacceptable")
 	}
 	return limit
 }

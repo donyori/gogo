@@ -25,7 +25,7 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// Stack is an interface representing a stack.
+// Stack is an interface that represents a stack.
 //
 // Its method Range accesses the items
 // from the most recently added to the earliest added.

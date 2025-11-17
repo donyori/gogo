@@ -20,7 +20,7 @@ package set
 
 import "github.com/donyori/gogo/container"
 
-// Set is an interface representing a set.
+// Set is an interface that represents a set.
 //
 // Set guarantees to contain no duplicate items.
 type Set[Item any] interface {

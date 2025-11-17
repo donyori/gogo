@@ -27,7 +27,7 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// Queue is an interface representing a queue.
+// Queue is an interface that represents a queue.
 //
 // Its method Range accesses the items from the front (the earliest added)
 // to the rear (the most recently added).

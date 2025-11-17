@@ -53,8 +53,8 @@ func As(err error, target any) bool {
 }
 
 // Join directly calls standard errors.Join.
-func Join(errs ...error) error {
-	return stderrors.Join(errs...)
+func Join(err ...error) error {
+	return stderrors.Join(err...)
 }
 
 // errorPointerType is the reflect.Type of *error.

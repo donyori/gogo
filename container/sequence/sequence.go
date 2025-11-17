@@ -24,7 +24,7 @@ import (
 	"github.com/donyori/gogo/container"
 )
 
-// Sequence is an interface representing a general sequence.
+// Sequence is an interface that represents a general sequence.
 //
 // Its method Range accesses the items from first to last.
 type Sequence[Item any] interface {

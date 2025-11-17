@@ -181,28 +181,28 @@ func lazyLoadZipFile(name string) (
 // lazyCalculateChecksums loads a file with specified name
 // through lazyLoadTestData and then calculates its checksums.
 //
-// newHashes are hash function makers
+// newHash is a list of hash function makers
 // (e.g., crypto/sha256.New, crypto.SHA256.New).
 //
-// The returned checksums correspond to newHashes.
+// The returned checksums correspond to newHash.
 // They are in hexadecimal representation, lowercase.
 //
-// lazyCalculateChecksums panics if anyone in newHashes is nil or returns nil.
-func lazyCalculateChecksums(name string, newHashes ...func() hash.Hash) (
+// lazyCalculateChecksums panics if anyone in newHash is nil or returns nil.
+func lazyCalculateChecksums(name string, newHash ...func() hash.Hash) (
 	checksums []string, err error) {
 	data, err := lazyLoadTestData(name)
-	if err != nil || len(newHashes) == 0 {
+	if err != nil || len(newHash) == 0 {
 		return nil, errors.AutoWrap(err)
 	}
-	hs := make([]hash.Hash, len(newHashes))
-	ws := make([]io.Writer, len(newHashes))
-	for i := range newHashes {
-		if newHashes[i] == nil {
-			panic(errors.AutoMsg(fmt.Sprintf("newHashes[%d] is nil", i)))
+	hs := make([]hash.Hash, len(newHash))
+	ws := make([]io.Writer, len(newHash))
+	for i := range newHash {
+		if newHash[i] == nil {
+			panic(errors.AutoMsg(fmt.Sprintf("newHash[%d] is nil", i)))
 		}
-		hs[i] = newHashes[i]()
+		hs[i] = newHash[i]()
 		if hs[i] == nil {
-			panic(errors.AutoMsg(fmt.Sprintf("newHashes[%d] returns nil", i)))
+			panic(errors.AutoMsg(fmt.Sprintf("newHash[%d] returns nil", i)))
 		}
 		ws[i] = hs[i]
 	}

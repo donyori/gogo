@@ -18,9 +18,13 @@
 
 package mathalgo
 
-import "github.com/donyori/gogo/constraints"
+import (
+	"slices"
 
-// LCM calculates the least common multiple of the integers xs.
+	"github.com/donyori/gogo/constraints"
+)
+
+// LCM calculates the least common multiple of the integers x.
 //
 // The least common multiple of nonzero integers is the smallest
 // positive integer that is divisible by each of the integers.
@@ -30,20 +34,18 @@ import "github.com/donyori/gogo/constraints"
 //
 // According to the above definition,
 // LCM always returns a nonnegative value,
-// and it returns 0 if and only if len(xs) is 0 or
-// there is at least one 0 in xs.
-func LCM[Int constraints.Integer](xs ...Int) Int {
-	if len(xs) == 0 {
+// and it returns 0 if and only if len(x) is 0 or
+// there is at least one 0 in x.
+func LCM[Int constraints.Integer](x ...Int) Int {
+	if len(x) == 0 {
 		return 0
 	}
-	for _, x := range xs {
-		if x == 0 {
-			return 0
-		}
+	if slices.Contains(x, 0) {
+		return 0
 	}
-	lcm := absIntToUint64(xs[0])
-	for i := 1; i < len(xs); i++ {
-		x := absIntToUint64(xs[i])
+	lcm := absIntToUint64(x[0])
+	for i := 1; i < len(x); i++ {
+		x := absIntToUint64(x[i])
 		lcm = lcm / gcd2Uint64Stein(lcm, x) * x
 	}
 	return Int(lcm)

@@ -144,3 +144,8 @@ For identifiers with a function-level or smaller scope
 "*The number of*" can also use the prefix `n-`,
 followed by the plural form (e.g., `nItems`).  
 "*The pointer of*" can also use the prefix `p-` (e.g., `pItem`).
+
+## Variadic
+
+The name of a variadic parameter should be singular (e.g., `foo(arg ...any)`)
+instead of plural (e.g., `foo(args ...any)`).

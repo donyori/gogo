@@ -49,21 +49,21 @@ import (
 //
 // upper indicates whether to use uppercase in hexadecimal representation.
 //
-// newHashes are functions that create new hash functions
+// newHash is a list of functions that create new hash functions
 // (e.g., crypto/sha256.New, crypto.SHA256.New).
 //
-// The length of the returned checksums is the same as that of newHashes.
-// The hash result of newHashes[i] is checksums[i], encoded in hexadecimal.
-// In particular, if newHashes[i] is nil or returns nil,
+// The length of the returned checksums is the same as that of newHash.
+// The hash result of newHash[i] is checksums[i], encoded in hexadecimal.
+// In particular, if newHash[i] is nil or returns nil,
 // checksums[i] is an empty string.
-// If len(newHashes) is 0, checksums is nil.
+// If len(newHash) is 0, checksums is nil.
 //
 // This function panics if file is nil.
 func Checksum(
 	file fs.File,
 	closeFile bool,
 	upper bool,
-	newHashes ...func() hash.Hash,
+	newHash ...func() hash.Hash,
 ) (checksums []string, err error) {
 	if file == nil {
 		panic(errors.AutoMsg("file is nil"))
@@ -73,17 +73,17 @@ func Checksum(
 		}(file)
 	}
 	err = checksumTestDir(file)
-	if err != nil || len(newHashes) == 0 {
+	if err != nil || len(newHash) == 0 {
 		return nil, errors.AutoWrap(err)
 	}
 
-	checksums = make([]string, len(newHashes))
-	hs := make([]hash.Hash, len(newHashes))
-	ws := make([]io.Writer, 0, len(newHashes))
-	bs := make([]uint, 0, len(newHashes))
-	for i := range newHashes {
-		if newHashes[i] != nil {
-			hs[i] = newHashes[i]()
+	checksums = make([]string, len(newHash))
+	hs := make([]hash.Hash, len(newHash))
+	ws := make([]io.Writer, 0, len(newHash))
+	bs := make([]uint, 0, len(newHash))
+	for i := range newHash {
+		if newHash[i] != nil {
+			hs[i] = newHash[i]()
 			if hs[i] != nil {
 				ws = append(ws, hs[i])
 				bs = append(bs, uint(hs[i].BlockSize()))
@@ -141,21 +141,21 @@ func checksumTestDir(file fs.File) error {
 //
 // upper indicates whether to use uppercase in hexadecimal representation.
 //
-// newHashes are functions that create new hash functions
+// newHash is a list of functions that create new hash functions
 // (e.g., crypto/sha256.New, crypto.SHA256.New).
 //
-// The length of the returned checksums is the same as that of newHashes.
-// The hash result of newHashes[i] is checksums[i], encoded in hexadecimal.
-// In particular, if newHashes[i] is nil or returns nil,
+// The length of the returned checksums is the same as that of newHash.
+// The hash result of newHash[i] is checksums[i], encoded in hexadecimal.
+// In particular, if newHash[i] is nil or returns nil,
 // checksums[i] is an empty string.
-// If len(newHashes) is 0, checksums is nil.
+// If len(newHash) is 0, checksums is nil.
 //
 // This function panics if fsys is nil.
 func ChecksumFromFS(
 	fsys fs.FS,
 	name string,
 	upper bool,
-	newHashes ...func() hash.Hash,
+	newHash ...func() hash.Hash,
 ) (checksums []string, err error) {
 	if fsys == nil {
 		panic(errors.AutoMsg("fsys is nil"))
@@ -164,7 +164,7 @@ func ChecksumFromFS(
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
-	return Checksum(f, true, upper, newHashes...)
+	return Checksum(f, true, upper, newHash...)
 }
 
 // HashVerifier extends hash.Hash by adding a Match method to report
@@ -248,15 +248,15 @@ func (hv *hashVerifier) Match() bool {
 // If closeFile is true and file is not nil, file is closed by this function.
 //
 // It returns true if the file is not nil and can be read,
-// and matches all HashVerifier in hvs
+// and matches all HashVerifier in hv
 // (nil and duplicate HashVerifier are ignored).
-// In particular, it returns true if there is no non-nil HashVerifier in hvs.
+// In particular, it returns true if there is no non-nil HashVerifier in hv.
 // In this case, the file is not read.
 //
-// Note that VerifyChecksum does not reset the hash state of anyone in hvs.
+// Note that VerifyChecksum does not reset the hash state of anyone in hv.
 // The client should use new HashVerifier returned by NewHashVerifier or
 // call the Reset method of HashVerifier before calling this function if needed.
-func VerifyChecksum(file fs.File, closeFile bool, hvs ...HashVerifier) bool {
+func VerifyChecksum(file fs.File, closeFile bool, hv ...HashVerifier) bool {
 	if file == nil {
 		return false
 	} else if closeFile {
@@ -268,16 +268,16 @@ func VerifyChecksum(file fs.File, closeFile bool, hvs ...HashVerifier) bool {
 	if err != nil || info.IsDir() {
 		return false
 	}
-	hvs = nonNilDeduplicatedHashVerifiers(hvs)
-	if len(hvs) == 0 {
+	hv = nonNilDeduplicatedHashVerifiers(hv)
+	if len(hv) == 0 {
 		return true
 	}
 
-	ws := make([]io.Writer, len(hvs))
-	bs := make([]uint, len(hvs))
-	for i := range hvs {
-		ws[i] = hvs[i]
-		bs[i] = uint(hvs[i].BlockSize())
+	ws := make([]io.Writer, len(hv))
+	bs := make([]uint, len(hv))
+	for i := range hv {
+		ws[i] = hv[i]
+		bs[i] = uint(hv[i].BlockSize())
 	}
 	w := ws[0]
 	bufSize := bs[0]
@@ -297,8 +297,8 @@ func VerifyChecksum(file fs.File, closeFile bool, hvs ...HashVerifier) bool {
 	if err != nil {
 		return false
 	}
-	for _, hv := range hvs {
-		if !hv.Match() {
+	for _, v := range hv {
+		if !v.Match() {
 			return false
 		}
 	}
@@ -306,29 +306,29 @@ func VerifyChecksum(file fs.File, closeFile bool, hvs ...HashVerifier) bool {
 }
 
 // nonNilDeduplicatedHashVerifiers returns all
-// non-nil deduplicated HashVerifier in hvs.
+// non-nil deduplicated HashVerifier in hv.
 //
-// If there is no nil or duplicate HashVerifier in hvs, it returns hvs itself.
-// Otherwise, it copies all non-nil deduplicated HashVerifier from hvs to
+// If there is no nil or duplicate HashVerifier in hv, it returns hv itself.
+// Otherwise, it copies all non-nil deduplicated HashVerifier from hv to
 // a new slice and returns that slice.
-// The content of hvs is not modified in both cases.
+// The content of hv is not modified in both cases.
 //
-// If there is no non-nil HashVerifier in hvs, it returns nil.
-func nonNilDeduplicatedHashVerifiers(hvs []HashVerifier) []HashVerifier {
-	result := hvs
-	set := make(map[HashVerifier]struct{}, 1+len(hvs))
+// If there is no non-nil HashVerifier in hv, it returns nil.
+func nonNilDeduplicatedHashVerifiers(hv []HashVerifier) []HashVerifier {
+	result := hv
+	set := make(map[HashVerifier]struct{}, 1+len(hv))
 	set[nil] = struct{}{}
 	original := true
-	for i, hv := range hvs {
+	for i, v := range hv {
 		if original {
-			if _, ok := set[hv]; ok {
-				result, original = make([]HashVerifier, i, len(hvs)-1), false
-				copy(result, hvs[:i])
+			if _, ok := set[v]; ok {
+				result, original = make([]HashVerifier, i, len(hv)-1), false
+				copy(result, hv[:i])
 			} else {
-				set[hv] = struct{}{}
+				set[v] = struct{}{}
 			}
-		} else if _, ok := set[hv]; !ok {
-			result, set[hv] = append(result, hv), struct{}{}
+		} else if _, ok := set[v]; !ok {
+			result, set[v] = append(result, v), struct{}{}
 		}
 	}
 	if len(result) == 0 {
@@ -341,17 +341,17 @@ func nonNilDeduplicatedHashVerifiers(hvs []HashVerifier) []HashVerifier {
 // where the file is opened from fsys by specified name.
 //
 // It returns true if fsys is not nil,
-// and the file can be read and matches all HashVerifier in hvs
+// and the file can be read and matches all HashVerifier in hv
 // (nil and duplicate HashVerifier are ignored).
 // In particular, it returns true if there is no non-nil HashVerifier
-// in hvs and the file can be opened for reading.
+// in hv and the file can be opened for reading.
 // In this case, the file is not read.
 //
 // Note that VerifyChecksumFromFS does not reset
-// the hash state of anyone in hvs.
+// the hash state of anyone in hv.
 // The client should use new HashVerifier returned by NewHashVerifier or
 // call the Reset method of HashVerifier before calling this function if needed.
-func VerifyChecksumFromFS(fsys fs.FS, name string, hvs ...HashVerifier) bool {
+func VerifyChecksumFromFS(fsys fs.FS, name string, hv ...HashVerifier) bool {
 	if fsys == nil {
 		return false
 	}
@@ -359,5 +359,5 @@ func VerifyChecksumFromFS(fsys fs.FS, name string, hvs ...HashVerifier) bool {
 	if err != nil {
 		return false
 	}
-	return VerifyChecksum(f, true, hvs...)
+	return VerifyChecksum(f, true, hv...)
 }

@@ -104,20 +104,20 @@ func PrintCopyrightNotice(w io.Writer, program, year, author, source string) (
 //
 // If w is nil, it uses os.Stdout instead.
 //
-// args is a list of arguments input by the user.
-// If args is nil, it uses os.Args[1:] instead.
-// If the user inputs nothing, set args to []string{} instead of nil.
+// arg is a list of arguments input by the user.
+// If arg is nil, it uses os.Args[1:] instead.
+// If the user inputs nothing, set arg to []string{} instead of nil.
 //
 // It returns the number of bytes written to w and any write error encountered.
-// If args is neither "show w" nor "show c",
+// If arg is neither "show w" nor "show c",
 // ResponseShowWC does nothing and returns (0, nil).
-func ResponseShowWC(w io.Writer, args ...string) (n int, err error) {
-	if args == nil {
-		args = os.Args[1:]
+func ResponseShowWC(w io.Writer, arg ...string) (n int, err error) {
+	if arg == nil {
+		arg = os.Args[1:]
 	}
 	fields := make([]string, 0, 2)
-	for _, arg := range args {
-		fs := strings.Fields(arg)
+	for _, a := range arg {
+		fs := strings.Fields(a)
 		if len(fields)+len(fs) > 2 {
 			return
 		}

@@ -28,7 +28,7 @@ import (
 	"github.com/donyori/gogo/function/compare"
 )
 
-// PriorityQueue is an interface representing a priority queue.
+// PriorityQueue is an interface that represents a priority queue.
 //
 // Its method Range may not access items in a priority-related order.
 // It only guarantees that each item is accessed once.

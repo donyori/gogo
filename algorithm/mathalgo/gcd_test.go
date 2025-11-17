@@ -437,30 +437,30 @@ func randomlyGenerateInts(
 	return
 }
 
-// gcdBruteForce finds the greatest common divisor of the integers xs
-// by testing the value from the minimum value in xs to zero, one by one.
+// gcdBruteForce finds the greatest common divisor of the integers x
+// by testing the value from the minimum value in x to zero, one by one.
 //
 // The definition of the greatest common divisor here
 // is the same as function GCD.
 //
-// It returns 0 if len(xs) is 0.
-func gcdBruteForce[Int constraints.Integer](xs ...Int) Int {
-	if len(xs) == 0 {
+// It returns 0 if len(x) is 0.
+func gcdBruteForce[Int constraints.Integer](x ...Int) Int {
+	if len(x) == 0 {
 		return 0
 	}
-	d := mathalgo.AbsIntToUint64(xs[0])
-	for i := 1; i < len(xs); i++ {
-		x := mathalgo.AbsIntToUint64(xs[i])
-		if d == 0 || x != 0 && d > x {
-			d = x
+	d := mathalgo.AbsIntToUint64(x[0])
+	for i := 1; i < len(x); i++ {
+		t := mathalgo.AbsIntToUint64(x[i])
+		if d == 0 || t != 0 && d > t {
+			d = t
 		}
 	}
 	for d > 0 {
 		var i int
-		for i < len(xs) && mathalgo.AbsIntToUint64(xs[i])%d == 0 {
+		for i < len(x) && mathalgo.AbsIntToUint64(x[i])%d == 0 {
 			i++
 		}
-		if i >= len(xs) {
+		if i >= len(x) {
 			break
 		}
 		d--

@@ -105,7 +105,7 @@ type DynamicArraySpecific[Item any] interface {
 	Shrink()
 }
 
-// DynamicArray is an interface representing
+// DynamicArray is an interface that represents
 // a dynamic-length direct-access sequence.
 type DynamicArray[Item any] interface {
 	Array[Item]

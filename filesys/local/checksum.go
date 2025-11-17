@@ -36,41 +36,41 @@ import (
 //
 // upper indicates whether to use uppercase in hexadecimal representation.
 //
-// newHashes are functions that create new hash functions
+// newHash is a list of functions that create new hash functions
 // (e.g., crypto/sha256.New, crypto.SHA256.New).
 //
-// The length of the returned checksums is the same as that of newHashes.
-// The hash result of newHashes[i] is checksums[i], encoded in hexadecimal.
-// In particular, if newHashes[i] is nil or returns nil,
+// The length of the returned checksums is the same as that of newHash.
+// The hash result of newHash[i] is checksums[i], encoded in hexadecimal.
+// In particular, if newHash[i] is nil or returns nil,
 // checksums[i] is an empty string.
-// If len(newHashes) is 0, checksums is nil.
-func Checksum(filename string, upper bool, newHashes ...func() hash.Hash) (
+// If len(newHash) is 0, checksums is nil.
+func Checksum(filename string, upper bool, newHash ...func() hash.Hash) (
 	checksums []string, err error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
-	return filesys.Checksum(f, true, upper, newHashes...)
+	return filesys.Checksum(f, true, upper, newHash...)
 }
 
 // VerifyChecksum verifies a local file by hash checksum.
 //
 // It returns true if the file can be read and matches all
-// filesys.HashVerifier in hvs
+// filesys.HashVerifier in hv
 // (nil and duplicate filesys.HashVerifier are ignored).
 // In particular, it returns true if there is no non-nil filesys.HashVerifier
-// in hvs and the file can be opened for reading.
+// in hv and the file can be opened for reading.
 // In this case, the file is not read.
 //
-// Note that VerifyChecksum does not reset the hash state of anyone in hvs.
+// Note that VerifyChecksum does not reset the hash state of anyone in hv.
 // The client should use new filesys.HashVerifier
 // returned by filesys.NewHashVerifier or
 // call the Reset method of filesys.HashVerifier
 // before calling this function if needed.
-func VerifyChecksum(filename string, hvs ...filesys.HashVerifier) bool {
+func VerifyChecksum(filename string, hv ...filesys.HashVerifier) bool {
 	f, err := os.Open(filename)
 	if err != nil {
 		return false
 	}
-	return filesys.VerifyChecksum(f, true, hvs...)
+	return filesys.VerifyChecksum(f, true, hv...)
 }

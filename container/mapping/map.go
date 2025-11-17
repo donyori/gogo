@@ -47,7 +47,7 @@ func (entry Entry[Key, Value]) String() string {
 	return fmt.Sprintf("%v: %v", entry.Key, entry.Value)
 }
 
-// Map is an interface representing a map
+// Map is an interface that represents a map
 // (also known as an associative array, symbol table, or dictionary).
 //
 // Note that the entries passed to the methods Range and Filter
