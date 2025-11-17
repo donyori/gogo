@@ -164,6 +164,7 @@ const MaxItem int = 3
 func init() {
 	// Check whether MaxItem is valid.
 	var maxX int
+
 	for _, ps := range dataList {
 		for _, data := range ps {
 			for _, x := range data {
@@ -173,6 +174,7 @@ func init() {
 			}
 		}
 	}
+
 	if maxX != MaxItem {
 		panic("MaxItem needs to be updated")
 	}
@@ -185,6 +187,7 @@ type testCase struct {
 
 func TestNextPermutation(t *testing.T) {
 	var testCases []testCase
+
 	for _, ps := range dataList {
 		for i := range len(ps) - 1 {
 			testCases = append(testCases, testCase{
@@ -193,6 +196,7 @@ func TestNextPermutation(t *testing.T) {
 				wantMore: true,
 			})
 		}
+
 		testCases = append(testCases, testCase{
 			data:     ps[len(ps)-1],
 			wantData: ps[len(ps)-1],
@@ -206,10 +210,12 @@ func TestNextPermutation(t *testing.T) {
 				data = make([]int, len(tc.data))
 				copy(data, tc.data)
 			}
+
 			itf := sort.IntSlice(data)
 			if more := permutation.NextPermutation(itf); more != tc.wantMore {
 				t.Errorf("return value: got %t; want %t", more, tc.wantMore)
 			}
+
 			if unequal.Slice(data, tc.wantData) {
 				t.Errorf("permutation: got %v; want %v", data, tc.wantData)
 			}

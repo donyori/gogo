@@ -20,7 +20,8 @@ package permutation
 
 import "github.com/donyori/gogo/algorithm/search/sequence"
 
-// Interface represents an integer-indexed permutation with method Less.
+// Interface represents a zero-based integer-indexed permutation
+// with method Less.
 //
 // It is consistent with the interface sort.Interface.
 type Interface interface {
@@ -56,73 +57,76 @@ func NextPermutation(itf Interface) bool {
 	if itf == nil {
 		return false
 	}
-	i := itf.Len() - 2
+
+	const secondToLastOffset int = -2
+
+	i := itf.Len() + secondToLastOffset
 	for i >= 0 && !itf.Less(i, i+1) {
 		i--
 	}
+
 	if i < 0 {
 		return false
 	}
+
 	npbsi := &nextPermutationBinarySearchInterface{
-		data:  itf,
+		p:     itf,
 		begin: i + 1,
 	}
-	j := npbsi.begin + sequence.BinarySearchMaxLess(npbsi, i) // find the last item greater than data[i]
+	j := npbsi.begin + sequence.BinarySearchMaxLess(npbsi, i) // find the last item greater than p[i]
 	itf.Swap(i, j)
+
 	for i, j = i+1, itf.Len()-1; i < j; i, j = i+1, j-1 {
 		itf.Swap(i, j)
 	}
+
 	return true
 }
 
 // nextPermutationBinarySearchInterface is an implementation of interface
 // github.com/donyori/gogo/algorithm/search/sequence.BinarySearchInterface.
 //
-// As this implementation is designed to find the last item
-// greater than the search goal in a DESCENDING sequence,
-// if the item is greater than the search goal,
-// it is treated as "less" than the goal in the binary search algorithm.
-// Otherwise, it is treated as "greater" than the goal.
-type nextPermutationBinarySearchInterface struct {
-	data  Interface
-	begin int
-	goal  int
-}
-
-// SetGoal sets the search goal.
-//
-// It will be called once at the beginning of the search functions.
-//
-// In this implementation, goal is the index of the search goal
+// In this implementation, target is the index of the search target
 // in the permutation.
-func (npbsi *nextPermutationBinarySearchInterface) SetGoal(goal int) {
-	npbsi.goal = goal
+//
+// As this implementation is designed to find the last item
+// greater than the search target in a DESCENDING sequence,
+// if the item is greater than the search target,
+// it is treated as "less" than the target in the binary search algorithm.
+// Otherwise, it is treated as "greater" than the target.
+type nextPermutationBinarySearchInterface struct {
+	p     Interface
+	begin int
 }
 
-// Len returns the number of items in the sequence.
-//
-// The sequence is a slice of the permutation.
+// Len returns the number of items in the sequence,
+// where the sequence is a slice of the permutation.
 func (npbsi *nextPermutationBinarySearchInterface) Len() int {
-	if npbsi.data == nil {
+	if npbsi.p == nil {
 		return 0
 	}
-	return npbsi.data.Len() - npbsi.begin
+
+	return npbsi.p.Len() - npbsi.begin
 }
 
-// Compare compares the item at index i in the sequence and the search goal.
+// CompareWithTarget compares the item at index i in the sequence
+// with the search target, where the sequence is a slice of the permutation.
 //
-// It returns (-1, false) if the item is greater than the goal
+// It returns (-1, false) if the item is greater than the target
 // (in this case, the item is treated as "less" than
-// the goal in the binary search algorithm).
+// the target in the binary search algorithm).
 //
 // Otherwise, it returns (1, false) (corresponding to the case where
-// the item is "greater" than the goal in the binary search algorithm).
+// the item is "greater" than the target in the binary search algorithm).
 //
 // It panics if i is out of range.
-func (npbsi *nextPermutationBinarySearchInterface) Compare(i int) (
-	lessEqualOrGreater int, isGoal bool) {
-	if npbsi.data.Less(npbsi.goal, i+npbsi.begin) {
+func (npbsi *nextPermutationBinarySearchInterface) CompareWithTarget(
+	i int,
+	target int,
+) (cmpResult int, isTarget bool) {
+	if npbsi.p.Less(target, i+npbsi.begin) {
 		return -1, false
 	}
+
 	return 1, false
 }

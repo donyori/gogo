@@ -39,6 +39,7 @@ func (iv *idValue) String() string {
 	if iv == nil {
 		return "<nil>"
 	}
+
 	return iv.id
 }
 
@@ -46,6 +47,7 @@ func idValueLess(a, b *idValue) bool {
 	if a == nil {
 		return b != nil
 	}
+
 	return b != nil && a.value < b.value
 }
 
@@ -53,6 +55,7 @@ func idValueEqual(a, b *idValue) bool {
 	if a == nil {
 		return b == nil
 	}
+
 	return b != nil && a.id == b.id
 }
 
@@ -75,6 +78,7 @@ func idValueSortCmp(a, b *idValue) int {
 	default:
 		return 0
 	}
+
 	return -1
 }
 
@@ -92,6 +96,7 @@ var acceptNotFound = map[int]struct{}{-1: {}}
 
 func init() {
 	valueCounter = make(map[int]int, MaxValue+1)
+
 	base := make([]*idValue, BaseLength)
 	for i := range BaseLength - 1 {
 		v := i % (MaxValue + 1)
@@ -104,16 +109,20 @@ func init() {
 	// dataList[0] is nil
 	dataList[1] = []*idValue{}
 	idx := 2
+
 	for length := 1; length <= BaseLength; length++ {
 		for numCopy := 1; numCopy <= MaxCopy; numCopy++ {
 			data := make([]*idValue, length*numCopy)
+
 			var copied int
 			for copied < len(data) {
 				copied += copy(data[copied:], base[:length])
 			}
+
 			if len(data) > 1 {
 				slices.SortFunc(data, idValueSortCmp)
 			}
+
 			dataList[idx], idx = data, idx+1
 		}
 	}
@@ -121,30 +130,34 @@ func init() {
 
 type testCase[AcceptType int | map[int]struct{}] struct {
 	data   []*idValue
-	goal   *idValue
+	target *idValue
 	accept AcceptType
 }
 
 func TestBinarySearch(t *testing.T) {
 	var testCases []testCase[map[int]struct{}]
+
 	for _, data := range dataList {
-		for _, goal := range data {
+		for _, tgt := range data {
 			accept := make(map[int]struct{}, 3)
+
 			for i, x := range data {
-				if idValueEqual(x, goal) {
+				if idValueEqual(x, tgt) {
 					accept[i] = struct{}{}
 				}
 			}
+
 			testCases = append(testCases, testCase[map[int]struct{}]{
 				data:   data,
-				goal:   goal,
+				target: tgt,
 				accept: accept,
 			})
 		}
+
 		for v := -2; v <= MaxValue+2; v++ {
 			testCases = append(testCases, testCase[map[int]struct{}]{
 				data: data,
-				goal: &idValue{
+				target: &idValue{
 					id:    fmt.Sprintf("%d-%d", v, valueCounter[v]),
 					value: v,
 				},
@@ -154,14 +167,15 @@ func TestBinarySearch(t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?data=%s&goal=%v",
-			i, dataToName(tc.data), tc.goal), func(t *testing.T) {
-			itf := sequence.WrapArrayLessEqual[*idValue](
+		t.Run(fmt.Sprintf("case %d?data=%s&target=%v",
+			i, dataToName(tc.data), tc.target), func(t *testing.T) {
+			itf := sequence.WrapArrayLessEqual(
 				(*array.SliceDynamicArray[*idValue])(&tc.data),
 				idValueLess,
 				idValueEqual,
 			)
-			idx := sequence.BinarySearch(itf, tc.goal)
+
+			idx := sequence.BinarySearch(itf, tc.target)
 			if _, ok := tc.accept[idx]; !ok {
 				t.Errorf("got %d; accept %s", idx, acceptSetString(tc.accept))
 			}
@@ -171,44 +185,50 @@ func TestBinarySearch(t *testing.T) {
 
 func TestBinarySearchMaxLess(t *testing.T) {
 	var testCases []testCase[int]
+
 	for _, data := range dataList {
-		for _, goal := range data {
+		for _, tgt := range data {
 			want := -1
-			for i := 0; i < len(data) && idValueLess(data[i], goal); i++ {
+			for i := 0; i < len(data) && idValueLess(data[i], tgt); i++ {
 				want = i
 			}
+
 			testCases = append(testCases, testCase[int]{
 				data:   data,
-				goal:   goal,
+				target: tgt,
 				accept: want,
 			})
 		}
+
 		for v := -2; v <= MaxValue+2; v++ {
-			goal := &idValue{
+			tgt := &idValue{
 				id:    fmt.Sprintf("%d-%d", v, valueCounter[v]),
 				value: v,
 			}
+
 			want := -1
-			for i := 0; i < len(data) && idValueLess(data[i], goal); i++ {
+			for i := 0; i < len(data) && idValueLess(data[i], tgt); i++ {
 				want = i
 			}
+
 			testCases = append(testCases, testCase[int]{
 				data:   data,
-				goal:   goal,
+				target: tgt,
 				accept: want,
 			})
 		}
 	}
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?data=%s&goal=%v",
-			i, dataToName(tc.data), tc.goal), func(t *testing.T) {
-			itf := sequence.WrapArrayLessEqual[*idValue](
+		t.Run(fmt.Sprintf("case %d?data=%s&target=%v",
+			i, dataToName(tc.data), tc.target), func(t *testing.T) {
+			itf := sequence.WrapArrayLessEqual(
 				(*array.SliceDynamicArray[*idValue])(&tc.data),
 				idValueLess,
 				idValueEqual,
 			)
-			idx := sequence.BinarySearchMaxLess(itf, tc.goal)
+
+			idx := sequence.BinarySearchMaxLess(itf, tc.target)
 			if idx != tc.accept {
 				t.Errorf("got %d; want %d", idx, tc.accept)
 			}
@@ -218,44 +238,50 @@ func TestBinarySearchMaxLess(t *testing.T) {
 
 func TestBinarySearchMinGreater(t *testing.T) {
 	var testCases []testCase[int]
+
 	for _, data := range dataList {
-		for _, goal := range data {
+		for _, tgt := range data {
 			want := -1
-			for i := len(data) - 1; i >= 0 && idValueLess(goal, data[i]); i-- {
+			for i := len(data) - 1; i >= 0 && idValueLess(tgt, data[i]); i-- {
 				want = i
 			}
+
 			testCases = append(testCases, testCase[int]{
 				data:   data,
-				goal:   goal,
+				target: tgt,
 				accept: want,
 			})
 		}
+
 		for v := -2; v <= MaxValue+2; v++ {
-			goal := &idValue{
+			tgt := &idValue{
 				id:    fmt.Sprintf("%d-%d", v, valueCounter[v]),
 				value: v,
 			}
+
 			want := -1
-			for i := len(data) - 1; i >= 0 && idValueLess(goal, data[i]); i-- {
+			for i := len(data) - 1; i >= 0 && idValueLess(tgt, data[i]); i-- {
 				want = i
 			}
+
 			testCases = append(testCases, testCase[int]{
 				data:   data,
-				goal:   goal,
+				target: tgt,
 				accept: want,
 			})
 		}
 	}
 
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("case %d?data=%s&goal=%v",
-			i, dataToName(tc.data), tc.goal), func(t *testing.T) {
-			itf := sequence.WrapArrayLessEqual[*idValue](
+		t.Run(fmt.Sprintf("case %d?data=%s&target=%v",
+			i, dataToName(tc.data), tc.target), func(t *testing.T) {
+			itf := sequence.WrapArrayLessEqual(
 				(*array.SliceDynamicArray[*idValue])(&tc.data),
 				idValueLess,
 				idValueEqual,
 			)
-			idx := sequence.BinarySearchMinGreater(itf, tc.goal)
+
+			idx := sequence.BinarySearchMinGreater(itf, tc.target)
 			if idx != tc.accept {
 				t.Errorf("got %d; want %d", idx, tc.accept)
 			}
@@ -267,22 +293,30 @@ func acceptSetString(acceptSet map[int]struct{}) string {
 	if acceptSet == nil {
 		return "<nil>"
 	}
+
 	vs := make([]int, len(acceptSet))
+
 	var i int
 	for v := range acceptSet {
 		vs[i], i = v, i+1
 	}
+
 	slices.Sort(vs)
+
 	var b strings.Builder
 	b.Grow(len(vs)*3 + 2)
 	b.WriteByte('[')
+
 	for i, v := range vs {
 		if i > 0 {
 			b.WriteByte(',')
 		}
+
 		b.WriteString(strconv.Itoa(v))
 	}
+
 	b.WriteByte(']')
+
 	return b.String()
 }
 
