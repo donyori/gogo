@@ -99,7 +99,7 @@ type WriteOptions struct {
 	ZipComp map[uint16]zip.Compressor
 }
 
-// defaultWriteOptions are default options for Write functions.
+// defaultWriteOptions are the default options for Write functions.
 var defaultWriteOptions = &WriteOptions{DeflateLv: flate.BestCompression}
 
 // Writer is a device to write data to a local file.

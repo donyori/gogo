@@ -69,26 +69,26 @@ type ErrorList interface {
 	// IterErrors returns an iterator over all errors in the list,
 	// traversing it from first to last.
 	//
-	// The returned iterator is always non-nil.
+	// The returned iterator is never nil.
 	IterErrors() iter.Seq[error]
 
 	// IterErrorsBackward returns an iterator over all errors in the list,
 	// traversing it from last to first.
 	//
-	// The returned iterator is always non-nil.
+	// The returned iterator is never nil.
 	IterErrorsBackward() iter.Seq[error]
 
 	// IterIndexErrors returns an iterator over index-error pairs in the list,
 	// traversing it from first to last.
 	//
-	// The returned iterator is always non-nil.
+	// The returned iterator is never nil.
 	IterIndexErrors() iter.Seq2[int, error]
 
 	// IterIndexErrorsBackward returns an iterator
 	// over index-error pairs in the list,
 	// traversing it from last to first with descending indices.
 	//
-	// The returned iterator is always non-nil.
+	// The returned iterator is never nil.
 	IterIndexErrorsBackward() iter.Seq2[int, error]
 
 	// Append appends err to the error list.

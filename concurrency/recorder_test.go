@@ -130,15 +130,15 @@ func goroutineTestRecorderReader(
 			!slices.Equal(got, wantAll) {
 			switch {
 			case got == nil:
-				// wantAll is non-nil.
+				// wantAll is not nil.
 				t.Errorf("reader %d, %s - got All <nil>; want %v",
 					rank, s, wantAll)
 			case wantAll == nil:
-				// got is non-nil.
+				// got is not nil.
 				t.Errorf("reader %d, %s - got All %v; want <nil>",
 					rank, s, got)
 			default:
-				// Both got and wantAll are non-nil.
+				// Both got and wantAll are not nil.
 				t.Errorf("reader %d, %s - got All %v; want %v",
 					rank, s, got, wantAll)
 			}

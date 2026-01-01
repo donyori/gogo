@@ -39,6 +39,6 @@ type Container[Item any] interface {
 	// IterItems returns an iterator over all items in the container.
 	// The order of iteration is consistent with the method Range.
 	//
-	// The returned iterator is always non-nil.
+	// The returned iterator is never nil.
 	IterItems() iter.Seq[Item]
 }

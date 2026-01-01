@@ -147,13 +147,13 @@ func TestAppend_NZero(t *testing.T) {
 			if !compare.SliceEqual(got, want) {
 				switch {
 				case got == nil:
-					// want is non-nil.
+					// want is not nil.
 					t.Errorf("got <nil>; want %x", want)
 				case want == nil:
-					// got is non-nil.
+					// got is not nil.
 					t.Errorf("got %x; want <nil>", got)
 				default:
-					// Both got and want are non-nil.
+					// Both got and want are not nil.
 					t.Errorf("got %x; want %x", got, want)
 				}
 			}

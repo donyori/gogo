@@ -82,7 +82,7 @@ type CommonFormat struct {
 // The formatting result is as follows:
 //   - <TYPE-AND-SIZE> "<nil>", if the sequence is nil.
 //   - <TYPE-AND-SIZE> "[" <CONTENT> "]",
-//     if the sequence is non-nil (can be empty).
+//     if the sequence is not nil (can be empty).
 //
 // where <TYPE-AND-SIZE> is as follows:
 //   - "(" <TYPE> "," <SIZE> ")", if both PrependType and PrependSize are true.
@@ -92,9 +92,9 @@ type CommonFormat struct {
 //
 // and <CONTENT> is as follows:
 //   - <PREFIX> <ITEM-1> <SEPARATOR> <ITEM-2> <SEPARATOR> ... <SEPARATOR> <ITEM-N> <SUFFIX>,
-//     if the sequence has at least two items and FormatItemFn is non-nil.
+//     if the sequence has at least two items and FormatItemFn is not nil.
 //   - <PREFIX> <ITEM> <SUFFIX>,
-//     if the sequence has only one item and FormatItemFn is non-nil.
+//     if the sequence has only one item and FormatItemFn is not nil.
 //   - "...", if the sequence is nonempty and FormatItemFn is nil.
 //   - "" (empty), if the sequence is empty.
 type SequenceFormat[Item any] struct {
@@ -134,7 +134,7 @@ func NewDefaultSequenceFormat[Item any]() *SequenceFormat[Item] {
 //
 // The formatting result is as follows:
 //   - <TYPE-AND-SIZE> "<nil>", if the map is nil.
-//   - <TYPE-AND-SIZE> "{" <CONTENT> "}", if the map is non-nil (can be empty).
+//   - <TYPE-AND-SIZE> "{" <CONTENT> "}", if the map is not nil (can be empty).
 //
 // where <TYPE-AND-SIZE> is as follows:
 //   - "(" <TYPE> "," <SIZE> ")", if both PrependType and PrependSize are true.
@@ -145,18 +145,18 @@ func NewDefaultSequenceFormat[Item any]() *SequenceFormat[Item] {
 // and <CONTENT> is as follows:
 //   - <PREFIX> <ITEM-1> <SEPARATOR> <ITEM-2> <SEPARATOR> ... <SEPARATOR> <ITEM-N> <SUFFIX>,
 //     if the map has at least two key-value pairs and
-//     either FormatKeyFn or FormatValueFn is non-nil.
+//     either FormatKeyFn or FormatValueFn is not nil.
 //   - <PREFIX> <ITEM> <SUFFIX>,
 //     if the map has only one key-value pair and
-//     either FormatKeyFn or FormatValueFn is non-nil.
+//     either FormatKeyFn or FormatValueFn is not nil.
 //   - "...", if the map is nonempty and
 //     both FormatKeyFn and FormatValueFn are nil.
 //   - "" (empty), if the map is empty.
 //
 // where <ITEM> (including <ITEM-1>, <ITEM-2>, ..., <ITEM-N>) is as follows:
-//   - <KEY> ":" <VALUE>, if both FormatKeyFn and FormatValueFn are non-nil.
-//   - <KEY>, if FormatKeyFn is non-nil and FormatValueFn is nil.
-//   - <VALUE>, if FormatKeyFn is nil and FormatValueFn is non-nil.
+//   - <KEY> ":" <VALUE>, if both FormatKeyFn and FormatValueFn are not nil.
+//   - <KEY>, if FormatKeyFn is not nil and FormatValueFn is nil.
+//   - <VALUE>, if FormatKeyFn is nil and FormatValueFn is not nil.
 type MapFormat[Key, Value any] struct {
 	CommonFormat
 

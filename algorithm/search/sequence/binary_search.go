@@ -231,7 +231,7 @@ func BinarySearchMinGreater[Target any](
 // when they are equal.
 // equalFn will be called only when both lessFn(item, target) and
 // lessFn(target, item) return false.
-// When equalFn is non-nil, the second return value of method CompareWithTarget
+// When equalFn is not nil, the second return value of method CompareWithTarget
 // is true if and only if lessFn(item, target) returns false,
 // lessFn(target, item) returns false,
 // and equalFn(item, target) returns true.
@@ -272,7 +272,7 @@ type arrayBinarySearchAdapter[Item any] struct {
 // when they are equal.
 // equalFn will be called only when both lessFn(item, target) and
 // lessFn(target, item) return false.
-// When equalFn is non-nil, the second return value of method CompareWithTarget
+// When equalFn is not nil, the second return value of method CompareWithTarget
 // is true if and only if lessFn(item, target) returns false,
 // lessFn(target, item) returns false,
 // and equalFn(item, target) returns true.

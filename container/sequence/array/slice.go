@@ -73,7 +73,7 @@ func (sda *SliceDynamicArray[Item]) Range(handler func(x Item) (cont bool)) {
 // IterItems returns an iterator over all items in the slice,
 // traversing it from first to last.
 //
-// The returned iterator is always non-nil.
+// The returned iterator is never nil.
 func (sda *SliceDynamicArray[Item]) IterItems() iter.Seq[Item] {
 	return sda.Range
 }
@@ -95,7 +95,7 @@ func (sda *SliceDynamicArray[Item]) RangeBackward(
 // IterItemsBackward returns an iterator over all items in the slice,
 // traversing it from last to first.
 //
-// The returned iterator is always non-nil.
+// The returned iterator is never nil.
 func (sda *SliceDynamicArray[Item]) IterItemsBackward() iter.Seq[Item] {
 	return sda.RangeBackward
 }
@@ -142,7 +142,7 @@ func (sda *SliceDynamicArray[Item]) Reverse() {
 // IterIndexItems returns an iterator over index-item pairs in the slice,
 // traversing it from first to last.
 //
-// The returned iterator is always non-nil.
+// The returned iterator is never nil.
 func (sda *SliceDynamicArray[Item]) IterIndexItems() iter.Seq2[int, Item] {
 	return func(yield func(int, Item) bool) {
 		if yield != nil && sda != nil {
@@ -159,7 +159,7 @@ func (sda *SliceDynamicArray[Item]) IterIndexItems() iter.Seq2[int, Item] {
 // over index-item pairs in the slice,
 // traversing it from last to first with descending indices.
 //
-// The returned iterator is always non-nil.
+// The returned iterator is never nil.
 func (sda *SliceDynamicArray[Item]) IterIndexItemsBackward() iter.Seq2[int, Item] {
 	return func(yield func(int, Item) bool) {
 		if yield != nil && sda != nil {

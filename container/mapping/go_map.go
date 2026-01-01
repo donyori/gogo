@@ -72,7 +72,7 @@ func (gm *GoMap[Key, Value]) Range(
 // IterItems returns an iterator over all entries (key-value pairs) in the map.
 // The order of iteration is random.
 //
-// The returned iterator is always non-nil.
+// The returned iterator is never nil.
 func (gm *GoMap[Key, Value]) IterItems() iter.Seq[Entry[Key, Value]] {
 	return gm.Range
 }
@@ -115,7 +115,7 @@ func (gm *GoMap[Key, Value]) Filter(
 // IterKeys returns an iterator over keys in the map.
 // The order of iteration is random.
 //
-// The returned iterator is always non-nil.
+// The returned iterator is never nil.
 func (gm *GoMap[Key, Value]) IterKeys() iter.Seq[Key] {
 	return func(yield func(Key) bool) {
 		if yield != nil && gm != nil {
@@ -131,7 +131,7 @@ func (gm *GoMap[Key, Value]) IterKeys() iter.Seq[Key] {
 // IterValues returns an iterator over values in the map.
 // The order of iteration is random.
 //
-// The returned iterator is always non-nil.
+// The returned iterator is never nil.
 func (gm *GoMap[Key, Value]) IterValues() iter.Seq[Value] {
 	return func(yield func(Value) bool) {
 		if yield != nil && gm != nil {
@@ -147,7 +147,7 @@ func (gm *GoMap[Key, Value]) IterValues() iter.Seq[Value] {
 // IterKeyValues returns an iterator over key-value pairs in the map.
 // The order of iteration is random.
 //
-// The returned iterator is always non-nil.
+// The returned iterator is never nil.
 func (gm *GoMap[Key, Value]) IterKeyValues() iter.Seq2[Key, Value] {
 	return func(yield func(Key, Value) bool) {
 		if yield != nil && gm != nil {

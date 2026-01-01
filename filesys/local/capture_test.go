@@ -157,7 +157,7 @@ func testCaptureOutputFileToStringAlreadyCaptured(
 		t.Errorf("got err %v; want one with suffix %q", err, WantErrSuffix)
 	}
 	if f2 != nil {
-		t.Error("got f2 non-nil")
+		t.Error("got f2 not nil")
 		_, _, _ = f2()
 	}
 }

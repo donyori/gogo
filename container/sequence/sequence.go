@@ -37,7 +37,7 @@ type Sequence[Item any] interface {
 	// IterItemsBackward returns an iterator over all items in the sequence,
 	// traversing it from last to first.
 	//
-	// The returned iterator is always non-nil.
+	// The returned iterator is never nil.
 	IterItemsBackward() iter.Seq[Item]
 
 	// Front returns the first item.

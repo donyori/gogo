@@ -48,7 +48,7 @@ type ErrorReadOnlySet interface {
 	// IterErrors returns an iterator over all errors in the set.
 	// The order of iteration is consistent with the method Range.
 	//
-	// The returned iterator is always non-nil.
+	// The returned iterator is never nil.
 	IterErrors() iter.Seq[error]
 }
 

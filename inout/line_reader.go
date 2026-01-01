@@ -122,7 +122,7 @@ type IterativeLineReader interface {
 	// (hardly happens in text files),
 	// the iterator may panic or report an error through pErr (if not nil).
 	//
-	// The returned iterator is always non-nil.
+	// The returned iterator is never nil.
 	IterLines(pErr *error) iter.Seq[[]byte]
 
 	// IterCountLines returns a single-use iterator over count-line pairs

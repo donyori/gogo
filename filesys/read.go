@@ -136,7 +136,7 @@ type Reader interface {
 	// it does nothing and reports ErrNotTar.
 	// (To test whether err is ErrNotTar, use function errors.Is.)
 	//
-	// The returned iterator is always non-nil
+	// The returned iterator is never nil
 	// but is a no-op iterator if err is not nil.
 	IterTarFiles(pErr *error, acceptNonLocalNames bool) (
 		seq iter.Seq[*tar.Header], err error)
@@ -176,7 +176,7 @@ type Reader interface {
 	// it does nothing and reports ErrNotZip.
 	// (To test whether the error is ErrNotZip, use function errors.Is.)
 	//
-	// The returned iterator is always non-nil
+	// The returned iterator is never nil
 	// but is a no-op iterator if err is not nil.
 	IterZipFiles() (seq iter.Seq[*zip.File], err error)
 
