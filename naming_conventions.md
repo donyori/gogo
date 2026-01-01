@@ -56,12 +56,14 @@ keywords or other identifiers such as standard packages.
 | builder                                 | ^b                  |
 | continue                                | \*cont              |
 | counter                                 | ctr                 |
+| decompressor                            | dcomp               |
 | default                                 | \*dflt              |
 | function                                | ^f, fn, func        |
 | input/output                            | \*inout (InOut), io |
 | iterator                                | iter                |
 | number (indicating amount, quantity)    | n\-, num\-          |
 | number (indicating rank, serial number) | no                  |
+| option                                  | opt                 |
 | pointer                                 | p\-, ptr            |
 | type                                    | typ                 |
 | value                                   | ^v, val             |
