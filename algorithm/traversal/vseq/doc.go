@@ -16,9 +16,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package graphv provides search algorithm on graphs,
-// where only the vertices are concerned.
+// Package vseq provides an interface that represents a sequence of
+// vertices/nodes in a graph, which is typically used to record the path
+// from the root (i.e., the starting point of the traversal)
+// to the current vertex/node during traversal.
 //
 // For better performance, all functions in this package are unsafe
 // for concurrency unless otherwise specified.
-package graphv
+package vseq

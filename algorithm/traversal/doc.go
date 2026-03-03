@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package tree provides search algorithms on trees.
+// Package traversal provides traversal algorithms.
 //
-// For better performance, all functions in this package are unsafe
-// for concurrency unless otherwise specified.
-package tree
+// For better performance, all functions in this package and its subpackages
+// are unsafe for concurrency unless otherwise specified.
+package traversal

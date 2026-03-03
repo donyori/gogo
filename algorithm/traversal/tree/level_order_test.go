@@ -1,0 +1,374 @@
+// gogo.  A Go (Golang) toolbox.
+// Copyright (C) 2019-2026  Yuan Gao
+//
+// This file is part of gogo.
+//
+// gogo is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+package tree_test
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/donyori/gogo/algorithm/traversal/tree"
+)
+
+var (
+	// LevelOrderNodeIteratorTestCaseWants are 24 test case wanted outputs
+	// for testing level-order node iterators,
+	// corresponding to IteratorTestCaseInputs.
+	LevelOrderNodeIteratorTestCaseWants = [NumIteratorTestCase]string{
+		"",
+		"T0aL1aL1bL1cR1dR1eL2aL2bL2cR2dR2eL2fL2gR2hR2iR2j" +
+			"R2kL2lL3aR3bL3cR3dL3eL3fR3gR3hR3iL3jR3kL3lR3mR3n",
+		"L1b",
+		"L1cL2fL2gR2hR2iL3jR3kL3lR3m",
+
+		"",
+		"T0aL1aL1bL1cR1dR1eL2a",
+		"L1b",
+		"L1cL2fL2gR2hR2iL3jR3k",
+
+		"",
+		"T0aL1aL1bL1cR1dR1eL2aL2bL2cR2dR2eL2fL2gR2hR2iR2jR2kL2l",
+		"L1b",
+		"L1cL2fL2gR2hR2iL3jR3kL3lR3m",
+
+		"",
+		"T0aL1aL1bL1cR1dR1eL2a",
+		"L1b",
+		"L1cL2fL2gR2hR2iL3jR3k",
+
+		"",
+		"T0aL1aL1bL1cR1dR1eL2aL2bL2cR2dR2eL2fL2gR2hR2iR2j" +
+			"R2kL2lL3aR3bL3cR3dL3eL3fR3gR3hR3iL3jR3kL3lR3mR3n",
+		"L1b",
+		"L1cL2fL2gR2hR2iL3jR3kL3lR3m",
+
+		"",
+		"T0aL1aL1bL1cR1dR1eL2aL2bL2cR2dR2eR2jR2kL2lL3aR3bL3cR3dR3hR3i",
+		"L1b",
+		"L1c",
+	}
+
+	// LevelOrderPathIteratorTestCaseWants are 24 test case wanted outputs
+	// for testing level-order path iterators,
+	// corresponding to IteratorTestCaseInputs.
+	LevelOrderPathIteratorTestCaseWants = [NumIteratorTestCase]string{
+		"",
+		"(T0a)(L1aT0a)(L1bT0a)(L1cT0a)(R1dT0a)(R1eT0a)(L2aL1aT0a)(L2bL1aT0a)" +
+			"(L2cL1aT0a)(R2dL1aT0a)(R2eL1aT0a)(L2fL1cT0a)(L2gL1cT0a)" +
+			"(R2hL1cT0a)(R2iL1cT0a)(R2jR1dT0a)(R2kR1dT0a)(L2lR1eT0a)" +
+			"(L3aL2aL1aT0a)(R3bL2aL1aT0a)(L3cL2bL1aT0a)(R3dL2cL1aT0a)" +
+			"(L3eR2dL1aT0a)(L3fR2dL1aT0a)(R3gR2dL1aT0a)(R3hR2eL1aT0a)" +
+			"(R3iR2eL1aT0a)(L3jL2gL1cT0a)(R3kL2gL1cT0a)(L3lR2iL1cT0a)" +
+			"(R3mR2iL1cT0a)(R3nL2lR1eT0a)",
+		"(L1b)",
+		"(L1c)(L2fL1c)(L2gL1c)(R2hL1c)(R2iL1c)(L3jL2gL1c)(R3kL2gL1c)" +
+			"(L3lR2iL1c)(R3mR2iL1c)",
+
+		"",
+		"(T0a)(L1aT0a)(L1bT0a)(L1cT0a)(R1dT0a)(R1eT0a)(L2aL1aT0a)",
+		"(L1b)",
+		"(L1c)(L2fL1c)(L2gL1c)(R2hL1c)(R2iL1c)(L3jL2gL1c)(R3kL2gL1c)",
+
+		"",
+		"(T0a)(L1aT0a)(L1bT0a)(L1cT0a)(R1dT0a)(R1eT0a)(L2aL1aT0a)(L2bL1aT0a)" +
+			"(L2cL1aT0a)(R2dL1aT0a)(R2eL1aT0a)(L2fL1cT0a)(L2gL1cT0a)" +
+			"(R2hL1cT0a)(R2iL1cT0a)(R2jR1dT0a)(R2kR1dT0a)(L2lR1eT0a)",
+		"(L1b)",
+		"(L1c)(L2fL1c)(L2gL1c)(R2hL1c)(R2iL1c)(L3jL2gL1c)(R3kL2gL1c)" +
+			"(L3lR2iL1c)(R3mR2iL1c)",
+
+		"",
+		"(T0a)(L1aT0a)(L1bT0a)(L1cT0a)(R1dT0a)(R1eT0a)(L2aL1aT0a)",
+		"(L1b)",
+		"(L1c)(L2fL1c)(L2gL1c)(R2hL1c)(R2iL1c)(L3jL2gL1c)(R3kL2gL1c)",
+
+		"",
+		"(T0a)(L1aT0a)(L1bT0a)(L1cT0a)(R1dT0a)(R1eT0a)(L2aL1aT0a)(L2bL1aT0a)" +
+			"(L2cL1aT0a)(R2dL1aT0a)(R2eL1aT0a)(L2fL1cT0a)(L2gL1cT0a)" +
+			"(R2hL1cT0a)(R2iL1cT0a)(R2jR1dT0a)(R2kR1dT0a)(L2lR1eT0a)" +
+			"(L3aL2aL1aT0a)(R3bL2aL1aT0a)(L3cL2bL1aT0a)(R3dL2cL1aT0a)" +
+			"(L3eR2dL1aT0a)(L3fR2dL1aT0a)(R3gR2dL1aT0a)(R3hR2eL1aT0a)" +
+			"(R3iR2eL1aT0a)(L3jL2gL1cT0a)(R3kL2gL1cT0a)(L3lR2iL1cT0a)" +
+			"(R3mR2iL1cT0a)(R3nL2lR1eT0a)",
+		"(L1b)",
+		"(L1c)(L2fL1c)(L2gL1c)(R2hL1c)(R2iL1c)(L3jL2gL1c)(R3kL2gL1c)" +
+			"(L3lR2iL1c)(R3mR2iL1c)",
+
+		"",
+		"(T0a)(L1aT0a)(L1bT0a)(L1cT0a)(R1dT0a)(R1eT0a)(L2aL1aT0a)(L2bL1aT0a)" +
+			"(L2cL1aT0a)(R2dL1aT0a)(R2eL1aT0a)(R2jR1dT0a)(R2kR1dT0a)" +
+			"(L2lR1eT0a)(L3aL2aL1aT0a)(R3bL2aL1aT0a)(L3cL2bL1aT0a)" +
+			"(R3dL2cL1aT0a)(R3hR2eL1aT0a)(R3iR2eL1aT0a)",
+		"(L1b)",
+		"(L1c)",
+	}
+)
+
+func TestIterLevelOrder(t *testing.T) {
+	t.Parallel()
+
+	for i := range NumIteratorTestCase {
+		root := IteratorTestCaseInputs[i].Root
+		opts := IteratorTestCaseInputs[i].Opts
+		skipChildrenFn := IteratorTestCaseInputs[i].NodeSkipChildrenFn
+		t.Run(
+			fmt.Sprintf(
+				"root=%s&opts=%s&skipChildren=%t",
+				stringNodeToName(root),
+				optionsToName(opts),
+				skipChildrenFn != nil,
+			),
+			func(t *testing.T) {
+				t.Parallel()
+
+				seq := tree.IterLevelOrder(root, opts, skipChildrenFn)
+				checkNodeIterator(
+					t, seq, LevelOrderNodeIteratorTestCaseWants[i])
+			},
+		)
+	}
+}
+
+func TestIterLevelOrderDepth(t *testing.T) {
+	t.Parallel()
+
+	for i := range NumIteratorTestCase {
+		root := IteratorTestCaseInputs[i].Root
+		opts := IteratorTestCaseInputs[i].Opts
+		skipChildrenFn := IteratorTestCaseInputs[i].NodeSkipChildrenFn
+		t.Run(
+			fmt.Sprintf(
+				"root=%s&opts=%s&skipChildren=%t",
+				stringNodeToName(root),
+				optionsToName(opts),
+				skipChildrenFn != nil,
+			),
+			func(t *testing.T) {
+				t.Parallel()
+
+				seq2 := tree.IterLevelOrderDepth(root, opts, skipChildrenFn)
+				checkNodeDepthIterator(
+					t, root, seq2, LevelOrderNodeIteratorTestCaseWants[i])
+			},
+		)
+	}
+}
+
+func TestIterLevelOrderStep(t *testing.T) {
+	t.Parallel()
+
+	for i := range NumIteratorTestCase {
+		root := IteratorTestCaseInputs[i].Root
+		opts := IteratorTestCaseInputs[i].Opts
+		skipChildrenFn := IteratorTestCaseInputs[i].NodeSkipChildrenFn
+		t.Run(
+			fmt.Sprintf(
+				"root=%s&opts=%s&skipChildren=%t",
+				stringNodeToName(root),
+				optionsToName(opts),
+				skipChildrenFn != nil,
+			),
+			func(t *testing.T) {
+				t.Parallel()
+
+				seq2 := tree.IterLevelOrderStep(root, opts, skipChildrenFn)
+				checkStepNodeIterator(
+					t, seq2, LevelOrderNodeIteratorTestCaseWants[i])
+			},
+		)
+	}
+}
+
+func TestIterLevelOrderPath(t *testing.T) {
+	t.Parallel()
+
+	for i := range NumIteratorTestCase {
+		root := IteratorTestCaseInputs[i].Root
+		opts := IteratorTestCaseInputs[i].Opts
+		skipChildrenFn := IteratorTestCaseInputs[i].PathSkipChildrenFn
+		t.Run(
+			fmt.Sprintf(
+				"root=%s&opts=%s&skipChildren=%t",
+				stringNodeToName(root),
+				optionsToName(opts),
+				skipChildrenFn != nil,
+			),
+			func(t *testing.T) {
+				t.Parallel()
+
+				seq := tree.IterLevelOrderPath(root, opts, skipChildrenFn)
+				checkPathIterator(
+					t, seq, LevelOrderPathIteratorTestCaseWants[i])
+			},
+		)
+	}
+}
+
+func TestIterLevelOrderPathStep(t *testing.T) {
+	t.Parallel()
+
+	for i := range NumIteratorTestCase {
+		root := IteratorTestCaseInputs[i].Root
+		opts := IteratorTestCaseInputs[i].Opts
+		skipChildrenFn := IteratorTestCaseInputs[i].PathSkipChildrenFn
+		t.Run(
+			fmt.Sprintf(
+				"root=%s&opts=%s&skipChildren=%t",
+				stringNodeToName(root),
+				optionsToName(opts),
+				skipChildrenFn != nil,
+			),
+			func(t *testing.T) {
+				t.Parallel()
+
+				seq2 := tree.IterLevelOrderPathStep(root, opts, skipChildrenFn)
+				checkStepPathIterator(
+					t, seq2, LevelOrderPathIteratorTestCaseWants[i])
+			},
+		)
+	}
+}
+
+func TestIterLevelOrderQueueBased(t *testing.T) {
+	t.Parallel()
+
+	for i := range NumIteratorTestCase {
+		root := IteratorTestCaseInputs[i].Root
+		opts := IteratorTestCaseInputs[i].Opts
+		skipChildrenFn := IteratorTestCaseInputs[i].NodeSkipChildrenFn
+		t.Run(
+			fmt.Sprintf(
+				"root=%s&opts=%s&skipChildren=%t",
+				stringNodeToName(root),
+				optionsToName(opts),
+				skipChildrenFn != nil,
+			),
+			func(t *testing.T) {
+				t.Parallel()
+
+				seq := tree.IterLevelOrderQueueBased(root, opts, skipChildrenFn)
+				checkNodeIterator(
+					t, seq, LevelOrderNodeIteratorTestCaseWants[i])
+			},
+		)
+	}
+}
+
+func TestIterLevelOrderDepthQueueBased(t *testing.T) {
+	t.Parallel()
+
+	for i := range NumIteratorTestCase {
+		root := IteratorTestCaseInputs[i].Root
+		opts := IteratorTestCaseInputs[i].Opts
+		skipChildrenFn := IteratorTestCaseInputs[i].NodeSkipChildrenFn
+		t.Run(
+			fmt.Sprintf(
+				"root=%s&opts=%s&skipChildren=%t",
+				stringNodeToName(root),
+				optionsToName(opts),
+				skipChildrenFn != nil,
+			),
+			func(t *testing.T) {
+				t.Parallel()
+
+				seq2 := tree.IterLevelOrderDepthQueueBased(
+					root, opts, skipChildrenFn)
+				checkNodeDepthIterator(
+					t, root, seq2, LevelOrderNodeIteratorTestCaseWants[i])
+			},
+		)
+	}
+}
+
+func TestIterLevelOrderStepQueueBased(t *testing.T) {
+	t.Parallel()
+
+	for i := range NumIteratorTestCase {
+		root := IteratorTestCaseInputs[i].Root
+		opts := IteratorTestCaseInputs[i].Opts
+		skipChildrenFn := IteratorTestCaseInputs[i].NodeSkipChildrenFn
+		t.Run(
+			fmt.Sprintf(
+				"root=%s&opts=%s&skipChildren=%t",
+				stringNodeToName(root),
+				optionsToName(opts),
+				skipChildrenFn != nil,
+			),
+			func(t *testing.T) {
+				t.Parallel()
+
+				seq2 := tree.IterLevelOrderStepQueueBased(
+					root, opts, skipChildrenFn)
+				checkStepNodeIterator(
+					t, seq2, LevelOrderNodeIteratorTestCaseWants[i])
+			},
+		)
+	}
+}
+
+func TestIterLevelOrderPathQueueBased(t *testing.T) {
+	t.Parallel()
+
+	for i := range NumIteratorTestCase {
+		root := IteratorTestCaseInputs[i].Root
+		opts := IteratorTestCaseInputs[i].Opts
+		skipChildrenFn := IteratorTestCaseInputs[i].PathSkipChildrenFn
+		t.Run(
+			fmt.Sprintf(
+				"root=%s&opts=%s&skipChildren=%t",
+				stringNodeToName(root),
+				optionsToName(opts),
+				skipChildrenFn != nil,
+			),
+			func(t *testing.T) {
+				t.Parallel()
+
+				seq := tree.IterLevelOrderPathQueueBased(
+					root, opts, skipChildrenFn)
+				checkPathIterator(
+					t, seq, LevelOrderPathIteratorTestCaseWants[i])
+			},
+		)
+	}
+}
+
+func TestIterLevelOrderPathStepQueueBased(t *testing.T) {
+	t.Parallel()
+
+	for i := range NumIteratorTestCase {
+		root := IteratorTestCaseInputs[i].Root
+		opts := IteratorTestCaseInputs[i].Opts
+		skipChildrenFn := IteratorTestCaseInputs[i].PathSkipChildrenFn
+		t.Run(
+			fmt.Sprintf(
+				"root=%s&opts=%s&skipChildren=%t",
+				stringNodeToName(root),
+				optionsToName(opts),
+				skipChildrenFn != nil,
+			),
+			func(t *testing.T) {
+				t.Parallel()
+
+				seq2 := tree.IterLevelOrderPathStepQueueBased(
+					root, opts, skipChildrenFn)
+				checkStepPathIterator(
+					t, seq2, LevelOrderPathIteratorTestCaseWants[i])
+			},
+		)
+	}
+}

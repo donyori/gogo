@@ -30,11 +30,11 @@ Please update your local clone if it still refers to `origin/master`.
 To do so, from your local clone of the repository, run the following commands:
 
 ```bash
-$ git branch -m OLD-BRANCH-NAME NEW-BRANCH-NAME
-$ git fetch origin
-$ git branch -u origin/main NEW-BRANCH-NAME
-$ git remote set-head origin -a
-$ git remote prune origin
+git branch -m OLD-BRANCH-NAME NEW-BRANCH-NAME
+git fetch origin
+git branch -u origin/main NEW-BRANCH-NAME
+git remote set-head origin -a
+git remote prune origin
 ```
 
 where `OLD-BRANCH-NAME` is the current name of your local branch
