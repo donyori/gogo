@@ -45,12 +45,12 @@ type ErrorList interface {
 
 	// ToList returns a copy of the list of errors, as type []error.
 	//
-	// If there is no errors in the list, it returns nil.
+	// If there are no errors in the list, it returns nil.
 	ToList() []error
 
 	// ToError returns a necessary error.
 	//
-	// If there is no error, it returns nil.
+	// If there are no errors, it returns nil.
 	// If there is only one item, it returns this item.
 	// Otherwise, it returns the error list itself.
 	ToError() error
@@ -59,7 +59,7 @@ type ErrorList interface {
 	//
 	// handler has two parameters: i (the index of the error) and
 	// err (the error value), and returns an indicator cont to report
-	// whether to continue the iteration.
+	// whether the iteration continues.
 	Range(handler func(i int, err error) (cont bool))
 
 	// RangeBackward is like Range,
@@ -96,7 +96,7 @@ type ErrorList interface {
 
 	// Deduplicate removes duplicate and nil errors.
 	//
-	// An error is regarded as duplicate if its method Error returns
+	// An error is treated as duplicate if its method Error returns
 	// the same string as that of a previous error.
 	Deduplicate()
 }
@@ -308,7 +308,7 @@ func (el *errorList) Deduplicate() {
 //
 // It discards all nil errors.
 //
-// If there is no non-nil error, it returns nil.
+// If there are no non-nil errors, it returns nil.
 // If there is only one non-nil error, it returns this error.
 // Otherwise, it returns an ErrorList containing all non-nil errors.
 func Combine(err ...error) error {

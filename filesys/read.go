@@ -125,7 +125,7 @@ type Reader interface {
 	// If pErr is not nil and the error is not io.EOF,
 	// the error is output to *pErr.
 	// Otherwise, the error may be unretrievable.
-	// If pErr is not nil and there is no error except for io.EOF,
+	// If pErr is not nil and there are no errors except for io.EOF,
 	// *pErr is set to nil after iteration.
 	//
 	// acceptNonLocalNames indicates whether to accept non-local names

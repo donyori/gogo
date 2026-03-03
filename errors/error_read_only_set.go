@@ -41,8 +41,7 @@ type ErrorReadOnlySet interface {
 	// Range calls handler on all items in the set.
 	//
 	// handler has one parameter: err (the error value),
-	// and returns an indicator cont to report
-	// whether to continue the iteration.
+	// and returns an indicator cont to report whether the iteration continues.
 	Range(handler func(err error) (cont bool))
 
 	// IterErrors returns an iterator over all errors in the set.
@@ -54,7 +53,7 @@ type ErrorReadOnlySet interface {
 
 // errorReadOnlySetEqual is an implementation of interface ErrorReadOnlySet.
 //
-// An error is regarded as "belonging to" this set
+// An error is treated as "belonging to" this set
 // if it is equal to any item in this set.
 type errorReadOnlySetEqual struct {
 	errSet map[error]struct{}
@@ -62,7 +61,7 @@ type errorReadOnlySetEqual struct {
 
 // NewErrorReadOnlySetEqual creates a new ErrorReadOnlySet.
 //
-// The returned set regards that an error "belongs to" it
+// The returned set treats that an error "belongs to" it
 // if the error is equal to any item in this set.
 func NewErrorReadOnlySetEqual(err ...error) ErrorReadOnlySet {
 	erose := &errorReadOnlySetEqual{errSet: make(map[error]struct{}, len(err))}
@@ -78,7 +77,7 @@ func (erose *errorReadOnlySetEqual) Len() int {
 
 // Contains reports whether err belongs to this error set.
 //
-// err is regarded as "belonging to" this set
+// err is treated as "belonging to" this set
 // if it is equal to any item in this set.
 func (erose *errorReadOnlySetEqual) Contains(err error) bool {
 	_, ok := erose.errSet[err]
@@ -103,7 +102,7 @@ func (erose *errorReadOnlySetEqual) IterErrors() iter.Seq[error] {
 
 // errorReadOnlySetEqual is an implementation of interface ErrorReadOnlySet.
 //
-// An error err is regarded as "belonging to" this set
+// An error err is treated as "belonging to" this set
 // if there is an item x in this set such that errors.Is(err, x) returns true.
 type errorReadOnlySetIs struct {
 	errs []error
@@ -111,7 +110,7 @@ type errorReadOnlySetIs struct {
 
 // NewErrorReadOnlySetIs creates a new ErrorReadOnlySet.
 //
-// The returned set regards that an error err "belongs to" it
+// The returned set treats that an error err "belongs to" it
 // if there is an item x in this set such that errors.Is(err, x) returns true.
 func NewErrorReadOnlySetIs(err ...error) ErrorReadOnlySet {
 	errSet := make(map[error]struct{}, len(err))
@@ -131,7 +130,7 @@ func (erosi *errorReadOnlySetIs) Len() int {
 
 // Contains reports whether err belongs to this error set.
 //
-// err is regarded as "belonging to" this set if there is an item x
+// err is treated as "belonging to" this set if there is an item x
 // in this set such that errors.Is(err, x) returns true.
 func (erosi *errorReadOnlySetIs) Contains(err error) bool {
 	for _, target := range erosi.errs {
@@ -159,20 +158,20 @@ func (erosi *errorReadOnlySetIs) IterErrors() iter.Seq[error] {
 // errorReadOnlySetSameMessage is an implementation of
 // interface ErrorReadOnlySet.
 //
-// An error is regarded as "belonging to" this set
+// An error is treated as "belonging to" this set
 // if it has the same message as any item in this set.
 //
-// In particular, the message of nil error is considered "<nil>".
+// In particular, the message of nil error is treated as "<nil>".
 type errorReadOnlySetSameMessage struct {
 	errsSet map[string][]error
 }
 
 // NewErrorReadOnlySetSameMessage creates a new ErrorReadOnlySet.
 //
-// The returned set regards that an error "belongs to" it
+// The returned set treats that an error "belongs to" it
 // if the error has the same message as any item in this set.
 //
-// In particular, the message of nil error is considered "<nil>".
+// In particular, the message of nil error is treated as "<nil>".
 func NewErrorReadOnlySetSameMessage(err ...error) ErrorReadOnlySet {
 	errSetMap := make(map[string]map[error]struct{}, len(err))
 	for _, e := range err {
@@ -211,10 +210,10 @@ func (erossm *errorReadOnlySetSameMessage) Len() int {
 
 // Contains reports whether err belongs to this error set.
 //
-// err is regarded as "belonging to" this set
+// err is treated as "belonging to" this set
 // if it has the same message as any item in this set.
 //
-// In particular, the message of nil error is considered "<nil>".
+// In particular, the message of nil error is treated as "<nil>".
 func (erossm *errorReadOnlySetSameMessage) Contains(err error) bool {
 	if err == nil {
 		return erossm.errsSet["<nil>"] != nil

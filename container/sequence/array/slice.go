@@ -209,8 +209,7 @@ func (sda *SliceDynamicArray[Item]) Slice(begin, end int) Array[Item] {
 	// 0 <= begin <= end <= cap(*sda);
 	// but we need 0 <= begin <= end <= len(*sda).
 	_ = (*sda)[begin:end:len(*sda)] // ensure begin and end are in range
-	s := (*sda)[begin:end:end]
-	return &s
+	return new((*sda)[begin:end:end])
 }
 
 // Clear sets the slice to nil.

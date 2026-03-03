@@ -20,6 +20,7 @@ package timestamp
 
 import (
 	"bytes"
+	"fmt"
 	"regexp"
 	"strconv"
 	"time"
@@ -453,10 +454,12 @@ var (
 // Caller should guarantee that tsType is valid.
 func timestampToTime(tsType timestampType, ts []byte) (t time.Time, err error) {
 	if len(ts) == 0 {
-		err = errors.AutoNew("empty timestamp")
+		err = errors.AutoNew(
+			"failed to parse decimal timestamp: timestamp is empty")
 		return
 	} else if !timestampRegExprMapping[tsType].Match(ts) {
-		err = errors.AutoNew("invalid timestamp")
+		err = errors.AutoWrap(fmt.Errorf(
+			"failed to parse decimal timestamp: timestamp %q is invalid", ts))
 		return
 	}
 	pointIdx := bytes.IndexByte(ts, '.')
@@ -563,7 +566,8 @@ func detectTimestampType(ts []byte, pointIdx int) (
 	}
 	if pointIdx >= 0 &&
 		len(ts)-pointIdx-1 > timestampFractionalLenMapping[tst] {
-		err = errors.AutoNew("invalid timestamp")
+		err = errors.AutoWrap(fmt.Errorf(
+			"failed to parse decimal timestamp: timestamp %q is invalid", ts))
 	}
 	return
 }

@@ -30,7 +30,7 @@ import (
 type testCloser struct {
 	tb     testing.TB
 	closed bool
-	err    error // Test can set err to simulate a failed call to Close.
+	err    error // test can set err to simulate a failed call to Close
 }
 
 func (tc *testCloser) Close() error {

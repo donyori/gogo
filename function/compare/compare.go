@@ -115,7 +115,7 @@ func OrderedCompare[T constraints.Ordered](a, b T) int {
 // for details.
 //
 // It treats NaN values as less than any others.
-// A NaN is considered equal to a NaN, and -0.0 is equal to 0.0.
+// A NaN is treated as equal to a NaN, and -0.0 is equal to 0.0.
 //
 // The client can instantiate it to get a CompareFunc.
 func FloatCompare[T constraints.Float](a, b T) int {

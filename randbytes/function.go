@@ -73,7 +73,7 @@ func Make(src rand.Source, length int) []byte {
 //
 // MakeCapacity panics if the random value source is nil,
 // the length is negative, or the capacity is less than the length.
-func MakeCapacity(src rand.Source, length int, capacity int) []byte {
+func MakeCapacity(src rand.Source, length, capacity int) []byte {
 	switch {
 	case src == nil:
 		panic(errors.AutoMsg("random value source is nil"))

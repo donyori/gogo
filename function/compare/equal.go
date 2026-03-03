@@ -41,9 +41,8 @@ func (ef EqualFunc[T]) Not() EqualFunc[T] {
 
 // Reflexive returns an EqualFunc that guarantees
 // the reflexivity of the equality relation.
-// The returned function considers that
-// all elements that are not equal to themselves
-// (such as not-a-number (NaN) values of floating-point numbers) are equal.
+// The returned function treats all elements that are not equal to themselves
+// (such as not-a-number (NaN) values of floating-point numbers) as equal.
 //
 // It returns nil if this EqualFunc is nil.
 func (ef EqualFunc[T]) Reflexive() EqualFunc[T] {
@@ -59,16 +58,15 @@ func (ef EqualFunc[T]) Reflexive() EqualFunc[T] {
 //
 // The client can instantiate it to get an EqualFunc.
 //
-// For floating-point numbers, to consider NaN values equal to each other,
+// For floating-point numbers, to treat NaN values as equal to each other,
 // use function FloatEqual.
 func Equal[T comparable](a, b T) bool {
 	return a == b
 }
 
 // ReflexiveEqual is a generic function to test whether a equals b.
-// In particular, it considers that
-// all elements that are not equal to themselves
-// (such as not-a-number (NaN) values of floating-point numbers) are equal.
+// In particular, it treats all elements that are not equal to themselves
+// (such as not-a-number (NaN) values of floating-point numbers) as equal.
 // Therefore, this equality relation is reflexive.
 //
 // The client can instantiate it to get an EqualFunc.
@@ -106,7 +104,7 @@ func FloatEqual[T constraints.Float](a, b T) bool {
 // it returns false rather than panicking.
 //
 // Note that for floating-point numbers, NaN values are not equal to each other.
-// To consider NaN values equal to each other, use function FloatEqual.
+// To treat NaN values as equal to each other, use function FloatEqual.
 //
 // For more information about identical types,
 // see <https://go.dev/ref/spec#Type_identity>.
@@ -129,7 +127,7 @@ func anyEqual(a, b any) bool {
 // SliceEqual is a generic function to test whether
 // the specified slices have the same length and the items
 // with the same index are equal.
-// In particular, a nil slice and a non-nil empty slice are considered unequal.
+// In particular, a nil slice and a non-nil empty slice are treated as unequal.
 //
 // It uses the not equal operator (!=) to test the equality of the slice items.
 //
@@ -152,9 +150,9 @@ func SliceEqual[S constraints.Slice[T], T comparable](a, b S) bool {
 // FloatSliceEqual is a generic function to test whether
 // the specified slices have the same length and the items
 // with the same index are equal.
-// In particular, a nil slice and a non-nil empty slice are considered unequal.
+// In particular, a nil slice and a non-nil empty slice are treated as unequal.
 //
-// Two items (floating-point numbers) x and y are considered equal
+// Two items (floating-point numbers) x and y are treated as equal
 // if x == y or both x and y are NaN.
 //
 // The client can instantiate it to get an EqualFunc.
@@ -177,7 +175,7 @@ func FloatSliceEqual[S constraints.Slice[T], T constraints.Float](a, b S) bool {
 // AnySliceEqual is a generic function to test whether
 // the specified slices have the same length and the items
 // with the same index are equal.
-// In particular, a nil slice and a non-nil empty slice are considered unequal.
+// In particular, a nil slice and a non-nil empty slice are treated as unequal.
 //
 // It uses the function AnyEqual to test the equality of the slice items.
 //
@@ -204,8 +202,8 @@ func AnySliceEqual[S constraints.Slice[T], T any](a, b S) bool {
 // It uses ef to test the equality of the slice items.
 // If ef is nil, it uses AnyEqual instead.
 //
-// nilEqualsEmpty indicates whether to consider
-// a nil slice equal to a non-nil empty slice.
+// nilEqualsEmpty indicates whether to treat a nil slice as
+// equal to a non-nil empty slice.
 func EqualToSliceEqual[S constraints.Slice[T], T any](
 	ef EqualFunc[T],
 	nilEqualsEmpty bool,
@@ -241,7 +239,7 @@ func EqualToSliceEqual[S constraints.Slice[T], T any](
 //	...
 //
 // because they all have two "0", one "1", and one "2".
-// In particular, a nil slice and a non-nil empty slice are considered unequal.
+// In particular, a nil slice and a non-nil empty slice are treated as unequal.
 //
 // It is useful when slices are treated as sets or multisets
 // rather than sequences.
@@ -274,7 +272,7 @@ func SliceEqualWithoutOrder[S constraints.Slice[T], T comparable](a, b S) bool {
 }
 
 // FloatSliceEqualWithoutOrder is like SliceEqualWithoutOrder,
-// but it considers two items (floating-point numbers) x and y equal
+// but it treats two items (floating-point numbers) x and y as equal
 // if x == y or both x and y are NaN.
 //
 // The client can instantiate it to get an EqualFunc.
@@ -323,7 +321,7 @@ func FloatSliceEqualWithoutOrder[S constraints.Slice[T], T constraints.Float](
 
 // MapEqual is a generic function to test whether
 // the specified maps have the same key-value pairs.
-// In particular, a nil map and a non-nil empty map are considered unequal.
+// In particular, a nil map and a non-nil empty map are treated as unequal.
 //
 // It uses the not equal operator (!=) to test the equality
 // of the map keys and values.
@@ -347,10 +345,10 @@ func MapEqual[M constraints.Map[K, V], K, V comparable](a, b M) bool {
 
 // FloatValueMapEqual is a generic function to test whether
 // the specified maps have the same key-value pairs.
-// In particular, a nil map and a non-nil empty map are considered unequal.
+// In particular, a nil map and a non-nil empty map are treated as unequal.
 //
-// Two map keys k1 and k2 are considered equal if k1 == k2.
-// Two map values v1 and v2 are considered equal
+// Two map keys k1 and k2 are treated as equal if k1 == k2.
+// Two map values v1 and v2 are treated as equal
 // if v1 == v2 or both v1 and v2 are NaN.
 //
 // The client can instantiate it to get an EqualFunc.
@@ -376,7 +374,7 @@ func FloatValueMapEqual[M constraints.Map[K, V], K comparable, V constraints.Flo
 
 // AnyValueMapEqual is a generic function to test whether
 // the specified maps have the same key-value pairs.
-// In particular, a nil map and a non-nil empty map are considered unequal.
+// In particular, a nil map and a non-nil empty map are treated as unequal.
 //
 // It uses the equal operator (==) to test the equality of the map keys
 // and the function AnyEqual to test the equality of the map values.
@@ -408,8 +406,8 @@ func AnyValueMapEqual[M constraints.Map[K, V], K comparable, V any](
 // and ef to test the equality of the map values.
 // If ef is nil, it uses AnyEqual instead.
 //
-// nilEqualsEmpty indicates whether to consider
-// a nil map equal to a non-nil empty map.
+// nilEqualsEmpty indicates whether to treat a nil map as
+// equal to a non-nil empty map.
 func ValueEqualToMapEqual[M constraints.Map[K, V], K comparable, V any](
 	ef EqualFunc[V],
 	nilEqualsEmpty bool,

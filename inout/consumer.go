@@ -51,7 +51,7 @@ type RuneConsumer interface {
 	// and consuming it until the rune is not the specified rune
 	// or ConsumeRune has consumed n runes (if n is positive).
 	// In particular, if the rune is not a valid Unicode code point in UTF-8,
-	// the rune is considered unicode.ReplacementChar (U+FFFD) with a size of 1.
+	// the rune is treated as unicode.ReplacementChar (U+FFFD) with a size of 1.
 	//
 	// If n is zero, ConsumeRune does nothing and returns (0, nil).
 	// If n is negative, it consumes the runes with no limit.

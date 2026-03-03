@@ -43,7 +43,8 @@ func writeOpenFile(
 	opts *filesys.WriteOptions,
 ) (w filesys.Writer, err error) {
 	if name == "" {
-		return nil, errors.AutoNew("name is empty")
+		return nil, errors.AutoNew(
+			"failed to open file for writing: name is empty")
 	}
 	name = filepath.Clean(name)
 	if mkDirs {

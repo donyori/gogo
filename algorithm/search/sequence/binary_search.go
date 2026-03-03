@@ -135,7 +135,7 @@ func BinarySearch[Target any](
 // If multiple items satisfy the condition,
 // it returns the index of the last one of them.
 //
-// It returns -1 if there is no such item in itf.
+// It returns -1 if there are no such items in itf.
 //
 // Time complexity: O(log n), where n = itf.Len().
 func BinarySearchMaxLess[Target any](
@@ -174,7 +174,7 @@ func BinarySearchMaxLess[Target any](
 // If multiple items satisfy the condition,
 // it returns the index of the first one of them.
 //
-// It returns -1 if there is no such item in itf.
+// It returns -1 if there are no such items in itf.
 //
 // Time complexity: O(log n), where n = itf.Len().
 func BinarySearchMinGreater[Target any](
@@ -214,7 +214,7 @@ func BinarySearchMinGreater[Target any](
 // The field lessFn is used to compare items in data with the search target.
 // It cannot be nil.
 // If both lessFn(item, target) and lessFn(target, item) return false,
-// item and target are considered equal,
+// item and target are treated as equal,
 // and the first return value of method CompareWithTarget is 0.
 //
 // lessFn must describe a strict weak ordering.
@@ -227,7 +227,7 @@ func BinarySearchMinGreater[Target any](
 //
 // The field equalFn is an additional function to test
 // whether an item is the search target.
-// If equalFn is nil, the item is considered the search target
+// If equalFn is nil, the item is treated as the search target
 // when they are equal.
 // equalFn will be called only when both lessFn(item, target) and
 // lessFn(target, item) return false.
@@ -253,7 +253,7 @@ type arrayBinarySearchAdapter[Item any] struct {
 // lessFn is used to compare items in data with the search target.
 // It cannot be nil.
 // If both lessFn(item, target) and lessFn(target, item) return false,
-// item and target are considered equal,
+// item and target are treated as equal,
 // and the first return value of method CompareWithTarget is 0.
 //
 // lessFn must describe a strict weak ordering.
@@ -268,7 +268,7 @@ type arrayBinarySearchAdapter[Item any] struct {
 //
 // equalFn is an additional function to test
 // whether an item is the search target.
-// If equalFn is nil, the item is considered the search target
+// If equalFn is nil, the item is treated as the search target
 // when they are equal.
 // equalFn will be called only when both lessFn(item, target) and
 // lessFn(target, item) return false.

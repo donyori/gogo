@@ -27,7 +27,7 @@ import (
 
 // MustFprintf is like fmt.Fprintf but panics when encountering an error.
 //
-// If it panics, the error value passed to the call of panic
+// If it panics, the error value passed to the call to panic
 // must be exactly of type *WritePanic.
 func MustFprintf(w io.Writer, format string, arg ...any) (n int) {
 	n, err := fmt.Fprintf(w, format, arg...)
@@ -39,7 +39,7 @@ func MustFprintf(w io.Writer, format string, arg ...any) (n int) {
 
 // MustFprint is like fmt.Fprint but panics when encountering an error.
 //
-// If it panics, the error value passed to the call of panic
+// If it panics, the error value passed to the call to panic
 // must be exactly of type *WritePanic.
 func MustFprint(w io.Writer, arg ...any) (n int) {
 	n, err := fmt.Fprint(w, arg...)
@@ -51,7 +51,7 @@ func MustFprint(w io.Writer, arg ...any) (n int) {
 
 // MustFprintln is like fmt.Fprintln but panics when encountering an error.
 //
-// If it panics, the error value passed to the call of panic
+// If it panics, the error value passed to the call to panic
 // must be exactly of type *WritePanic.
 func MustFprintln(w io.Writer, arg ...any) (n int) {
 	n, err := fmt.Fprintln(w, arg...)
@@ -69,7 +69,7 @@ type Printer interface {
 
 	// MustPrintf is like Printf but panics when encountering an error.
 	//
-	// If it panics, the error value passed to the call of panic
+	// If it panics, the error value passed to the call to panic
 	// must be exactly of type *WritePanic.
 	MustPrintf(format string, arg ...any) (n int)
 
@@ -79,7 +79,7 @@ type Printer interface {
 
 	// MustPrint is like Print but panics when encountering an error.
 	//
-	// If it panics, the error value passed to the call of panic
+	// If it panics, the error value passed to the call to panic
 	// must be exactly of type *WritePanic.
 	MustPrint(arg ...any) (n int)
 
@@ -89,7 +89,7 @@ type Printer interface {
 
 	// MustPrintln is like Println but panics when encountering an error.
 	//
-	// If it panics, the error value passed to the call of panic
+	// If it panics, the error value passed to the call to panic
 	// must be exactly of type *WritePanic.
 	MustPrintln(arg ...any) (n int)
 }

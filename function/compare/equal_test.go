@@ -468,7 +468,7 @@ func init() {
 		{1, 2., '3', byte('4')},
 	})
 	anySliceNeqPairs = append(anySliceNeqPairs, [2][]any{
-		// It should regard as unequal since []int is not comparable.
+		// It should be treated as unequal since []int is not comparable.
 		{[]int{1, 2, 3}},
 		{[]int{1, 2, 3}},
 	}, [2][]any{
@@ -855,7 +855,7 @@ func init() {
 		{"A": 1, "B": 2., "C": '3', "D": byte('4')},
 	})
 	stringToAnyNeqPairs = append(stringToAnyNeqPairs, [2]map[string]any{
-		// It should regard as unequal since []int is not comparable.
+		// It should be treated as unequal since []int is not comparable.
 		{"A": []int{1, 2, 3}},
 		{"A": []int{1, 2, 3}},
 	}, [2]map[string]any{

@@ -137,7 +137,7 @@ var ErrWriterClosed = errors.AutoWrapCustom(
 	nil,
 )
 
-// WritePanic is the error passed to the call of panic
+// WritePanic is the error passed to the call to panic
 // in MustWrite methods and MustPrint methods.
 //
 // It records the error that caused the panic.

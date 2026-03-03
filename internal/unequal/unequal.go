@@ -29,7 +29,7 @@ import (
 // Slice tests whether two slices are unequal,
 // where the type of slice items is comparable.
 //
-// A nil slice and an empty slice are considered unequal.
+// A nil slice and an empty slice are treated as unequal.
 func Slice[S constraints.Slice[T], T comparable](s1, s2 S) bool {
 	return (s1 == nil) != (s2 == nil) || !slices.Equal(s1, s2)
 }
@@ -37,7 +37,7 @@ func Slice[S constraints.Slice[T], T comparable](s1, s2 S) bool {
 // Map tests whether two maps are unequal,
 // where the type of keys and the type of values are comparable.
 //
-// A nil map and an empty map are considered unequal.
+// A nil map and an empty map are treated as unequal.
 func Map[M constraints.Map[K, V], K, V comparable](m1, m2 M) bool {
 	return (m1 == nil) != (m2 == nil) || !maps.Equal(m1, m2)
 }

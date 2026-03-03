@@ -37,13 +37,13 @@ func TestCommunicator_Send_Receive(t *testing.T) {
 	) {
 		testCommunicatorSendReceiveProc(
 			world.Rank(),
-			func(rank int, dst int) {
+			func(rank, dst int) {
 				if !world.Send(dst, dataFn(rank, dst)) {
 					t.Errorf("goroutine %d, dst %d, Send returns false",
 						rank, dst)
 				}
 			},
-			func(rank int, src int) {
+			func(rank, src int) {
 				msg, ok := world.Receive(src)
 				if !ok {
 					t.Errorf("goroutine %d, src %d, Receive returns ok to false",
@@ -158,7 +158,7 @@ func TestCommunicator_Send_Receive_Any(t *testing.T) {
 				world,
 				comm,
 				dataFn,
-				func(rank int, src int, msg any) {
+				func(rank, src int, msg any) {
 					if src < 0 {
 						t.Errorf("goroutine %d, detected an unexpected cancellation signal",
 							rank)
@@ -220,7 +220,7 @@ func testCommunicatorSendReceiveAny23Proc(
 	world spmd.Communicator[int],
 	comm spmd.Communicator[int],
 	dataFn func(src, dst int) int,
-	checkSrcMsg func(rank int, src int, msg any),
+	checkSrcMsg func(rank, src int, msg any),
 ) {
 	r := comm.Rank()
 	switch r {

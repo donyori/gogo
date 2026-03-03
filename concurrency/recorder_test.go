@@ -113,7 +113,7 @@ func goroutineTestRecorderReader(
 ) {
 	defer wg.Done()
 
-	check := func(round int, wantLastX int, wantLastOK bool, wantAll []int) {
+	check := func(round, wantLastX int, wantLastOK bool, wantAll []int) {
 		s := "initially"
 		if round >= 0 {
 			s = "round " + strconv.Itoa(round)

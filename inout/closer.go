@@ -223,7 +223,7 @@ type multiCloser struct {
 //
 // closer is the closers provided to the MultiCloser.
 // All nil closers are ignored.
-// If there is no non-nil closer,
+// If there are no non-nil closers,
 // the MultiCloser performs as an already closed closer.
 func NewMultiCloser(tryAll, noError bool, closer ...io.Closer) MultiCloser {
 	mc := &multiCloser{

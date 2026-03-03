@@ -39,7 +39,7 @@ import (
 // The second parameter is the map of communicators of custom groups.
 // The key of the map is the ID of the custom group.
 // The value of the map is the corresponding communicator for this goroutine.
-// If there is no custom group, commMap is nil.
+// If there are no custom groups, commMap is nil.
 type BusinessFunc[Message any] func(
 	world Communicator[Message],
 	commMap map[string]Communicator[Message],

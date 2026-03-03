@@ -27,7 +27,7 @@ type Writer interface {
 	// MustWrite is like Write of io.Writer
 	// but panics when encountering an error.
 	//
-	// If it panics, the error value passed to the call of panic
+	// If it panics, the error value passed to the call to panic
 	// must be exactly of type *WritePanic.
 	MustWrite(p []byte) (n int)
 }
@@ -39,7 +39,7 @@ type ByteWriter interface {
 	// MustWriteByte is like WriteByte of io.ByteWriter
 	// but panics when encountering an error.
 	//
-	// If it panics, the error value passed to the call of panic
+	// If it panics, the error value passed to the call to panic
 	// must be exactly of type *WritePanic.
 	MustWriteByte(c byte)
 }
@@ -53,7 +53,7 @@ type RuneWriter interface {
 
 	// MustWriteRune is like WriteRune but panics when encountering an error.
 	//
-	// If it panics, the error value passed to the call of panic
+	// If it panics, the error value passed to the call to panic
 	// must be exactly of type *WritePanic.
 	MustWriteRune(r rune) (size int)
 }
@@ -65,7 +65,7 @@ type StringWriter interface {
 	// MustWriteString is like WriteString of io.StringWriter
 	// but panics when encountering an error.
 	//
-	// If it panics, the error value passed to the call of panic
+	// If it panics, the error value passed to the call to panic
 	// must be exactly of type *WritePanic.
 	MustWriteString(s string) (n int)
 }

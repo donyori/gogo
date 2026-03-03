@@ -29,11 +29,11 @@ import (
 // The greatest common divisor of integers, which are not all zero,
 // is the largest positive integer that divides each of the integers
 // (zero is considered divisible by everything).
-// In particular, if there is no nonzero integer,
+// In particular, if there are no nonzero integers,
 // the greatest common divisor is considered zero.
 //
 // According to the above definition, GCD always returns a nonnegative value,
-// and it returns 0 if and only if there is no nonzero value in x.
+// and it returns 0 if and only if there are no nonzero values in x.
 func GCD[Int constraints.Integer](x ...Int) Int {
 	var i int
 	for i < len(x) && x[i] == 0 {

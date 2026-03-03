@@ -31,7 +31,7 @@ type Once interface {
 	// the method Do or DoRecover is being called for
 	// the first time for this instance of Once.
 	// Otherwise, it does nothing but waits for
-	// the first call of the specified function to finish.
+	// the first call to the specified function to finish.
 	//
 	// Because no call to Do or DoRecover returns until
 	// the one call to the specified function returns,
@@ -88,7 +88,7 @@ type Once interface {
 
 // NewOnce creates a new Once that calls the specified function f only once.
 //
-// f can be nil, which is considered a function that does nothing.
+// f can be nil, which is treated as a function that does nothing.
 func NewOnce(f func()) Once {
 	firstC := make(chan struct{}, 1)
 	firstC <- struct{}{}
