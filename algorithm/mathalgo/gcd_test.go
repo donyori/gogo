@@ -41,23 +41,28 @@ var (
 
 func init() {
 	const MaxD int = 2
+
 	numInts := 1
 	for range NumTestIntegerPrimeFactors {
 		numInts *= MaxD + 1
 	}
+
 	testIntegers = make([]int, numInts)
 	testIntegersFactorMap = make(
 		map[int][NumTestIntegerPrimeFactors]int, numInts)
 	d2s := [MaxD + 1]int{1, 2, 4}
 	d3s := [MaxD + 1]int{1, 3, 9}
 	d5s := [MaxD + 1]int{1, 5, 25}
+
 	var idx int
+
 	for d2 := 0; d2 <= MaxD; d2++ {
 		for d3 := 0; d3 <= MaxD; d3++ {
 			for d5 := 0; d5 <= MaxD; d5++ {
 				if idx >= len(testIntegers) {
 					panic("not enough test integers, please update")
 				}
+
 				x := d2s[d2] * d3s[d3] * d5s[d5]
 				testIntegers[idx] = x
 				testIntegersFactorMap[x] = [NumTestIntegerPrimeFactors]int{
@@ -69,20 +74,26 @@ func init() {
 			}
 		}
 	}
+
 	if idx != len(testIntegers) {
 		panic("excessive test integers, please update")
 	}
 }
 
 func TestGCD_2Int(t *testing.T) {
+	t.Parallel()
+
 	testCases := make([]struct {
 		a, b, want int
 	}, len(testIntegers)*len(testIntegers)<<2)
+
 	var idx int
+
 	for _, a := range testIntegers {
 		for _, b := range testIntegers {
 			fsA, fsB := testIntegersFactorMap[a], testIntegersFactorMap[b]
 			want := 1
+
 			for i := range NumTestIntegerPrimeFactors {
 				if fsA[i] <= fsB[i] {
 					want *= fsA[i]
@@ -90,16 +101,35 @@ func TestGCD_2Int(t *testing.T) {
 					want *= fsB[i]
 				}
 			}
-			testCases[idx] = struct{ a, b, want int }{a: a, b: b, want: want}
-			testCases[idx+1] = struct{ a, b, want int }{a: a, b: -b, want: want}
-			testCases[idx+2] = struct{ a, b, want int }{a: -a, b: b, want: want}
-			testCases[idx+3] = struct{ a, b, want int }{a: -a, b: -b, want: want}
+
+			testCases[idx] = struct{ a, b, want int }{
+				a:    a,
+				b:    b,
+				want: want,
+			}
+			testCases[idx+1] = struct{ a, b, want int }{
+				a:    a,
+				b:    -b,
+				want: want,
+			}
+			testCases[idx+2] = struct{ a, b, want int }{
+				a:    -a,
+				b:    b,
+				want: want,
+			}
+			testCases[idx+3] = struct{ a, b, want int }{
+				a:    -a,
+				b:    -b,
+				want: want,
+			}
 			idx += 4
 		}
 	}
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("a=%d&b=%d", tc.a, tc.b), func(t *testing.T) {
+			t.Parallel()
+
 			got := mathalgo.GCD(tc.a, tc.b)
 			if got != tc.want {
 				t.Errorf("got %d; want %d", got, tc.want)
@@ -109,6 +139,8 @@ func TestGCD_2Int(t *testing.T) {
 }
 
 func TestGCD_0(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		xs   []int
 		want int
@@ -139,6 +171,8 @@ func TestGCD_0(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("xs="+xsToName(tc.xs), func(t *testing.T) {
+			t.Parallel()
+
 			got := mathalgo.GCD(tc.xs...)
 			if got != tc.want {
 				t.Errorf("got %d; want %d", got, tc.want)
@@ -148,10 +182,14 @@ func TestGCD_0(t *testing.T) {
 }
 
 func TestGCD_RandomlySelectInt(t *testing.T) {
+	t.Parallel()
+
 	const N int = 100
+
 	xsNameSet := make(map[string]struct{}, N)
 	xsNameSet[""] = struct{}{}
-	random := rand.New(rand.NewChaCha8(ChaCha8Seed))
+	random := rand.New(rand.NewChaCha8(ChaCha8Seed)) //gosec:disable G404 -- math/rand/v2 is reproducible
+
 	for range N {
 		xs, xsName := randomlySelectInts(t, random, xsNameSet)
 		if t.Failed() {
@@ -159,24 +197,32 @@ func TestGCD_RandomlySelectInt(t *testing.T) {
 		}
 
 		minF2, minF3, minF5 := math.MaxInt, math.MaxInt, math.MaxInt
+
 		for _, x := range xs {
 			if x < 0 {
 				x = -x
 			}
+
 			fs := testIntegersFactorMap[x]
+
 			if minF2 > fs[0] {
 				minF2 = fs[0]
 			}
+
 			if minF3 > fs[1] {
 				minF3 = fs[1]
 			}
+
 			if minF5 > fs[2] {
 				minF5 = fs[2]
 			}
 		}
+
 		want := minF2 * minF3 * minF5
 
 		t.Run("xs="+xsName, func(t *testing.T) {
+			t.Parallel()
+
 			got := mathalgo.GCD(xs...)
 			if got != want {
 				t.Errorf("got %d; want %d", got, want)
@@ -186,11 +232,17 @@ func TestGCD_RandomlySelectInt(t *testing.T) {
 }
 
 func TestGCD_AllRandom(t *testing.T) {
+	t.Parallel()
+
 	const N int = 100
+
 	xsNameSet := make(map[string]struct{}, N)
 	xsNameSet[""] = struct{}{}
+
 	var wantMoreThan1 bool
-	random := rand.New(rand.NewChaCha8(ChaCha8Seed))
+
+	random := rand.New(rand.NewChaCha8(ChaCha8Seed)) //gosec:disable G404 -- math/rand/v2 is reproducible
+
 	for range N {
 		xs, xsName := randomlyGenerateInts(t, random, xsNameSet)
 		if t.Failed() {
@@ -203,6 +255,8 @@ func TestGCD_AllRandom(t *testing.T) {
 		}
 
 		t.Run("xs="+xsName, func(t *testing.T) {
+			t.Parallel()
+
 			got := mathalgo.GCD(xs...)
 			if got != want {
 				t.Errorf("got %d; want %d", got, want)
@@ -216,6 +270,8 @@ func TestGCD_AllRandom(t *testing.T) {
 }
 
 func TestGCD_Type(t *testing.T) {
+	t.Parallel()
+
 	xss := []any{
 		[]int{12, -16, 0, 20},
 		[]int8{12, -16, 0, 20},
@@ -229,22 +285,26 @@ func TestGCD_Type(t *testing.T) {
 		[]uint64{12, 16, 0, 20},
 		[]uintptr{12, 16, 0, 20},
 	}
+
 	const Want uint64 = 4
 
 	for _, xsAny := range xss {
 		t.Run(fmt.Sprintf("xs-type=%T", xsAny), func(t *testing.T) {
+			t.Parallel()
+
 			var got uint64
+
 			switch xs := xsAny.(type) {
 			case []int:
-				got = uint64(mathalgo.GCD(xs...))
+				got = uint64(mathalgo.GCD(xs...)) //gosec:disable G115 -- this is a test for int
 			case []int8:
-				got = uint64(mathalgo.GCD(xs...))
+				got = uint64(mathalgo.GCD(xs...)) //gosec:disable G115 -- this is a test for int8
 			case []int16:
-				got = uint64(mathalgo.GCD(xs...))
+				got = uint64(mathalgo.GCD(xs...)) //gosec:disable G115 -- this is a test for int16
 			case []int32:
-				got = uint64(mathalgo.GCD(xs...))
+				got = uint64(mathalgo.GCD(xs...)) //gosec:disable G115 -- this is a test for int32
 			case []int64:
-				got = uint64(mathalgo.GCD(xs...))
+				got = uint64(mathalgo.GCD(xs...)) //gosec:disable G115 -- this is a test for int64
 			case []uint:
 				got = uint64(mathalgo.GCD(xs...))
 			case []uint8:
@@ -270,6 +330,8 @@ func TestGCD_Type(t *testing.T) {
 }
 
 func TestGCD2Uint64Functions(t *testing.T) {
+	t.Parallel()
+
 	fns := []struct {
 		name string
 		f    func(a, b uint64) uint64
@@ -284,26 +346,54 @@ func TestGCD2Uint64Functions(t *testing.T) {
 		a, b, want uint64
 	}, 6+len(testIntegers)*len(testIntegers))
 	// The following 6 cases are used in the benchmark.
-	testCases[0] = struct{ a, b, want uint64 }{a: 1, b: 7, want: 1}
-	testCases[1] = struct{ a, b, want uint64 }{a: 3 * 7, b: 7, want: 7}
-	testCases[2] = struct{ a, b, want uint64 }{a: 2 * 6, b: 3 * 6, want: 6}
-	testCases[3] = struct{ a, b, want uint64 }{a: 2 * 2048, b: 3 * 2048, want: 2048}
-	testCases[4] = struct{ a, b, want uint64 }{a: 13 * 405_751, b: 13 * 13, want: 13}
-	testCases[5] = struct{ a, b, want uint64 }{a: 13 * 405_751, b: 11 * 405_751, want: 405_751}
+	testCases[0] = struct{ a, b, want uint64 }{
+		a:    1,
+		b:    7,
+		want: 1,
+	}
+	testCases[1] = struct{ a, b, want uint64 }{
+		a:    3 * 7,
+		b:    7,
+		want: 7,
+	}
+	testCases[2] = struct{ a, b, want uint64 }{
+		a:    2 * 6,
+		b:    3 * 6,
+		want: 6,
+	}
+	testCases[3] = struct{ a, b, want uint64 }{
+		a:    2 * 2048,
+		b:    3 * 2048,
+		want: 2048,
+	}
+	testCases[4] = struct{ a, b, want uint64 }{
+		a:    13 * 405_751,
+		b:    13 * 13,
+		want: 13,
+	}
+	testCases[5] = struct{ a, b, want uint64 }{
+		a:    13 * 405_751,
+		b:    11 * 405_751,
+		want: 405_751,
+	}
 	idx := 6
+
 	for _, a := range testIntegers {
 		for _, b := range testIntegers {
 			fsA, fsB := testIntegersFactorMap[a], testIntegersFactorMap[b]
+
 			var want uint64 = 1
+
 			for i := range NumTestIntegerPrimeFactors {
 				if fsA[i] <= fsB[i] {
-					want *= uint64(fsA[i])
+					want *= uint64(fsA[i]) //gosec:disable G115 -- these integers are nonnegative
 				} else {
-					want *= uint64(fsB[i])
+					want *= uint64(fsB[i]) //gosec:disable G115 -- these integers are nonnegative
 				}
 			}
-			testCases[idx].a = uint64(a)
-			testCases[idx].b = uint64(b)
+
+			testCases[idx].a = uint64(a) //gosec:disable G115 -- these integers are nonnegative
+			testCases[idx].b = uint64(b) //gosec:disable G115 -- these integers are nonnegative
 			testCases[idx].want = want
 			idx++
 		}
@@ -311,8 +401,12 @@ func TestGCD2Uint64Functions(t *testing.T) {
 
 	for _, fn := range fns {
 		t.Run(fn.name, func(t *testing.T) {
+			t.Parallel()
+
 			for _, tc := range testCases {
 				t.Run(fmt.Sprintf("a=%d&b=%d", tc.a, tc.b), func(t *testing.T) {
+					t.Parallel()
+
 					got := fn.f(tc.a, tc.b)
 					if got != tc.want {
 						t.Errorf("got %d; want %d", got, tc.want)
@@ -380,9 +474,15 @@ func randomlySelectInts(
 	random *rand.Rand,
 	xsNameSet map[string]struct{},
 ) (xs []int, xsName string) {
-	const MaxTry int = 100
-	const MaxLen int = 64
+	t.Helper()
+
+	const (
+		MaxTry int = 100
+		MaxLen int = 64
+	)
+
 	xs = make([]int, 1+random.IntN(MaxLen))
+
 	_, duplicated := xsNameSet[xsName]
 	for try := 0; duplicated && try < MaxTry; try++ {
 		for i := range xs {
@@ -391,14 +491,18 @@ func randomlySelectInts(
 				xs[i] = -xs[i]
 			}
 		}
+
 		xsName = xsToName(xs)
 		_, duplicated = xsNameSet[xsName]
 	}
+
 	if _, duplicated = xsNameSet[xsName]; duplicated {
 		t.Errorf("try %d times but always get tested xs", MaxTry)
 		return nil, ""
 	}
+
 	xsNameSet[xsName] = struct{}{}
+
 	return
 }
 
@@ -417,23 +521,33 @@ func randomlyGenerateInts(
 	random *rand.Rand,
 	xsNameSet map[string]struct{},
 ) (xs []int, xsName string) {
-	const MaxTry int = 100
-	const MaxLen int = 4
-	const MaxX int = 127
+	t.Helper()
+
+	const (
+		MaxTry int = 100
+		MaxLen int = 4
+		MaxX   int = 127
+	)
+
 	xs = make([]int, 1+random.IntN(MaxLen))
+
 	_, duplicated := xsNameSet[xsName]
 	for try := 0; duplicated && try < MaxTry; try++ {
 		for i := range xs {
 			xs[i] = random.IntN(MaxX + 1)
 		}
+
 		xsName = xsToName(xs)
 		_, duplicated = xsNameSet[xsName]
 	}
+
 	if _, duplicated = xsNameSet[xsName]; duplicated {
 		t.Errorf("try %d times but always get tested xs", MaxTry)
 		return nil, ""
 	}
+
 	xsNameSet[xsName] = struct{}{}
+
 	return
 }
 
@@ -448,23 +562,29 @@ func gcdBruteForce[Int constraints.Integer](x ...Int) Int {
 	if len(x) == 0 {
 		return 0
 	}
+
 	d := mathalgo.AbsIntToUint64(x[0])
+
 	for i := 1; i < len(x); i++ {
 		t := mathalgo.AbsIntToUint64(x[i])
 		if d == 0 || t != 0 && d > t {
 			d = t
 		}
 	}
+
 	for d > 0 {
 		var i int
 		for i < len(x) && mathalgo.AbsIntToUint64(x[i])%d == 0 {
 			i++
 		}
+
 		if i >= len(x) {
 			break
 		}
+
 		d--
 	}
+
 	return Int(d)
 }
 
@@ -480,20 +600,25 @@ func gcd2Uint64SteinAnother(a, b uint64) uint64 {
 	for a&1 == 0 {
 		a, m = a>>1, m+1
 	}
+
 	for b&1 == 0 {
 		b, n = b>>1, n+1
 	}
+
 	if m > n {
 		m = n
 	}
+
 	for {
 		if a < b {
 			a, b = b, a
 		}
+
 		a -= b
 		if a == 0 {
 			return b << m
 		}
+
 		for a&1 == 0 {
 			a >>= 1
 		}
@@ -506,13 +631,11 @@ func gcd2Uint64SteinAnother(a, b uint64) uint64 {
 //
 // Caller should guarantee that both a and b are not zero.
 func gcd2Uint64BruteForce(a, b uint64) uint64 {
-	d := a
-	if d > b {
-		d = b
-	}
+	d := min(a, b)
 	for d > 0 && (a%d != 0 || b%d != 0) {
 		d--
 	}
+
 	return d
 }
 
@@ -525,8 +648,10 @@ func gcd2Uint64Euclidean(a, b uint64) uint64 {
 	if a < b {
 		a, b = b, a
 	}
+
 	for b != 0 {
 		a, b = b, a%b
 	}
+
 	return a
 }

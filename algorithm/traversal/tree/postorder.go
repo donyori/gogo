@@ -77,7 +77,7 @@ func stackBasedPostorderMain(
 		}
 
 		step++
-		cont, _ := visitor.VisitNode(top.node, step, top.depth)
+		cont, _ := visitor.VisitNode(step, top.node, top.depth)
 
 		// (step == opts.MaxStep) is equivalent to
 		// (opts.MaxStep > 0 && step >= opts.MaxStep)
@@ -139,7 +139,7 @@ func stackBasedPostorderPathMain(
 		}
 
 		step++
-		cont, _ := visitor.VisitPath(top, step, topDepth)
+		cont, _ := visitor.VisitPath(step, top, topDepth)
 
 		if !cont || step == opts.MaxStep {
 			return
@@ -214,7 +214,7 @@ func stackBasedReversePostorderMain(
 		}
 
 		step++
-		cont, _ := visitor.VisitNode(top.node, step, top.depth)
+		cont, _ := visitor.VisitNode(step, top.node, top.depth)
 
 		// (step == opts.MaxStep) is equivalent to
 		// (opts.MaxStep > 0 && step >= opts.MaxStep)
@@ -267,7 +267,7 @@ func stackBasedReversePostorderPathMain(
 		}
 
 		step++
-		cont, _ := visitor.VisitPath(top, step, topDepth)
+		cont, _ := visitor.VisitPath(step, top, topDepth)
 
 		if !cont || step == opts.MaxStep {
 			return

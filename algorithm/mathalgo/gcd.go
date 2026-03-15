@@ -39,15 +39,18 @@ func GCD[Int constraints.Integer](x ...Int) Int {
 	for i < len(x) && x[i] == 0 {
 		i++
 	}
+
 	if i >= len(x) {
 		return 0
 	}
+
 	gcd := absIntToUint64(x[i])
 	for i++; i < len(x); i++ {
 		if x[i] != 0 {
 			gcd = gcd2Uint64Stein(absIntToUint64(x[i]), gcd)
 		}
 	}
+
 	return Int(gcd)
 }
 
@@ -57,6 +60,7 @@ func absIntToUint64[Int constraints.Integer](x Int) uint64 {
 	if x < 0 {
 		x = -x
 	}
+
 	return uint64(x)
 }
 
@@ -70,17 +74,21 @@ func absIntToUint64[Int constraints.Integer](x Int) uint64 {
 func gcd2Uint64Stein(a, b uint64) uint64 {
 	m, n := bits.TrailingZeros64(a), bits.TrailingZeros64(b)
 	a, b = a>>m, b>>n
+
 	if m > n {
 		m = n // let m be min(m, n)
 	}
+
 	for {
 		if a < b {
 			a, b = b, a // let a, b be max(a, b), min(a, b) respectively
 		}
+
 		a -= b
 		if a == 0 {
 			return b << m
 		}
+
 		a >>= bits.TrailingZeros64(a)
 	}
 }

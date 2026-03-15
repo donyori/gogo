@@ -110,7 +110,7 @@ func iterativeDeepeningLevelOrderHandleStackTop(
 
 	if top.depth == visitDepth {
 		*pStep++
-		cont, skipChildren = visitor.VisitNode(top.node, *pStep, top.depth)
+		cont, skipChildren = visitor.VisitNode(*pStep, top.node, top.depth)
 
 		if skipChildren {
 			skipChildSet.Add(top.node)
@@ -232,7 +232,7 @@ func iterativeDeepeningLevelOrderPathHandleStackTop(
 
 	if topDepth == visitDepth {
 		*pStep++
-		cont, skipChildren = visitor.VisitPath(top, *pStep, topDepth)
+		cont, skipChildren = visitor.VisitPath(*pStep, top, topDepth)
 
 		if skipChildren {
 			skipChildSet.Add(top.Back())
@@ -302,7 +302,7 @@ func queueBasedLevelOrderMain(
 		// Other children can be obtained by method NextSibling within a loop.
 		for node != nil {
 			step++
-			cont, skipChildren := visitor.VisitNode(node, step, head.depth)
+			cont, skipChildren := visitor.VisitNode(step, node, head.depth)
 
 			// (step == opts.MaxStep) is equivalent to
 			// (opts.MaxStep > 0 && step >= opts.MaxStep)
@@ -361,7 +361,7 @@ func queueBasedLevelOrderPathMain(
 
 		for nSeq != nil {
 			step++
-			cont, skipChildren := visitor.VisitPath(nSeq, step, headDepth)
+			cont, skipChildren := visitor.VisitPath(step, nSeq, headDepth)
 
 			if !cont || step == opts.MaxStep {
 				return

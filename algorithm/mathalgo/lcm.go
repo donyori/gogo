@@ -37,16 +37,15 @@ import (
 // and it returns 0 if and only if len(x) is 0 or
 // there is at least one 0 in x.
 func LCM[Int constraints.Integer](x ...Int) Int {
-	if len(x) == 0 {
+	if len(x) == 0 || slices.Contains(x, 0) {
 		return 0
 	}
-	if slices.Contains(x, 0) {
-		return 0
-	}
+
 	lcm := absIntToUint64(x[0])
 	for i := 1; i < len(x); i++ {
 		x := absIntToUint64(x[i])
 		lcm = lcm / gcd2Uint64Stein(lcm, x) * x
 	}
+
 	return Int(lcm)
 }

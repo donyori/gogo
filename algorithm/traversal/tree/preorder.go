@@ -54,7 +54,7 @@ func stackBasedPreorderMain(
 		top := traversalStack.Pop().(nodeDepth)
 
 		step++
-		cont, skipChildren := visitor.VisitNode(top.node, step, top.depth)
+		cont, skipChildren := visitor.VisitNode(step, top.node, top.depth)
 
 		// (step == opts.MaxStep) is equivalent to
 		// (opts.MaxStep > 0 && step >= opts.MaxStep)
@@ -111,7 +111,7 @@ func stackBasedPreorderPathMain(
 		topDepth := top.Len() - 1
 
 		step++
-		cont, skipChildren := visitor.VisitPath(top, step, topDepth)
+		cont, skipChildren := visitor.VisitPath(step, top, topDepth)
 
 		if !cont || step == opts.MaxStep {
 			return
@@ -161,7 +161,7 @@ func stackBasedReversePreorderMain(
 		top := traversalStack.Pop().(nodeDepth)
 
 		step++
-		cont, skipChildren := visitor.VisitNode(top.node, step, top.depth)
+		cont, skipChildren := visitor.VisitNode(step, top.node, top.depth)
 
 		// (step == opts.MaxStep) is equivalent to
 		// (opts.MaxStep > 0 && step >= opts.MaxStep)
@@ -208,7 +208,7 @@ func stackBasedReversePreorderPathMain(
 		topDepth := top.Len() - 1
 
 		step++
-		cont, skipChildren := visitor.VisitPath(top, step, topDepth)
+		cont, skipChildren := visitor.VisitPath(step, top, topDepth)
 
 		if !cont || step == opts.MaxStep {
 			return

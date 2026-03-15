@@ -122,7 +122,7 @@ func stackBasedInorderMain(
 		}
 
 		step++
-		cont, skipChildren := visitor.VisitNode(top.node, step, top.depth)
+		cont, skipChildren := visitor.VisitNode(step, top.node, top.depth)
 
 		// (step == opts.MaxStep) is equivalent to
 		// (opts.MaxStep > 0 && step >= opts.MaxStep)
@@ -230,7 +230,7 @@ func stackBasedInorderPathMain(
 		}
 
 		step++
-		cont, skipChildren := visitor.VisitPath(top, step, topDepth)
+		cont, skipChildren := visitor.VisitPath(step, top, topDepth)
 
 		if !cont || step == opts.MaxStep {
 			return
@@ -338,7 +338,7 @@ func stackBasedReverseInorderMain(
 		}
 
 		step++
-		cont, skipChildren := visitor.VisitNode(top.node, step, top.depth)
+		cont, skipChildren := visitor.VisitNode(step, top.node, top.depth)
 
 		// (step == opts.MaxStep) is equivalent to
 		// (opts.MaxStep > 0 && step >= opts.MaxStep)
@@ -438,7 +438,7 @@ func stackBasedReverseInorderPathMain(
 		}
 
 		step++
-		cont, skipChildren := visitor.VisitPath(top, step, topDepth)
+		cont, skipChildren := visitor.VisitPath(step, top, topDepth)
 
 		if !cont || step == opts.MaxStep {
 			return

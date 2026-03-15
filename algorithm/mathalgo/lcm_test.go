@@ -29,14 +29,19 @@ import (
 )
 
 func TestLCM_2Int(t *testing.T) {
+	t.Parallel()
+
 	testCases := make([]struct {
 		a, b, want int
 	}, len(testIntegers)*len(testIntegers)<<2)
+
 	var idx int
+
 	for _, a := range testIntegers {
 		for _, b := range testIntegers {
 			fsA, fsB := testIntegersFactorMap[a], testIntegersFactorMap[b]
 			want := 1
+
 			for i := range NumTestIntegerPrimeFactors {
 				if fsA[i] >= fsB[i] {
 					want *= fsA[i]
@@ -44,16 +49,35 @@ func TestLCM_2Int(t *testing.T) {
 					want *= fsB[i]
 				}
 			}
-			testCases[idx] = struct{ a, b, want int }{a: a, b: b, want: want}
-			testCases[idx+1] = struct{ a, b, want int }{a: a, b: -b, want: want}
-			testCases[idx+2] = struct{ a, b, want int }{a: -a, b: b, want: want}
-			testCases[idx+3] = struct{ a, b, want int }{a: -a, b: -b, want: want}
+
+			testCases[idx] = struct{ a, b, want int }{
+				a:    a,
+				b:    b,
+				want: want,
+			}
+			testCases[idx+1] = struct{ a, b, want int }{
+				a:    a,
+				b:    -b,
+				want: want,
+			}
+			testCases[idx+2] = struct{ a, b, want int }{
+				a:    -a,
+				b:    b,
+				want: want,
+			}
+			testCases[idx+3] = struct{ a, b, want int }{
+				a:    -a,
+				b:    -b,
+				want: want,
+			}
 			idx += 4
 		}
 	}
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("a=%d&b=%d", tc.a, tc.b), func(t *testing.T) {
+			t.Parallel()
+
 			got := mathalgo.LCM(tc.a, tc.b)
 			if got != tc.want {
 				t.Errorf("got %d; want %d", got, tc.want)
@@ -63,6 +87,8 @@ func TestLCM_2Int(t *testing.T) {
 }
 
 func TestLCM_0(t *testing.T) {
+	t.Parallel()
+
 	xss := [][]int{
 		nil,
 		{},
@@ -90,6 +116,8 @@ func TestLCM_0(t *testing.T) {
 
 	for _, xs := range xss {
 		t.Run("xs="+xsToName(xs), func(t *testing.T) {
+			t.Parallel()
+
 			got := mathalgo.LCM(xs...)
 			if got != 0 {
 				t.Errorf("got %d; want 0", got)
@@ -99,10 +127,14 @@ func TestLCM_0(t *testing.T) {
 }
 
 func TestLCM_RandomlySelectInt(t *testing.T) {
+	t.Parallel()
+
 	const N int = 100
+
 	xsNameSet := make(map[string]struct{}, N)
 	xsNameSet[""] = struct{}{}
-	random := rand.New(rand.NewChaCha8(ChaCha8Seed))
+	random := rand.New(rand.NewChaCha8(ChaCha8Seed)) //gosec:disable G404 -- math/rand/v2 is reproducible
+
 	for range N {
 		xs, xsName := randomlySelectInts(t, random, xsNameSet)
 		if t.Failed() {
@@ -110,24 +142,32 @@ func TestLCM_RandomlySelectInt(t *testing.T) {
 		}
 
 		var maxF2, maxF3, maxF5 int
+
 		for _, x := range xs {
 			if x < 0 {
 				x = -x
 			}
+
 			fs := testIntegersFactorMap[x]
+
 			if maxF2 < fs[0] {
 				maxF2 = fs[0]
 			}
+
 			if maxF3 < fs[1] {
 				maxF3 = fs[1]
 			}
+
 			if maxF5 < fs[2] {
 				maxF5 = fs[2]
 			}
 		}
+
 		want := maxF2 * maxF3 * maxF5
 
 		t.Run("xs="+xsName, func(t *testing.T) {
+			t.Parallel()
+
 			got := mathalgo.LCM(xs...)
 			if got != want {
 				t.Errorf("got %d; want %d", got, want)
@@ -137,11 +177,17 @@ func TestLCM_RandomlySelectInt(t *testing.T) {
 }
 
 func TestLCM_AllRandom(t *testing.T) {
+	t.Parallel()
+
 	const N int = 100
+
 	xsNameSet := make(map[string]struct{}, N)
 	xsNameSet[""] = struct{}{}
+
 	var wantPositive bool
-	random := rand.New(rand.NewChaCha8(ChaCha8Seed))
+
+	random := rand.New(rand.NewChaCha8(ChaCha8Seed)) //gosec:disable G404 -- math/rand/v2 is reproducible
+
 	for range N {
 		xs, xsName := randomlyGenerateInts(t, random, xsNameSet)
 		if t.Failed() {
@@ -154,6 +200,8 @@ func TestLCM_AllRandom(t *testing.T) {
 		}
 
 		t.Run("xs="+xsName, func(t *testing.T) {
+			t.Parallel()
+
 			got := mathalgo.LCM(xs...)
 			if got != want {
 				t.Errorf("got %d; want %d", got, want)
@@ -167,6 +215,8 @@ func TestLCM_AllRandom(t *testing.T) {
 }
 
 func TestLCM_Type(t *testing.T) {
+	t.Parallel()
+
 	xss := []any{
 		[]int{6, -8, 10},
 		[]int8{6, -8, 10},
@@ -180,22 +230,26 @@ func TestLCM_Type(t *testing.T) {
 		[]uint64{6, 8, 10},
 		[]uintptr{6, 8, 10},
 	}
+
 	const Want uint64 = 120
 
 	for _, xsAny := range xss {
 		t.Run(fmt.Sprintf("xs-type=%T", xsAny), func(t *testing.T) {
+			t.Parallel()
+
 			var got uint64
+
 			switch xs := xsAny.(type) {
 			case []int:
-				got = uint64(mathalgo.LCM(xs...))
+				got = uint64(mathalgo.LCM(xs...)) //gosec:disable G115 -- this is a test for int
 			case []int8:
-				got = uint64(mathalgo.LCM(xs...))
+				got = uint64(mathalgo.LCM(xs...)) //gosec:disable G115 -- this is a test for int8
 			case []int16:
-				got = uint64(mathalgo.LCM(xs...))
+				got = uint64(mathalgo.LCM(xs...)) //gosec:disable G115 -- this is a test for int16
 			case []int32:
-				got = uint64(mathalgo.LCM(xs...))
+				got = uint64(mathalgo.LCM(xs...)) //gosec:disable G115 -- this is a test for int32
 			case []int64:
-				got = uint64(mathalgo.LCM(xs...))
+				got = uint64(mathalgo.LCM(xs...)) //gosec:disable G115 -- this is a test for int64
 			case []uint:
 				got = uint64(mathalgo.LCM(xs...))
 			case []uint8:
@@ -232,11 +286,13 @@ func lcmBruteForce[Int constraints.Integer](x ...Int) Int {
 	if len(x) == 0 || x[0] == 0 {
 		return 0
 	}
+
 	m := mathalgo.AbsIntToUint64(x[0])
 	for i := 1; i < len(x); i++ {
 		if x[i] == 0 {
 			return 0
 		}
+
 		t := mathalgo.AbsIntToUint64(x[i])
 		if m < t {
 			m = t
@@ -249,16 +305,20 @@ func lcmBruteForce[Int constraints.Integer](x ...Int) Int {
 		for i < len(x) && m%mathalgo.AbsIntToUint64(x[i]) == 0 {
 			i++
 		}
+
 		if i >= len(x) {
 			return Int(m)
 		}
+
 		m++
 	}
+
 	for _, x := range x {
 		if m%mathalgo.AbsIntToUint64(x) != 0 {
 			panic("lcm overflows")
 		}
 	}
+
 	return Int(m)
 }
 
@@ -267,6 +327,7 @@ func lcmBruteForce[Int constraints.Integer](x ...Int) Int {
 // The result is of type uint64.
 func getLimitAccordingToType[Int constraints.Integer](x ...Int) uint64 {
 	var limit uint64
+
 	switch any(x).(type) {
 	case []int:
 		limit = math.MaxInt
@@ -292,5 +353,6 @@ func getLimitAccordingToType[Int constraints.Integer](x ...Int) uint64 {
 		// This should never happen, but will act as a safeguard for later.
 		panic("type of x is unacceptable")
 	}
+
 	return limit
 }

@@ -107,7 +107,7 @@ type NodeVisitor interface {
 	// skipChildren reports whether to skip
 	// the unvisited children of the current node.
 	// skipChildren makes sense only when cont is true.
-	VisitNode(node Node, step int64, depth int) (cont, skipChildren bool)
+	VisitNode(step int64, node Node, depth int) (cont, skipChildren bool)
 }
 
 // PathVisitor is an interface that extends VisitorCommon with a method to
@@ -139,8 +139,8 @@ type PathVisitor interface {
 	// the unvisited children of the current node.
 	// skipChildren makes sense only when cont is true.
 	VisitPath(
-		nodePath vseq.VertexSequence[Node],
 		step int64,
+		nodePath vseq.VertexSequence[Node],
 		depth int,
 	) (cont, skipChildren bool)
 }
@@ -364,15 +364,15 @@ func queueBasedVisitPathFunc(
 // NodeSkipChildrenFunc is a function that reports whether to skip
 // the unvisited children of the current node
 // with the current step and depth during tree traversal.
-type NodeSkipChildrenFunc func(node Node, step int64, depth int) bool
+type NodeSkipChildrenFunc func(step int64, node Node, depth int) bool
 
 // PathSkipChildrenFunc is a function that reports whether to skip
 // the unvisited children of the current node
 // (i.e., the last node in the specified node path)
 // with the current step and depth during tree traversal.
 type PathSkipChildrenFunc func(
-	nodePath vseq.VertexSequence[Node],
 	step int64,
+	nodePath vseq.VertexSequence[Node],
 	depth int,
 ) bool
 
@@ -399,14 +399,14 @@ type iteratorNodeVisitor struct {
 }
 
 func (inv *iteratorNodeVisitor) VisitNode(
-	node Node,
 	step int64,
+	node Node,
 	depth int,
 ) (cont, skipChildren bool) {
 	if inv.yield != nil {
 		cont = inv.yield(node)
 		skipChildren = inv.skipChildrenFn != nil && inv.skipChildrenFn(
-			node, step, depth)
+			step, node, depth)
 	}
 
 	return
@@ -421,14 +421,14 @@ type iteratorNodeDepthVisitor struct {
 }
 
 func (indv *iteratorNodeDepthVisitor) VisitNode(
-	node Node,
 	step int64,
+	node Node,
 	depth int,
 ) (cont, skipChildren bool) {
 	if indv.yield != nil {
 		cont = indv.yield(node, depth)
 		skipChildren = indv.skipChildrenFn != nil && indv.skipChildrenFn(
-			node, step, depth)
+			step, node, depth)
 	}
 
 	return
@@ -443,14 +443,14 @@ type iteratorStepNodeVisitor struct {
 }
 
 func (isnv *iteratorStepNodeVisitor) VisitNode(
-	node Node,
 	step int64,
+	node Node,
 	depth int,
 ) (cont, skipChildren bool) {
 	if isnv.yield != nil {
 		cont = isnv.yield(step, node)
 		skipChildren = isnv.skipChildrenFn != nil && isnv.skipChildrenFn(
-			node, step, depth)
+			step, node, depth)
 	}
 
 	return
@@ -465,14 +465,14 @@ type iteratorPathVisitor struct {
 }
 
 func (ipv *iteratorPathVisitor) VisitPath(
-	nodePath vseq.VertexSequence[Node],
 	step int64,
+	nodePath vseq.VertexSequence[Node],
 	depth int,
 ) (cont, skipChildren bool) {
 	if ipv.yield != nil {
 		cont = ipv.yield(nodePath)
 		skipChildren = ipv.skipChildrenFn != nil && ipv.skipChildrenFn(
-			nodePath, step, depth)
+			step, nodePath, depth)
 	}
 
 	return
@@ -487,14 +487,14 @@ type iteratorStepPathVisitor struct {
 }
 
 func (ispv *iteratorStepPathVisitor) VisitPath(
-	nodePath vseq.VertexSequence[Node],
 	step int64,
+	nodePath vseq.VertexSequence[Node],
 	depth int,
 ) (cont, skipChildren bool) {
 	if ispv.yield != nil {
 		cont = ispv.yield(step, nodePath)
 		skipChildren = ispv.skipChildrenFn != nil && ispv.skipChildrenFn(
-			nodePath, step, depth)
+			step, nodePath, depth)
 	}
 
 	return

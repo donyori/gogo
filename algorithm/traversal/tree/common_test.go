@@ -154,7 +154,7 @@ const NumIteratorTestCase int = 24
 // NodeSkipChildrenR2dL1bL1cL2l is a
 // github.com/donyori/gogo/algorithm/traversal/tree.NodeSkipChildrenFunc
 // that skips the children of StringNode "R2d", "L1b", "L1c", "L2l".
-func NodeSkipChildrenR2dL1bL1cL2l(node tree.Node, _ int64, _ int) bool {
+func NodeSkipChildrenR2dL1bL1cL2l(_ int64, node tree.Node, _ int) bool {
 	if sn, ok := node.(StringNode); ok {
 		switch sn {
 		case "R2d", "L1b", "L1c", "L2l":
@@ -169,12 +169,12 @@ func NodeSkipChildrenR2dL1bL1cL2l(node tree.Node, _ int64, _ int) bool {
 // github.com/donyori/gogo/algorithm/traversal/tree.PathSkipChildrenFunc
 // that skips the children of StringNode "R2d", "L1b", "L1c", "L2l".
 func PathSkipChildrenR2dL1bL1cL2l(
-	nodePath vseq.VertexSequence[tree.Node],
 	_ int64,
+	nodePath vseq.VertexSequence[tree.Node],
 	_ int,
 ) bool {
 	if nodePath != nil && nodePath.Len() > 0 {
-		return NodeSkipChildrenR2dL1bL1cL2l(nodePath.Back(), 0, 0)
+		return NodeSkipChildrenR2dL1bL1cL2l(0, nodePath.Back(), 0)
 	}
 
 	return false
