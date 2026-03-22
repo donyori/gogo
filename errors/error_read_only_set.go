@@ -68,6 +68,7 @@ func NewErrorReadOnlySetEqual(err ...error) ErrorReadOnlySet {
 	for _, e := range err {
 		erose.errSet[e] = setMapV
 	}
+
 	return erose
 }
 
@@ -117,10 +118,12 @@ func NewErrorReadOnlySetIs(err ...error) ErrorReadOnlySet {
 	for _, e := range err {
 		errSet[e] = setMapV
 	}
+
 	erosi := &errorReadOnlySetIs{errs: make([]error, 0, len(errSet))}
 	for e := range errSet {
 		erosi.errs = append(erosi.errs, e)
 	}
+
 	return erosi
 }
 
@@ -138,6 +141,7 @@ func (erosi *errorReadOnlySetIs) Contains(err error) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -179,6 +183,7 @@ func NewErrorReadOnlySetSameMessage(err ...error) ErrorReadOnlySet {
 		if e != nil {
 			msg = e.Error()
 		}
+
 		set := errSetMap[msg]
 		if set == nil {
 			set = map[error]struct{}{e: setMapV}
@@ -187,6 +192,7 @@ func NewErrorReadOnlySetSameMessage(err ...error) ErrorReadOnlySet {
 			set[e] = setMapV
 		}
 	}
+
 	erossm := &errorReadOnlySetSameMessage{
 		errsSet: make(map[string][]error, len(errSetMap)),
 	}
@@ -195,8 +201,10 @@ func NewErrorReadOnlySetSameMessage(err ...error) ErrorReadOnlySet {
 		for e := range set {
 			errs = append(errs, e)
 		}
+
 		erossm.errsSet[k] = errs
 	}
+
 	return erossm
 }
 
@@ -205,6 +213,7 @@ func (erossm *errorReadOnlySetSameMessage) Len() int {
 	for _, errs := range erossm.errsSet {
 		n += len(errs)
 	}
+
 	return n
 }
 
@@ -218,6 +227,7 @@ func (erossm *errorReadOnlySetSameMessage) Contains(err error) bool {
 	if err == nil {
 		return erossm.errsSet["<nil>"] != nil
 	}
+
 	return erossm.errsSet[err.Error()] != nil
 }
 

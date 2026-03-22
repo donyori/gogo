@@ -738,12 +738,7 @@ func TestGoMap_GetAndRemove(t *testing.T) {
 func keysToName(keys []string) string {
 	return fmtcoll.MustFormatSliceToString(
 		keys,
-		&fmtcoll.SequenceFormat[string]{
-			CommonFormat: fmtcoll.CommonFormat{
-				Separator: ",",
-			},
-			FormatItemFn: fmtcoll.FprintfToFormatFunc[string]("%+q"),
-		},
+		fmtcoll.NewSequenceFormatQuoted[string](true),
 	)
 }
 

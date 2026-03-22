@@ -25,27 +25,43 @@ import (
 )
 
 func TestLicenseParts(t *testing.T) {
+	t.Parallel()
+
 	t.Run("disclaimer of warranty", func(t *testing.T) {
+		t.Parallel()
+
 		if agpl3.DisclaimerOfWarranty != DisclaimerOfWarranty {
 			t.Error("wrong string")
 		}
-		if agpl3.License[agpl3.DisclaimerOfWarrantyBegin:agpl3.DisclaimerOfWarrantyEnd] != DisclaimerOfWarranty {
+
+		dow := agpl3.License[agpl3.DisclaimerOfWarrantyBegin:agpl3.DisclaimerOfWarrantyEnd]
+		if dow != DisclaimerOfWarranty {
 			t.Error("wrong indices")
 		}
 	})
+
 	t.Run("limitation of liability", func(t *testing.T) {
+		t.Parallel()
+
 		if agpl3.LimitationOfLiability != LimitationOfLiability {
 			t.Error("wrong string")
 		}
-		if agpl3.License[agpl3.LimitationOfLiabilityBegin:agpl3.LimitationOfLiabilityEnd] != LimitationOfLiability {
+
+		lol := agpl3.License[agpl3.LimitationOfLiabilityBegin:agpl3.LimitationOfLiabilityEnd]
+		if lol != LimitationOfLiability {
 			t.Error("wrong indices")
 		}
 	})
+
 	t.Run("terms and conditions", func(t *testing.T) {
+		t.Parallel()
+
 		if agpl3.TermsAndConditions != TermsAndConditions {
 			t.Error("wrong string")
 		}
-		if agpl3.License[agpl3.TermsAndConditionsBegin:agpl3.TermsAndConditionsEnd] != TermsAndConditions {
+
+		toc := agpl3.License[agpl3.TermsAndConditionsBegin:agpl3.TermsAndConditionsEnd]
+		if toc != TermsAndConditions {
 			t.Error("wrong indices")
 		}
 	})

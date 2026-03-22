@@ -19,6 +19,7 @@
 package constraints_test
 
 import (
+	"maps"
 	"testing"
 
 	"github.com/donyori/gogo/constraints"
@@ -91,6 +92,8 @@ var (
 )
 
 func TestCompilePredeclaredOrdered(t *testing.T) {
+	t.Parallel()
+
 	predeclaredSmallest(ints)
 	predeclaredSmallest(int8s)
 	predeclaredSmallest(int16s)
@@ -110,7 +113,7 @@ func TestCompilePredeclaredOrdered(t *testing.T) {
 
 	// The following statements should be invalid.
 	//
-	//  predeclaredSmallest(myInts)
+	//	predeclaredSmallest(myInts)
 	//	predeclaredSmallest(myInt8s)
 	//	predeclaredSmallest(myInt16s)
 	//	predeclaredSmallest(myInt32s)
@@ -127,27 +130,32 @@ func TestCompilePredeclaredOrdered(t *testing.T) {
 	//	predeclaredSmallest(myFloat64s)
 	//	predeclaredSmallest(myStrings)
 	//
-	//  predeclaredSmallest(complex64s)
-	//  predeclaredSmallest(complex128s)
-	//  predeclaredSmallest(myComplex64s)
-	//  predeclaredSmallest(myComplex128s)
+	//	predeclaredSmallest(complex64s)
+	//	predeclaredSmallest(complex128s)
+	//	predeclaredSmallest(myComplex64s)
+	//	predeclaredSmallest(myComplex128s)
 }
 
-func predeclaredSmallest[T constraints.PredeclaredOrdered](s []T) (
-	r T, ok bool) {
+func predeclaredSmallest[T constraints.PredeclaredOrdered](
+	s []T,
+) (r T, ok bool) {
 	if len(s) == 0 {
 		return
 	}
+
 	r = s[0]
 	for _, x := range s[1:] {
 		if x < r {
 			r = x
 		}
 	}
+
 	return r, true
 }
 
 func TestCompileOrdered(t *testing.T) {
+	t.Parallel()
+
 	smallest(ints)
 	smallest(int8s)
 	smallest(int16s)
@@ -184,26 +192,30 @@ func TestCompileOrdered(t *testing.T) {
 
 	// The following statements should be invalid.
 	//
-	//  smallest(complex64s)
-	//  smallest(complex128s)
-	//  smallest(myComplex64s)
-	//  smallest(myComplex128s)
+	//	smallest(complex64s)
+	//	smallest(complex128s)
+	//	smallest(myComplex64s)
+	//	smallest(myComplex128s)
 }
 
 func smallest[T constraints.Ordered](s []T) (r T, ok bool) {
 	if len(s) == 0 {
 		return
 	}
+
 	r = s[0]
 	for _, x := range s[1:] {
 		if x < r {
 			r = x
 		}
 	}
+
 	return r, true
 }
 
 func TestCompileAddable(t *testing.T) {
+	t.Parallel()
+
 	sum(ints)
 	sum(int8s)
 	sum(int16s)
@@ -248,17 +260,23 @@ func sum[T constraints.Addable](s []T) T {
 	if len(s) == 0 {
 		return r
 	}
+
 	for _, x := range s {
 		r += x
 	}
+
 	return r
 }
 
 func TestCompileByteString(t *testing.T) {
-	var str string
-	var bs []byte
-	var myS myString
-	var myB myByteSlice
+	t.Parallel()
+
+	var (
+		str string
+		bs  []byte
+		myS myString
+		myB myByteSlice
+	)
 
 	concatBytes(str, bs)
 	concatBytes(bs, myS)
@@ -270,10 +288,13 @@ func concatBytes[T1, T2 constraints.ByteString](s1 T1, s2 T2) []byte {
 	s := make([]byte, len(s1)+len(s2))
 	n := copy(s, s1)
 	copy(s[n:], s2)
+
 	return s
 }
 
 func TestCompileSlice(t *testing.T) {
+	t.Parallel()
+
 	copySlice(ints)
 	copySlice(int8s)
 	copySlice(int16s)
@@ -314,6 +335,7 @@ func TestCompileSlice(t *testing.T) {
 
 	var s myIntSlice
 	copySlice(s)
+
 	var ss []myIntSlice
 	copySlice(ss)
 }
@@ -322,14 +344,20 @@ func copySlice[S constraints.Slice[Elem], Elem any](s S) S {
 	if s == nil {
 		return nil
 	}
+
 	cp := make(S, len(s))
 	copy(cp, s)
+
 	return cp
 }
 
 func TestCompileMap(t *testing.T) {
-	var m1 map[string][]int
-	var m2 myStringToIntSliceMap
+	t.Parallel()
+
+	var (
+		m1 map[string][]int
+		m2 myStringToIntSliceMap
+	)
 
 	copyMap(m1)
 	copyMap(m2)
@@ -339,9 +367,9 @@ func copyMap[M constraints.Map[Key, Value], Key comparable, Value any](m M) M {
 	if m == nil {
 		return nil
 	}
+
 	cp := make(M, len(m))
-	for k, v := range m {
-		cp[k] = v
-	}
+	maps.Copy(cp, m)
+
 	return cp
 }

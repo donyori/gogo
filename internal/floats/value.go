@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+//nolint:mnd // this file contains a lot of numbers for the number of bits and bit representations
 package floats
 
 import "math"

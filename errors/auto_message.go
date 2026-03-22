@@ -49,24 +49,32 @@ func AutoMsgCustom(msg string, ms ErrorMessageStrategy, skip int) string {
 	if msg == "" {
 		msg = "<no error message>"
 	}
+
 	if !ms.Valid() {
 		ms = PrependFullFuncName
 	}
+
 	if ms == OriginalMsg {
 		return msg
 	}
+
 	const AutoMsgCustomPrefix = "github.com/donyori/gogo/errors.AutoMsgCustom: "
+
 	const CannotRetrieveCallerPanicMsg = AutoMsgCustomPrefix +
 		"cannot retrieve caller function name"
+
 	frame, ok := runtime.CallerFrame(skip + 1)
 	if !ok || frame.Function == "" {
 		panic(CannotRetrieveCallerPanicMsg)
 	}
+
 	prefix := frame.Function
 	pkg := runtime.FuncPkg(frame.Function)
+
 	if len(pkg) >= len(frame.Function) {
 		panic(CannotRetrieveCallerPanicMsg)
 	}
+
 	if ms != PrependFullFuncName {
 		switch ms {
 		case PrependFullPkgName:
@@ -80,13 +88,16 @@ func AutoMsgCustom(msg string, ms ErrorMessageStrategy, skip int) string {
 			// as a default value doesn't make sense here.
 			panic(fmt.Sprintf(
 				AutoMsgCustomPrefix+
-					"error message strategy is invalid (%v), which should never happen",
+					"error message strategy is invalid (%v), "+
+					"which should never happen",
 				ms,
 			))
 		}
 	}
+
 	if prefix == "" {
 		return msg
 	}
+
 	return prefix + ": " + msg
 }

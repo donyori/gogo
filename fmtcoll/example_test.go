@@ -44,6 +44,7 @@ func ExampleFormatSliceToString() {
 			} else {
 				_, err = w.Write([]byte(" <nil>"))
 			}
+
 			return err
 		},
 	}
@@ -60,11 +61,13 @@ func ExampleFormatSliceToString() {
 			if err != nil {
 				return err
 			}
+
 			if sw, ok := w.(io.StringWriter); ok {
 				_, err = sw.WriteString(s)
 			} else {
 				_, err = w.Write([]byte(s))
 			}
+
 			return err
 		},
 	}
@@ -73,6 +76,7 @@ func ExampleFormatSliceToString() {
 	if err != nil {
 		panic(err) // handle error
 	}
+
 	fmt.Println(s)
 
 	// Output:

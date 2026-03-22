@@ -150,11 +150,16 @@ var testNanoTimestampCases = []struct {
 }
 
 func TestTimestamp_String(t *testing.T) {
+	t.Parallel()
+
 	for i, tc := range testTimestampCases {
 		t.Run(
-			fmt.Sprintf("case %d?forFormat=%+q", i, tc.forFormat),
+			fmt.Sprintf("case%d?forFormat=%+q", i, tc.forFormat),
 			func(t *testing.T) {
-				if s := tc.timestamp.String(); s != tc.forFormat {
+				t.Parallel()
+
+				s := tc.timestamp.String()
+				if s != tc.forFormat {
 					t.Errorf("got %s; want %s", s, tc.forFormat)
 				}
 			},
@@ -163,10 +168,14 @@ func TestTimestamp_String(t *testing.T) {
 }
 
 func TestTimestamp_MarshalJSON(t *testing.T) {
+	t.Parallel()
+
 	for i, tc := range testTimestampCases {
 		t.Run(
-			fmt.Sprintf("case %d?forFormat=%+q", i, tc.forFormat),
+			fmt.Sprintf("case%d?forFormat=%+q", i, tc.forFormat),
 			func(t *testing.T) {
+				t.Parallel()
+
 				b, err := json.Marshal(tc.timestamp)
 				if err != nil {
 					t.Error(err)
@@ -179,11 +188,16 @@ func TestTimestamp_MarshalJSON(t *testing.T) {
 }
 
 func TestTimestamp_UnmarshalJSON(t *testing.T) {
+	t.Parallel()
+
 	for i, tc := range testTimestampCases {
 		t.Run(
-			fmt.Sprintf("case %d?forParse=%+q", i, tc.forParse),
+			fmt.Sprintf("case%d?forParse=%+q", i, tc.forParse),
 			func(t *testing.T) {
+				t.Parallel()
+
 				var ts timestamp.Timestamp
+
 				err := json.Unmarshal(tc.forParse, &ts)
 				if err != nil {
 					t.Error(err)
@@ -193,57 +207,71 @@ func TestTimestamp_UnmarshalJSON(t *testing.T) {
 			},
 		)
 	}
+
 	t.Run("null", func(t *testing.T) {
-		testUnmarshalJsonNull[timestamp.Timestamp](t)
+		t.Parallel()
+		testUnmarshalJSONNull[timestamp.Timestamp](t)
 	})
 }
 
 func TestUnixTimestamp_String(t *testing.T) {
+	t.Parallel()
 	testString(t, testUnixTimestampCases)
 }
 
 func TestUnixTimestamp_MarshalJSON(t *testing.T) {
-	testMarshalJson(t, testUnixTimestampCases)
+	t.Parallel()
+	testMarshalJSON(t, testUnixTimestampCases)
 }
 
 func TestUnixTimestamp_UnmarshalJSON(t *testing.T) {
-	testUnmarshalJson(t, testUnixTimestampCases)
+	t.Parallel()
+	testUnmarshalJSON(t, testUnixTimestampCases)
 }
 
 func TestMilliTimestamp_String(t *testing.T) {
+	t.Parallel()
 	testString(t, testMilliTimestampCases)
 }
 
 func TestMilliTimestamp_MarshalJSON(t *testing.T) {
-	testMarshalJson(t, testMilliTimestampCases)
+	t.Parallel()
+	testMarshalJSON(t, testMilliTimestampCases)
 }
 
 func TestMilliTimestamp_UnmarshalJSON(t *testing.T) {
-	testUnmarshalJson(t, testMilliTimestampCases)
+	t.Parallel()
+	testUnmarshalJSON(t, testMilliTimestampCases)
 }
 
 func TestMicroTimestamp_String(t *testing.T) {
+	t.Parallel()
 	testString(t, testMicroTimestampCases)
 }
 
 func TestMicroTimestamp_MarshalJSON(t *testing.T) {
-	testMarshalJson(t, testMicroTimestampCases)
+	t.Parallel()
+	testMarshalJSON(t, testMicroTimestampCases)
 }
 
 func TestMicroTimestamp_UnmarshalJSON(t *testing.T) {
-	testUnmarshalJson(t, testMicroTimestampCases)
+	t.Parallel()
+	testUnmarshalJSON(t, testMicroTimestampCases)
 }
 
 func TestNanoTimestamp_String(t *testing.T) {
+	t.Parallel()
 	testString(t, testNanoTimestampCases)
 }
 
 func TestNanoTimestamp_MarshalJSON(t *testing.T) {
-	testMarshalJson(t, testNanoTimestampCases)
+	t.Parallel()
+	testMarshalJSON(t, testNanoTimestampCases)
 }
 
 func TestNanoTimestamp_UnmarshalJSON(t *testing.T) {
-	testUnmarshalJson(t, testNanoTimestampCases)
+	t.Parallel()
+	testUnmarshalJSON(t, testNanoTimestampCases)
 }
 
 type timestampConstraint interface {
@@ -251,14 +279,21 @@ type timestampConstraint interface {
 		timestamp.MicroTimestamp | timestamp.NanoTimestamp
 }
 
-func testString[Ts timestampConstraint](t *testing.T, cases []struct {
-	timestamp Ts
-	bytes     []byte
-}) {
+func testString[Ts timestampConstraint](
+	t *testing.T,
+	cases []struct {
+		timestamp Ts
+		bytes     []byte
+	},
+) {
+	t.Helper()
+
 	for i, tc := range cases {
 		t.Run(
-			fmt.Sprintf("case %d?bytes=%+q", i, tc.bytes),
+			fmt.Sprintf("case%d?bytes=%+q", i, tc.bytes),
 			func(t *testing.T) {
+				t.Parallel()
+
 				s := any(tc.timestamp).(fmt.Stringer).String()
 				if s != string(tc.bytes) {
 					t.Errorf("got %s; want %s", s, tc.bytes)
@@ -268,14 +303,21 @@ func testString[Ts timestampConstraint](t *testing.T, cases []struct {
 	}
 }
 
-func testMarshalJson[Ts timestampConstraint](t *testing.T, cases []struct {
-	timestamp Ts
-	bytes     []byte
-}) {
+func testMarshalJSON[Ts timestampConstraint](
+	t *testing.T,
+	cases []struct {
+		timestamp Ts
+		bytes     []byte
+	},
+) {
+	t.Helper()
+
 	for i, tc := range cases {
 		t.Run(
-			fmt.Sprintf("case %d?bytes=%+q", i, tc.bytes),
+			fmt.Sprintf("case%d?bytes=%+q", i, tc.bytes),
 			func(t *testing.T) {
+				t.Parallel()
+
 				b, err := json.Marshal(tc.timestamp)
 				if err != nil {
 					t.Error(err)
@@ -287,15 +329,23 @@ func testMarshalJson[Ts timestampConstraint](t *testing.T, cases []struct {
 	}
 }
 
-func testUnmarshalJson[Ts timestampConstraint](t *testing.T, cases []struct {
-	timestamp Ts
-	bytes     []byte
-}) {
+func testUnmarshalJSON[Ts timestampConstraint](
+	t *testing.T,
+	cases []struct {
+		timestamp Ts
+		bytes     []byte
+	},
+) {
+	t.Helper()
+
 	for i, tc := range cases {
 		t.Run(
-			fmt.Sprintf("case %d?bytes=%+q", i, tc.bytes),
+			fmt.Sprintf("case%d?bytes=%+q", i, tc.bytes),
 			func(t *testing.T) {
+				t.Parallel()
+
 				var ts Ts
+
 				err := json.Unmarshal(tc.bytes, &ts)
 				if err != nil {
 					t.Error(err)
@@ -305,19 +355,24 @@ func testUnmarshalJson[Ts timestampConstraint](t *testing.T, cases []struct {
 			},
 		)
 	}
+
 	t.Run("null", func(t *testing.T) {
-		testUnmarshalJsonNull[Ts](t)
+		t.Parallel()
+		testUnmarshalJSONNull[Ts](t)
 	})
 }
 
 var (
-	now       = time.Now()
-	nullBytes = []byte("null")
+	now           = time.Now()
+	jsonNullBytes = []byte("null")
 )
 
-func testUnmarshalJsonNull[Ts timestampConstraint](t *testing.T) {
+func testUnmarshalJSONNull[Ts timestampConstraint](t *testing.T) {
+	t.Helper()
+
 	ts := Ts(now)
-	err := any(&ts).(json.Unmarshaler).UnmarshalJSON(nullBytes)
+
+	err := any(&ts).(json.Unmarshaler).UnmarshalJSON(jsonNullBytes)
 	if err != nil {
 		t.Error(err)
 	} else if !now.Equal(time.Time(ts)) {

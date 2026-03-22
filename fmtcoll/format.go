@@ -39,6 +39,10 @@ func FprintfToFormatFunc[T any](format string) FormatFunc[T] {
 	}
 }
 
+// asciiOnlyQuotedFormat is the format specifier used by FprintfToFormatFunc
+// that makes fmt.Fprintf format x to an ASCII-only quoted representation.
+const asciiOnlyQuotedFormat = "%+q"
+
 // CommonFormat contains the format options common to sequences and maps.
 type CommonFormat struct {
 	// Separator is the string inserted between every two items.
@@ -114,10 +118,27 @@ type SequenceFormat[Item any] struct {
 //   - Separator: ","
 //   - Prefix: ""
 //   - Suffix: ""
+//   - PrependType: false
+//   - PrependSize: false
+//   - FormatItemFn: FprintfToFormatFunc[Item]("%v")
+func NewDefaultSequenceFormat[Item any]() *SequenceFormat[Item] {
+	return &SequenceFormat[Item]{
+		CommonFormat: CommonFormat{
+			Separator: ",",
+		},
+		FormatItemFn: FprintfToFormatFunc[Item]("%v"),
+	}
+}
+
+// NewSequenceFormatPrepend creates a new SequenceFormat
+// with the options as follows:
+//   - Separator: ","
+//   - Prefix: ""
+//   - Suffix: ""
 //   - PrependType: true
 //   - PrependSize: true
 //   - FormatItemFn: FprintfToFormatFunc[Item]("%v")
-func NewDefaultSequenceFormat[Item any]() *SequenceFormat[Item] {
+func NewSequenceFormatPrepend[Item any]() *SequenceFormat[Item] {
 	return &SequenceFormat[Item]{
 		CommonFormat: CommonFormat{
 			Separator:   ",",
@@ -125,6 +146,38 @@ func NewDefaultSequenceFormat[Item any]() *SequenceFormat[Item] {
 			PrependSize: true,
 		},
 		FormatItemFn: FprintfToFormatFunc[Item]("%v"),
+	}
+}
+
+// NewSequenceFormatQuoted creates a new SequenceFormat
+// with the options as follows:
+//
+// If asciiOnly is false:
+//   - Separator: ","
+//   - Prefix: ""
+//   - Suffix: ""
+//   - PrependType: false
+//   - PrependSize: false
+//   - FormatItemFn: FprintfToFormatFunc[Item]("%q")
+//
+// If asciiOnly is true:
+//   - Separator: ","
+//   - Prefix: ""
+//   - Suffix: ""
+//   - PrependType: false
+//   - PrependSize: false
+//   - FormatItemFn: FprintfToFormatFunc[Item]("%+q")
+func NewSequenceFormatQuoted[Item any](asciiOnly bool) *SequenceFormat[Item] {
+	format := "%q"
+	if asciiOnly {
+		format = asciiOnlyQuotedFormat
+	}
+
+	return &SequenceFormat[Item]{
+		CommonFormat: CommonFormat{
+			Separator: ",",
+		},
+		FormatItemFn: FprintfToFormatFunc[Item](format),
 	}
 }
 
@@ -203,12 +256,32 @@ type MapFormat[Key, Value any] struct {
 //   - Separator: ","
 //   - Prefix: ""
 //   - Suffix: ""
+//   - PrependType: false
+//   - PrependSize: false
+//   - FormatKeyFn: FprintfToFormatFunc[Key]("%v")
+//   - FormatValueFn: FprintfToFormatFunc[Value]("%v")
+//   - CompareKeyValueFn: nil
+func NewDefaultMapFormat[Key, Value any]() *MapFormat[Key, Value] {
+	return &MapFormat[Key, Value]{
+		CommonFormat: CommonFormat{
+			Separator: ",",
+		},
+		FormatKeyFn:   FprintfToFormatFunc[Key]("%v"),
+		FormatValueFn: FprintfToFormatFunc[Value]("%v"),
+	}
+}
+
+// NewMapFormatPrepend creates a new MapFormat
+// with the options as follows:
+//   - Separator: ","
+//   - Prefix: ""
+//   - Suffix: ""
 //   - PrependType: true
 //   - PrependSize: true
 //   - FormatKeyFn: FprintfToFormatFunc[Key]("%v")
 //   - FormatValueFn: FprintfToFormatFunc[Value]("%v")
 //   - CompareKeyValueFn: nil
-func NewDefaultMapFormat[Key, Value any]() *MapFormat[Key, Value] {
+func NewMapFormatPrepend[Key, Value any]() *MapFormat[Key, Value] {
 	return &MapFormat[Key, Value]{
 		CommonFormat: CommonFormat{
 			Separator:   ",",
@@ -217,5 +290,122 @@ func NewDefaultMapFormat[Key, Value any]() *MapFormat[Key, Value] {
 		},
 		FormatKeyFn:   FprintfToFormatFunc[Key]("%v"),
 		FormatValueFn: FprintfToFormatFunc[Value]("%v"),
+	}
+}
+
+// NewMapFormatKeyQuoted creates a new MapFormat
+// with the options as follows:
+//
+// If asciiOnly is false:
+//   - Separator: ","
+//   - Prefix: ""
+//   - Suffix: ""
+//   - PrependType: false
+//   - PrependSize: false
+//   - FormatKeyFn: FprintfToFormatFunc[Key]("%q")
+//   - FormatValueFn: FprintfToFormatFunc[Value]("%v")
+//   - CompareKeyValueFn: nil
+//
+// If asciiOnly is true:
+//   - Separator: ","
+//   - Prefix: ""
+//   - Suffix: ""
+//   - PrependType: false
+//   - PrependSize: false
+//   - FormatKeyFn: FprintfToFormatFunc[Key]("%+q")
+//   - FormatValueFn: FprintfToFormatFunc[Value]("%v")
+//   - CompareKeyValueFn: nil
+func NewMapFormatKeyQuoted[Key, Value any](
+	asciiOnly bool,
+) *MapFormat[Key, Value] {
+	format := "%q"
+	if asciiOnly {
+		format = asciiOnlyQuotedFormat
+	}
+
+	return &MapFormat[Key, Value]{
+		CommonFormat: CommonFormat{
+			Separator: ",",
+		},
+		FormatKeyFn:   FprintfToFormatFunc[Key](format),
+		FormatValueFn: FprintfToFormatFunc[Value]("%v"),
+	}
+}
+
+// NewMapFormatValueQuoted creates a new MapFormat
+// with the options as follows:
+//
+// If asciiOnly is false:
+//   - Separator: ","
+//   - Prefix: ""
+//   - Suffix: ""
+//   - PrependType: false
+//   - PrependSize: false
+//   - FormatKeyFn: FprintfToFormatFunc[Key]("%v")
+//   - FormatValueFn: FprintfToFormatFunc[Value]("%q")
+//   - CompareKeyValueFn: nil
+//
+// If asciiOnly is true:
+//   - Separator: ","
+//   - Prefix: ""
+//   - Suffix: ""
+//   - PrependType: false
+//   - PrependSize: false
+//   - FormatKeyFn: FprintfToFormatFunc[Key]("%v")
+//   - FormatValueFn: FprintfToFormatFunc[Value]("%+q")
+//   - CompareKeyValueFn: nil
+func NewMapFormatValueQuoted[Key, Value any](
+	asciiOnly bool,
+) *MapFormat[Key, Value] {
+	format := "%q"
+	if asciiOnly {
+		format = asciiOnlyQuotedFormat
+	}
+
+	return &MapFormat[Key, Value]{
+		CommonFormat: CommonFormat{
+			Separator: ",",
+		},
+		FormatKeyFn:   FprintfToFormatFunc[Key]("%v"),
+		FormatValueFn: FprintfToFormatFunc[Value](format),
+	}
+}
+
+// NewMapFormatKeyValueQuoted creates a new MapFormat
+// with the options as follows:
+//
+// If asciiOnly is false:
+//   - Separator: ","
+//   - Prefix: ""
+//   - Suffix: ""
+//   - PrependType: false
+//   - PrependSize: false
+//   - FormatKeyFn: FprintfToFormatFunc[Key]("%q")
+//   - FormatValueFn: FprintfToFormatFunc[Value]("%q")
+//   - CompareKeyValueFn: nil
+//
+// If asciiOnly is false:
+//   - Separator: ","
+//   - Prefix: ""
+//   - Suffix: ""
+//   - PrependType: false
+//   - PrependSize: false
+//   - FormatKeyFn: FprintfToFormatFunc[Key]("%+q")
+//   - FormatValueFn: FprintfToFormatFunc[Value]("%+q")
+//   - CompareKeyValueFn: nil
+func NewMapFormatKeyValueQuoted[Key, Value any](
+	asciiOnly bool,
+) *MapFormat[Key, Value] {
+	format := "%q"
+	if asciiOnly {
+		format = asciiOnlyQuotedFormat
+	}
+
+	return &MapFormat[Key, Value]{
+		CommonFormat: CommonFormat{
+			Separator: ",",
+		},
+		FormatKeyFn:   FprintfToFormatFunc[Key](format),
+		FormatValueFn: FprintfToFormatFunc[Value](format),
 	}
 }

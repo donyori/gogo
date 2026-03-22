@@ -186,6 +186,8 @@ type testCase struct {
 }
 
 func TestNextPermutation(t *testing.T) {
+	t.Parallel()
+
 	var testCases []testCase
 
 	for _, ps := range dataList {
@@ -205,6 +207,8 @@ func TestNextPermutation(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("data="+dataToName(tc.data), func(t *testing.T) {
+			t.Parallel()
+
 			var data []int
 			if tc.data != nil {
 				data = make([]int, len(tc.data))
@@ -224,10 +228,8 @@ func TestNextPermutation(t *testing.T) {
 }
 
 func dataToName(data []int) string {
-	return fmtcoll.MustFormatSliceToString(data, &fmtcoll.SequenceFormat[int]{
-		CommonFormat: fmtcoll.CommonFormat{
-			Separator: ",",
-		},
-		FormatItemFn: fmtcoll.FprintfToFormatFunc[int]("%d"),
-	})
+	return fmtcoll.MustFormatSliceToString(
+		data,
+		fmtcoll.NewDefaultSequenceFormat[int](),
+	)
 }

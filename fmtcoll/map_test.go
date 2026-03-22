@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -31,6 +30,8 @@ import (
 )
 
 func TestFormatMapToString(t *testing.T) {
+	t.Parallel()
+
 	testFormatMapToString(
 		t,
 		"map[string]*int",
@@ -59,6 +60,8 @@ func TestFormatMapToString(t *testing.T) {
 }
 
 func TestMustFormatMapToString_Panic(t *testing.T) {
+	t.Parallel()
+
 	testMustFormatToStringPanic(
 		t,
 		func(errorFormatItemFn fmtcoll.FormatFunc[int]) {
@@ -71,6 +74,8 @@ func TestMustFormatMapToString_Panic(t *testing.T) {
 }
 
 func TestFormatGogoMapToString(t *testing.T) {
+	t.Parallel()
+
 	testFormatMapToString(
 		t,
 		"mapping.Map[string,*int]",
@@ -89,6 +94,7 @@ func TestFormatGogoMapToString(t *testing.T) {
 			if dataList[tc.dataIdx] != nil {
 				m = (*mapping.GoMap[string, *int])(&dataList[tc.dataIdx])
 			}
+
 			return fmtcoll.FormatGogoMapToString(
 				m, &fmtcoll.MapFormat[string, *int]{
 					CommonFormat:      commonFormatList[tc.commonFormatIdx],
@@ -102,10 +108,12 @@ func TestFormatGogoMapToString(t *testing.T) {
 }
 
 func TestMustFormatGogoMapToString_Panic(t *testing.T) {
+	t.Parallel()
+
 	testMustFormatToStringPanic(
 		t,
 		func(errorFormatItemFn fmtcoll.FormatFunc[int]) {
-			fmtcoll.MustFormatGogoMapToString[int, int](
+			fmtcoll.MustFormatGogoMapToString(
 				&mapping.GoMap[int, int]{0: 0},
 				&fmtcoll.MapFormat[int, int]{FormatKeyFn: errorFormatItemFn},
 			)
@@ -131,6 +139,8 @@ func testFormatMapToString(
 		compareKeyValueFn func(key1 string, _ *int, key2 string, _ *int) int,
 	) (result string, err error),
 ) {
+	t.Helper()
+
 	const Separator, Prefix, Suffix = ",", "<PREFIX>", "<SUFFIX>"
 
 	compareKeyValueFn := func(key1 string, _ *int, key2 string, _ *int) int {
@@ -139,6 +149,7 @@ func testFormatMapToString(
 		} else if key1 > key2 {
 			return 1
 		}
+
 		return 0
 	}
 	two, three := 2, 3
@@ -153,15 +164,48 @@ func testFormatMapToString(
 		{},
 		{PrependType: true},
 		{PrependSize: true},
-		{PrependType: true, PrependSize: true},
+		{
+			PrependType: true,
+			PrependSize: true,
+		},
 		{Separator: Separator},
-		{Separator: Separator, PrependType: true},
-		{Separator: Separator, PrependSize: true},
-		{Separator: Separator, PrependType: true, PrependSize: true},
-		{Separator: Separator, Prefix: Prefix, Suffix: Suffix},
-		{Separator: Separator, Prefix: Prefix, Suffix: Suffix, PrependType: true},
-		{Separator: Separator, Prefix: Prefix, Suffix: Suffix, PrependSize: true},
-		{Separator: Separator, Prefix: Prefix, Suffix: Suffix, PrependType: true, PrependSize: true},
+		{
+			Separator:   Separator,
+			PrependType: true,
+		},
+		{
+			Separator:   Separator,
+			PrependSize: true,
+		},
+		{
+			Separator:   Separator,
+			PrependType: true,
+			PrependSize: true,
+		},
+		{
+			Separator: Separator,
+			Prefix:    Prefix,
+			Suffix:    Suffix,
+		},
+		{
+			Separator:   Separator,
+			Prefix:      Prefix,
+			Suffix:      Suffix,
+			PrependType: true,
+		},
+		{
+			Separator:   Separator,
+			Prefix:      Prefix,
+			Suffix:      Suffix,
+			PrependSize: true,
+		},
+		{
+			Separator:   Separator,
+			Prefix:      Prefix,
+			Suffix:      Suffix,
+			PrependType: true,
+			PrependSize: true,
+		},
 	}
 
 	for _, tc := range getTestCasesForFormatMapToString(
@@ -171,10 +215,14 @@ func testFormatMapToString(
 		if tc.formatKeyFn == nil {
 			name += "&formatKeyFn=<nil>"
 		}
+
 		if tc.formatValueFn == nil {
 			name += "&formatValueFn=<nil>"
 		}
+
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := f(tc, dataList, commonFormatList, compareKeyValueFn)
 			if err != nil {
 				t.Error("err -", err)
@@ -193,6 +241,7 @@ func getTestCasesForFormatMapToString(
 	commonFormatList []fmtcoll.CommonFormat,
 ) []mapTestCase {
 	const NilItemStr = "<nilptr>"
+
 	formatKeyFn := fmtcoll.FprintfToFormatFunc[string]("%q")
 	formatValueFn := func(w io.Writer, x *int) error {
 		var err error
@@ -203,23 +252,21 @@ func getTestCasesForFormatMapToString(
 		} else {
 			_, err = w.Write([]byte(NilItemStr))
 		}
+
 		return err
 	}
 
 	testCases := make([]mapTestCase, len(dataList)*len(commonFormatList)<<2)
+
 	var idx int
+
 	for dataIdx, data := range dataList {
 		for commonFormatIdx := range commonFormatList {
-			var prefix string
-			if commonFormatList[commonFormatIdx].PrependType {
-				if commonFormatList[commonFormatIdx].PrependSize {
-					prefix = fmt.Sprintf("(%s,%d)", typeStr, len(data))
-				} else {
-					prefix = fmt.Sprintf("(%s)", typeStr)
-				}
-			} else if commonFormatList[commonFormatIdx].PrependSize {
-				prefix = fmt.Sprintf("(%d)", len(data))
-			}
+			prefix := getPrefixByCommonFormat(
+				&commonFormatList[commonFormatIdx],
+				typeStr,
+				len(data),
+			)
 
 			for _, fmtKeyFn := range []fmtcoll.FormatFunc[string]{
 				nil,
@@ -233,12 +280,9 @@ func getTestCasesForFormatMapToString(
 					testCases[idx].commonFormatIdx = commonFormatIdx
 					testCases[idx].formatKeyFn = fmtKeyFn
 					testCases[idx].formatValueFn = fmtValueFn
-					testCases[idx].want = getWantStringForFormatMapToString(
-						NilItemStr,
-						commonFormatList,
-						commonFormatIdx,
+					testCases[idx].want = prefix + formatMapContentToString(
 						data,
-						prefix,
+						&commonFormatList[commonFormatIdx],
 						fmtKeyFn,
 						fmtValueFn,
 					)
@@ -247,58 +291,58 @@ func getTestCasesForFormatMapToString(
 			}
 		}
 	}
+
 	return testCases
 }
 
-// getWantStringForFormatMapToString returns the expected result string
-// for testFormatMapToString.
-func getWantStringForFormatMapToString(
-	nilItemStr string,
-	commonFormatList []fmtcoll.CommonFormat,
-	commonFormatIdx int,
+// formatMapContentToString formats the specified map content
+// to a string with the specified format options.
+func formatMapContentToString(
 	data map[string]*int,
-	prefix string,
-	fmtKeyFn fmtcoll.FormatFunc[string],
-	fmtValueFn fmtcoll.FormatFunc[*int],
+	cf *fmtcoll.CommonFormat,
+	formatKeyFn fmtcoll.FormatFunc[string],
+	formatValueFn fmtcoll.FormatFunc[*int],
 ) string {
-	var s string
 	switch {
 	case data == nil:
-		s = "<nil>"
+		return "<nil>"
 	case len(data) == 0:
-		s = "{}"
-	case fmtKeyFn == nil && fmtValueFn == nil:
-		s = "{...}"
-	default:
-		keys := make([]string, 0, len(data))
-		for key := range data {
-			keys = append(keys, key)
-		}
-		slices.Sort(keys)
-		var b strings.Builder
-		b.WriteByte('{')
-		b.WriteString(commonFormatList[commonFormatIdx].Prefix)
-		for i, key := range keys {
-			if i > 0 {
-				b.WriteString(commonFormatList[commonFormatIdx].Separator)
-			}
-			if fmtKeyFn != nil {
-				b.WriteString(strconv.Quote(key))
-				if fmtValueFn != nil {
-					b.WriteByte(':')
-				}
-			}
-			if fmtValueFn != nil {
-				if x := data[key]; x != nil {
-					b.WriteString(strconv.Itoa(*x))
-				} else {
-					b.WriteString(nilItemStr)
-				}
-			}
-		}
-		b.WriteString(commonFormatList[commonFormatIdx].Suffix)
-		b.WriteByte('}')
-		s = b.String()
+		return "{}"
+	case formatKeyFn == nil && formatValueFn == nil:
+		return "{...}"
 	}
-	return prefix + s
+
+	keys := make([]string, 0, len(data))
+	for key := range data {
+		keys = append(keys, key)
+	}
+
+	slices.Sort(keys)
+
+	var b strings.Builder
+	b.WriteByte('{')
+	b.WriteString(cf.Prefix)
+
+	for i, key := range keys {
+		if i > 0 {
+			b.WriteString(cf.Separator)
+		}
+
+		if formatKeyFn != nil {
+			writeItemToStringBuilder(&b, key, formatKeyFn)
+
+			if formatValueFn != nil {
+				b.WriteByte(':')
+			}
+		}
+
+		if formatValueFn != nil {
+			writeItemToStringBuilder(&b, data[key], formatValueFn)
+		}
+	}
+
+	b.WriteString(cf.Suffix)
+	b.WriteByte('}')
+
+	return b.String()
 }

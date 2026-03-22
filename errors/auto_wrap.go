@@ -85,10 +85,13 @@ func (awe *autoWrappedError) Error() string {
 	if msg == "" {
 		msg = "<no error message>"
 	}
+
 	if awe.ms == OriginalMsg {
 		return msg
 	}
+
 	var prefix string
+
 	switch awe.ms {
 	case PrependFullFuncName:
 		prefix = awe.FullFunction()
@@ -106,9 +109,11 @@ func (awe *autoWrappedError) Error() string {
 			awe.ms,
 		)))
 	}
+
 	if prefix == "" {
 		return msg
 	}
+
 	return prefix + ": " + msg
 }
 
@@ -121,10 +126,11 @@ func (awe *autoWrappedError) Root() error {
 	// Each type testing should not go along the Unwrap error tree,
 	// so type assertion is used here instead of errors.As.
 	for {
-		wrapped, ok := err.(AutoWrappedError)
+		wrapped, ok := err.(AutoWrappedError) //nolint:errorlint // as stated above
 		if !ok {
 			return err
 		}
+
 		err = wrapped.Unwrap()
 	}
 }
@@ -174,6 +180,7 @@ func AutoWrap(err error) error {
 	if err == nil { // nil error is the most common case, so add a short path here
 		return nil
 	}
+
 	return AutoWrapCustom(err, -1, 1, defaultExclusionSet)
 }
 
@@ -199,6 +206,7 @@ func AutoWrapSkip(err error, skip int) error {
 	if err == nil { // nil error is the most common case, so add a short path here
 		return nil
 	}
+
 	return AutoWrapCustom(err, -1, skip+1, defaultExclusionSet)
 }
 
@@ -230,14 +238,17 @@ func AutoWrapCustom(
 	if err == nil || exclusions != nil && exclusions.Contains(err) {
 		return err
 	}
+
 	frame, ok := runtime.CallerFrame(skip + 1)
 	if !ok || frame.Function == "" ||
 		len(runtime.FuncPkg(frame.Function)) >= len(frame.Function) {
 		panic(AutoMsg("cannot retrieve caller function name"))
 	}
+
 	if !ms.Valid() {
 		ms = PrependFullFuncName
 	}
+
 	return &autoWrappedError{
 		err:      err,
 		ms:       ms,
@@ -249,9 +260,12 @@ func AutoWrapCustom(
 func IsAutoWrappedError(err error) bool {
 	// The type testing should not go along the Unwrap error tree,
 	// so type assertion is used here instead of errors.As.
-	_, ok := err.(AutoWrappedError)
+	_, ok := err.(AutoWrappedError) //nolint:errorlint // as stated above
 	return ok
 }
+
+//revive:disable:error-return
+// In the following two functions, the error returned is the main result.
 
 // UnwrapAutoWrappedError unwraps err and returns the result and true
 // if err is an AutoWrappedError.
@@ -260,10 +274,11 @@ func IsAutoWrappedError(err error) bool {
 func UnwrapAutoWrappedError(err error) (error, bool) {
 	// The type testing should not go along the Unwrap error tree,
 	// so type assertion is used here instead of errors.As.
-	awe, ok := err.(AutoWrappedError)
+	awe, ok := err.(AutoWrappedError) //nolint:errorlint // as stated above
 	if ok {
 		err = awe.Unwrap()
 	}
+
 	return err, ok
 }
 
@@ -274,12 +289,17 @@ func UnwrapAutoWrappedError(err error) (error, bool) {
 // If err is not an AutoWrappedError,
 // UnwrapAllAutoWrappedErrors returns err itself and false.
 func UnwrapAllAutoWrappedErrors(err error) (error, bool) {
-	awe, ok := err.(AutoWrappedError)
+	// The type testing should not go along the Unwrap error tree,
+	// so type assertion is used here instead of errors.As.
+	awe, ok := err.(AutoWrappedError) //nolint:errorlint // as stated above
 	if ok {
 		err = awe.Root()
 	}
+
 	return err, ok
 }
+
+//revive:enable:error-return
 
 // ListFunctionNamesInAutoWrappedErrors repeatedly lists
 // the full function name recorded in the AutoWrappedError err
@@ -293,10 +313,13 @@ func ListFunctionNamesInAutoWrappedErrors(err error) (
 	names []string, root error) {
 	root = err
 	for {
-		awe, ok := root.(AutoWrappedError)
+		// The type testing should not go along the Unwrap error tree,
+		// so type assertion is used here instead of errors.As.
+		awe, ok := root.(AutoWrappedError) //nolint:errorlint // as stated above
 		if !ok {
 			return
 		}
+
 		names, root = append(names, awe.FullFunction()), awe.Unwrap()
 	}
 }

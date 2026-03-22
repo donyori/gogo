@@ -101,8 +101,11 @@ type ErrorList interface {
 	Deduplicate()
 }
 
+// nilErrorString is the string that represents a nil error.
+const nilErrorString = "<nil>"
+
 // errorList is an implementation of interface ErrorList.
-type errorList struct {
+type errorList struct { //nolint:errname // it is an implementation of interface ErrorList
 	list      []error
 	ignoreNil bool
 }
@@ -119,6 +122,7 @@ func NewErrorList(ignoreNil bool, err ...error) ErrorList {
 		el.list = make([]error, 0, len(err))
 		el.Append(err...)
 	}
+
 	return el
 }
 
@@ -141,24 +145,32 @@ func (el *errorList) Error() string {
 		if err != nil {
 			return err.Error()
 		}
-		return "<nil>"
+
+		return nilErrorString
 	}
-	var builder strings.Builder
+
 	s := strconv.Itoa(len(el.list))
+
+	var builder strings.Builder
 	builder.WriteString(s)
 	builder.WriteString(" errors: [")
+
 	for i, err := range el.list {
 		if i > 0 {
 			builder.WriteString(", ")
 		}
-		s = "<nil>"
+
+		s = nilErrorString
 		if err != nil {
 			s = err.Error()
 		}
+
 		s = strconv.Quote(s)
 		builder.WriteString(s)
 	}
+
 	builder.WriteString("]")
+
 	return builder.String()
 }
 
@@ -167,21 +179,27 @@ func (el *errorList) Unwrap() []error {
 	if el.ignoreNil {
 		return el.ToList()
 	}
+
 	var n int
+
 	for _, err := range el.list {
 		if err != nil {
 			n++
 		}
 	}
+
 	if n == 0 {
 		return nil
 	}
+
 	errs := make([]error, 0, n)
+
 	for _, err := range el.list {
 		if err != nil {
 			errs = append(errs, err)
 		}
 	}
+
 	return errs
 }
 
@@ -193,11 +211,13 @@ func (el *errorList) Erroneous() bool {
 	if el.ignoreNil {
 		return len(el.list) > 0
 	}
+
 	for _, err := range el.list {
 		if err != nil {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -205,8 +225,10 @@ func (el *errorList) ToList() []error {
 	if len(el.list) == 0 {
 		return nil
 	}
+
 	errs := make([]error, len(el.list))
 	copy(errs, el.list)
+
 	return errs
 }
 
@@ -285,7 +307,9 @@ func (el *errorList) Deduplicate() {
 	if len(el.list) == 0 {
 		return
 	}
+
 	set, n := make(map[string]struct{}), 0
+
 	for i := range el.list {
 		x := el.list[i]
 		if x != nil {
@@ -297,9 +321,11 @@ func (el *errorList) Deduplicate() {
 			}
 		}
 	}
+
 	if n == len(el.list) {
 		return
 	}
+
 	clear(el.list[n:]) // avoid memory leak
 	el.list = el.list[:n]
 }
@@ -315,5 +341,6 @@ func Combine(err ...error) error {
 	if len(err) == 0 {
 		return nil
 	}
+
 	return NewErrorList(true, err...).ToError()
 }

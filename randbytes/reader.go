@@ -62,24 +62,32 @@ func NewReader(src rand.Source) Reader {
 	if src == nil {
 		panic(errors.AutoMsg("random value source is nil"))
 	}
+
 	return &reader{src: src}
 }
 
 func (r *reader) Read(p []byte) (n int, err error) {
 	// Don't use "n = range p" or "n = range len(p)",
 	// because these statements make n end at len(p)-1, not len(p).
-	for n = 0; n < len(p); n++ {
+	n = 0
+	for n < len(p) {
 		p[n], _ = r.ReadByte() // the error is always nil
+		n++
 	}
+
 	return
 }
 
 func (r *reader) ReadByte() (c byte, err error) {
+	const ByteNumBit uint64 = 8
+
 	if r.ctr == 0 {
 		r.x, r.ctr = r.src.Uint64(), 8
 	}
-	c = byte(r.x)
-	r.x, r.ctr = r.x>>8, r.ctr-1
+
+	c = byte(r.x) //gosec:disable G115 -- it takes the last 8 bits
+	r.x, r.ctr = r.x>>ByteNumBit, r.ctr-1
+
 	return
 }
 

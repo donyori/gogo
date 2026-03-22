@@ -453,12 +453,10 @@ func BenchmarkGCD2Uint64Functions(b *testing.B) {
 }
 
 func xsToName[Int constraints.Integer](xs []Int) string {
-	return fmtcoll.MustFormatSliceToString(xs, &fmtcoll.SequenceFormat[Int]{
-		CommonFormat: fmtcoll.CommonFormat{
-			Separator: ",",
-		},
-		FormatItemFn: fmtcoll.FprintfToFormatFunc[Int]("%d"),
-	})
+	return fmtcoll.MustFormatSliceToString(
+		xs,
+		fmtcoll.NewDefaultSequenceFormat[Int](),
+	)
 }
 
 // randomlySelectInts selects 1 to 64 integers from testIntegers randomly.

@@ -35,7 +35,8 @@ import (
 // It takes 3 arguments, <program>, <year>, and <name of author>.
 const terminalNoticeLayout = "" +
 	"    %s  Copyright (C) %s  %s\n" +
-	"    This program comes with ABSOLUTELY NO WARRANTY; for details use `%[1]s show w'.\n" +
+	"    This program comes with ABSOLUTELY NO WARRANTY; " +
+	"for details use `%[1]s show w'.\n" +
 	"    This is free software, and you are welcome to redistribute it\n" +
 	"    under certain conditions; use `%[1]s show c' for details.\n"
 
@@ -74,27 +75,39 @@ var ErrAuthorMissing = errors.AutoNewCustom(
 // If source is empty, the program source part is discarded.
 //
 // It returns the number of bytes written to w and any error encountered.
-func PrintCopyrightNotice(w io.Writer, program, year, author, source string) (
-	n int, err error) {
+func PrintCopyrightNotice(
+	w io.Writer,
+	program string,
+	year string,
+	author string,
+	source string,
+) (n int, err error) {
 	if author == "" {
 		return 0, errors.AutoWrap(ErrAuthorMissing)
 	}
+
 	if w == nil {
 		w = os.Stdout
 	}
+
 	if program == "" && os.Args[0] != "" {
 		program = filepath.Base(os.Args[0])
 		program = program[:len(program)-len(filepath.Ext(program))]
 	}
+
 	if year == "" {
 		year = strconv.Itoa(time.Now().Year())
 	}
+
 	layout := terminalNoticeWithSourceLayout
 	args := []any{program, year, author, source}
+
 	if source == "" {
 		layout, args = terminalNoticeLayout, args[:3]
 	}
+
 	n, err = fmt.Fprintf(w, layout, args...)
+
 	return n, errors.AutoWrap(err)
 }
 
@@ -112,24 +125,33 @@ func PrintCopyrightNotice(w io.Writer, program, year, author, source string) (
 // If arg is neither "show w" nor "show c",
 // ResponseShowWC does nothing and returns (0, nil).
 func ResponseShowWC(w io.Writer, arg ...string) (n int, err error) {
+	const NumArg int = 2
+
 	if arg == nil {
 		arg = os.Args[1:]
 	}
-	fields := make([]string, 0, 2)
+
+	fields := make([]string, 0, NumArg)
+
 	for _, a := range arg {
 		fs := strings.Fields(a)
-		if len(fields)+len(fs) > 2 {
+		if len(fields)+len(fs) > NumArg {
 			return
 		}
+
 		for i := range fs {
 			fs[i] = strings.ToLower(fs[i])
 		}
+
 		fields = append(fields, fs...)
 	}
-	if len(fields) != 2 || fields[0] != "show" {
+
+	if len(fields) != NumArg || fields[0] != "show" {
 		return
 	}
+
 	var toPrint string
+
 	switch fields[1] {
 	case "w":
 		toPrint = License[DisclaimerOfWarrantyBegin:DisclaimerOfWarrantyEnd]
@@ -138,9 +160,12 @@ func ResponseShowWC(w io.Writer, arg ...string) (n int, err error) {
 	default:
 		return
 	}
+
 	if w == nil {
 		w = os.Stdout
 	}
+
 	n, err = fmt.Fprintln(w, "  "+toPrint)
+
 	return n, errors.AutoWrap(err)
 }

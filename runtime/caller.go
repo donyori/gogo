@@ -33,9 +33,11 @@ func FuncPkg(fn string) string {
 	// are escaped to URL encoding ('.' -> "%2e").
 	i := strings.LastIndexByte(fn, '/')
 	j := strings.IndexByte(fn[i+1:], '.')
+
 	if j < 0 {
 		return fn
 	}
+
 	return fn[:i+1+j]
 }
 
@@ -46,12 +48,17 @@ func FuncPkg(fn string) string {
 //
 // The return value ok is false if the information is unretrievable.
 func CallerFrame(skip int) (frame stdruntime.Frame, ok bool) {
+	const CallerOfCallerFrameNumFrame int = 2
+
 	rpc := make([]uintptr, 1)
-	n := stdruntime.Callers(skip+2, rpc)
+	n := stdruntime.Callers(skip+CallerOfCallerFrameNumFrame, rpc)
+
 	if n < 1 {
 		return
 	}
+
 	frame, _ = stdruntime.CallersFrames(rpc).Next()
+
 	return frame, frame.PC != 0
 }
 
@@ -63,10 +70,12 @@ func FramePkgFunc(frame stdruntime.Frame) (pkg, fn string, ok bool) {
 	if frame.PC == 0 || frame.Function == "" {
 		return
 	}
+
 	pkg = FuncPkg(frame.Function)
 	if len(pkg) >= len(frame.Function) {
 		return "", "", false
 	}
+
 	return pkg, frame.Function[len(pkg)+1:], true
 }
 
@@ -82,5 +91,6 @@ func CallerPkgFunc(skip int) (pkg, fn string, ok bool) {
 	if !ok {
 		return
 	}
+
 	return FramePkgFunc(frame)
 }

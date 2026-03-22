@@ -21,7 +21,6 @@ package fmtcoll_test
 import (
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -32,6 +31,8 @@ import (
 )
 
 func TestFormatSliceToString(t *testing.T) {
+	t.Parallel()
+
 	testFormatSequenceToString(
 		t,
 		"[]*int",
@@ -52,6 +53,8 @@ func TestFormatSliceToString(t *testing.T) {
 }
 
 func TestMustFormatSliceToString_Panic(t *testing.T) {
+	t.Parallel()
+
 	testMustFormatToStringPanic(
 		t,
 		func(errorFormatItemFn fmtcoll.FormatFunc[int]) {
@@ -64,6 +67,8 @@ func TestMustFormatSliceToString_Panic(t *testing.T) {
 }
 
 func TestFormatSequenceToString(t *testing.T) {
+	t.Parallel()
+
 	testFormatSequenceToString(
 		t,
 		"sequence.Sequence[*int]",
@@ -76,6 +81,7 @@ func TestFormatSequenceToString(t *testing.T) {
 			if dataList[tc.dataIdx] != nil {
 				s = (*array.SliceDynamicArray[*int])(&dataList[tc.dataIdx])
 			}
+
 			return fmtcoll.FormatSequenceToString(
 				s, &fmtcoll.SequenceFormat[*int]{
 					CommonFormat: commonFormatList[tc.commonFormatIdx],
@@ -87,6 +93,8 @@ func TestFormatSequenceToString(t *testing.T) {
 }
 
 func TestMustFormatSequenceToString_Panic(t *testing.T) {
+	t.Parallel()
+
 	testMustFormatToStringPanic(
 		t,
 		func(errorFormatItemFn fmtcoll.FormatFunc[int]) {
@@ -114,6 +122,8 @@ func testFormatSequenceToString(
 		commonFormatList []fmtcoll.CommonFormat,
 	) (result string, err error),
 ) {
+	t.Helper()
+
 	const Separator, Prefix, Suffix = ",", "<PREFIX>", "<SUFFIX>"
 
 	two, three := 2, 3
@@ -122,15 +132,48 @@ func testFormatSequenceToString(
 		{},
 		{PrependType: true},
 		{PrependSize: true},
-		{PrependType: true, PrependSize: true},
+		{
+			PrependType: true,
+			PrependSize: true,
+		},
 		{Separator: Separator},
-		{Separator: Separator, PrependType: true},
-		{Separator: Separator, PrependSize: true},
-		{Separator: Separator, PrependType: true, PrependSize: true},
-		{Separator: Separator, Prefix: Prefix, Suffix: Suffix},
-		{Separator: Separator, Prefix: Prefix, Suffix: Suffix, PrependType: true},
-		{Separator: Separator, Prefix: Prefix, Suffix: Suffix, PrependSize: true},
-		{Separator: Separator, Prefix: Prefix, Suffix: Suffix, PrependType: true, PrependSize: true},
+		{
+			Separator:   Separator,
+			PrependType: true,
+		},
+		{
+			Separator:   Separator,
+			PrependSize: true,
+		},
+		{
+			Separator:   Separator,
+			PrependType: true,
+			PrependSize: true,
+		},
+		{
+			Separator: Separator,
+			Prefix:    Prefix,
+			Suffix:    Suffix,
+		},
+		{
+			Separator:   Separator,
+			Prefix:      Prefix,
+			Suffix:      Suffix,
+			PrependType: true,
+		},
+		{
+			Separator:   Separator,
+			Prefix:      Prefix,
+			Suffix:      Suffix,
+			PrependSize: true,
+		},
+		{
+			Separator:   Separator,
+			Prefix:      Prefix,
+			Suffix:      Suffix,
+			PrependType: true,
+			PrependSize: true,
+		},
 	}
 
 	for _, tc := range getTestCasesForFormatSequenceToString(
@@ -140,7 +183,10 @@ func testFormatSequenceToString(
 		if tc.formatItemFn == nil {
 			name += "&formatItemFn=<nil>"
 		}
+
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := f(tc, dataList, commonFormatList)
 			if err != nil {
 				t.Error("err -", err)
@@ -158,16 +204,18 @@ func getTestCasesForFormatSequenceToString(
 	dataList [][]*int,
 	commonFormatList []fmtcoll.CommonFormat,
 ) []sequenceTestCase {
-	const NilItemStr = "<nilptr>"
+	const NilPointerStr = "<nilptr>"
+
 	formatItemFn := func(w io.Writer, x *int) error {
 		var err error
 		if x != nil {
 			_, err = fmt.Fprintf(w, "%d", *x)
 		} else if sw, ok := w.(io.StringWriter); ok {
-			_, err = sw.WriteString(NilItemStr)
+			_, err = sw.WriteString(NilPointerStr)
 		} else {
-			_, err = w.Write([]byte(NilItemStr))
+			_, err = w.Write([]byte(NilPointerStr))
 		}
+
 		return err
 	}
 
@@ -175,81 +223,137 @@ func getTestCasesForFormatSequenceToString(
 		[]sequenceTestCase,
 		len(dataList)*len(commonFormatList)<<1,
 	)
+
 	var idx int
+
 	for dataIdx, data := range dataList {
 		for commonFormatIdx := range commonFormatList {
-			var prefix string
-			if commonFormatList[commonFormatIdx].PrependType {
-				if commonFormatList[commonFormatIdx].PrependSize {
-					prefix = fmt.Sprintf("(%s,%d)", typeStr, len(data))
-				} else {
-					prefix = fmt.Sprintf("(%s)", typeStr)
-				}
-			} else if commonFormatList[commonFormatIdx].PrependSize {
-				prefix = fmt.Sprintf("(%d)", len(data))
-			}
+			prefix := getPrefixByCommonFormat(
+				&commonFormatList[commonFormatIdx],
+				typeStr,
+				len(data),
+			)
 
 			for _, fmtItemFn := range []fmtcoll.FormatFunc[*int]{
 				nil,
 				formatItemFn,
 			} {
-				var s string
-				switch {
-				case data == nil:
-					s = "<nil>"
-				case len(data) == 0:
-					s = "[]"
-				case fmtItemFn == nil:
-					s = "[...]"
-				default:
-					var b strings.Builder
-					b.WriteByte('[')
-					b.WriteString(commonFormatList[commonFormatIdx].Prefix)
-					for i, x := range data {
-						if i > 0 {
-							b.WriteString(
-								commonFormatList[commonFormatIdx].Separator)
-						}
-						if x != nil {
-							b.WriteString(strconv.Itoa(*x))
-						} else {
-							b.WriteString(NilItemStr)
-						}
-					}
-					b.WriteString(commonFormatList[commonFormatIdx].Suffix)
-					b.WriteByte(']')
-					s = b.String()
-				}
-
 				testCases[idx].dataIdx = dataIdx
 				testCases[idx].commonFormatIdx = commonFormatIdx
 				testCases[idx].formatItemFn = fmtItemFn
-				testCases[idx].want = prefix + s
+				testCases[idx].want = prefix + formatSequenceContentToString(
+					data,
+					&commonFormatList[commonFormatIdx],
+					fmtItemFn,
+				)
 				idx++
 			}
 		}
 	}
+
 	return testCases
+}
+
+// formatSequenceContentToString formats the specified sequence content
+// to a string with the specified format options.
+func formatSequenceContentToString(
+	data []*int,
+	cf *fmtcoll.CommonFormat,
+	formatItemFn fmtcoll.FormatFunc[*int],
+) string {
+	switch {
+	case data == nil:
+		return "<nil>"
+	case len(data) == 0:
+		return "[]"
+	case formatItemFn == nil:
+		return "[...]"
+	}
+
+	var b strings.Builder
+	b.WriteByte('[')
+	b.WriteString(cf.Prefix)
+
+	for i, x := range data {
+		if i > 0 {
+			b.WriteString(cf.Separator)
+		}
+
+		writeItemToStringBuilder(&b, x, formatItemFn)
+	}
+
+	b.WriteString(cf.Suffix)
+	b.WriteByte(']')
+
+	return b.String()
 }
 
 func testMustFormatToStringPanic(
 	t *testing.T,
 	f func(errorFormatItemFn fmtcoll.FormatFunc[int]),
 ) {
+	t.Helper()
+
 	wantErr := errors.New("want error")
 	errorFormatItemFn := func(io.Writer, int) error {
 		return errors.AutoWrap(wantErr)
 	}
+
 	defer func() {
 		e := recover()
 		if e == nil {
 			t.Error("want panic but not")
 			return
 		}
+
 		err, ok := e.(error)
 		if !ok || !errors.Is(err, wantErr) {
 			t.Error("panic -", e)
 		}
 	}()
+
 	f(errorFormatItemFn)
+}
+
+// getPrefixByCommonFormat returns the prefix that conforms to
+// the specified format options, type string, and collection size.
+func getPrefixByCommonFormat(
+	cf *fmtcoll.CommonFormat,
+	typeStr string,
+	size int,
+) string {
+	var prefix string
+
+	if cf.PrependType {
+		if cf.PrependSize {
+			prefix = fmt.Sprintf("(%s,%d)", typeStr, size)
+		} else {
+			prefix = fmt.Sprintf("(%s)", typeStr)
+		}
+	} else if cf.PrependSize {
+		prefix = fmt.Sprintf("(%d)", size)
+	}
+
+	return prefix
+}
+
+// writeItemToStringBuilder writes the item string returned by
+// the specified format function to the specified string builder.
+//
+// If the format function returns an error,
+// writeItemToStringBuilder writes an error string to
+// the specified string builder.
+func writeItemToStringBuilder[T any](
+	b *strings.Builder,
+	x T,
+	formatItemFn fmtcoll.FormatFunc[T],
+) {
+	var xb strings.Builder
+
+	err := formatItemFn(&xb, x)
+	if err == nil {
+		b.WriteString(xb.String())
+	} else {
+		b.WriteString("!ERROR:" + err.Error() + "!")
+	}
 }

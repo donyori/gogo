@@ -30,33 +30,42 @@ import (
 )
 
 func TestNewReader_NilSrc(t *testing.T) {
+	t.Parallel()
+
 	defer func() {
 		r := recover()
 		if r == nil {
 			if !t.Failed() {
 				t.Error("panic with nil")
 			}
+
 			return
 		}
+
 		s, ok := r.(string)
 		if !ok || !strings.HasSuffix(s, "random value source is nil") {
 			t.Error("unexpected panic -", r)
 		}
 	}()
+
 	randbytes.NewReader(nil)
 	t.Error("want panic but not")
 }
 
 func TestReader_Read(t *testing.T) {
+	t.Parallel()
+
 	reader := randbytes.NewReader(rand.NewChaCha8(ChaCha8Seed))
 	want := Random223BytesByChaCha8[:]
 	p := make([]byte, len(want))
+
 	n, err := reader.Read(p)
 	if err != nil {
 		t.Fatal(err)
 	} else if n != len(want) {
 		t.Errorf("got n %d; want %d", n, len(want))
 	}
+
 	if !bytes.Equal(p, want) {
 		t.Errorf("got (len %d)\n%x\nwant (len %d)\n%x",
 			len(p), p, len(want), want)
@@ -64,9 +73,12 @@ func TestReader_Read(t *testing.T) {
 }
 
 func TestReader_Read_ReadByOneByte(t *testing.T) {
+	t.Parallel()
+
 	reader := randbytes.NewReader(rand.NewChaCha8(ChaCha8Seed))
 	want := Random223BytesByChaCha8[:]
 	p := make([]byte, len(want))
+
 	_, err := io.ReadFull(iotest.OneByteReader(reader), p)
 	if err != nil {
 		t.Error(err)
@@ -77,6 +89,8 @@ func TestReader_Read_ReadByOneByte(t *testing.T) {
 }
 
 func TestReader_Read_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name string
 		p    []byte
@@ -86,7 +100,10 @@ func TestReader_Read_NilAndEmpty(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			reader := randbytes.NewReader(rand.NewChaCha8(ChaCha8Seed))
+
 			n, err := reader.Read(tc.p)
 			if err != nil {
 				t.Error(err)
@@ -98,6 +115,8 @@ func TestReader_Read_NilAndEmpty(t *testing.T) {
 }
 
 func TestReader_ReadByte(t *testing.T) {
+	t.Parallel()
+
 	reader := randbytes.NewReader(rand.NewChaCha8(ChaCha8Seed))
 	for i := range Random223BytesByChaCha8 {
 		c, err := reader.ReadByte()

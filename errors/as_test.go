@@ -36,6 +36,7 @@ func (err MyError) Error() string {
 
 func TestAs(t *testing.T) {
 	t.Parallel()
+
 	newErr := errors.New("newError")
 	myErr := MyError("myError")
 	testCases := []struct {
@@ -56,11 +57,14 @@ func TestAs(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("err=%v", tc.err), func(t *testing.T) {
 			t.Parallel()
+
 			var target MyError
+
 			got := errors.As(tc.err, &target)
 			if got != tc.want {
 				t.Errorf("got %t; want %t", got, tc.want)
 			}
+
 			if tc.want {
 				if target != myErr {
 					t.Errorf("got target %v; want %v", target, myErr)
@@ -74,6 +78,7 @@ func TestAs(t *testing.T) {
 
 func TestAs_PanicForErrorPointer(t *testing.T) {
 	t.Parallel()
+
 	target := new(error)
 	err := errors.New("test error")
 
@@ -83,6 +88,7 @@ func TestAs_PanicForErrorPointer(t *testing.T) {
 			t.Error("want panic but not")
 			return
 		}
+
 		s, ok := e.(string)
 		if !ok || !strings.HasSuffix(s,
 			"target is of type *error; As always returns true for that") {
@@ -95,6 +101,7 @@ func TestAs_PanicForErrorPointer(t *testing.T) {
 
 func TestAsType(t *testing.T) {
 	t.Parallel()
+
 	newErr := errors.New("newError")
 	myErr := MyError("myError")
 	testCases := []struct {
@@ -115,14 +122,18 @@ func TestAsType(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("err=%v", tc.err), func(t *testing.T) {
 			t.Parallel()
+
 			var wantErr MyError
 			if tc.wantBool {
 				wantErr = myErr
 			}
+
 			gotErr, gotBool := errors.AsType[MyError](tc.err)
+
 			if gotErr != wantErr {
 				t.Errorf("got error %v; want %v", gotErr, wantErr)
 			}
+
 			if gotBool != tc.wantBool {
 				t.Errorf("got bool %t; want %t", gotBool, tc.wantBool)
 			}
@@ -132,6 +143,7 @@ func TestAsType(t *testing.T) {
 
 func TestAsType_PanicForTypeError(t *testing.T) {
 	t.Parallel()
+
 	err := errors.New("test error")
 
 	defer func() {
@@ -140,6 +152,7 @@ func TestAsType_PanicForTypeError(t *testing.T) {
 			t.Error("want panic but not")
 			return
 		}
+
 		s, ok := e.(string)
 		if !ok || !strings.HasSuffix(s,
 			"type E is exactly error; AsType[error] is senseless") {

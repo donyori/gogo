@@ -36,10 +36,11 @@ import (
 //
 // If format is nil, it uses default format options
 // as returned by NewDefaultMapFormat instead.
-func FormatMapToString[M constraints.Map[Key, Value], Key comparable, Value any](
-	m M,
-	format *MapFormat[Key, Value],
-) (result string, err error) {
+func FormatMapToString[
+	M constraints.Map[Key, Value],
+	Key comparable,
+	Value any,
+](m M, format *MapFormat[Key, Value]) (result string, err error) {
 	result, err = formatMapToString(
 		format,
 		reflect.TypeFor[M]().String(),
@@ -53,19 +54,22 @@ func FormatMapToString[M constraints.Map[Key, Value], Key comparable, Value any]
 			}
 		},
 	)
+
 	return result, errors.AutoWrap(err)
 }
 
 // MustFormatMapToString is like FormatMapToString
 // but panics when encountering an error.
-func MustFormatMapToString[M constraints.Map[Key, Value], Key comparable, Value any](
-	m M,
-	format *MapFormat[Key, Value],
-) string {
+func MustFormatMapToString[
+	M constraints.Map[Key, Value],
+	Key comparable,
+	Value any,
+](m M, format *MapFormat[Key, Value]) string {
 	result, err := FormatMapToString(m, format)
 	if err != nil {
 		panic(errors.AutoWrap(err))
 	}
+
 	return result
 }
 
@@ -81,11 +85,15 @@ func FormatGogoMapToString[Key, Value any](
 	m mapping.Map[Key, Value],
 	format *MapFormat[Key, Value],
 ) (result string, err error) {
-	var size int
-	var rangeFn func(handler func(x mapping.Entry[Key, Value]) (cont bool))
+	var (
+		size    int
+		rangeFn func(handler func(x mapping.Entry[Key, Value]) (cont bool))
+	)
+
 	if m != nil {
 		size, rangeFn = m.Len(), m.Range
 	}
+
 	result, err = formatMapToString(
 		format,
 		reflect.TypeOf(&m).Elem().String(), // reflect.TypeOf(m) returns nil if m is nil, so use &m here
@@ -93,6 +101,7 @@ func FormatGogoMapToString[Key, Value any](
 		size,
 		rangeFn,
 	)
+
 	return result, errors.AutoWrap(err)
 }
 
@@ -106,6 +115,7 @@ func MustFormatGogoMapToString[Key, Value any](
 	if err != nil {
 		panic(errors.AutoWrap(err))
 	}
+
 	return result
 }
 
@@ -124,7 +134,9 @@ func formatMapToString[Key, Value any](
 	if format == nil {
 		format = NewDefaultMapFormat[Key, Value]()
 	}
+
 	var prefix string
+
 	if format.PrependType {
 		if format.PrependSize {
 			prefix = fmt.Sprintf("(%s,%d)", typeStr, size)
@@ -134,6 +146,7 @@ func formatMapToString[Key, Value any](
 	} else if format.PrependSize {
 		prefix = fmt.Sprintf("(%d)", size)
 	}
+
 	if isNil {
 		return prefix + "<nil>", nil
 	}
@@ -141,19 +154,22 @@ func formatMapToString[Key, Value any](
 	var b strings.Builder
 	b.WriteString(prefix)
 	b.WriteByte('{')
+
 	if size > 0 {
-		err = formatMapContentToString(&b, format, size, rangeFn)
+		err = writeMapContentToStringBuilder(&b, format, size, rangeFn)
 		if err != nil {
 			return "", errors.AutoWrap(err)
 		}
 	}
+
 	b.WriteByte('}')
+
 	return b.String(), nil
 }
 
-// formatMapContentToString is a subprocess of formatMapToString
+// writeMapContentToStringBuilder is a subprocess of formatMapToString
 // that writes the map content to the string builder b.
-func formatMapContentToString[Key, Value any](
+func writeMapContentToStringBuilder[Key, Value any](
 	b *strings.Builder,
 	format *MapFormat[Key, Value],
 	size int,
@@ -161,10 +177,12 @@ func formatMapContentToString[Key, Value any](
 ) error {
 	if format.FormatKeyFn != nil || format.FormatValueFn != nil {
 		entries := make([]mapping.Entry[Key, Value], 0, size)
+
 		rangeFn(func(x mapping.Entry[Key, Value]) (cont bool) {
 			entries = append(entries, x)
 			return true
 		})
+
 		if format.CompareKeyValueFn != nil {
 			slices.SortFunc(entries, func(a, b mapping.Entry[Key, Value]) int {
 				return format.CompareKeyValueFn(a.Key, a.Value, b.Key, b.Value)
@@ -172,28 +190,49 @@ func formatMapContentToString[Key, Value any](
 		}
 
 		b.WriteString(format.Prefix)
-		for i := range entries {
-			if i > 0 {
-				b.WriteString(format.Separator)
-			}
-			if format.FormatKeyFn != nil {
-				err := format.FormatKeyFn(b, entries[i].Key)
-				if err != nil {
-					return errors.AutoWrap(err)
-				} else if format.FormatValueFn != nil {
-					b.WriteByte(':')
-				}
-			}
-			if format.FormatValueFn != nil {
-				err := format.FormatValueFn(b, entries[i].Value)
-				if err != nil {
-					return errors.AutoWrap(err)
-				}
-			}
+
+		err := writeMapEntriesToStringBuilder(b, format, entries)
+		if err != nil {
+			return errors.AutoWrap(err)
 		}
+
 		b.WriteString(format.Suffix)
 	} else {
 		b.WriteString("...")
 	}
+
+	return nil
+}
+
+// writeMapEntriesToStringBuilder is a subprocess of
+// writeMapContentToStringBuilder
+// that writes the map entries to the string builder b.
+func writeMapEntriesToStringBuilder[Key, Value any](
+	b *strings.Builder,
+	format *MapFormat[Key, Value],
+	entries []mapping.Entry[Key, Value],
+) error {
+	for i := range entries {
+		if i > 0 {
+			b.WriteString(format.Separator)
+		}
+
+		if format.FormatKeyFn != nil {
+			err := format.FormatKeyFn(b, entries[i].Key)
+			if err != nil {
+				return errors.AutoWrap(err)
+			} else if format.FormatValueFn != nil {
+				b.WriteByte(':')
+			}
+		}
+
+		if format.FormatValueFn != nil {
+			err := format.FormatValueFn(b, entries[i].Value)
+			if err != nil {
+				return errors.AutoWrap(err)
+			}
+		}
+	}
+
 	return nil
 }

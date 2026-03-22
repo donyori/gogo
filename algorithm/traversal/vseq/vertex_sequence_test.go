@@ -759,11 +759,6 @@ func checkResultVertexSequence(
 func verticesToName(v []int) string {
 	return fmtcoll.MustFormatSliceToString(
 		v,
-		&fmtcoll.SequenceFormat[int]{
-			CommonFormat: fmtcoll.CommonFormat{
-				Separator: ",",
-			},
-			FormatItemFn: fmtcoll.FprintfToFormatFunc[int]("%d"),
-		},
+		fmtcoll.NewDefaultSequenceFormat[int](),
 	)
 }

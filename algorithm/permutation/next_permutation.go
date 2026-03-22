@@ -58,9 +58,9 @@ func NextPermutation(itf Interface) bool {
 		return false
 	}
 
-	const secondToLastOffset int = -2
+	const SecondToLastOffset int = -2
 
-	i := itf.Len() + secondToLastOffset
+	i := itf.Len() + SecondToLastOffset
 	for i >= 0 && !itf.Less(i, i+1) {
 		i--
 	}
@@ -69,11 +69,11 @@ func NextPermutation(itf Interface) bool {
 		return false
 	}
 
-	npbsi := &nextPermutationBinarySearchInterface{
+	bsi := &nextPermutationBinarySearchInterface{
 		p:     itf,
 		begin: i + 1,
 	}
-	j := npbsi.begin + sequence.BinarySearchMaxLess(npbsi, i) // find the last item greater than p[i]
+	j := bsi.begin + sequence.BinarySearchMaxLess(bsi, i) // find the last item greater than p[i]
 	itf.Swap(i, j)
 
 	for i, j = i+1, itf.Len()-1; i < j; i, j = i+1, j-1 {
@@ -101,12 +101,12 @@ type nextPermutationBinarySearchInterface struct {
 
 // Len returns the number of items in the sequence,
 // where the sequence is a slice of the permutation.
-func (npbsi *nextPermutationBinarySearchInterface) Len() int {
-	if npbsi.p == nil {
+func (bsi *nextPermutationBinarySearchInterface) Len() int {
+	if bsi.p == nil {
 		return 0
 	}
 
-	return npbsi.p.Len() - npbsi.begin
+	return bsi.p.Len() - bsi.begin
 }
 
 // CompareWithTarget compares the item at index i in the sequence
@@ -120,11 +120,11 @@ func (npbsi *nextPermutationBinarySearchInterface) Len() int {
 // the item is "greater" than the target in the binary search algorithm).
 //
 // It panics if i is out of range.
-func (npbsi *nextPermutationBinarySearchInterface) CompareWithTarget(
+func (bsi *nextPermutationBinarySearchInterface) CompareWithTarget(
 	i int,
 	target int,
 ) (cmpResult int, isTarget bool) {
-	if npbsi.p.Less(target, i+npbsi.begin) {
+	if bsi.p.Less(target, i+bsi.begin) {
 		return -1, false
 	}
 

@@ -37,11 +37,13 @@ func NewAutoWrappedError(err error, suffix string) AutoWrappedError {
 	if err == nil {
 		return nil
 	}
+
 	frame, ok := runtime.CallerFrame(1)
 	if !ok || frame.Function == "" ||
 		len(runtime.FuncPkg(frame.Function)) >= len(frame.Function) {
 		panic(AutoMsg("cannot retrieve caller function name"))
 	}
+
 	awe := &autoWrappedError{
 		err:      err,
 		ms:       PrependSimpleFuncName,
@@ -50,14 +52,16 @@ func NewAutoWrappedError(err error, suffix string) AutoWrappedError {
 	if suffix != "" {
 		awe.fullFunc += "_" + suffix
 	}
+
 	return awe
 }
 
-type ErrorListImpl = errorList
+type ErrorListImpl = errorList //nolint:errname // it exports the internal implementation of interface ErrorList
 
 func (el *ErrorListImpl) GetList() []error {
 	if el == nil {
 		return nil
 	}
+
 	return el.list
 }

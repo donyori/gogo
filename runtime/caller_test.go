@@ -28,6 +28,8 @@ import (
 )
 
 func TestFuncPkg(t *testing.T) {
+	t.Parallel()
+
 	// testCases contain some inputs that are not legal function names,
 	// to test robustness.
 	testCases := []struct {
@@ -61,6 +63,8 @@ func TestFuncPkg(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("fn=%+q", tc.fn), func(t *testing.T) {
+			t.Parallel()
+
 			if got := runtime.FuncPkg(tc.fn); got != tc.want {
 				t.Errorf("got %q; want %q", got, tc.want)
 			}
@@ -112,6 +116,8 @@ type callerPkgFuncRecord struct {
 }
 
 func TestCallerPkgFunc(t *testing.T) {
+	t.Parallel()
+
 	const WantPkg = "github.com/donyori/gogo/runtime_test"
 
 	var records []callerPkgFuncRecord
@@ -123,6 +129,7 @@ func TestCallerPkgFunc(t *testing.T) {
 			fn:      elem[2],
 		})
 	}
+
 	pkg, fn, _ := runtime.CallerPkgFunc(0)
 	records = append(records, callerPkgFuncRecord{
 		wantPkg: WantPkg,
@@ -130,6 +137,7 @@ func TestCallerPkgFunc(t *testing.T) {
 		pkg:     pkg,
 		fn:      fn,
 	})
+
 	func() {
 		defer func() {
 			pkg, fn, _ := runtime.CallerPkgFunc(0)
@@ -140,6 +148,7 @@ func TestCallerPkgFunc(t *testing.T) {
 				fn:      fn,
 			})
 		}()
+
 		pkg, fn, _ := runtime.CallerPkgFunc(0)
 		records = append(records, callerPkgFuncRecord{
 			wantPkg: WantPkg,
@@ -148,6 +157,7 @@ func TestCallerPkgFunc(t *testing.T) {
 			fn:      fn,
 		})
 	}()
+
 	tes := new(ExportedStruct)
 	pkg, fn = tes.Foo()
 	records = append(records, callerPkgFuncRecord{
@@ -188,7 +198,10 @@ func TestCallerPkgFunc(t *testing.T) {
 }
 
 func TestCallerPkgFunc_DotPkg(t *testing.T) {
+	t.Parallel()
+
 	var records []callerPkgFuncRecord
+
 	dotpkg.Do(func() {
 		pkg, fn, _ := runtime.CallerPkgFunc(1)
 		records = append(records, callerPkgFuncRecord{

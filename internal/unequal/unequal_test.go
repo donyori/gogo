@@ -28,6 +28,8 @@ import (
 )
 
 func TestSlice(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		s1, s2 []int
 		want   bool
@@ -64,15 +66,12 @@ func TestSlice(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		format := &fmtcoll.SequenceFormat[int]{
-			CommonFormat: fmtcoll.CommonFormat{
-				Separator: ",",
-			},
-			FormatItemFn: fmtcoll.FprintfToFormatFunc[int]("%d"),
-		}
+		format := fmtcoll.NewDefaultSequenceFormat[int]()
 		s1Name := fmtcoll.MustFormatSliceToString(tc.s1, format)
 		s2Name := fmtcoll.MustFormatSliceToString(tc.s2, format)
 		t.Run(fmt.Sprintf("s1=%s&s2=%s", s1Name, s2Name), func(t *testing.T) {
+			t.Parallel()
+
 			got := unequal.Slice(tc.s1, tc.s2)
 			if got != tc.want {
 				t.Errorf("got %t; want %t", got, tc.want)
@@ -82,6 +81,8 @@ func TestSlice(t *testing.T) {
 }
 
 func TestMap(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		m1, m2 map[string]int
 		want   bool
@@ -152,12 +153,15 @@ func TestMap(t *testing.T) {
 				case value1 > value2:
 					return 1
 				}
+
 				return 0
 			},
 		}
 		m1Name := fmtcoll.MustFormatMapToString(tc.m1, format)
 		m2Name := fmtcoll.MustFormatMapToString(tc.m2, format)
 		t.Run(fmt.Sprintf("m1=%s&m2=%s", m1Name, m2Name), func(t *testing.T) {
+			t.Parallel()
+
 			got := unequal.Map(tc.m1, tc.m2)
 			if got != tc.want {
 				t.Errorf("got %t; want %t", got, tc.want)
@@ -167,16 +171,21 @@ func TestMap(t *testing.T) {
 }
 
 func TestErrorUnwrapAuto(t *testing.T) {
+	t.Parallel()
+
 	err1 := errors.New("error-1")
 	err1AutoWrap := errors.AutoWrap(err1)
 	err2 := errors.New("error-2")
 	err2AutoWrap := errors.AutoWrap(err2)
+
 	var err1AutoWrap2, err2AutoWrap2 error
+
 	func() {
 		// Wrap them in an inner function.
 		err1AutoWrap2 = errors.AutoWrap(err1AutoWrap)
 		err2AutoWrap2 = errors.AutoWrap(err2AutoWrap)
 	}()
+
 	testCases := []struct {
 		err1, err2 error
 		want       bool
@@ -242,6 +251,8 @@ func TestErrorUnwrapAuto(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("err1=%v&err2=%v", tc.err1, tc.err2),
 			func(t *testing.T) {
+				t.Parallel()
+
 				got := unequal.ErrorUnwrapAuto(tc.err1, tc.err2)
 				if got != tc.want {
 					t.Errorf("got %t; want %t", got, tc.want)

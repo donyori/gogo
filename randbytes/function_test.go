@@ -37,20 +37,26 @@ var Random223BytesByChaCha8 [223]byte
 
 func init() {
 	src := rand.NewChaCha8(ChaCha8Seed)
+
 	var x uint64
+
 	for i := range Random223BytesByChaCha8 {
 		if i%8 == 0 {
 			x = src.Uint64()
 		}
+
 		Random223BytesByChaCha8[i] = byte(x)
 		x >>= 8
 	}
 }
 
 func TestFill(t *testing.T) {
+	t.Parallel()
+
 	want := Random223BytesByChaCha8[:]
 	p := make([]byte, len(want))
 	randbytes.Fill(rand.NewChaCha8(ChaCha8Seed), p)
+
 	if !bytes.Equal(p, want) {
 		t.Errorf("got (len %d)\n%x\nwant (len %d)\n%x",
 			len(p), p, len(want), want)
@@ -58,6 +64,8 @@ func TestFill(t *testing.T) {
 }
 
 func TestFill_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name string
 		p    []byte
@@ -67,14 +75,18 @@ func TestFill_NilAndEmpty(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			randbytes.Fill(rand.NewChaCha8(ChaCha8Seed), tc.p)
 		})
 	}
 }
 
 func TestMake(t *testing.T) {
+	t.Parallel()
+
 	want := Random223BytesByChaCha8[:]
 	got := randbytes.Make(rand.NewChaCha8(ChaCha8Seed), len(want))
+
 	if cap(got) != len(want) || !bytes.Equal(got, want) {
 		t.Errorf("got (len %d, cap %d)\n%x\nwant (len %d, cap %[4]d)\n%x",
 			len(got), cap(got), got, len(want), want)
@@ -82,6 +94,8 @@ func TestMake(t *testing.T) {
 }
 
 func TestMake_Empty(t *testing.T) {
+	t.Parallel()
+
 	got := randbytes.Make(rand.NewChaCha8(ChaCha8Seed), 0)
 	if got == nil {
 		t.Error("got <nil>; want []byte{}")
@@ -91,10 +105,13 @@ func TestMake_Empty(t *testing.T) {
 }
 
 func TestMakeCapacity(t *testing.T) {
+	t.Parallel()
+
 	want := Random223BytesByChaCha8[:]
 	wantCap := len(want) + 20
 	got := randbytes.MakeCapacity(
 		rand.NewChaCha8(ChaCha8Seed), len(want), wantCap)
+
 	if cap(got) != wantCap || !bytes.Equal(got, want) {
 		t.Errorf("got (len %d, cap %d)\n%x\nwant (len %d, cap %d)\n%x",
 			len(got), cap(got), got, len(want), wantCap, want)
@@ -102,6 +119,8 @@ func TestMakeCapacity(t *testing.T) {
 }
 
 func TestMakeCapacity_Empty(t *testing.T) {
+	t.Parallel()
+
 	got := randbytes.MakeCapacity(rand.NewChaCha8(ChaCha8Seed), 0, 0)
 	if got == nil {
 		t.Error("got <nil>; want []byte{}")
@@ -111,6 +130,8 @@ func TestMakeCapacity_Empty(t *testing.T) {
 }
 
 func TestMakeCapacity_EmptyButCapacityOne(t *testing.T) {
+	t.Parallel()
+
 	got := randbytes.MakeCapacity(rand.NewChaCha8(ChaCha8Seed), 0, 1)
 	if got == nil {
 		t.Error("got <nil>; want []byte{}")
@@ -120,11 +141,14 @@ func TestMakeCapacity_EmptyButCapacityOne(t *testing.T) {
 }
 
 func TestAppend(t *testing.T) {
+	t.Parallel()
+
 	p := []byte("Append")
 	want := make([]byte, len(p)+len(Random223BytesByChaCha8))
 	copy(want[copy(want, p):], Random223BytesByChaCha8[:])
 	got := randbytes.Append(
 		rand.NewChaCha8(ChaCha8Seed), p, len(Random223BytesByChaCha8))
+
 	if !bytes.Equal(got, want) {
 		t.Errorf("got (len %d)\n%x\nwant (len %d)\n%x",
 			len(got), got, len(want), want)
@@ -132,6 +156,8 @@ func TestAppend(t *testing.T) {
 }
 
 func TestAppend_NZero(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name string
 		p    []byte
@@ -142,8 +168,11 @@ func TestAppend_NZero(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			want := slices.Clone(tc.p)
 			got := randbytes.Append(rand.NewChaCha8(ChaCha8Seed), tc.p, 0)
+
 			if !compare.SliceEqual(got, want) {
 				switch {
 				case got == nil:
@@ -162,6 +191,8 @@ func TestAppend_NZero(t *testing.T) {
 }
 
 func TestAppend_ToNilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	want := Random223BytesByChaCha8[:]
 	testCases := []struct {
 		name string
@@ -170,8 +201,11 @@ func TestAppend_ToNilAndEmpty(t *testing.T) {
 		{"nil", nil},
 		{"empty", []byte{}},
 	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := randbytes.Append(
 				rand.NewChaCha8(ChaCha8Seed), tc.p, len(want))
 			if !bytes.Equal(got, want) {
@@ -183,9 +217,13 @@ func TestAppend_ToNilAndEmpty(t *testing.T) {
 }
 
 func TestWriteN(t *testing.T) {
+	t.Parallel()
+
 	want := Random223BytesByChaCha8[:]
+
 	var buf bytes.Buffer
 	buf.Grow(len(want))
+
 	written, err := randbytes.WriteN(
 		rand.NewChaCha8(ChaCha8Seed), &buf, len(want))
 	if err != nil {
@@ -193,6 +231,7 @@ func TestWriteN(t *testing.T) {
 	} else if written != len(want) {
 		t.Errorf("got written %d; want %d", written, len(want))
 	}
+
 	got := buf.Bytes()
 	if !bytes.Equal(got, want) {
 		t.Errorf("got (len %d)\n%x\nwant (len %d)\n%x",
@@ -201,16 +240,21 @@ func TestWriteN(t *testing.T) {
 }
 
 func TestWriteN_NZero(t *testing.T) {
+	t.Parallel()
+
 	var buf bytes.Buffer
+
 	written, err := randbytes.WriteN(rand.NewChaCha8(ChaCha8Seed), &buf, 0)
 	if err != nil {
 		t.Fatal(err)
 	} else if written != 0 {
 		t.Errorf("got written %d; want 0", written)
 	}
+
 	if buf.Len() != 0 || buf.Cap() != 0 {
 		t.Errorf("got buf.Len() %d, buf.Cap() %d; want 0, 0",
 			buf.Len(), buf.Cap())
+
 		if buf.Len() > 0 {
 			t.Errorf("got data %x", buf.Bytes())
 		}

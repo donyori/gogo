@@ -52,6 +52,7 @@ func FormatSliceToString[S constraints.Slice[Item], Item any](
 			}
 		},
 	)
+
 	return result, errors.AutoWrap(err)
 }
 
@@ -65,6 +66,7 @@ func MustFormatSliceToString[S constraints.Slice[Item], Item any](
 	if err != nil {
 		panic(errors.AutoWrap(err))
 	}
+
 	return result
 }
 
@@ -79,11 +81,15 @@ func FormatSequenceToString[Item any](
 	s sequence.Sequence[Item],
 	format *SequenceFormat[Item],
 ) (result string, err error) {
-	var size int
-	var rangeFn func(handler func(x Item) (cont bool))
+	var (
+		size    int
+		rangeFn func(handler func(x Item) (cont bool))
+	)
+
 	if s != nil {
 		size, rangeFn = s.Len(), s.Range
 	}
+
 	result, err = formatSequenceToString(
 		format,
 		reflect.TypeOf(&s).Elem().String(), // reflect.TypeOf(s) returns nil if s is nil, so use &s here
@@ -91,6 +97,7 @@ func FormatSequenceToString[Item any](
 		size,
 		rangeFn,
 	)
+
 	return result, errors.AutoWrap(err)
 }
 
@@ -104,6 +111,7 @@ func MustFormatSequenceToString[Item any](
 	if err != nil {
 		panic(errors.AutoWrap(err))
 	}
+
 	return result
 }
 
@@ -122,7 +130,9 @@ func formatSequenceToString[Item any](
 	if format == nil {
 		format = NewDefaultSequenceFormat[Item]()
 	}
+
 	var prefix string
+
 	if format.PrependType {
 		if format.PrependSize {
 			prefix = fmt.Sprintf("(%s,%d)", typeStr, size)
@@ -132,6 +142,7 @@ func formatSequenceToString[Item any](
 	} else if format.PrependSize {
 		prefix = fmt.Sprintf("(%d)", size)
 	}
+
 	if isNil {
 		return prefix + "<nil>", nil
 	}
@@ -139,27 +150,54 @@ func formatSequenceToString[Item any](
 	var b strings.Builder
 	b.WriteString(prefix)
 	b.WriteByte('[')
+
 	if size > 0 {
-		if format.FormatItemFn != nil {
-			b.WriteString(format.Prefix)
-			var notFirst bool
-			rangeFn(func(x Item) (cont bool) {
-				if notFirst {
-					b.WriteString(format.Separator)
-				} else {
-					notFirst = true
-				}
-				err = format.FormatItemFn(&b, x)
-				return err == nil
-			})
-			if err != nil {
-				return "", errors.AutoWrap(err)
-			}
-			b.WriteString(format.Suffix)
-		} else {
-			b.WriteString("...")
+		err = writeSequenceContentToStringBuilder(&b, format, rangeFn)
+		if err != nil {
+			return "", errors.AutoWrap(err)
 		}
 	}
+
 	b.WriteByte(']')
+
 	return b.String(), nil
+}
+
+// writeSequenceContentToStringBuilder is a subprocess of formatSequenceToString
+// that writes the sequence content to the string builder b.
+func writeSequenceContentToStringBuilder[Item any](
+	b *strings.Builder,
+	format *SequenceFormat[Item],
+	rangeFn func(handler func(x Item) (cont bool)),
+) error {
+	if format.FormatItemFn != nil {
+		b.WriteString(format.Prefix)
+
+		var (
+			notFirst bool
+			err      error
+		)
+
+		rangeFn(func(x Item) (cont bool) {
+			if notFirst {
+				b.WriteString(format.Separator)
+			} else {
+				notFirst = true
+			}
+
+			err = format.FormatItemFn(b, x)
+
+			return err == nil
+		})
+
+		if err != nil {
+			return errors.AutoWrap(err)
+		}
+
+		b.WriteString(format.Suffix)
+	} else {
+		b.WriteString("...")
+	}
+
+	return nil
 }

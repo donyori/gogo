@@ -29,38 +29,56 @@ import (
 )
 
 var (
-	errorsForErrorReadOnlySet       [][]error
-	anotherErrorForErrorReadOnlySet error
+	errorsForErrorReadOnlySet     [][]error
+	errAnotherForErrorReadOnlySet error
 )
 
 func init() {
-	anotherErrorForErrorReadOnlySet = stderrors.New("another error")
+	errAnotherForErrorReadOnlySet = stderrors.New("another error")
 
 	const N int = 3
+
 	errorsForErrorReadOnlySet = make([][]error, 5)
+
 	errorsForErrorReadOnlySet[0] = make([]error, N)
 	for i := range N {
 		errorsForErrorReadOnlySet[0][i] = fmt.Errorf("test error %d", i)
 	}
+
 	errorsForErrorReadOnlySet[1] = make([]error, N<<1)
 	for i := range N {
-		errorsForErrorReadOnlySet[1][i<<1] = &errorUnwrap{errorsForErrorReadOnlySet[0][i]}
-		errorsForErrorReadOnlySet[1][i<<1+1] = &errorUnwrap{errorsForErrorReadOnlySet[1][i<<1]}
+		errorsForErrorReadOnlySet[1][i<<1] = &unwrapError{
+			errorsForErrorReadOnlySet[0][i],
+		}
+		errorsForErrorReadOnlySet[1][i<<1+1] = &unwrapError{
+			errorsForErrorReadOnlySet[1][i<<1],
+		}
 	}
+
 	errorsForErrorReadOnlySet[2] = make([]error, N<<1)
 	errorsForErrorReadOnlySet[3] = make([]error, N<<1)
+
 	for i := range N {
-		errorsForErrorReadOnlySet[2][i<<1] = &errorIsAlwaysTrue{errorsForErrorReadOnlySet[0][i]}
-		errorsForErrorReadOnlySet[2][i<<1+1] = &errorIsAlwaysTrue{errorsForErrorReadOnlySet[1][i<<1]}
-		errorsForErrorReadOnlySet[3][i<<1] = &errorIsAlwaysFalse{errorsForErrorReadOnlySet[0][i]}
-		errorsForErrorReadOnlySet[3][i<<1+1] = &errorIsAlwaysFalse{errorsForErrorReadOnlySet[1][i<<1]}
+		errorsForErrorReadOnlySet[2][i<<1] = &isAlwaysTrueError{
+			errorsForErrorReadOnlySet[0][i],
+		}
+		errorsForErrorReadOnlySet[2][i<<1+1] = &isAlwaysTrueError{
+			errorsForErrorReadOnlySet[1][i<<1],
+		}
+		errorsForErrorReadOnlySet[3][i<<1] = &isAlwaysFalseError{
+			errorsForErrorReadOnlySet[0][i],
+		}
+		errorsForErrorReadOnlySet[3][i<<1+1] = &isAlwaysFalseError{
+			errorsForErrorReadOnlySet[1][i<<1],
+		}
 	}
+
 	errorsForErrorReadOnlySet[4] = make([]error, N)
 	for i := range N {
 		errorsForErrorReadOnlySet[4][i] = stderrors.Join(
 			errorsForErrorReadOnlySet[1][i<<1],
 			errorsForErrorReadOnlySet[3][i<<1],
-			anotherErrorForErrorReadOnlySet,
+			errAnotherForErrorReadOnlySet,
 		)
 	}
 }
@@ -71,10 +89,13 @@ type errorReadOnlySetContainsCase struct {
 }
 
 func TestErrorReadOnlySetEqual_Len(t *testing.T) {
+	t.Parallel()
+
 	var setErrs []error
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
+
 	set := errors.NewErrorReadOnlySetEqual(setErrs...)
 	if n := set.Len(); n != len(setErrs) {
 		t.Errorf("got %d; want %d", n, len(setErrs))
@@ -82,10 +103,13 @@ func TestErrorReadOnlySetEqual_Len(t *testing.T) {
 }
 
 func TestErrorReadOnlySetEqual_Len_Nil(t *testing.T) {
+	t.Parallel()
+
 	setErrs := []error{nil, stderrors.New("<nil>")}
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
+
 	set := errors.NewErrorReadOnlySetEqual(setErrs...)
 	if n := set.Len(); n != len(setErrs) {
 		t.Errorf("got %d; want %d", n, len(setErrs))
@@ -93,29 +117,60 @@ func TestErrorReadOnlySetEqual_Len_Nil(t *testing.T) {
 }
 
 func TestErrorReadOnlySetEqual_Contains(t *testing.T) {
+	t.Parallel()
+
 	var setErrs []error
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
+
 	testCases := make([]errorReadOnlySetContainsCase, 0, len(setErrs)*7+1)
+
 	for _, err := range setErrs {
 		testCases = append(
 			testCases,
-			errorReadOnlySetContainsCase{err, true},
-			errorReadOnlySetContainsCase{stderrors.New(err.Error()), false},
-			errorReadOnlySetContainsCase{&errorUnwrap{err}, false},
-			errorReadOnlySetContainsCase{&errorIsAlwaysTrue{err}, false},
-			errorReadOnlySetContainsCase{&errorIsAlwaysFalse{err}, false},
-			errorReadOnlySetContainsCase{anotherErrorForErrorReadOnlySet, false},
-			errorReadOnlySetContainsCase{stderrors.Join(anotherErrorForErrorReadOnlySet, err), false},
+			errorReadOnlySetContainsCase{
+				err,
+				true,
+			},
+			errorReadOnlySetContainsCase{
+				stderrors.New(err.Error()),
+				false,
+			},
+			errorReadOnlySetContainsCase{
+				&unwrapError{err},
+				false,
+			},
+			errorReadOnlySetContainsCase{
+				&isAlwaysTrueError{err},
+				false,
+			},
+			errorReadOnlySetContainsCase{
+				&isAlwaysFalseError{err},
+				false,
+			},
+			errorReadOnlySetContainsCase{
+				errAnotherForErrorReadOnlySet,
+				false,
+			},
+			errorReadOnlySetContainsCase{
+				stderrors.Join(errAnotherForErrorReadOnlySet, err),
+				false,
+			},
 		)
 	}
-	testCases = append(testCases, errorReadOnlySetContainsCase{}) // {nil, false}
+
+	testCases = append(testCases, errorReadOnlySetContainsCase{
+		nil,
+		false,
+	})
 
 	for i, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("case %d?target=%+q", i, tc.target),
+			fmt.Sprintf("case%d?target=%+q", i, tc.target),
 			func(t *testing.T) {
+				t.Parallel()
+
 				set := errors.NewErrorReadOnlySetEqual(setErrs...)
 				if set.Contains(tc.target) != tc.want {
 					t.Errorf("got %t; want %t", !tc.want, tc.want)
@@ -126,22 +181,27 @@ func TestErrorReadOnlySetEqual_Contains(t *testing.T) {
 }
 
 func TestErrorReadOnlySetEqual_Contains_Nil(t *testing.T) {
+	t.Parallel()
+
 	setErrs := []error{nil}
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
+
 	testCases := []errorReadOnlySetContainsCase{
 		{nil, true},
 		{stderrors.New("<nil>"), false},
-		{new(errorUnwrap), false},
-		{new(errorIsAlwaysTrue), false},
-		{new(errorIsAlwaysFalse), false},
+		{new(unwrapError), false},
+		{new(isAlwaysTrueError), false},
+		{new(isAlwaysFalseError), false},
 	}
 
 	for i, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("case %d?target=%+q", i, tc.target),
+			fmt.Sprintf("case%d?target=%+q", i, tc.target),
 			func(t *testing.T) {
+				t.Parallel()
+
 				set := errors.NewErrorReadOnlySetEqual(setErrs...)
 				if set.Contains(tc.target) != tc.want {
 					t.Errorf("got %t; want %t", !tc.want, tc.want)
@@ -152,16 +212,21 @@ func TestErrorReadOnlySetEqual_Contains_Nil(t *testing.T) {
 }
 
 func TestErrorReadOnlySetEqual_Range(t *testing.T) {
+	t.Parallel()
+
 	errs := slices.Clone(errorsForErrorReadOnlySet[0])
+
 	counterMap := make(map[error]int, len(errs))
 	for _, err := range errs {
 		counterMap[err] = 1
 	}
+
 	set := errors.NewErrorReadOnlySetEqual(errs...)
 	set.Range(func(err error) (cont bool) {
 		counterMap[err]--
 		return true
 	})
+
 	for err, ctr := range counterMap {
 		if ctr > 0 {
 			t.Error("insufficient accesses to", err)
@@ -172,6 +237,8 @@ func TestErrorReadOnlySetEqual_Range(t *testing.T) {
 }
 
 func TestErrorReadOnlySetEqual_Range_Empty(t *testing.T) {
+	t.Parallel()
+
 	set := errors.NewErrorReadOnlySetEqual()
 	set.Range(func(err error) (cont bool) {
 		t.Error("handler was called, err:", err)
@@ -180,31 +247,42 @@ func TestErrorReadOnlySetEqual_Range_Empty(t *testing.T) {
 }
 
 func TestErrorReadOnlySetEqual_Range_NilHandler(t *testing.T) {
+	t.Parallel()
+
 	errs := slices.Clone(errorsForErrorReadOnlySet[0])
 	set := errors.NewErrorReadOnlySetEqual(errs...)
+
 	defer func() {
 		if e := recover(); e != nil {
 			t.Error("panic -", e)
 		}
 	}()
+
 	set.Range(nil)
 }
 
 func TestErrorReadOnlySetEqual_IterErrors(t *testing.T) {
+	t.Parallel()
+
 	errs := slices.Clone(errorsForErrorReadOnlySet[0])
+
 	counterMap := make(map[error]int, len(errs))
 	for _, err := range errs {
 		counterMap[err] = 1
 	}
+
 	set := errors.NewErrorReadOnlySetEqual(errs...)
+
 	seq := set.IterErrors()
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	counterMapCopy := maps.Clone(counterMap)
 	for err := range seq {
 		counterMap[err]--
 	}
+
 	for err, ctr := range counterMap {
 		if ctr > 0 {
 			t.Error("insufficient accesses to", err)
@@ -212,10 +290,12 @@ func TestErrorReadOnlySetEqual_IterErrors(t *testing.T) {
 			t.Error("too many accesses to", err)
 		}
 	}
+
 	// Rewind the iterator and test it again.
 	for err := range seq {
 		counterMapCopy[err]--
 	}
+
 	for err, ctr := range counterMapCopy {
 		if ctr > 0 {
 			t.Error("rewind - insufficient accesses to", err)
@@ -226,21 +306,28 @@ func TestErrorReadOnlySetEqual_IterErrors(t *testing.T) {
 }
 
 func TestErrorReadOnlySetEqual_IterErrors_Empty(t *testing.T) {
+	t.Parallel()
+
 	set := errors.NewErrorReadOnlySetEqual()
+
 	seq := set.IterErrors()
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	for err := range seq {
 		t.Error("yielded", err)
 	}
 }
 
 func TestErrorReadOnlySetIs_Len(t *testing.T) {
+	t.Parallel()
+
 	var setErrs []error
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
+
 	set := errors.NewErrorReadOnlySetIs(setErrs...)
 	if n := set.Len(); n != len(setErrs) {
 		t.Errorf("got %d; want %d", n, len(setErrs))
@@ -248,10 +335,13 @@ func TestErrorReadOnlySetIs_Len(t *testing.T) {
 }
 
 func TestErrorReadOnlySetIs_Len_Nil(t *testing.T) {
+	t.Parallel()
+
 	setErrs := []error{nil, stderrors.New("<nil>")}
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
+
 	set := errors.NewErrorReadOnlySetIs(setErrs...)
 	if n := set.Len(); n != len(setErrs) {
 		t.Errorf("got %d; want %d", n, len(setErrs))
@@ -259,40 +349,85 @@ func TestErrorReadOnlySetIs_Len_Nil(t *testing.T) {
 }
 
 func TestErrorReadOnlySetIs_Contains(t *testing.T) {
+	t.Parallel()
+
 	var setErrs []error
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
+
 	testCases := make([]errorReadOnlySetContainsCase, 0, len(setErrs)*7+5)
+
 	for _, err := range setErrs {
 		testCases = append(
 			testCases,
-			errorReadOnlySetContainsCase{err, true},
-			errorReadOnlySetContainsCase{stderrors.New(err.Error()), false},
-			errorReadOnlySetContainsCase{&errorUnwrap{err}, true},
-			errorReadOnlySetContainsCase{&errorIsAlwaysTrue{err}, true},
+			errorReadOnlySetContainsCase{
+				err,
+				true,
+			},
+			errorReadOnlySetContainsCase{
+				stderrors.New(err.Error()),
+				false,
+			},
+			errorReadOnlySetContainsCase{
+				&unwrapError{err},
+				true,
+			},
+			errorReadOnlySetContainsCase{
+				&isAlwaysTrueError{err},
+				true,
+			},
+
 			// When method Is returns false,
 			// errors.Is will continue testing along the Unwrap error tree
 			// rather than return false.
-			errorReadOnlySetContainsCase{&errorIsAlwaysFalse{err}, true},
-			errorReadOnlySetContainsCase{anotherErrorForErrorReadOnlySet, false},
-			errorReadOnlySetContainsCase{stderrors.Join(anotherErrorForErrorReadOnlySet, err), true},
+			errorReadOnlySetContainsCase{
+				&isAlwaysFalseError{err},
+				true,
+			},
+
+			errorReadOnlySetContainsCase{
+				errAnotherForErrorReadOnlySet,
+				false,
+			},
+			errorReadOnlySetContainsCase{
+				stderrors.Join(errAnotherForErrorReadOnlySet, err),
+				true,
+			},
 		)
 	}
+
 	err := stderrors.New("test error +1")
 	testCases = append(
 		testCases,
-		errorReadOnlySetContainsCase{}, // {nil, false}
-		errorReadOnlySetContainsCase{&errorUnwrap{err}, false},
-		errorReadOnlySetContainsCase{&errorIsAlwaysTrue{err}, true},
-		errorReadOnlySetContainsCase{&errorIsAlwaysFalse{err}, false},
-		errorReadOnlySetContainsCase{stderrors.Join(anotherErrorForErrorReadOnlySet, err), false},
+		errorReadOnlySetContainsCase{
+			nil,
+			false,
+		},
+		errorReadOnlySetContainsCase{
+			&unwrapError{err},
+			false,
+		},
+		errorReadOnlySetContainsCase{
+			&isAlwaysTrueError{err},
+			true,
+		},
+		errorReadOnlySetContainsCase{
+			&isAlwaysFalseError{err},
+			false,
+		},
+		errorReadOnlySetContainsCase{
+			stderrors.Join(errAnotherForErrorReadOnlySet, err),
+			false,
+		},
 	)
 
 	for i, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("case %d?target=%+q", i, tc.target),
+			fmt.Sprintf("case%d?target=%+q", i, tc.target),
 			func(t *testing.T) {
+				t.Parallel()
+
 				set := errors.NewErrorReadOnlySetIs(setErrs...)
 				if set.Contains(tc.target) != tc.want {
 					t.Errorf("got %t; want %t", !tc.want, tc.want)
@@ -303,22 +438,27 @@ func TestErrorReadOnlySetIs_Contains(t *testing.T) {
 }
 
 func TestErrorReadOnlySetIs_Contains_Nil(t *testing.T) {
+	t.Parallel()
+
 	setErrs := []error{nil}
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
+
 	testCases := []errorReadOnlySetContainsCase{
 		{nil, true},
 		{stderrors.New("<nil>"), false},
-		{new(errorUnwrap), false},
-		{new(errorIsAlwaysTrue), true},
-		{new(errorIsAlwaysFalse), false},
+		{new(unwrapError), false},
+		{new(isAlwaysTrueError), true},
+		{new(isAlwaysFalseError), false},
 	}
 
 	for i, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("case %d?target=%+q", i, tc.target),
+			fmt.Sprintf("case%d?target=%+q", i, tc.target),
 			func(t *testing.T) {
+				t.Parallel()
+
 				set := errors.NewErrorReadOnlySetIs(setErrs...)
 				if set.Contains(tc.target) != tc.want {
 					t.Errorf("got %t; want %t", !tc.want, tc.want)
@@ -329,16 +469,21 @@ func TestErrorReadOnlySetIs_Contains_Nil(t *testing.T) {
 }
 
 func TestErrorReadOnlySetIs_Range(t *testing.T) {
+	t.Parallel()
+
 	errs := slices.Clone(errorsForErrorReadOnlySet[0])
+
 	counterMap := make(map[error]int, len(errs))
 	for _, err := range errs {
 		counterMap[err] = 1
 	}
+
 	set := errors.NewErrorReadOnlySetIs(errs...)
 	set.Range(func(err error) (cont bool) {
 		counterMap[err]--
 		return true
 	})
+
 	for err, ctr := range counterMap {
 		if ctr > 0 {
 			t.Error("insufficient accesses to", err)
@@ -349,6 +494,8 @@ func TestErrorReadOnlySetIs_Range(t *testing.T) {
 }
 
 func TestErrorReadOnlySetIs_Range_Empty(t *testing.T) {
+	t.Parallel()
+
 	set := errors.NewErrorReadOnlySetIs()
 	set.Range(func(err error) (cont bool) {
 		t.Error("handler was called, err:", err)
@@ -357,31 +504,42 @@ func TestErrorReadOnlySetIs_Range_Empty(t *testing.T) {
 }
 
 func TestErrorReadOnlySetIs_Range_NilHandler(t *testing.T) {
+	t.Parallel()
+
 	errs := slices.Clone(errorsForErrorReadOnlySet[0])
 	set := errors.NewErrorReadOnlySetIs(errs...)
+
 	defer func() {
 		if e := recover(); e != nil {
 			t.Error("panic -", e)
 		}
 	}()
+
 	set.Range(nil)
 }
 
 func TestErrorReadOnlySetIs_IterErrors(t *testing.T) {
+	t.Parallel()
+
 	errs := slices.Clone(errorsForErrorReadOnlySet[0])
+
 	counterMap := make(map[error]int, len(errs))
 	for _, err := range errs {
 		counterMap[err] = 1
 	}
+
 	set := errors.NewErrorReadOnlySetIs(errs...)
+
 	seq := set.IterErrors()
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	counterMapCopy := maps.Clone(counterMap)
 	for err := range seq {
 		counterMap[err]--
 	}
+
 	for err, ctr := range counterMap {
 		if ctr > 0 {
 			t.Error("insufficient accesses to", err)
@@ -389,10 +547,12 @@ func TestErrorReadOnlySetIs_IterErrors(t *testing.T) {
 			t.Error("too many accesses to", err)
 		}
 	}
+
 	// Rewind the iterator and test it again.
 	for err := range seq {
 		counterMapCopy[err]--
 	}
+
 	for err, ctr := range counterMapCopy {
 		if ctr > 0 {
 			t.Error("rewind - insufficient accesses to", err)
@@ -403,21 +563,28 @@ func TestErrorReadOnlySetIs_IterErrors(t *testing.T) {
 }
 
 func TestErrorReadOnlySetIs_IterErrors_Empty(t *testing.T) {
+	t.Parallel()
+
 	set := errors.NewErrorReadOnlySetIs()
+
 	seq := set.IterErrors()
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	for err := range seq {
 		t.Error("yielded", err)
 	}
 }
 
 func TestErrorReadOnlySetSameMessage_Len(t *testing.T) {
+	t.Parallel()
+
 	var setErrs []error
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
+
 	set := errors.NewErrorReadOnlySetSameMessage(setErrs...)
 	if n := set.Len(); n != len(setErrs) {
 		t.Errorf("got %d; want %d", n, len(setErrs))
@@ -425,10 +592,13 @@ func TestErrorReadOnlySetSameMessage_Len(t *testing.T) {
 }
 
 func TestErrorReadOnlySetSameMessage_Len_Nil(t *testing.T) {
+	t.Parallel()
+
 	setErrs := []error{nil, stderrors.New("<nil>")}
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
+
 	set := errors.NewErrorReadOnlySetSameMessage(setErrs...)
 	if n := set.Len(); n != len(setErrs) {
 		t.Errorf("got %d; want %d", n, len(setErrs))
@@ -436,39 +606,71 @@ func TestErrorReadOnlySetSameMessage_Len_Nil(t *testing.T) {
 }
 
 func TestErrorReadOnlySetSameMessage_Contains(t *testing.T) {
-	var setErrs []error
+	t.Parallel()
+
 	msgSet := make(map[string]struct{})
+
+	var setErrs []error
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 		for _, err := range errs {
 			msgSet[err.Error()] = struct{}{}
 		}
 	}
+
 	testCases := make([]errorReadOnlySetContainsCase, 0, len(setErrs)*7+1)
+
 	for _, err := range setErrs {
-		eu := &errorUnwrap{err}
-		_, wantEU := msgSet[eu.Error()]
-		et := &errorIsAlwaysTrue{err}
-		_, wantET := msgSet[et.Error()]
-		ef := &errorIsAlwaysFalse{err}
-		_, wantEF := msgSet[ef.Error()]
+		ue := &unwrapError{err}
+		_, wantEU := msgSet[ue.Error()]
+		te := &isAlwaysTrueError{err}
+		_, wantET := msgSet[te.Error()]
+		fe := &isAlwaysFalseError{err}
+		_, wantEF := msgSet[fe.Error()]
 		testCases = append(
 			testCases,
-			errorReadOnlySetContainsCase{err, true},
-			errorReadOnlySetContainsCase{stderrors.New(err.Error()), true},
-			errorReadOnlySetContainsCase{eu, wantEU},
-			errorReadOnlySetContainsCase{et, wantET},
-			errorReadOnlySetContainsCase{ef, wantEF},
-			errorReadOnlySetContainsCase{anotherErrorForErrorReadOnlySet, false},
-			errorReadOnlySetContainsCase{stderrors.Join(anotherErrorForErrorReadOnlySet, err), false},
+			errorReadOnlySetContainsCase{
+				err,
+				true,
+			},
+			errorReadOnlySetContainsCase{
+				stderrors.New(err.Error()),
+				true,
+			},
+			errorReadOnlySetContainsCase{
+				ue,
+				wantEU,
+			},
+			errorReadOnlySetContainsCase{
+				te,
+				wantET,
+			},
+			errorReadOnlySetContainsCase{
+				fe,
+				wantEF,
+			},
+			errorReadOnlySetContainsCase{
+				errAnotherForErrorReadOnlySet,
+				false,
+			},
+			errorReadOnlySetContainsCase{
+				stderrors.Join(errAnotherForErrorReadOnlySet, err),
+				false,
+			},
 		)
 	}
-	testCases = append(testCases, errorReadOnlySetContainsCase{}) // {nil, false}
+
+	testCases = append(testCases, errorReadOnlySetContainsCase{
+		nil,
+		false,
+	})
 
 	for i, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("case %d?target=%+q", i, tc.target),
+			fmt.Sprintf("case%d?target=%+q", i, tc.target),
 			func(t *testing.T) {
+				t.Parallel()
+
 				set := errors.NewErrorReadOnlySetSameMessage(setErrs...)
 				if set.Contains(tc.target) != tc.want {
 					t.Errorf("got %t; want %t", !tc.want, tc.want)
@@ -479,22 +681,27 @@ func TestErrorReadOnlySetSameMessage_Contains(t *testing.T) {
 }
 
 func TestErrorReadOnlySetSameMessage_Contains_Nil(t *testing.T) {
+	t.Parallel()
+
 	setErrs := []error{nil}
 	for _, errs := range errorsForErrorReadOnlySet {
 		setErrs = append(setErrs, errs...)
 	}
+
 	testCases := []errorReadOnlySetContainsCase{
 		{nil, true},
 		{stderrors.New("<nil>"), true},
-		{new(errorUnwrap), false},
-		{new(errorIsAlwaysTrue), false},
-		{new(errorIsAlwaysFalse), false},
+		{new(unwrapError), false},
+		{new(isAlwaysTrueError), false},
+		{new(isAlwaysFalseError), false},
 	}
 
 	for i, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("case %d?target=%+q", i, tc.target),
+			fmt.Sprintf("case%d?target=%+q", i, tc.target),
 			func(t *testing.T) {
+				t.Parallel()
+
 				set := errors.NewErrorReadOnlySetSameMessage(setErrs...)
 				if set.Contains(tc.target) != tc.want {
 					t.Errorf("got %t; want %t", !tc.want, tc.want)
@@ -505,16 +712,21 @@ func TestErrorReadOnlySetSameMessage_Contains_Nil(t *testing.T) {
 }
 
 func TestErrorReadOnlySetSameMessage_Range(t *testing.T) {
+	t.Parallel()
+
 	errs := slices.Clone(errorsForErrorReadOnlySet[0])
+
 	counterMap := make(map[error]int, len(errs))
 	for _, err := range errs {
 		counterMap[err] = 1
 	}
+
 	set := errors.NewErrorReadOnlySetSameMessage(errs...)
 	set.Range(func(err error) (cont bool) {
 		counterMap[err]--
 		return true
 	})
+
 	for err, ctr := range counterMap {
 		if ctr > 0 {
 			t.Error("insufficient accesses to", err)
@@ -525,6 +737,8 @@ func TestErrorReadOnlySetSameMessage_Range(t *testing.T) {
 }
 
 func TestErrorReadOnlySetSameMessage_Range_Empty(t *testing.T) {
+	t.Parallel()
+
 	set := errors.NewErrorReadOnlySetSameMessage()
 	set.Range(func(err error) (cont bool) {
 		t.Error("handler was called, err:", err)
@@ -533,31 +747,42 @@ func TestErrorReadOnlySetSameMessage_Range_Empty(t *testing.T) {
 }
 
 func TestErrorReadOnlySetSameMessage_Range_NilHandler(t *testing.T) {
+	t.Parallel()
+
 	errs := slices.Clone(errorsForErrorReadOnlySet[0])
 	set := errors.NewErrorReadOnlySetSameMessage(errs...)
+
 	defer func() {
 		if e := recover(); e != nil {
 			t.Error("panic -", e)
 		}
 	}()
+
 	set.Range(nil)
 }
 
 func TestErrorReadOnlySetSameMessage_IterErrors(t *testing.T) {
+	t.Parallel()
+
 	errs := slices.Clone(errorsForErrorReadOnlySet[0])
+
 	counterMap := make(map[error]int, len(errs))
 	for _, err := range errs {
 		counterMap[err] = 1
 	}
+
 	set := errors.NewErrorReadOnlySetSameMessage(errs...)
+
 	seq := set.IterErrors()
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	counterMapCopy := maps.Clone(counterMap)
 	for err := range seq {
 		counterMap[err]--
 	}
+
 	for err, ctr := range counterMap {
 		if ctr > 0 {
 			t.Error("insufficient accesses to", err)
@@ -565,10 +790,12 @@ func TestErrorReadOnlySetSameMessage_IterErrors(t *testing.T) {
 			t.Error("too many accesses to", err)
 		}
 	}
+
 	// Rewind the iterator and test it again.
 	for err := range seq {
 		counterMapCopy[err]--
 	}
+
 	for err, ctr := range counterMapCopy {
 		if ctr > 0 {
 			t.Error("rewind - insufficient accesses to", err)
@@ -579,65 +806,72 @@ func TestErrorReadOnlySetSameMessage_IterErrors(t *testing.T) {
 }
 
 func TestErrorReadOnlySetSameMessage_IterErrors_Empty(t *testing.T) {
+	t.Parallel()
+
 	set := errors.NewErrorReadOnlySetSameMessage()
+
 	seq := set.IterErrors()
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	for err := range seq {
 		t.Error("yielded", err)
 	}
 }
 
-type errorUnwrap struct {
+type unwrapError struct {
 	err error
 }
 
-func (eu *errorUnwrap) Error() string {
-	if eu.err == nil {
+func (ue *unwrapError) Error() string {
+	if ue.err == nil {
 		return "test error - <nil>"
 	}
-	return "test error unwrap - " + eu.err.Error()
+
+	return "test error unwrap - " + ue.err.Error()
 }
 
-func (eu *errorUnwrap) Unwrap() error {
-	return eu.err
+func (ue *unwrapError) Unwrap() error {
+	return ue.err
 }
 
-type errorIsAlwaysTrue struct {
+type isAlwaysTrueError struct {
 	err error
 }
 
-func (eiat *errorIsAlwaysTrue) Error() string {
-	if eiat.err == nil {
+func (te *isAlwaysTrueError) Error() string {
+	if te.err == nil {
 		return "test error Is always true - <nil>"
 	}
-	return "test error Is always true - " + eiat.err.Error()
+
+	return "test error Is always true - " + te.err.Error()
 }
 
-func (eiat *errorIsAlwaysTrue) Unwrap() error {
-	return eiat.err
+func (te *isAlwaysTrueError) Unwrap() error {
+	return te.err
 }
 
-func (eiat *errorIsAlwaysTrue) Is(error) bool {
+func (te *isAlwaysTrueError) Is(error) bool {
 	return true
 }
 
-type errorIsAlwaysFalse struct {
+type isAlwaysFalseError struct {
 	err error
 }
 
-func (eiaf *errorIsAlwaysFalse) Error() string {
-	if eiaf.err == nil {
+func (fe *isAlwaysFalseError) Error() string {
+	if fe.err == nil {
 		return "test error Is always false - <nil>"
 	}
-	return "test error Is always false - " + eiaf.err.Error()
+
+	return "test error Is always false - " + fe.err.Error()
 }
 
-func (eiaf *errorIsAlwaysFalse) Unwrap() error {
-	return eiaf.err
+func (fe *isAlwaysFalseError) Unwrap() error {
+	return fe.err
 }
 
-func (eiaf *errorIsAlwaysFalse) Is(error) bool {
+func (fe *isAlwaysFalseError) Is(error) bool {
 	return false
 }

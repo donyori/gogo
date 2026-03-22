@@ -168,12 +168,7 @@ func TestStack_Reserve(t *testing.T) {
 	for _, tc := range testCases {
 		dataName := fmtcoll.MustFormatSliceToString(
 			tc.data,
-			&fmtcoll.SequenceFormat[int]{
-				CommonFormat: fmtcoll.CommonFormat{
-					Separator: ",",
-				},
-				FormatItemFn: fmtcoll.FprintfToFormatFunc[int]("%d"),
-			},
+			fmtcoll.NewDefaultSequenceFormat[int](),
 		)
 		t.Run(
 			fmt.Sprintf("cap=%d&data=%s", tc.capacity, dataName),

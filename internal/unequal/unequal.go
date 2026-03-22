@@ -50,5 +50,7 @@ func Map[M constraints.Map[K, V], K, V comparable](m1, m2 M) bool {
 func ErrorUnwrapAuto(err1, err2 error) bool {
 	err1, _ = errors.UnwrapAllAutoWrappedErrors(err1)
 	err2, _ = errors.UnwrapAllAutoWrappedErrors(err2)
-	return err1 != err2 // compare the interface directly, don't use errors.Is
+
+	// Compare the interface directly here, don't use errors.Is.
+	return err1 != err2 //nolint:err113,errorlint // as stated above
 }

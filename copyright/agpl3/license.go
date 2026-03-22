@@ -18,19 +18,31 @@
 
 package agpl3
 
-// DisclaimerOfWarranty = License[DisclaimerOfWarrantyBegin:DisclaimerOfWarrantyEnd].
+// DisclaimerOfWarranty =
+// License[DisclaimerOfWarrantyBegin:DisclaimerOfWarrantyEnd].
 const (
-	DisclaimerOfWarrantyBegin int = 30724 // DisclaimerOfWarrantyBegin is the beginning index of DisclaimerOfWarranty in License.
-	DisclaimerOfWarrantyEnd   int = 31272 // DisclaimerOfWarrantyEnd is the end index of DisclaimerOfWarranty in License.
+	// DisclaimerOfWarrantyBegin is the beginning index of
+	// DisclaimerOfWarranty in License.
+	DisclaimerOfWarrantyBegin int = 30724
+
+	// DisclaimerOfWarrantyEnd is the end index of
+	// DisclaimerOfWarranty in License.
+	DisclaimerOfWarrantyEnd int = 31272
 )
 
 // DisclaimerOfWarranty is the disclaimer of warranty in AGPL v3.
 var DisclaimerOfWarranty = License[DisclaimerOfWarrantyBegin:DisclaimerOfWarrantyEnd]
 
-// LimitationOfLiability = License[LimitationOfLiabilityBegin:LimitationOfLiabilityEnd].
+// LimitationOfLiability =
+// License[LimitationOfLiabilityBegin:LimitationOfLiabilityEnd].
 const (
-	LimitationOfLiabilityBegin int = 31308 // LimitationOfLiabilityBegin is the beginning index of LimitationOfLiability in License.
-	LimitationOfLiabilityEnd   int = 31910 // LimitationOfLiabilityEnd is the end index of LimitationOfLiability in License.
+	// LimitationOfLiabilityBegin is the beginning index of
+	// LimitationOfLiability in License.
+	LimitationOfLiabilityBegin int = 31308
+
+	// LimitationOfLiabilityEnd is the end index of
+	// LimitationOfLiability in License.
+	LimitationOfLiabilityEnd int = 31910
 )
 
 // LimitationOfLiability is the limitation of liability in AGPL v3.
@@ -38,8 +50,12 @@ var LimitationOfLiability = License[LimitationOfLiabilityBegin:LimitationOfLiabi
 
 // TermsAndConditions = License[TermsAndConditionsBegin:TermsAndConditionsEnd].
 const (
-	TermsAndConditionsBegin int = 2888  // TermsAndConditionsBegin is the beginning index of TermsAndConditions in License.
-	TermsAndConditionsEnd   int = 32386 // TermsAndConditionsEnd is the end index of TermsAndConditions in License.
+	// TermsAndConditionsBegin is the beginning index of
+	// TermsAndConditions in License.
+	TermsAndConditionsBegin int = 2888
+
+	// TermsAndConditionsEnd is the end index of TermsAndConditions in License.
+	TermsAndConditionsEnd int = 32386
 )
 
 // TermsAndConditions are the terms and conditions of AGPL v3.

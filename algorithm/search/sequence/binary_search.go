@@ -322,5 +322,5 @@ func (absa *arrayBinarySearchAdapter[Item]) CompareWithTarget(
 //
 // Caller should guarantee that a and b are nonnegative.
 func avg(a, b int) int {
-	return int(uint(a+b) >> 1) //nolint:gosec
+	return int(uint(a+b) >> 1) //gosec:disable G115 -- the average of nonnegative integers a and b cannot overflow
 }

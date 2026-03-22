@@ -52,6 +52,7 @@ func As(err error, target any) bool {
 		panic(AutoMsg("target is of type *error; " +
 			"As always returns true for that"))
 	}
+
 	return stderrors.As(err, target)
 }
 
@@ -63,6 +64,7 @@ func AsType[E error](err error) (E, bool) {
 	if reflect.TypeFor[E]() == errorType {
 		panic(AutoMsg("type E is exactly error; AsType[error] is senseless"))
 	}
+
 	return stderrors.AsType[E](err)
 }
 

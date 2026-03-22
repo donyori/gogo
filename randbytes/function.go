@@ -37,11 +37,14 @@ func Fill(src rand.Source, p []byte) {
 	if src == nil {
 		panic(errors.AutoMsg("random value source is nil"))
 	}
+
 	var x uint64
+
 	for i := range p {
 		if i&7 == 0 {
 			x = src.Uint64()
 		}
+
 		p[i] = byte(x)
 		x >>= 8
 	}
@@ -62,8 +65,10 @@ func Make(src rand.Source, length int) []byte {
 	case length == 0:
 		return []byte{}
 	}
+
 	p := make([]byte, length)
 	Fill(src, p)
+
 	return p
 }
 
@@ -85,8 +90,10 @@ func MakeCapacity(src rand.Source, length, capacity int) []byte {
 	case length == 0:
 		return make([]byte, 0, capacity)
 	}
+
 	p := make([]byte, length, capacity)
 	Fill(src, p)
+
 	return p
 }
 
@@ -105,8 +112,10 @@ func Append(src rand.Source, p []byte, n int) []byte {
 	case n == 0:
 		return p
 	}
+
 	p = slices.Grow(p, n)
 	Fill(src, p[len(p):][:n])
+
 	return p[:len(p)+n]
 }
 
@@ -120,6 +129,8 @@ func Append(src rand.Source, p []byte, n int) []byte {
 // It panics if the random value source or the byte writer is nil
 // or n is negative.
 func WriteN(src rand.Source, w io.ByteWriter, n int) (written int, err error) {
+	const ByteNumBit uint64 = 8
+
 	switch {
 	case src == nil:
 		panic(errors.AutoMsg("random value source is nil"))
@@ -128,16 +139,21 @@ func WriteN(src rand.Source, w io.ByteWriter, n int) (written int, err error) {
 	case n < 0:
 		panic(errors.AutoMsg(fmt.Sprintf("n (%d) is negative", n)))
 	}
+
 	var x uint64
+
 	for written < n {
 		if written&7 == 0 {
 			x = src.Uint64()
 		}
+
 		err = w.WriteByte(byte(x))
 		if err != nil {
 			return written, errors.AutoWrap(err)
 		}
-		written, x = written+1, x>>8
+
+		written, x = written+1, x>>ByteNumBit
 	}
+
 	return
 }

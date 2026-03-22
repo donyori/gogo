@@ -26,11 +26,14 @@ import (
 )
 
 func TestNegZeros(t *testing.T) {
+	t.Parallel()
+
 	if floats.NegZero32 != 0.0 {
 		t.Error("NegZero32 is not zero")
 	} else if math.Float32bits(floats.NegZero32)>>31 == 0 {
 		t.Error("NegZero32 is not negative")
 	}
+
 	if floats.NegZero64 != 0.0 {
 		t.Error("NegZero64 is not zero")
 	} else if math.Float64bits(floats.NegZero64)>>63 == 0 {
@@ -39,25 +42,32 @@ func TestNegZeros(t *testing.T) {
 }
 
 func TestInfs(t *testing.T) {
+	t.Parallel()
+
 	// !(x > y) is not equivalent to (x <= y) when NaN values are involved.
 	if !(floats.Inf32 > math.MaxFloat32) ||
 		!math.IsInf(float64(floats.Inf32), 1) {
 		t.Error("Inf32 is not positive infinity")
 	}
+
 	// !(x < y) is not equivalent to (x >= y) when NaN values are involved.
 	if !(floats.NegInf32 < -math.MaxFloat32) ||
 		!math.IsInf(float64(floats.NegInf32), -1) {
 		t.Error("NegInf32 is not negative infinity")
 	}
+
 	if !math.IsInf(floats.Inf64, 1) {
 		t.Error("Inf64 is not positive infinity")
 	}
+
 	if !math.IsInf(floats.NegInf64, -1) {
 		t.Error("NegInf64 is not negative infinity")
 	}
 }
 
 func TestNaNs(t *testing.T) {
+	t.Parallel()
+
 	names := [][]string{
 		{"NaN32A", "NaN32B", "NaN32C", "NaN32D"},
 		{"NaN64A", "NaN64B", "NaN64C", "NaN64D"},
@@ -68,11 +78,13 @@ func TestNaNs(t *testing.T) {
 	nan64s := []float64{
 		floats.NaN64A, floats.NaN64B, floats.NaN64C, floats.NaN64D,
 	}
+
 	for i := range nan32s {
 		if nan32s[i] == nan32s[i] || !math.IsNaN(float64(nan32s[i])) {
 			t.Error(names[0][i], "is not a NaN")
 		}
 	}
+
 	for i := range nan64s {
 		if !math.IsNaN(nan64s[i]) {
 			t.Error(names[1][i], "is not a NaN")
