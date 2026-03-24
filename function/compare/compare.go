@@ -20,13 +20,13 @@ package compare
 
 import "github.com/donyori/gogo/constraints"
 
-// CompareFunc is a function that returns
+// Func is a function that returns
 //
 //	-1 if a is less than b,
 //	 0 if a equals b,
 //	+1 if a is greater than b.
 //
-// To use CompareFunc in cases where a strict weak ordering is required,
+// To use Func in cases where a strict weak ordering is required,
 // such as sorting, it must implement a strict weak ordering.
 // For strict weak ordering,
 // see <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>.
@@ -34,7 +34,7 @@ import "github.com/donyori/gogo/constraints"
 // Note that floating-point comparison
 // (the < operator on float32 or float64 values)
 // is not a strict weak ordering when not-a-number (NaN) values are involved.
-type CompareFunc[T any] func(a, b T) int
+type Func[T any] func(a, b T) int
 
 // Reverse returns a reverse function that returns
 //
@@ -42,13 +42,14 @@ type CompareFunc[T any] func(a, b T) int
 //	 0 if a equals b,
 //	+1 if a is less than b.
 //
-// Reverse returns nil if this CompareFunc is nil.
-func (cf CompareFunc[T]) Reverse() CompareFunc[T] {
-	if cf == nil {
+// Reverse returns nil if this Func is nil.
+func (f Func[T]) Reverse() Func[T] {
+	if f == nil {
 		return nil
 	}
+
 	return func(a, b T) int {
-		return -cf(a, b)
+		return -f(a, b)
 	}
 }
 
@@ -57,13 +58,14 @@ func (cf CompareFunc[T]) Reverse() CompareFunc[T] {
 //
 //	compare(a, b) == 0
 //
-// ToEqual returns nil if this CompareFunc is nil.
-func (cf CompareFunc[T]) ToEqual() EqualFunc[T] {
-	if cf == nil {
+// ToEqual returns nil if this Func is nil.
+func (f Func[T]) ToEqual() EqualFunc[T] {
+	if f == nil {
 		return nil
 	}
+
 	return func(a, b T) bool {
-		return cf(a, b) == 0
+		return f(a, b) == 0
 	}
 }
 
@@ -72,39 +74,62 @@ func (cf CompareFunc[T]) ToEqual() EqualFunc[T] {
 //
 //	compare(a, b) < 0
 //
-// ToLess returns nil if this CompareFunc is nil.
-func (cf CompareFunc[T]) ToLess() LessFunc[T] {
-	if cf == nil {
+// ToLess returns nil if this Func is nil.
+func (f Func[T]) ToLess() LessFunc[T] {
+	if f == nil {
 		return nil
 	}
+
 	return func(a, b T) bool {
-		return cf(a, b) < 0
+		return f(a, b) < 0
 	}
 }
 
-// OrderedCompare is a generic function that returns
+// FuncToReverse is equivalent to
+//
+//	f.Reverse()
+func FuncToReverse[T any](f Func[T]) Func[T] {
+	return f.Reverse()
+}
+
+// FuncToEqual is equivalent to
+//
+//	f.ToEqual()
+func FuncToEqual[T any](f Func[T]) EqualFunc[T] {
+	return f.ToEqual()
+}
+
+// FuncToLess is equivalent to
+//
+//	f.ToLess()
+func FuncToLess[T any](f Func[T]) LessFunc[T] {
+	return f.ToLess()
+}
+
+// Ordered is a generic function that returns
 //
 //	-1 if a < b,
 //	+1 if a > b,
 //	 0 otherwise.
 //
-// The client can instantiate it to get a CompareFunc.
+// The client can instantiate it to get a Func.
 //
 // Note that floating-point comparison
 // (the < operator on float32 or float64 values)
 // is not a strict weak ordering when not-a-number (NaN) values are involved.
 // If a strict weak ordering is required (such as sorting),
-// use the function FloatCompare for floating-point numbers.
-func OrderedCompare[T constraints.Ordered](a, b T) int {
+// use the function Float for floating-point numbers.
+func Ordered[T constraints.Ordered](a, b T) int {
 	if a < b {
 		return -1
 	} else if a > b {
 		return 1
 	}
+
 	return 0
 }
 
-// FloatCompare is a generic function that returns
+// Float is a generic function that returns
 //
 //	-1 if a < b, or a is a NaN and b is not a NaN,
 //	+1 if a > b, or a is not a NaN and b is a NaN,
@@ -117,8 +142,8 @@ func OrderedCompare[T constraints.Ordered](a, b T) int {
 // It treats NaN values as less than any others.
 // A NaN is treated as equal to a NaN, and -0.0 is equal to 0.0.
 //
-// The client can instantiate it to get a CompareFunc.
-func FloatCompare[T constraints.Float](a, b T) int {
+// The client can instantiate it to get a Func.
+func Float[T constraints.Float](a, b T) int {
 	// "x != x" means that x is a NaN.
 	switch {
 	case a < b:
@@ -132,5 +157,6 @@ func FloatCompare[T constraints.Float](a, b T) int {
 	case b != b:
 		return 1
 	}
+
 	return 0
 }

@@ -33,7 +33,7 @@ import (
 
 func TestWrapSliceFunctionsNilSlicePtr(t *testing.T) {
 	t.Run(
-		"WrapSlice-int,compare.OrderedLess,compare.OrderedCompare",
+		"WrapSlice-int,compare.OrderedLess,compare.Ordered",
 		func(t *testing.T) {
 			testWrapSliceFunctionsNilSlicePtr(
 				t,
@@ -41,7 +41,7 @@ func TestWrapSliceFunctionsNilSlicePtr(t *testing.T) {
 					return array.WrapSlice[int](
 						nil,
 						compare.OrderedLess,
-						compare.OrderedCompare,
+						compare.Ordered,
 					)
 				},
 			)
@@ -106,7 +106,7 @@ func TestWrapSlice_NilLessFn(t *testing.T) {
 		}
 	}
 
-	oda := array.WrapSlice(&slice, nil, compare.OrderedCompare)
+	oda := array.WrapSlice(&slice, nil, compare.Ordered)
 	if oda == nil {
 		t.Fatal("got nil OrderedDynamicArray")
 	} else if got := oda.Len(); got != n {
@@ -178,7 +178,7 @@ func TestWrapSlice_NilLessFnAndCmpFn(t *testing.T) {
 
 func TestAffectProvidedSlice(t *testing.T) {
 	t.Run(
-		"WrapSlice-int,compare.OrderedLess,compare.OrderedCompare",
+		"WrapSlice-int,compare.OrderedLess,compare.Ordered",
 		func(t *testing.T) {
 			testAffectProvidedSlice(
 				t,
@@ -186,7 +186,7 @@ func TestAffectProvidedSlice(t *testing.T) {
 					return array.WrapSlice(
 						slicePtr,
 						compare.OrderedLess,
-						compare.OrderedCompare,
+						compare.Ordered,
 					)
 				},
 			)

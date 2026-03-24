@@ -34,6 +34,7 @@ func (ef EqualFunc[T]) Not() EqualFunc[T] {
 	if ef == nil {
 		return nil
 	}
+
 	return func(a, b T) bool {
 		return !ef(a, b)
 	}
@@ -49,9 +50,24 @@ func (ef EqualFunc[T]) Reflexive() EqualFunc[T] {
 	if ef == nil {
 		return nil
 	}
+
 	return func(a, b T) bool {
 		return ef(a, b) || !ef(a, a) && !ef(b, b)
 	}
+}
+
+// EqualToNot is equivalent to
+//
+//	ef.Not()
+func EqualToNot[T any](ef EqualFunc[T]) EqualFunc[T] {
+	return ef.Not()
+}
+
+// EqualToReflexive is equivalent to
+//
+//	ef.Reflexive()
+func EqualToReflexive[T any](ef EqualFunc[T]) EqualFunc[T] {
+	return ef.Reflexive()
 }
 
 // Equal is a generic function to test whether a == b.
@@ -139,11 +155,13 @@ func SliceEqual[S constraints.Slice[T], T comparable](a, b S) bool {
 	} else if n == 0 {
 		return (a == nil) == (b == nil)
 	}
+
 	for i := range n {
 		if a[i] != b[i] {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -163,12 +181,14 @@ func FloatSliceEqual[S constraints.Slice[T], T constraints.Float](a, b S) bool {
 	} else if n == 0 {
 		return (a == nil) == (b == nil)
 	}
+
 	for i := range n {
 		// "x == x" means that x is not a NaN.
 		if a[i] != b[i] && (a[i] == a[i] || b[i] == b[i]) {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -187,11 +207,13 @@ func AnySliceEqual[S constraints.Slice[T], T any](a, b S) bool {
 	} else if n == 0 {
 		return (a == nil) == (b == nil)
 	}
+
 	for i := range n {
 		if !AnyEqual(a[i], b[i]) {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -213,6 +235,7 @@ func EqualToSliceEqual[S constraints.Slice[T], T any](
 			return AnyEqual(a, b)
 		}
 	}
+
 	return func(a, b S) bool {
 		n := len(a)
 		if n != len(b) {
@@ -220,11 +243,13 @@ func EqualToSliceEqual[S constraints.Slice[T], T any](
 		} else if n == 0 {
 			return nilEqualsEmpty || (a == nil) == (b == nil)
 		}
+
 		for i := range n {
 			if !ef(a[i], b[i]) {
 				return false
 			}
 		}
+
 		return true
 	}
 }
@@ -252,22 +277,27 @@ func SliceEqualWithoutOrder[S constraints.Slice[T], T comparable](a, b S) bool {
 	} else if n == 0 {
 		return (a == nil) == (b == nil)
 	}
+
 	counter := make(map[T]int, n)
 	for _, x := range a {
 		counter[x]++
 	}
+
 	for _, x := range b {
 		c := counter[x] - 1
 		if c < 0 {
 			return false
 		}
+
 		counter[x] = c
 	}
+
 	for _, c := range counter {
 		if c > 0 {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -286,7 +316,9 @@ func FloatSliceEqualWithoutOrder[S constraints.Slice[T], T constraints.Float](
 	} else if n == 0 {
 		return (a == nil) == (b == nil)
 	}
+
 	counter, numNaN := make(map[T]int, n), 0
+
 	// "x == x" means that x is not a NaN.
 	for _, x := range a {
 		if x == x {
@@ -295,25 +327,30 @@ func FloatSliceEqualWithoutOrder[S constraints.Slice[T], T constraints.Float](
 			numNaN++
 		}
 	}
+
 	for _, x := range b {
 		if x == x {
 			c := counter[x] - 1
 			if c < 0 {
 				return false
 			}
+
 			counter[x] = c
 		} else {
 			if numNaN <= 0 {
 				return false
 			}
+
 			numNaN--
 		}
 	}
+
 	for _, c := range counter {
 		if c > 0 {
 			return false
 		}
 	}
+
 	// numNaN must be 0 here,
 	// because len(a) == len(b) and they have the same number of non-NaN items.
 	return true
@@ -334,12 +371,14 @@ func MapEqual[M constraints.Map[K, V], K, V comparable](a, b M) bool {
 	} else if n == 0 {
 		return (a == nil) == (b == nil)
 	}
+
 	for k, v1 := range a {
 		v2, ok := b[k]
 		if !ok || v1 != v2 {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -362,6 +401,7 @@ func FloatValueMapEqual[M constraints.Map[K, V], K comparable, V constraints.Flo
 	} else if n == 0 {
 		return (a == nil) == (b == nil)
 	}
+
 	for k, v1 := range a {
 		v2, ok := b[k]
 		// "x == x" means that x is not a NaN.
@@ -369,6 +409,7 @@ func FloatValueMapEqual[M constraints.Map[K, V], K comparable, V constraints.Flo
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -390,12 +431,14 @@ func AnyValueMapEqual[M constraints.Map[K, V], K comparable, V any](
 	} else if n == 0 {
 		return (a == nil) == (b == nil)
 	}
+
 	for k, v1 := range a {
 		v2, ok := b[k]
 		if !ok || !AnyEqual(v1, v2) {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -417,6 +460,7 @@ func ValueEqualToMapEqual[M constraints.Map[K, V], K comparable, V any](
 			return AnyEqual(a, b)
 		}
 	}
+
 	return func(a, b M) bool {
 		n := len(a)
 		if n != len(b) {
@@ -424,12 +468,14 @@ func ValueEqualToMapEqual[M constraints.Map[K, V], K comparable, V any](
 		} else if n == 0 {
 			return nilEqualsEmpty || (a == nil) == (b == nil)
 		}
+
 		for k, v1 := range a {
 			v2, ok := b[k]
 			if !ok || !ef(v1, v2) {
 				return false
 			}
 		}
+
 		return true
 	}
 }

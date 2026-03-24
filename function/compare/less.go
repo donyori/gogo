@@ -39,6 +39,7 @@ func (lf LessFunc[T]) Not() LessFunc[T] {
 	if lf == nil {
 		return nil
 	}
+
 	return func(a, b T) bool {
 		return !lf(a, b)
 	}
@@ -51,6 +52,7 @@ func (lf LessFunc[T]) Reverse() LessFunc[T] {
 	if lf == nil {
 		return nil
 	}
+
 	return func(a, b T) bool {
 		return lf(b, a)
 	}
@@ -59,37 +61,68 @@ func (lf LessFunc[T]) Reverse() LessFunc[T] {
 // ToEqual returns an EqualFunc to test whether a == b.
 // The returned function reports true if and only if
 //
-//	!(less(a, b) || less(b, a))
+//	!lf(a, b) && !lf(b, a)
 //
 // ToEqual returns nil if this LessFunc is nil.
 func (lf LessFunc[T]) ToEqual() EqualFunc[T] {
 	if lf == nil {
 		return nil
 	}
+
 	return func(a, b T) bool {
-		return !(lf(a, b) || lf(b, a))
+		return !lf(a, b) && !lf(b, a)
 	}
 }
 
-// ToCompare returns a CompareFunc that returns
+// ToCompare returns a Func that returns
 //
 //	-1 if less(a, b),
 //	+1 if less(b, a),
 //	 0 otherwise.
 //
 // ToCompare returns nil if this LessFunc is nil.
-func (lf LessFunc[T]) ToCompare() CompareFunc[T] {
+func (lf LessFunc[T]) ToCompare() Func[T] {
 	if lf == nil {
 		return nil
 	}
+
 	return func(a, b T) int {
 		if lf(a, b) {
 			return -1
 		} else if lf(b, a) {
 			return 1
 		}
+
 		return 0
 	}
+}
+
+// LessToNot is equivalent to
+//
+//	lf.Not()
+func LessToNot[T any](lf LessFunc[T]) LessFunc[T] {
+	return lf.Not()
+}
+
+// LessToReverse is equivalent to
+//
+//	lf.Reverse()
+func LessToReverse[T any](lf LessFunc[T]) LessFunc[T] {
+	return lf.Reverse()
+}
+
+// LessToEqual is equivalent to
+//
+//	lf.ToEqual()
+func LessToEqual[T any](lf LessFunc[T]) EqualFunc[T] {
+	return lf.ToEqual()
+}
+
+// LessToCompare is equivalent to
+//
+//	lf.ToCompare()
+func LessToCompare[T any](lf LessFunc[T]) Func[T] {
+	return lf.ToCompare()
 }
 
 // OrderedLess is a generic function to test whether a < b.

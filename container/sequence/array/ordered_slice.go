@@ -28,23 +28,23 @@ import (
 
 // sliceOrderedDynamicArray combines SliceDynamicArray,
 // github.com/donyori/gogo/function/compare.LessFunc,
-// and github.com/donyori/gogo/function/compare.CompareFunc.
+// and github.com/donyori/gogo/function/compare.Func.
 //
 // It implements the interface OrderedDynamicArray.
 type sliceOrderedDynamicArray[Item any] struct {
 	*SliceDynamicArray[Item]
 	lessFn compare.LessFunc[Item]
-	cmpFn  compare.CompareFunc[Item]
+	cmpFn  compare.Func[Item]
 }
 
 var _ OrderedDynamicArray[any] = (*sliceOrderedDynamicArray[any])(nil)
 
 // WrapSlice wraps a pointer to a Go slice with
 // github.com/donyori/gogo/function/compare.LessFunc and
-// github.com/donyori/gogo/function/compare.CompareFunc
+// github.com/donyori/gogo/function/compare.Func
 // to an OrderedDynamicArray.
 //
-// The specified LessFunc and CompareFunc must be consistent,
+// The specified LessFunc and Func must be consistent,
 // and describe a strict weak ordering.
 // See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
 // for details.
@@ -61,14 +61,14 @@ var _ OrderedDynamicArray[any] = (*sliceOrderedDynamicArray[any])(nil)
 // If the slice pointer is nil,
 // WrapSlice creates an empty slice and uses the pointer to it.
 //
-// If one of the LessFunc and CompareFunc is nil,
+// If one of the LessFunc and Func is nil,
 // WrapSlice generates it from the other
-// (via LessFunc.ToCompare and CompareFunc.ToLess).
+// (via LessFunc.ToCompare and Func.ToLess).
 // If both of them are nil, WrapSlice panics.
 func WrapSlice[Item any](
 	slicePtr *[]Item,
 	lessFn compare.LessFunc[Item],
-	cmpFn compare.CompareFunc[Item],
+	cmpFn compare.Func[Item],
 ) OrderedDynamicArray[Item] {
 	if lessFn == nil {
 		if cmpFn == nil {
@@ -104,7 +104,7 @@ func WrapSlice[Item any](
 func WrapStrictWeakOrderedSlice[Item constraints.StrictWeakOrdered](
 	slicePtr *[]Item,
 ) OrderedDynamicArray[Item] {
-	return WrapSlice(slicePtr, compare.OrderedLess, compare.OrderedCompare)
+	return WrapSlice(slicePtr, compare.OrderedLess, compare.Ordered)
 }
 
 // WrapFloatSlice wraps a pointer to Go slice to an OrderedDynamicArray.
@@ -124,7 +124,7 @@ func WrapStrictWeakOrderedSlice[Item constraints.StrictWeakOrdered](
 func WrapFloatSlice[Item constraints.Float](
 	slicePtr *[]Item,
 ) OrderedDynamicArray[Item] {
-	return WrapSlice(slicePtr, compare.FloatLess, compare.FloatCompare)
+	return WrapSlice(slicePtr, compare.FloatLess, compare.Float)
 }
 
 func (soda *sliceOrderedDynamicArray[Item]) Min() Item {
