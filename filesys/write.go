@@ -254,8 +254,11 @@ type writer struct {
 // and it is also closed by this function when encountering an error.
 //
 // This function panics if file is nil.
-func Write(file WritableFile, opts *WriteOptions, closeFile bool) (
-	w Writer, err error) {
+func Write(
+	file WritableFile,
+	opts *WriteOptions,
+	closeFile bool,
+) (w Writer, err error) {
 	if file == nil {
 		panic(errors.AutoMsg("file is nil"))
 	}
@@ -444,7 +447,7 @@ func (fw *writer) Write(p []byte) (n int, err error) {
 func (fw *writer) MustWrite(p []byte) (n int) {
 	n, err := fw.Write(p)
 	if err != nil {
-		panic(inout.NewWritePanic(errors.AutoWrap(err)))
+		panic(inout.NewWritePanicError(errors.AutoWrap(err)))
 	}
 	return
 }
@@ -459,7 +462,7 @@ func (fw *writer) WriteByte(c byte) error {
 func (fw *writer) MustWriteByte(c byte) {
 	err := fw.WriteByte(c)
 	if err != nil {
-		panic(inout.NewWritePanic(errors.AutoWrap(err)))
+		panic(inout.NewWritePanicError(errors.AutoWrap(err)))
 	}
 }
 
@@ -474,7 +477,7 @@ func (fw *writer) WriteRune(r rune) (size int, err error) {
 func (fw *writer) MustWriteRune(r rune) (size int) {
 	size, err := fw.WriteRune(r)
 	if err != nil {
-		panic(inout.NewWritePanic(errors.AutoWrap(err)))
+		panic(inout.NewWritePanicError(errors.AutoWrap(err)))
 	}
 	return
 }
@@ -490,7 +493,7 @@ func (fw *writer) WriteString(s string) (n int, err error) {
 func (fw *writer) MustWriteString(s string) (n int) {
 	n, err := fw.WriteString(s)
 	if err != nil {
-		panic(inout.NewWritePanic(errors.AutoWrap(err)))
+		panic(inout.NewWritePanicError(errors.AutoWrap(err)))
 	}
 	return
 }
@@ -514,7 +517,7 @@ func (fw *writer) Printf(format string, arg ...any) (n int, err error) {
 func (fw *writer) MustPrintf(format string, arg ...any) (n int) {
 	n, err := fw.Printf(format, arg...)
 	if err != nil {
-		panic(inout.NewWritePanic(errors.AutoWrap(err)))
+		panic(inout.NewWritePanicError(errors.AutoWrap(err)))
 	}
 	return
 }
@@ -530,7 +533,7 @@ func (fw *writer) Print(arg ...any) (n int, err error) {
 func (fw *writer) MustPrint(arg ...any) (n int) {
 	n, err := fw.Print(arg...)
 	if err != nil {
-		panic(inout.NewWritePanic(errors.AutoWrap(err)))
+		panic(inout.NewWritePanicError(errors.AutoWrap(err)))
 	}
 	return
 }
@@ -546,7 +549,7 @@ func (fw *writer) Println(arg ...any) (n int, err error) {
 func (fw *writer) MustPrintln(arg ...any) (n int) {
 	n, err := fw.Println(arg...)
 	if err != nil {
-		panic(inout.NewWritePanic(errors.AutoWrap(err)))
+		panic(inout.NewWritePanicError(errors.AutoWrap(err)))
 	}
 	return
 }

@@ -30,6 +30,8 @@ import (
 )
 
 func TestUint64EncodedLenFunctions(t *testing.T) {
+	t.Parallel()
+
 	fns := []struct {
 		name string
 		f    func(u uint64) int
@@ -40,8 +42,12 @@ func TestUint64EncodedLenFunctions(t *testing.T) {
 
 	for _, fn := range fns {
 		t.Run(fn.name, func(t *testing.T) {
+			t.Parallel()
+
 			for i, u := range uint64s {
 				t.Run(fmt.Sprintf("u=%#X", u), func(t *testing.T) {
+					t.Parallel()
+
 					n := vlq.Uint64EncodedLen(u)
 					if n != len(encodedUint64s[i]) {
 						t.Errorf("got %d; want %d", n, len(encodedUint64s[i]))
@@ -75,10 +81,15 @@ func BenchmarkUint64EncodedLenFunctions(b *testing.B) {
 }
 
 func TestEncodeUint64(t *testing.T) {
+	t.Parallel()
+
 	for i, u := range uint64s {
 		t.Run(fmt.Sprintf("u=%#X", u), func(t *testing.T) {
+			t.Parallel()
+
 			dst := make([]byte, 10)
 			n := vlq.EncodeUint64(dst, u)
+
 			if !bytes.Equal(dst[:n], encodedUint64s[i]) {
 				t.Errorf("got %#X; want %#X", dst[:n], encodedUint64s[i])
 			}
@@ -87,6 +98,8 @@ func TestEncodeUint64(t *testing.T) {
 }
 
 func TestAppendEncodeUint64(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name string
 		p    []byte
@@ -97,11 +110,16 @@ func TestAppendEncodeUint64(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			for i, u := range uint64s {
 				t.Run(fmt.Sprintf("u=%#X", u), func(t *testing.T) {
+					t.Parallel()
+
 					dst := slices.Clone(tc.p)
 					want := append(slices.Clone(tc.p), encodedUint64s[i]...)
 					got := vlq.AppendEncodeUint64(dst, u)
+
 					if !bytes.Equal(got, want) {
 						t.Errorf("got %#X; want %#X", got, want)
 					}
@@ -112,10 +130,15 @@ func TestAppendEncodeUint64(t *testing.T) {
 }
 
 func TestInt64EncodedLen(t *testing.T) {
+	t.Parallel()
+
 	for i, u := range uint64s {
 		x := uintconv.ToInt64Zigzag(u)
 		t.Run(fmt.Sprintf("i=%#X", x), func(t *testing.T) {
-			if n := vlq.Int64EncodedLen(x); n != len(encodedUint64s[i]) {
+			t.Parallel()
+
+			n := vlq.Int64EncodedLen(x)
+			if n != len(encodedUint64s[i]) {
 				t.Errorf("got %d; want %d", n, len(encodedUint64s[i]))
 			}
 		})
@@ -123,11 +146,16 @@ func TestInt64EncodedLen(t *testing.T) {
 }
 
 func TestEncodeInt64(t *testing.T) {
+	t.Parallel()
+
 	for i, u := range uint64s {
 		x := uintconv.ToInt64Zigzag(u)
 		t.Run(fmt.Sprintf("i=%#X", x), func(t *testing.T) {
+			t.Parallel()
+
 			dst := make([]byte, 10)
 			n := vlq.EncodeInt64(dst, x)
+
 			if !bytes.Equal(dst[:n], encodedUint64s[i]) {
 				t.Errorf("got %#X; want %#X", dst[:n], encodedUint64s[i])
 			}
@@ -136,6 +164,8 @@ func TestEncodeInt64(t *testing.T) {
 }
 
 func TestAppendEncodeInt64(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name string
 		p    []byte
@@ -146,12 +176,17 @@ func TestAppendEncodeInt64(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			for i, u := range uint64s {
 				x := uintconv.ToInt64Zigzag(u)
 				t.Run(fmt.Sprintf("i=%#X", x), func(t *testing.T) {
+					t.Parallel()
+
 					dst := slices.Clone(tc.p)
 					want := append(slices.Clone(tc.p), encodedUint64s[i]...)
 					got := vlq.AppendEncodeInt64(dst, x)
+
 					if !bytes.Equal(got, want) {
 						t.Errorf("got %#X; want %#X", got, want)
 					}
@@ -162,11 +197,15 @@ func TestAppendEncodeInt64(t *testing.T) {
 }
 
 func TestFloat64EncodedLen(t *testing.T) {
+	t.Parallel()
+
 	for i, u := range uint64s {
 		f := uintconv.ToFloat64ByteReversal(u)
 		t.Run(
 			fmt.Sprintf("f=%v(bits=%#016X)", f, math.Float64bits(f)),
 			func(t *testing.T) {
+				t.Parallel()
+
 				n := vlq.Float64EncodedLen(f)
 				if n != len(encodedUint64s[i]) {
 					t.Errorf("got %d; want %d", n, len(encodedUint64s[i]))
@@ -177,13 +216,18 @@ func TestFloat64EncodedLen(t *testing.T) {
 }
 
 func TestEncodeFloat64(t *testing.T) {
+	t.Parallel()
+
 	for i, u := range uint64s {
 		f := uintconv.ToFloat64ByteReversal(u)
 		t.Run(
 			fmt.Sprintf("f=%v(bits=%#016X)", f, math.Float64bits(f)),
 			func(t *testing.T) {
+				t.Parallel()
+
 				dst := make([]byte, 10)
 				n := vlq.EncodeFloat64(dst, f)
+
 				if !bytes.Equal(dst[:n], encodedUint64s[i]) {
 					t.Errorf("got %#X; want %#X", dst[:n], encodedUint64s[i])
 				}
@@ -193,6 +237,8 @@ func TestEncodeFloat64(t *testing.T) {
 }
 
 func TestAppendEncodeFloat64(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name string
 		p    []byte
@@ -203,14 +249,19 @@ func TestAppendEncodeFloat64(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			for i, u := range uint64s {
 				f := uintconv.ToFloat64ByteReversal(u)
 				t.Run(
 					fmt.Sprintf("f=%v(bits=%#016X)", f, math.Float64bits(f)),
 					func(t *testing.T) {
+						t.Parallel()
+
 						dst := slices.Clone(tc.p)
 						want := append(slices.Clone(tc.p), encodedUint64s[i]...)
 						got := vlq.AppendEncodeFloat64(dst, f)
+
 						if !bytes.Equal(got, want) {
 							t.Errorf("got %#X; want %#X", got, want)
 						}
@@ -241,5 +292,6 @@ func uint64EncodedLenBinarySearch(u uint64) int {
 			return mid + 2
 		}
 	}
+
 	return high + 1
 }

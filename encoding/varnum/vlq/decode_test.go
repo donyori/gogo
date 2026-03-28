@@ -29,22 +29,34 @@ import (
 )
 
 func TestDecodeUint64(t *testing.T) {
+	t.Parallel()
+
 	for i, src := range encodedUint64s {
 		t.Run(fmt.Sprintf("src=%#X", src), func(t *testing.T) {
+			t.Parallel()
+
 			u, n, err := vlq.DecodeUint64(src)
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			if u != uint64s[i] {
 				t.Fatalf("got %#X; want %#X", u, uint64s[i])
 			}
+
 			if wantN := vlq.Uint64EncodedLen(u); n != wantN {
 				t.Errorf("got n %d; want %d", n, wantN)
 			}
 		})
 	}
+}
+
+func TestDecodeUint64_IncompleteSources(t *testing.T) {
+	t.Parallel()
+
 	for _, src := range incompleteSrcs {
 		var name string
+
 		if len(src) == 0 {
 			if src == nil {
 				name = "src=<nil>(Incomplete)"
@@ -54,22 +66,34 @@ func TestDecodeUint64(t *testing.T) {
 		} else {
 			name = fmt.Sprintf("src=%#X(Incomplete)", src)
 		}
+
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			u, n, err := vlq.DecodeUint64(src)
 			if !errors.Is(err, vlq.ErrSrcIncomplete) {
 				t.Fatalf("got %#X, %v", u, err)
 			}
+
 			if n != 0 {
 				t.Errorf("got n %d; want 0", n)
 			}
 		})
 	}
+}
+
+func TestDecodeUint64_TooLargeSources(t *testing.T) {
+	t.Parallel()
+
 	for _, src := range tooLargeSrcs {
 		t.Run(fmt.Sprintf("src=%#X(TooLarge)", src), func(t *testing.T) {
+			t.Parallel()
+
 			u, n, err := vlq.DecodeUint64(src)
 			if !errors.Is(err, vlq.ErrSrcTooLarge) {
 				t.Fatalf("got %#X, %v", u, err)
 			}
+
 			if n != 0 {
 				t.Errorf("got n %d; want 0", n)
 			}
@@ -78,15 +102,21 @@ func TestDecodeUint64(t *testing.T) {
 }
 
 func TestDecodeInt64(t *testing.T) {
+	t.Parallel()
+
 	for i, src := range encodedUint64s {
 		t.Run(fmt.Sprintf("src=%#X", src), func(t *testing.T) {
+			t.Parallel()
+
 			x, n, err := vlq.DecodeInt64(src)
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			if want := uintconv.ToInt64Zigzag(uint64s[i]); x != want {
 				t.Fatalf("got %#X; want %#X", x, want)
 			}
+
 			if wantN := vlq.Int64EncodedLen(x); n != wantN {
 				t.Errorf("got n %d; want %d", n, wantN)
 			}
@@ -95,12 +125,17 @@ func TestDecodeInt64(t *testing.T) {
 }
 
 func TestDecodeFloat64(t *testing.T) {
+	t.Parallel()
+
 	for i, src := range encodedUint64s {
 		t.Run(fmt.Sprintf("src=%#X", src), func(t *testing.T) {
+			t.Parallel()
+
 			f, n, err := vlq.DecodeFloat64(src)
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			want := uintconv.ToFloat64ByteReversal(uint64s[i])
 			if math.IsNaN(want) {
 				if !math.IsNaN(f) {
@@ -116,6 +151,7 @@ func TestDecodeFloat64(t *testing.T) {
 					math.Float64bits(want),
 				)
 			}
+
 			if wantN := vlq.Float64EncodedLen(f); n != wantN {
 				t.Errorf("got n %d; want %d", n, wantN)
 			}

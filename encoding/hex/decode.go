@@ -34,5 +34,6 @@ func DecodedLen[Int constraints.Integer](x Int) Int {
 	} else if x&1 != 0 {
 		panic(errors.AutoMsg(fmt.Sprintf("x (%d) is odd", x)))
 	}
+
 	return x >> 1
 }

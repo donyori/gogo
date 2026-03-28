@@ -35,19 +35,24 @@ import (
 // function EncodeInt64 with package fmt.
 func encodeInt64Baseline(dst []byte, x int64, upper bool, digits int) int {
 	layout := "%"
+
 	if digits > 0 {
 		width := digits
 		if x < 0 {
 			width++ // increase one for the negative sign
 		}
+
 		layout += "0" + strconv.Itoa(width)
 	}
+
 	if upper {
 		layout += "X"
 	} else {
 		layout += "x"
 	}
+
 	w := bytes.NewBuffer(dst[:0])
+
 	n, err := fmt.Fprintf(w, layout, x)
 	if err != nil {
 		panic(errors.AutoWrap(err))
@@ -55,6 +60,7 @@ func encodeInt64Baseline(dst []byte, x int64, upper bool, digits int) int {
 		panic(errors.AutoMsg(fmt.Sprintf(
 			"dst is too small, len(dst): %d, need: %d", len(dst), n)))
 	}
+
 	return n
 }
 
@@ -62,38 +68,50 @@ func encodeInt64Baseline(dst []byte, x int64, upper bool, digits int) int {
 // function EncodeInt64ToString with package fmt.
 func encodeInt64ToStringBaseline(x int64, upper bool, digits int) string {
 	layout := "%"
+
 	if digits > 0 {
 		width := digits
 		if x < 0 {
 			width++ // increase one for the negative sign
 		}
+
 		layout += "0" + strconv.Itoa(width)
 	}
+
 	if upper {
 		layout += "X"
 	} else {
 		layout += "x"
 	}
+
 	return fmt.Sprintf(layout, x)
 }
 
 // encodeInt64ToBaseline implements all requirements of
 // function EncodeInt64To with package fmt.
-func encodeInt64ToBaseline(w io.Writer, x int64, upper bool, digits int) (
-	written int, err error) {
+func encodeInt64ToBaseline(
+	w io.Writer,
+	x int64,
+	upper bool,
+	digits int,
+) (written int, err error) {
 	layout := "%"
+
 	if digits > 0 {
 		width := digits
 		if x < 0 {
 			width++ // increase one for the negative sign
 		}
+
 		layout += "0" + strconv.Itoa(width)
 	}
+
 	if upper {
 		layout += "X"
 	} else {
 		layout += "x"
 	}
+
 	return fmt.Fprintf(w, layout, x)
 }
 
@@ -109,16 +127,21 @@ var testEncodeIntegerDigits = [...]int{
 }
 
 func TestEncodeInt64(t *testing.T) {
+	t.Parallel()
+
 	for _, x := range testEncodeInt64Xs {
 		for _, upper := range []bool{false, true} {
 			for _, digits := range testEncodeIntegerDigits {
 				t.Run(
 					fmt.Sprintf("x=%d&upper=%t&digits=%d", x, upper, digits),
 					func(t *testing.T) {
+						t.Parallel()
+
 						length := hex.EncodeInt64DstLen(digits)
 						dst1, dst2 := make([]byte, length), make([]byte, length)
 						n1 := hex.EncodeInt64(dst1, x, upper, digits)
 						n2 := encodeInt64Baseline(dst2, x, upper, digits)
+
 						if n1 != n2 || !bytes.Equal(dst1[:n1], dst2[:n2]) {
 							t.Errorf("got (%d) %s; want (%d) %s",
 								n1, dst1[:n1], n2, dst2[:n2])
@@ -131,14 +154,19 @@ func TestEncodeInt64(t *testing.T) {
 }
 
 func TestEncodeInt64ToString(t *testing.T) {
+	t.Parallel()
+
 	for _, x := range testEncodeInt64Xs {
 		for _, upper := range []bool{false, true} {
 			for _, digits := range testEncodeIntegerDigits {
 				t.Run(
 					fmt.Sprintf("x=%d&upper=%t&digits=%d", x, upper, digits),
 					func(t *testing.T) {
-						r := hex.EncodeInt64ToString(x, upper, digits)
+						t.Parallel()
+
 						want := encodeInt64ToStringBaseline(x, upper, digits)
+						r := hex.EncodeInt64ToString(x, upper, digits)
+
 						if r != want {
 							t.Errorf("got %s; want %s", r, want)
 						}
@@ -150,30 +178,43 @@ func TestEncodeInt64ToString(t *testing.T) {
 }
 
 func TestEncodeInt64To(t *testing.T) {
-	var b1, b2 strings.Builder
+	t.Parallel()
+
 	for _, x := range testEncodeInt64Xs {
 		for _, upper := range []bool{false, true} {
 			for _, digits := range testEncodeIntegerDigits {
 				t.Run(
 					fmt.Sprintf("x=%d&upper=%t&digits=%d", x, upper, digits),
 					func(t *testing.T) {
-						b1.Reset()
-						b2.Reset()
-						n1, err1 := hex.EncodeInt64To(&b1, x, upper, digits)
-						if err1 != nil {
-							t.Fatalf("written %d - %v", n1, err1)
-						}
-						n2, err2 := encodeInt64ToBaseline(&b2, x, upper, digits)
-						if err2 != nil {
-							t.Fatalf("baseline, written %d - %v", n2, err2)
-						}
-						if n1 != n2 || b1.String() != b2.String() {
-							t.Errorf("got (%d) %s; want (%d) %s",
-								n1, b1.String(), n2, b2.String())
-						}
+						t.Parallel()
+
+						testEncodeInt64To(t, x, upper, digits)
 					},
 				)
 			}
 		}
+	}
+}
+
+// testEncodeInt64To is the common process of the subtests of TestEncodeInt64To.
+func testEncodeInt64To(t *testing.T, x int64, upper bool, digits int) {
+	t.Helper()
+
+	var b1, b2 strings.Builder
+
+	n1, err1 := hex.EncodeInt64To(&b1, x, upper, digits)
+	if err1 != nil {
+		t.Errorf("written %d - %v", n1, err1)
+		return
+	}
+
+	n2, err2 := encodeInt64ToBaseline(&b2, x, upper, digits)
+	if err2 != nil {
+		t.Errorf("baseline, written %d - %v", n2, err2)
+		return
+	}
+
+	if n1 != n2 || b1.String() != b2.String() {
+		t.Errorf("got (%d) %s; want (%d) %s", n1, b1.String(), n2, b2.String())
 	}
 }

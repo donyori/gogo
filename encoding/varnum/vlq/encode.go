@@ -48,6 +48,8 @@ var minUint64s = [...]uint64{
 //
 // It is at most 10.
 func Uint64EncodedLen(u uint64) int {
+	const MaxEncodedLength int = 10
+
 	// It is more efficient to simply test items one by one
 	// since the size of minUint64s is very small.
 	for i := range minUint64s {
@@ -55,7 +57,8 @@ func Uint64EncodedLen(u uint64) int {
 			return i + 1
 		}
 	}
-	return 10
+
+	return MaxEncodedLength
 }
 
 // EncodeUint64 encodes the 64-bit unsigned integer u in variable-length
@@ -71,6 +74,7 @@ func EncodeUint64(dst []byte, u uint64) int {
 		panic(errors.AutoMsg(fmt.Sprintf(
 			"dst is too small, length: %d, required: %d", len(dst), reqLen)))
 	}
+
 	return encodeUint64(dst, u)
 }
 
@@ -81,6 +85,7 @@ func AppendEncodeUint64(dst []byte, u uint64) []byte {
 	n := Uint64EncodedLen(u)
 	dst = slices.Grow(dst, n)
 	encodeUint64(dst[len(dst):][:n], u)
+
 	return dst[:len(dst)+n]
 }
 
@@ -106,6 +111,7 @@ func EncodeInt64(dst []byte, i int64) int {
 		panic(errors.AutoMsg(fmt.Sprintf(
 			"dst is too small, length: %d, required: %d", len(dst), reqLen)))
 	}
+
 	return encodeUint64(dst, u)
 }
 
@@ -141,6 +147,7 @@ func EncodeFloat64(dst []byte, f float64) int {
 		panic(errors.AutoMsg(fmt.Sprintf(
 			"dst is too small, length: %d, required: %d", len(dst), reqLen)))
 	}
+
 	return encodeUint64(dst, u)
 }
 
@@ -158,7 +165,7 @@ const bufferLen int = 10
 
 // bufferPool is a set of temporary buffers used during encoding.
 //
-// The type of the buffers is *[bufferLen]byte.
+// The type of the buffers is [*[bufferLen]byte].
 //
 // Each buffer is large enough to hold the encoding result of
 // a 64-bit unsigned integer.
@@ -173,21 +180,35 @@ var bufferPool = sync.Pool{
 //
 // Caller should guarantee that len(dst) >= Uint64EncodedLen(u).
 func encodeUint64(dst []byte, u uint64) int {
-	if u < 0x80 {
+	const (
+		NumByteNumberBit uint64 = 7
+		ByteUpperBound   uint64 = 1 << NumByteNumberBit
+		MaxByte          uint64 = ByteUpperBound - 1
+	)
+
+	if u < ByteUpperBound {
 		// If u does not exceed 7 bits, simply write itself to dst and return 1.
 		dst[0] = byte(u)
 		return 1
 	}
+
 	buf := bufferPool.Get().(*[bufferLen]byte)
 	defer bufferPool.Put(buf)
-	buf[0] = byte(u & 0x7F)
-	t, n := u>>7, 1
+
+	buf[0] = byte(u & MaxByte)
+
+	t, n := u>>NumByteNumberBit, 1
 	for t != 0 {
 		t-- // remove the prepending redundancy in typical VLQ
-		buf[n], n, t = byte(t&0x7F|0x80), n+1, t>>7
+
+		buf[n] = byte(t&MaxByte | ByteUpperBound) //gosec:disable G115 -- these integers are within 8 bits
+
+		n, t = n+1, t>>NumByteNumberBit
 	}
+
 	for i := range n {
 		dst[i] = buf[n-1-i]
 	}
+
 	return n
 }

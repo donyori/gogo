@@ -23,10 +23,11 @@ package uintconv
 //
 // FromInt64Zigzag(ToInt64Zigzag(x)) == x.
 func FromInt64Zigzag(i int64) uint64 {
-	u := uint64(i) << 1
+	u := uint64(i) << 1 //gosec:disable G115 -- integer overflow does not matter here
 	if i < 0 {
 		u = ^u
 	}
+
 	return u
 }
 
@@ -39,5 +40,6 @@ func ToInt64Zigzag(u uint64) int64 {
 	if u&1 != 0 {
 		i = ^i
 	}
+
 	return i
 }

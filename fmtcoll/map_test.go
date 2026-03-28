@@ -240,7 +240,7 @@ func getTestCasesForFormatMapToString(
 	dataList []map[string]*int,
 	commonFormatList []fmtcoll.CommonFormat,
 ) []mapTestCase {
-	const NilItemStr = "<nilptr>"
+	const NilPointerStr = "<nilptr>"
 
 	formatKeyFn := fmtcoll.FprintfToFormatFunc[string]("%q")
 	formatValueFn := func(w io.Writer, x *int) error {
@@ -248,9 +248,9 @@ func getTestCasesForFormatMapToString(
 		if x != nil {
 			_, err = fmt.Fprintf(w, "%d", *x)
 		} else if sw, ok := w.(io.StringWriter); ok {
-			_, err = sw.WriteString(NilItemStr)
+			_, err = sw.WriteString(NilPointerStr)
 		} else {
-			_, err = w.Write([]byte(NilItemStr))
+			_, err = w.Write([]byte(NilPointerStr))
 		}
 
 		return err

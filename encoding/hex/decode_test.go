@@ -28,18 +28,27 @@ import (
 )
 
 func TestDecodedLen(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range testEncodeCases {
 		if tc.upper { // only use the lower cases to avoid redundant sources
 			continue
 		}
+
 		t.Run("dst="+tc.dstName, func(t *testing.T) {
+			t.Parallel()
+
 			t.Run("type=int", func(t *testing.T) {
+				t.Parallel()
+
 				n := hex.DecodedLen(len(tc.dstStr))
 				if n != len(tc.srcStr) {
 					t.Errorf("got %d; want %d", n, len(tc.srcStr))
 				}
 			})
 			t.Run("type=int64", func(t *testing.T) {
+				t.Parallel()
+
 				n := hex.DecodedLen(int64(len(tc.dstStr)))
 				if n != int64(len(tc.srcStr)) {
 					t.Errorf("got %d; want %d", n, len(tc.srcStr))
@@ -50,10 +59,16 @@ func TestDecodedLen(t *testing.T) {
 }
 
 func TestDecodedLen_Negative(t *testing.T) {
+	t.Parallel()
+
 	t.Run("type=int", func(t *testing.T) {
+		t.Parallel()
+
 		testDecodedLenNegative[int](t)
 	})
 	t.Run("type=int64", func(t *testing.T) {
+		t.Parallel()
+
 		testDecodedLenNegative[int64](t)
 	})
 }
@@ -61,7 +76,10 @@ func TestDecodedLen_Negative(t *testing.T) {
 // testDecodedLenNegative is the common process of
 // the subtests of TestDecodedLen_Negative.
 func testDecodedLenNegative[Int constraints.SignedInteger](t *testing.T) {
+	t.Helper()
+
 	var x Int = -1
+
 	defer func() {
 		if e := recover(); e != nil {
 			msg, ok := e.(string)
@@ -71,21 +89,32 @@ func testDecodedLenNegative[Int constraints.SignedInteger](t *testing.T) {
 			}
 		}
 	}()
+
 	got := hex.DecodedLen(x) // want panic here
 	t.Errorf("want panic but got %d (%#[1]x)", got)
 }
 
 func TestDecodedLen_Odd(t *testing.T) {
+	t.Parallel()
+
 	t.Run("type=int", func(t *testing.T) {
+		t.Parallel()
+
 		testDecodedLenOdd[int](t)
 	})
 	t.Run("type=uint", func(t *testing.T) {
+		t.Parallel()
+
 		testDecodedLenOdd[uint](t)
 	})
 	t.Run("type=int64", func(t *testing.T) {
+		t.Parallel()
+
 		testDecodedLenOdd[int64](t)
 	})
 	t.Run("type=uint64", func(t *testing.T) {
+		t.Parallel()
+
 		testDecodedLenOdd[uint64](t)
 	})
 }
@@ -93,7 +122,10 @@ func TestDecodedLen_Odd(t *testing.T) {
 // testDecodedLenOdd is the common process of
 // the subtests of TestDecodedLen_Odd.
 func testDecodedLenOdd[Int constraints.Integer](t *testing.T) {
+	t.Helper()
+
 	var x Int = 3
+
 	defer func() {
 		if e := recover(); e != nil {
 			msg, ok := e.(string)
@@ -103,6 +135,7 @@ func testDecodedLenOdd[Int constraints.Integer](t *testing.T) {
 			}
 		}
 	}()
+
 	got := hex.DecodedLen(x) // want panic here
 	t.Errorf("want panic but got %d (%#[1]x)", got)
 }

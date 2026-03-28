@@ -41,9 +41,14 @@ var int64Uint64ZigzagPairs = []struct {
 }
 
 func TestFromInt64Zigzag(t *testing.T) {
+	t.Parallel()
+
 	for _, pair := range int64Uint64ZigzagPairs {
 		t.Run(fmt.Sprintf("i=%#X", pair.i), func(t *testing.T) {
-			if got := uintconv.FromInt64Zigzag(pair.i); got != pair.u {
+			t.Parallel()
+
+			got := uintconv.FromInt64Zigzag(pair.i)
+			if got != pair.u {
 				t.Errorf("got %#X; want %#X", got, pair.u)
 			}
 		})
@@ -51,9 +56,14 @@ func TestFromInt64Zigzag(t *testing.T) {
 }
 
 func TestToInt64Zigzag(t *testing.T) {
+	t.Parallel()
+
 	for _, pair := range int64Uint64ZigzagPairs {
 		t.Run(fmt.Sprintf("u=%#X", pair.u), func(t *testing.T) {
-			if got := uintconv.ToInt64Zigzag(pair.u); got != pair.i {
+			t.Parallel()
+
+			got := uintconv.ToInt64Zigzag(pair.u)
+			if got != pair.i {
 				t.Errorf("got %#X; want %#X", got, pair.i)
 			}
 		})

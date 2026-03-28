@@ -24,6 +24,9 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
+// nilErrorString is the string that represents a nil error.
+const nilErrorString = "<nil>"
+
 // ClosedError is an error indicating that a closable device is already closed.
 //
 // It records the device name and possible parent error.
@@ -58,12 +61,14 @@ func NewClosedError(deviceName string, parentErr error) *ClosedError {
 	if deviceName == "" {
 		deviceName = "closer"
 	}
+
 	if parentErr == nil {
 		parentErr = ErrClosed
 	} else if !errors.Is(parentErr, ErrClosed) {
 		panic(errors.AutoMsg("parentErr is neither nil nor an ErrClosed " +
 			"(errors.Is(parentErr, ErrClosed) returns false)"))
 	}
+
 	return &ClosedError{
 		device: deviceName,
 		parent: parentErr,
@@ -75,8 +80,9 @@ func NewClosedError(deviceName string, parentErr error) *ClosedError {
 // If ce is nil, it returns "<nil>".
 func (ce *ClosedError) DeviceName() string {
 	if ce == nil {
-		return "<nil>"
+		return nilErrorString
 	}
+
 	return ce.device
 }
 
@@ -85,15 +91,17 @@ func (ce *ClosedError) DeviceName() string {
 // If ce is nil, it returns "<nil>".
 func (ce *ClosedError) Error() string {
 	if ce == nil {
-		return "<nil>"
+		return nilErrorString
 	} else if ce.device == "" {
 		if ce.parent != nil {
 			// This should never happen, but will act as a safeguard for later.
 			panic(errors.AutoMsg(
 				"ClosedError has an empty device but a non-nil parent"))
 		}
+
 		return "closer is already closed (zero-value ClosedError)"
 	}
+
 	return ce.device + " is already closed"
 }
 
@@ -104,6 +112,7 @@ func (ce *ClosedError) Unwrap() error {
 	if ce == nil {
 		return nil
 	}
+
 	return ce.parent
 }
 
@@ -137,41 +146,43 @@ var ErrWriterClosed = errors.AutoWrapCustom(
 	nil,
 )
 
-// WritePanic is the error passed to the call to panic
+// WritePanicError is the error passed to the call to panic
 // in MustWrite methods and MustPrint methods.
 //
 // It records the error that caused the panic.
-type WritePanic struct {
+type WritePanicError struct {
 	// err is the error that caused the panic.
 	err error
 }
 
-// NewWritePanic creates a new WritePanic with
+// NewWritePanicError creates a new WritePanicError with
 // specified error that caused the panic.
-func NewWritePanic(causeErr error) *WritePanic {
-	return &WritePanic{err: causeErr}
+func NewWritePanicError(causeErr error) *WritePanicError {
+	return &WritePanicError{err: causeErr}
 }
 
 // Error reports the error message.
 //
 // If wp is nil, it returns "<nil>".
-func (wp *WritePanic) Error() string {
+func (wp *WritePanicError) Error() string {
 	if wp == nil {
-		return "<nil>"
+		return nilErrorString
 	} else if wp.err != nil {
 		if msg := wp.err.Error(); msg != "" {
 			return msg
 		}
 	}
+
 	return "<no error message>"
 }
 
 // Unwrap returns the error that caused this panic.
 //
 // If wp is nil, it returns nil.
-func (wp *WritePanic) Unwrap() error {
+func (wp *WritePanicError) Unwrap() error {
 	if wp == nil {
 		return nil
 	}
+
 	return wp.err
 }

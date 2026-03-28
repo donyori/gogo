@@ -28,7 +28,7 @@ type Writer interface {
 	// but panics when encountering an error.
 	//
 	// If it panics, the error value passed to the call to panic
-	// must be exactly of type *WritePanic.
+	// must be exactly of type *WritePanicError.
 	MustWrite(p []byte) (n int)
 }
 
@@ -40,7 +40,7 @@ type ByteWriter interface {
 	// but panics when encountering an error.
 	//
 	// If it panics, the error value passed to the call to panic
-	// must be exactly of type *WritePanic.
+	// must be exactly of type *WritePanicError.
 	MustWriteByte(c byte)
 }
 
@@ -54,7 +54,7 @@ type RuneWriter interface {
 	// MustWriteRune is like WriteRune but panics when encountering an error.
 	//
 	// If it panics, the error value passed to the call to panic
-	// must be exactly of type *WritePanic.
+	// must be exactly of type *WritePanicError.
 	MustWriteRune(r rune) (size int)
 }
 
@@ -66,6 +66,6 @@ type StringWriter interface {
 	// but panics when encountering an error.
 	//
 	// If it panics, the error value passed to the call to panic
-	// must be exactly of type *WritePanic.
+	// must be exactly of type *WritePanicError.
 	MustWriteString(s string) (n int)
 }

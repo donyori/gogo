@@ -33,6 +33,8 @@ import (
 )
 
 func TestBufferedReader_Basic(t *testing.T) {
+	t.Parallel()
+
 	const Content = `die Ruinenstadt ist immer noch schön
 ich warte lange Zeit auf deine Rückkehr
 in der Hand ein Vergissmeinnicht
@@ -54,14 +56,20 @@ singe ich ein Lied
 wenn die Jahreszeit des Vergissmeinnichts kommt,
 rufe ich dich
 `
+
 	br := inout.NewBufferedReader(strings.NewReader(Content))
-	if err := iotest.TestReader(br, []byte(Content)); err != nil {
+
+	err := iotest.TestReader(br, []byte(Content))
+	if err != nil {
 		t.Error(err)
 	}
 }
 
 func TestResettableBufferedReader_ConsumeByte(t *testing.T) {
+	t.Parallel()
+
 	const Target byte = 'a'
+
 	testCases := []struct {
 		content         string
 		n, wantConsumed int64
@@ -93,12 +101,16 @@ func TestResettableBufferedReader_ConsumeByte(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("content=%+q&n=%d", tc.content, tc.n),
 			func(t *testing.T) {
+				t.Parallel()
+
 				br := inout.NewBufferedReader(strings.NewReader(tc.content))
 				consumed, err := br.ConsumeByte(Target, tc.n)
+
 				if consumed != tc.wantConsumed {
 					t.Errorf("got consumed %d; want %d",
 						consumed, tc.wantConsumed)
 				}
+
 				if !errors.Is(err, tc.wantErr) {
 					t.Errorf("got err %v; want %v", err, tc.wantErr)
 				}
@@ -108,6 +120,8 @@ func TestResettableBufferedReader_ConsumeByte(t *testing.T) {
 }
 
 func TestResettableBufferedReader_ConsumeByteFunc(t *testing.T) {
+	t.Parallel()
+
 	f := func(c byte) bool {
 		return c >= 'a' && c <= 'z'
 	}
@@ -142,12 +156,16 @@ func TestResettableBufferedReader_ConsumeByteFunc(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("content=%+q&n=%d", tc.content, tc.n),
 			func(t *testing.T) {
+				t.Parallel()
+
 				br := inout.NewBufferedReader(strings.NewReader(tc.content))
 				consumed, err := br.ConsumeByteFunc(f, tc.n)
+
 				if consumed != tc.wantConsumed {
 					t.Errorf("got consumed %d; want %d",
 						consumed, tc.wantConsumed)
 				}
+
 				if !errors.Is(err, tc.wantErr) {
 					t.Errorf("got err %v; want %v", err, tc.wantErr)
 				}
@@ -157,7 +175,10 @@ func TestResettableBufferedReader_ConsumeByteFunc(t *testing.T) {
 }
 
 func TestResettableBufferedReader_ConsumeRune(t *testing.T) {
-	const Target rune = '对'
+	t.Parallel()
+
+	const Target rune = '\u5BF9'
+
 	testCases := []struct {
 		content         string
 		n, wantConsumed int64
@@ -168,33 +189,37 @@ func TestResettableBufferedReader_ConsumeRune(t *testing.T) {
 		{"", 1, 0, io.EOF},
 		{"", 2, 0, io.EOF},
 
-		{"对对对啊", 0, 0, nil},
-		{"对对对啊", -1, 3, nil},
-		{"对对对啊", 1, 1, nil},
-		{"对对对啊", 2, 2, nil},
-		{"对对对啊", 3, 3, nil},
-		{"对对对啊", 4, 3, nil},
-		{"对对对啊", 5, 3, nil},
+		{"\u5BF9\u5BF9\u5BF9\u554A", 0, 0, nil},
+		{"\u5BF9\u5BF9\u5BF9\u554A", -1, 3, nil},
+		{"\u5BF9\u5BF9\u5BF9\u554A", 1, 1, nil},
+		{"\u5BF9\u5BF9\u5BF9\u554A", 2, 2, nil},
+		{"\u5BF9\u5BF9\u5BF9\u554A", 3, 3, nil},
+		{"\u5BF9\u5BF9\u5BF9\u554A", 4, 3, nil},
+		{"\u5BF9\u5BF9\u5BF9\u554A", 5, 3, nil},
 
-		{"对对对", 0, 0, nil},
-		{"对对对", -1, 3, io.EOF},
-		{"对对对", 1, 1, nil},
-		{"对对对", 2, 2, nil},
-		{"对对对", 3, 3, nil},
-		{"对对对", 4, 3, io.EOF},
-		{"对对对", 5, 3, io.EOF},
+		{"\u5BF9\u5BF9\u5BF9", 0, 0, nil},
+		{"\u5BF9\u5BF9\u5BF9", -1, 3, io.EOF},
+		{"\u5BF9\u5BF9\u5BF9", 1, 1, nil},
+		{"\u5BF9\u5BF9\u5BF9", 2, 2, nil},
+		{"\u5BF9\u5BF9\u5BF9", 3, 3, nil},
+		{"\u5BF9\u5BF9\u5BF9", 4, 3, io.EOF},
+		{"\u5BF9\u5BF9\u5BF9", 5, 3, io.EOF},
 	}
 
 	for _, tc := range testCases {
 		t.Run(
 			fmt.Sprintf("content=%+q&n=%d", tc.content, tc.n),
 			func(t *testing.T) {
+				t.Parallel()
+
 				br := inout.NewBufferedReader(strings.NewReader(tc.content))
 				consumed, err := br.ConsumeRune(Target, tc.n)
+
 				if consumed != tc.wantConsumed {
 					t.Errorf("got consumed %d; want %d",
 						consumed, tc.wantConsumed)
 				}
+
 				if !errors.Is(err, tc.wantErr) {
 					t.Errorf("got err %v; want %v", err, tc.wantErr)
 				}
@@ -204,11 +229,13 @@ func TestResettableBufferedReader_ConsumeRune(t *testing.T) {
 }
 
 func TestResettableBufferedReader_ConsumeRune_InvalidRune(t *testing.T) {
-	bad1 := "啊"[1:2]
-	bad2 := "对"[1:]
-	s1 := bad1 + "啊"
-	s2 := bad2 + "对"
-	s3 := bad1 + bad2 + "对"
+	t.Parallel()
+
+	bad1 := "\u554A"[1:2]
+	bad2 := "\u5BF9"[1:]
+	s1 := bad1 + "\u554A"
+	s2 := bad2 + "\u5BF9"
+	s3 := bad1 + bad2 + "\u5BF9"
 	s4 := bad1 + bad2
 	testCases := []struct {
 		content         string
@@ -249,12 +276,16 @@ func TestResettableBufferedReader_ConsumeRune_InvalidRune(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("content=%+q&n=%d", tc.content, tc.n),
 			func(t *testing.T) {
+				t.Parallel()
+
 				br := inout.NewBufferedReader(strings.NewReader(tc.content))
 				consumed, err := br.ConsumeRune(unicode.ReplacementChar, tc.n)
+
 				if consumed != tc.wantConsumed {
 					t.Errorf("got consumed %d; want %d",
 						consumed, tc.wantConsumed)
 				}
+
 				if !errors.Is(err, tc.wantErr) {
 					t.Errorf("got err %v; want %v", err, tc.wantErr)
 				}
@@ -264,6 +295,8 @@ func TestResettableBufferedReader_ConsumeRune_InvalidRune(t *testing.T) {
 }
 
 func TestResettableBufferedReader_ConsumeRuneFunc(t *testing.T) {
+	t.Parallel()
+
 	f := func(r rune, size int) bool {
 		return r >= 'a' && r <= 'z' || size > 1
 	}
@@ -277,33 +310,37 @@ func TestResettableBufferedReader_ConsumeRuneFunc(t *testing.T) {
 		{"", 1, 0, io.EOF},
 		{"", 2, 0, io.EOF},
 
-		{"o夏天!", 0, 0, nil},
-		{"o夏天!", -1, 3, nil},
-		{"o夏天!", 1, 1, nil},
-		{"o夏天!", 2, 2, nil},
-		{"o夏天!", 3, 3, nil},
-		{"o夏天!", 4, 3, nil},
-		{"o夏天!", 5, 3, nil},
+		{"o\u590F\u5929!", 0, 0, nil},
+		{"o\u590F\u5929!", -1, 3, nil},
+		{"o\u590F\u5929!", 1, 1, nil},
+		{"o\u590F\u5929!", 2, 2, nil},
+		{"o\u590F\u5929!", 3, 3, nil},
+		{"o\u590F\u5929!", 4, 3, nil},
+		{"o\u590F\u5929!", 5, 3, nil},
 
-		{"o夏天", 0, 0, nil},
-		{"o夏天", -1, 3, io.EOF},
-		{"o夏天", 1, 1, nil},
-		{"o夏天", 2, 2, nil},
-		{"o夏天", 3, 3, nil},
-		{"o夏天", 4, 3, io.EOF},
-		{"o夏天", 5, 3, io.EOF},
+		{"o\u590F\u5929", 0, 0, nil},
+		{"o\u590F\u5929", -1, 3, io.EOF},
+		{"o\u590F\u5929", 1, 1, nil},
+		{"o\u590F\u5929", 2, 2, nil},
+		{"o\u590F\u5929", 3, 3, nil},
+		{"o\u590F\u5929", 4, 3, io.EOF},
+		{"o\u590F\u5929", 5, 3, io.EOF},
 	}
 
 	for _, tc := range testCases {
 		t.Run(
 			fmt.Sprintf("content=%+q&n=%d", tc.content, tc.n),
 			func(t *testing.T) {
+				t.Parallel()
+
 				br := inout.NewBufferedReader(strings.NewReader(tc.content))
 				consumed, err := br.ConsumeRuneFunc(f, tc.n)
+
 				if consumed != tc.wantConsumed {
 					t.Errorf("got consumed %d; want %d",
 						consumed, tc.wantConsumed)
 				}
+
 				if !errors.Is(err, tc.wantErr) {
 					t.Errorf("got err %v; want %v", err, tc.wantErr)
 				}
@@ -313,11 +350,15 @@ func TestResettableBufferedReader_ConsumeRuneFunc(t *testing.T) {
 }
 
 func TestResettableBufferedReader_ReadEntireLine(t *testing.T) {
+	t.Parallel()
+
 	longLine, data := buildLongLineAndInputData()
 	br := inout.NewBufferedReader(bytes.NewReader(data))
+
 	var err error
 	for err == nil {
 		var line []byte
+
 		line, err = br.ReadEntireLine()
 		if err == nil {
 			if !bytes.Equal(line, longLine) {
@@ -331,17 +372,23 @@ func TestResettableBufferedReader_ReadEntireLine(t *testing.T) {
 }
 
 func TestBufferedReader_WriteLineTo(t *testing.T) {
+	t.Parallel()
+
 	longLine, data := buildLongLineAndInputData()
 	br := inout.NewBufferedReader(bytes.NewReader(data))
+
 	var output bytes.Buffer
 	output.Grow(len(longLine) + 100) // reserve enough space
+
 	var err error
 	for err == nil {
 		output.Reset()
+
 		_, err = br.WriteLineTo(&output)
 		if err == nil {
 			if !bytes.Equal(output.Bytes(), longLine) {
-				t.Errorf("output line wrong; line length: %d\nline: %q\nwant: %q",
+				t.Errorf("output line wrong; "+
+					"line length: %d\nline: %q\nwant: %q",
 					output.Len(), output.Bytes(), longLine)
 			}
 		} else if !errors.Is(err, io.EOF) {
@@ -351,22 +398,28 @@ func TestBufferedReader_WriteLineTo(t *testing.T) {
 }
 
 func TestBufferedReader_IterLines(t *testing.T) {
+	t.Parallel()
+
 	longLine, data := buildLongLineAndInputData()
 	br := inout.NewBufferedReader(bytes.NewReader(data))
 	outErr := errors.New("init error") // initialize as a non-nil error
+
 	seq := br.IterLines(&outErr)
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
 
 	var i int
+
 	for line := range seq {
 		if !bytes.Equal(line, longLine) {
 			t.Errorf("read line wrong; line length: %d\nline: %q\nwant: %q",
 				len(line), line, longLine)
 		}
+
 		i++
 	}
+
 	if outErr != nil {
 		t.Error("iteration ended with", outErr)
 	} else if i != numLine {
@@ -375,23 +428,29 @@ func TestBufferedReader_IterLines(t *testing.T) {
 
 	// Test whether the iterator is single-use.
 	prevErr := outErr
+
 	for line := range seq {
 		if line != nil {
 			t.Errorf("not single-use iterator; got %q", line)
 		} else {
 			t.Error("not single-use iterator; got <nil>")
 		}
+
 		break
 	}
+
 	if unequal.ErrorUnwrapAuto(outErr, prevErr) {
 		t.Errorf("output error changed from %v to %v", prevErr, outErr)
 	}
 }
 
 func TestBufferedReader_IterCountLines(t *testing.T) {
+	t.Parallel()
+
 	longLine, data := buildLongLineAndInputData()
 	br := inout.NewBufferedReader(bytes.NewReader(data))
 	outErr := errors.New("init error") // initialize as a non-nil error
+
 	seq2 := br.IterCountLines(&outErr)
 	if seq2 == nil {
 		t.Fatal("got nil iterator")
@@ -402,12 +461,15 @@ func TestBufferedReader_IterCountLines(t *testing.T) {
 		if i != int64(ctr) {
 			t.Errorf("got count %d; want %d", i, ctr)
 		}
+
 		if !bytes.Equal(line, longLine) {
 			t.Errorf("read line wrong; line length: %d\nline: %q\nwant: %q",
 				len(line), line, longLine)
 		}
+
 		ctr++
 	}
+
 	if outErr != nil {
 		t.Error("iteration ended with", outErr)
 	} else if ctr != numLine {
@@ -416,14 +478,17 @@ func TestBufferedReader_IterCountLines(t *testing.T) {
 
 	// Test whether the iterator is single-use.
 	prevErr := outErr
+
 	for i, line := range seq2 {
 		if line != nil {
 			t.Errorf("not single-use iterator; got %d, %q", i, line)
 		} else {
 			t.Errorf("not single-use iterator; got %d, <nil>", i)
 		}
+
 		break
 	}
+
 	if unequal.ErrorUnwrapAuto(outErr, prevErr) {
 		t.Errorf("output error changed from %v to %v", prevErr, outErr)
 	}
@@ -440,15 +505,21 @@ const numLine int = 4
 // separated by the end-of-line character '\n'.
 // The data does not end with an end-of-line character.
 func buildLongLineAndInputData() (longLine, data []byte) {
-	const RepeatingUnit = "123456789ⅠⅡⅢⅣⅤⅥⅦⅧⅨ"
+	const RepeatingUnit = "123456789" +
+		"\u2160\u2161\u2162\u2163\u2164\u2165\u2166\u2167\u2168"
+
 	longLine = bytes.Repeat([]byte(RepeatingUnit), 2048)
 	data = make([]byte, (len(longLine)+1)*numLine-1)
+
 	var n int
+
 	for i := range numLine {
 		if i > 0 {
 			data[n], n = '\n', n+1
 		}
+
 		n += copy(data[n:], longLine)
 	}
+
 	return
 }

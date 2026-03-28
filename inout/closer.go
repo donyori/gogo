@@ -74,6 +74,7 @@ func WrapNoErrorCloser(closer io.Closer) Closer {
 	if closer == nil {
 		panic(errors.AutoMsg("closer is nil"))
 	}
+
 	return &noErrorCloser{c: closer}
 }
 
@@ -81,10 +82,12 @@ func (nec *noErrorCloser) Close() error {
 	if nec.closed {
 		return nil
 	}
+
 	err := nec.c.Close()
 	if err == nil {
 		nec.closed = true
 	}
+
 	return err // don't wrap the error
 }
 
@@ -127,16 +130,20 @@ func WrapErrorCloser(
 	if closer == nil {
 		panic(errors.AutoMsg("closer is nil"))
 	}
+
 	deviceName = strings.TrimSpace(deviceName)
 	if deviceName == "" {
 		deviceName = "closer"
 	}
+
 	if parentErr == nil {
 		parentErr = ErrClosed
 	} else if !errors.Is(parentErr, ErrClosed) {
 		panic(errors.AutoMsg(
-			"parentErr is neither nil nor an ErrClosed (errors.Is(parentErr, ErrClosed) returns false)"))
+			"parentErr is neither nil nor an ErrClosed " +
+				"(errors.Is(parentErr, ErrClosed) returns false)"))
 	}
+
 	return &errorCloser{
 		c:  closer,
 		dn: deviceName,
@@ -148,10 +155,12 @@ func (ec *errorCloser) Close() error {
 	if ec.closed {
 		return NewClosedError(ec.dn, ec.pe)
 	}
+
 	err := ec.c.Close()
 	if err == nil {
 		ec.closed = true
 	}
+
 	return err // don't wrap the error
 }
 
@@ -236,13 +245,17 @@ func NewMultiCloser(tryAll, noError bool, closer ...io.Closer) MultiCloser {
 			mc.cs = append(mc.cs, c)
 		}
 	}
+
 	mc.idx = len(mc.cs)
+
 	if tryAll {
 		mc.flag |= multiCloserTryAllMask
 	}
+
 	if noError {
 		mc.flag |= multiCloserNoErrorMask
 	}
+
 	return mc
 }
 
@@ -252,6 +265,7 @@ func (mc *multiCloser) Close() error {
 		if mc.flag&multiCloserNoErrorMask == 0 {
 			err = NewClosedError("MultiCloser", nil)
 		}
+
 		return err
 	}
 
@@ -261,18 +275,24 @@ func (mc *multiCloser) Close() error {
 			if err != nil {
 				return err // don't wrap the error
 			}
+
 			mc.cm[mc.cs[mc.idx-1]] = true
 			mc.idx--
 		}
+
 		return nil
 	}
+
 	el := errors.NewErrorList(true)
+
 	for i := mc.idx - 1; i >= 0; i-- {
 		if mc.cm[mc.cs[i]] {
 			continue
 		}
+
 		err := mc.cs[i].Close()
 		el.Append(err)
+
 		if err == nil {
 			mc.cm[mc.cs[i]] = true
 			if !el.Erroneous() {
@@ -280,6 +300,7 @@ func (mc *multiCloser) Close() error {
 			}
 		}
 	}
+
 	return el.ToError() // don't wrap the error
 }
 

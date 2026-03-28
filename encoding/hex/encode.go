@@ -34,10 +34,12 @@ func EncodedLen[Int constraints.Integer](n Int) Int {
 	if n < 0 {
 		panic(errors.AutoMsg(fmt.Sprintf("n (%d) is negative", n)))
 	}
+
 	m := n << 1
 	if m>>1 != n {
 		panic(errors.AutoMsg(fmt.Sprintf("result overflows (n: %#x)", n)))
 	}
+
 	return m
 }
 
@@ -62,6 +64,7 @@ func Encode[Bytes constraints.ByteString](
 		panic(errors.AutoMsg(fmt.Sprintf(
 			"dst is too small, length: %d, required: %d", len(dst), reqLen)))
 	}
+
 	return encode(dst, src, upper)
 }
 
@@ -80,6 +83,7 @@ func AppendEncode[Bytes constraints.ByteString](
 	n := EncodedLen(len(src))
 	dst = slices.Grow(dst, n)
 	encode(dst[len(dst):][:n], src, upper)
+
 	return dst[:len(dst)+n]
 }
 
@@ -95,6 +99,7 @@ func EncodeToString[Bytes constraints.ByteString](
 ) string {
 	dst := make([]byte, EncodedLen(len(src)))
 	encode(dst, src, upper)
+
 	return string(dst)
 }
 
@@ -129,6 +134,7 @@ func NewEncoder(w io.Writer, upper bool) Encoder {
 	if w == nil {
 		panic(errors.AutoMsg("w is nil"))
 	}
+
 	return &encoder{
 		w:     w,
 		upper: upper,
@@ -138,64 +144,82 @@ func NewEncoder(w io.Writer, upper bool) Encoder {
 func (enc *encoder) Write(p []byte) (n int, err error) {
 	buf := encodeBufferPool.Get().(*[sourceBufferLen << 1]byte)
 	defer encodeBufferPool.Put(buf)
+
 	size := sourceBufferLen
 	for len(p) > 0 && err == nil {
 		if len(p) < size {
 			size = len(p)
 		}
+
 		encoded := encode(buf[:], p[:size], enc.upper)
+
 		var written int
+
 		written, err = enc.w.Write(buf[:encoded])
 		n += DecodedLen(written)
 		p = p[size:]
 	}
+
 	return n, errors.AutoWrap(err)
 }
 
 func (enc *encoder) WriteByte(c byte) error {
 	buf := encodeBufferPool.Get().(*[sourceBufferLen << 1]byte)
 	defer encodeBufferPool.Put(buf)
+
 	buf[0] = c
 	encoded := encode(buf[1:], buf[:1], enc.upper)
 	_, err := enc.w.Write(buf[1:][:encoded])
+
 	return errors.AutoWrap(err)
 }
 
 func (enc *encoder) WriteString(s string) (n int, err error) {
 	buf := encodeBufferPool.Get().(*[sourceBufferLen << 1]byte)
 	defer encodeBufferPool.Put(buf)
+
 	size := sourceBufferLen
 	for len(s) > 0 && err == nil {
 		if len(s) < size {
 			size = len(s)
 		}
+
 		encoded := encode(buf[:], s[:size], enc.upper)
+
 		var written int
+
 		written, err = enc.w.Write(buf[:encoded])
 		n += DecodedLen(written)
 		s = s[size:]
 	}
+
 	return n, errors.AutoWrap(err)
 }
 
 func (enc *encoder) ReadFrom(r io.Reader) (n int64, err error) {
 	buf := sourceBufferPool.Get().(*[sourceBufferLen]byte)
 	defer sourceBufferPool.Put(buf)
+
 	for {
 		readLen, readErr := r.Read(buf[:])
+
 		var writeErr error
+
 		if readLen > 0 {
 			n += int64(readLen)
 			_, writeErr = enc.Write(buf[:readLen])
 		}
+
 		err = readErr
 		if errors.Is(err, io.EOF) {
 			err = nil
 		}
+
 		if readErr != nil {
 			if err != nil {
 				return n, errors.AutoWrap(err)
 			}
+
 			return n, errors.AutoWrap(writeErr)
 		} else if writeErr != nil {
 			return n, errors.AutoWrap(writeErr)
@@ -220,12 +244,15 @@ func encode[Bytes constraints.ByteString](
 	if upper {
 		ht = uppercaseHexTable
 	}
+
 	end := EncodedLen(len(src))
+
 	var n int
 	for n < end {
 		dst[n] = ht[src[n>>1]>>4]
 		dst[n+1] = ht[src[n>>1]&0x0f]
 		n += 2
 	}
+
 	return n
 }

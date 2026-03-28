@@ -28,123 +28,178 @@ import (
 )
 
 func TestCanEncodeTo(t *testing.T) {
+	t.Parallel()
+
 	for _, srcCase := range testEncodeCases {
 		if srcCase.upper { // only use the lower cases to avoid redundant sources
 			continue
 		}
+
 		xSet := make(map[string]struct{}, len(testEncodeCases))
 		for _, xCase := range testEncodeCases {
 			if _, ok := xSet[xCase.dstStr]; ok {
 				continue
 			}
+
 			xSet[xCase.dstStr] = struct{}{}
-			want := srcCase.srcStr == xCase.srcStr
-			t.Run(
-				fmt.Sprintf(
-					"src=%s&x=%s&upper=%t",
-					srcCase.srcName,
-					xCase.dstName,
-					xCase.upper,
-				),
-				func(t *testing.T) {
-					t.Run("srcType=[]byte&xType=[]byte", func(t *testing.T) {
-						got := hex.CanEncodeTo(srcCase.srcBytes, xCase.dstBytes)
-						if got != want {
-							t.Errorf("got %t; want %t", got, want)
-						}
-					})
-					t.Run("srcType=[]byte&xType=string", func(t *testing.T) {
-						got := hex.CanEncodeTo(srcCase.srcBytes, xCase.dstStr)
-						if got != want {
-							t.Errorf("got %t; want %t", got, want)
-						}
-					})
-					t.Run("srcType=string&xType=[]byte", func(t *testing.T) {
-						got := hex.CanEncodeTo(srcCase.srcStr, xCase.dstBytes)
-						if got != want {
-							t.Errorf("got %t; want %t", got, want)
-						}
-					})
-					t.Run("srcType=string&xType=string", func(t *testing.T) {
-						got := hex.CanEncodeTo(srcCase.srcStr, xCase.dstStr)
-						if got != want {
-							t.Errorf("got %t; want %t", got, want)
-						}
-					})
-				},
-			)
+			subtestCanEncodeTo(t, srcCase, xCase)
 		}
 	}
 }
 
+func subtestCanEncodeTo( //nolint:thelper // this is the main body, not a helper
+	t *testing.T,
+	srcCase *testEncodeCase,
+	xCase *testEncodeCase,
+) {
+	want := srcCase.srcStr == xCase.srcStr
+	t.Run(
+		fmt.Sprintf(
+			"src=%s&x=%s&upper=%t",
+			srcCase.srcName,
+			xCase.dstName,
+			xCase.upper,
+		),
+		func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("srcType=[]byte&xType=[]byte", func(t *testing.T) {
+				t.Parallel()
+
+				got := hex.CanEncodeTo(srcCase.srcBytes, xCase.dstBytes)
+				if got != want {
+					t.Errorf("got %t; want %t", got, want)
+				}
+			})
+			t.Run("srcType=[]byte&xType=string", func(t *testing.T) {
+				t.Parallel()
+
+				got := hex.CanEncodeTo(srcCase.srcBytes, xCase.dstStr)
+				if got != want {
+					t.Errorf("got %t; want %t", got, want)
+				}
+			})
+			t.Run("srcType=string&xType=[]byte", func(t *testing.T) {
+				t.Parallel()
+
+				got := hex.CanEncodeTo(srcCase.srcStr, xCase.dstBytes)
+				if got != want {
+					t.Errorf("got %t; want %t", got, want)
+				}
+			})
+			t.Run("srcType=string&xType=string", func(t *testing.T) {
+				t.Parallel()
+
+				got := hex.CanEncodeTo(srcCase.srcStr, xCase.dstStr)
+				if got != want {
+					t.Errorf("got %t; want %t", got, want)
+				}
+			})
+		},
+	)
+}
+
 func TestCanEncodeTo_LetterCaseDiff(t *testing.T) {
+	t.Parallel()
+
 	skipAll := true
 	xSet := make(map[string]struct{}, len(testEncodeCases))
+
 	for _, tc := range testEncodeCases {
 		if len(tc.dstStr) == 0 {
 			continue
 		}
+
 		x := make([]byte, len(tc.dstBytes))
 		copy(x, tc.dstBytes)
+
 		skip := true
+
 		for i := range x {
 			if x[i] <= '9' {
 				x[i] ^= hex.LetterCaseDiff
 				skip = false
 			}
 		}
+
 		xStr := string(x)
 		if skip {
 			continue
 		} else if _, ok := xSet[xStr]; ok {
 			continue
 		}
+
 		xSet[xStr] = struct{}{}
-		t.Run(
-			fmt.Sprintf(
-				"src=%s&x=%s&upper=%t&numeric-xor-%#x",
-				tc.srcName,
-				stringName(xStr),
-				tc.upper,
-				hex.LetterCaseDiff,
-			),
-			func(t *testing.T) {
-				t.Run("srcType=[]byte&xType=[]byte", func(t *testing.T) {
-					if hex.CanEncodeTo(tc.srcBytes, x) {
-						t.Error("got true; want false")
-					}
-				})
-				t.Run("srcType=[]byte&xType=string", func(t *testing.T) {
-					if hex.CanEncodeTo(tc.srcBytes, xStr) {
-						t.Error("got true; want false")
-					}
-				})
-				t.Run("srcType=string&xType=[]byte", func(t *testing.T) {
-					if hex.CanEncodeTo(tc.srcStr, x) {
-						t.Error("got true; want false")
-					}
-				})
-				t.Run("srcType=string&xType=string", func(t *testing.T) {
-					if hex.CanEncodeTo(tc.srcStr, xStr) {
-						t.Error("got true; want false")
-					}
-				})
-			},
-		)
+		subtestCanEncodeToLetterCaseDiff(t, tc, x, xStr)
+
 		skipAll = false
 	}
+
 	if skipAll {
 		t.Errorf("No test about numeric character xor %#x as dst!",
 			hex.LetterCaseDiff)
 	}
 }
 
+func subtestCanEncodeToLetterCaseDiff( //nolint:thelper // this is the main body, not a helper
+	t *testing.T,
+	tc *testEncodeCase,
+	x []byte,
+	xStr string,
+) {
+	t.Run(
+		fmt.Sprintf(
+			"src=%s&x=%s&upper=%t&numeric-xor-%#x",
+			tc.srcName,
+			stringName(xStr),
+			tc.upper,
+			hex.LetterCaseDiff,
+		),
+		func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("srcType=[]byte&xType=[]byte", func(t *testing.T) {
+				t.Parallel()
+
+				if hex.CanEncodeTo(tc.srcBytes, x) {
+					t.Error("got true; want false")
+				}
+			})
+			t.Run("srcType=[]byte&xType=string", func(t *testing.T) {
+				t.Parallel()
+
+				if hex.CanEncodeTo(tc.srcBytes, xStr) {
+					t.Error("got true; want false")
+				}
+			})
+			t.Run("srcType=string&xType=[]byte", func(t *testing.T) {
+				t.Parallel()
+
+				if hex.CanEncodeTo(tc.srcStr, x) {
+					t.Error("got true; want false")
+				}
+			})
+			t.Run("srcType=string&xType=string", func(t *testing.T) {
+				t.Parallel()
+
+				if hex.CanEncodeTo(tc.srcStr, xStr) {
+					t.Error("got true; want false")
+				}
+			})
+		},
+	)
+}
+
 func TestCanEncodeToPrefix(t *testing.T) {
+	t.Parallel()
+
 	const MaxI int = 7
+
 	for _, srcCase := range testEncodeCases {
 		if srcCase.upper { // only use the lower cases to avoid redundant sources
 			continue
 		}
+
 		prefixSet := make(map[string]struct{}, len(testEncodeCases)*(MaxI+1))
 		for i := 0; i <= MaxI; i++ {
 			for _, prefixCase := range testEncodeCases {
@@ -152,71 +207,86 @@ func TestCanEncodeToPrefix(t *testing.T) {
 				if _, ok := prefixSet[prefix]; ok {
 					continue
 				}
+
 				prefixSet[prefix] = struct{}{}
-				// srcCase.dstStr is in lowercase as the uppercase is skipped.
-				want := strings.HasPrefix(
-					srcCase.dstStr, strings.ToLower(prefix))
-				t.Run(
-					fmt.Sprintf(
-						"src=%s&prefix=%s&upper=%t",
-						srcCase.srcName,
-						stringName(prefix),
-						prefixCase.upper,
-					),
-					func(t *testing.T) {
-						t.Run(
-							"srcType=[]byte&prefixType=[]byte",
-							func(t *testing.T) {
-								got := hex.CanEncodeToPrefix(
-									srcCase.srcBytes, prefixBytes)
-								if got != want {
-									t.Errorf("got %t; want %t", got, want)
-								}
-							},
-						)
-						t.Run(
-							"srcType=[]byte&prefixType=string",
-							func(t *testing.T) {
-								got := hex.CanEncodeToPrefix(
-									srcCase.srcBytes, prefix)
-								if got != want {
-									t.Errorf("got %t; want %t", got, want)
-								}
-							},
-						)
-						t.Run(
-							"srcType=string&prefixType=[]byte",
-							func(t *testing.T) {
-								got := hex.CanEncodeToPrefix(
-									srcCase.srcStr, prefixBytes)
-								if got != want {
-									t.Errorf("got %t; want %t", got, want)
-								}
-							},
-						)
-						t.Run(
-							"srcType=string&prefixType=string",
-							func(t *testing.T) {
-								got := hex.CanEncodeToPrefix(
-									srcCase.srcStr, prefix)
-								if got != want {
-									t.Errorf("got %t; want %t", got, want)
-								}
-							},
-						)
-					},
+				subtestCanEncodeToPrefix(
+					t,
+					srcCase,
+					prefixCase.upper,
+					prefix,
+					prefixBytes,
 				)
 			}
 		}
 	}
 }
 
+func subtestCanEncodeToPrefix( //nolint:thelper // this is the main body, not a helper
+	t *testing.T,
+	srcCase *testEncodeCase,
+	upper bool,
+	prefix string,
+	prefixBytes []byte,
+) {
+	// srcCase.dstStr is in lowercase as the uppercase is skipped.
+	want := strings.HasPrefix(srcCase.dstStr, strings.ToLower(prefix))
+	t.Run(
+		fmt.Sprintf(
+			"src=%s&prefix=%s&upper=%t",
+			srcCase.srcName,
+			stringName(prefix),
+			upper,
+		),
+		func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("srcType=[]byte&prefixType=[]byte", func(t *testing.T) {
+				t.Parallel()
+
+				got := hex.CanEncodeToPrefix(srcCase.srcBytes, prefixBytes)
+				if got != want {
+					t.Errorf("got %t; want %t", got, want)
+				}
+			})
+			t.Run("srcType=[]byte&prefixType=string", func(t *testing.T) {
+				t.Parallel()
+
+				got := hex.CanEncodeToPrefix(srcCase.srcBytes, prefix)
+				if got != want {
+					t.Errorf("got %t; want %t", got, want)
+				}
+			})
+			t.Run("srcType=string&prefixType=[]byte", func(t *testing.T) {
+				t.Parallel()
+
+				got := hex.CanEncodeToPrefix(srcCase.srcStr, prefixBytes)
+				if got != want {
+					t.Errorf("got %t; want %t", got, want)
+				}
+			})
+			t.Run("srcType=string&prefixType=string", func(t *testing.T) {
+				t.Parallel()
+
+				got := hex.CanEncodeToPrefix(srcCase.srcStr, prefix)
+				if got != want {
+					t.Errorf("got %t; want %t", got, want)
+				}
+			})
+		},
+	)
+}
+
 // getPrefixAndPrefixBytes returns the prefix and prefix bytes
 // for TestCanEncodeToPrefix according to the specified i and test encode case.
 //
 // It uses t.Fatalf to stop the test if i is out of range [0, 7].
-func getPrefixAndPrefixBytes(t *testing.T, i int, prefixCase *testEncodeCase) (
-	prefix string, prefixBytes []byte) {
+func getPrefixAndPrefixBytes(
+	t *testing.T,
+	i int,
+	prefixCase *testEncodeCase,
+) (prefix string, prefixBytes []byte) {
+	t.Helper()
+
 	switch i {
 	case 0:
 		if len(prefixCase.dstStr) > 1 {
@@ -253,10 +323,13 @@ func getPrefixAndPrefixBytes(t *testing.T, i int, prefixCase *testEncodeCase) (
 	default:
 		t.Fatalf("i (%d) is out of range [0, 7]", i)
 	}
+
 	return
 }
 
 func TestCanEncodeToBytesStringFunctions(t *testing.T) {
+	t.Parallel()
+
 	src, dst, _, sameLen :=
 		makeCanEncodeToPrefixBytesStringFunctionsTestData(t, -1)
 	if t.Failed() {
@@ -284,8 +357,12 @@ func TestCanEncodeToBytesStringFunctions(t *testing.T) {
 
 	for _, fn := range fns {
 		t.Run(fn.name, func(t *testing.T) {
+			t.Parallel()
+
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
+					t.Parallel()
+
 					got := fn.f(src, tc.x)
 					if got != tc.want {
 						t.Errorf("got %t; want %t", got, tc.want)
@@ -334,11 +411,14 @@ func BenchmarkCanEncodeToBytesStringFunctions(b *testing.B) {
 }
 
 func TestCanEncodeToPrefixBytesStringFunctions(t *testing.T) {
+	t.Parallel()
+
 	src, dst, prefixEven, sameLenEven :=
 		makeCanEncodeToPrefixBytesStringFunctionsTestData(t, 12)
 	if t.Failed() {
 		return
 	}
+
 	prefixOdd := prefixEven[:len(prefixEven)-1]
 	sameLenOdd := sameLenEven[:len(sameLenEven)-1]
 
@@ -365,8 +445,12 @@ func TestCanEncodeToPrefixBytesStringFunctions(t *testing.T) {
 
 	for _, fn := range fns {
 		t.Run(fn.name, func(t *testing.T) {
+			t.Parallel()
+
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
+					t.Parallel()
+
 					got := fn.f(src, tc.prefix)
 					if got != tc.want {
 						t.Errorf("got %t; want %t", got, tc.want)
@@ -383,6 +467,7 @@ func BenchmarkCanEncodeToPrefixBytesStringFunctions(b *testing.B) {
 	if b.Failed() {
 		return
 	}
+
 	prefixOdd := prefixEven[:len(prefixEven)-1]
 	sameLenOdd := sameLenEven[:len(sameLenEven)-1]
 
@@ -438,7 +523,9 @@ func canEncodeToBytesString2(src []byte, x string) bool {
 // strings.HasPrefix, and strings.ToLower.
 func canEncodeToPrefixBytesString(src []byte, prefix string) bool {
 	return strings.HasPrefix(
-		stdhex.EncodeToString(src), strings.ToLower(prefix))
+		stdhex.EncodeToString(src),
+		strings.ToLower(prefix),
+	)
 }
 
 // makeCanEncodeToPrefixBytesStringFunctionsTestData generates data for testing
@@ -452,8 +539,9 @@ func canEncodeToPrefixBytesString(src []byte, prefix string) bool {
 func makeCanEncodeToPrefixBytesStringFunctionsTestData(
 	tb testing.TB,
 	prefixLen int,
-) (
-	src []byte, dst, prefix, sameLen string) {
+) (src []byte, dst, prefix, sameLen string) {
+	tb.Helper()
+
 	dst = testEncodeLongSrcCases[0].dstStr
 	if prefixLen <= 0 {
 		prefixLen = len(dst)
@@ -464,26 +552,33 @@ func makeCanEncodeToPrefixBytesStringFunctionsTestData(
 			len(dst),
 		)
 		dst = ""
+
 		return
 	}
+
 	prefix = dst[:prefixLen]
 
 	var b strings.Builder
 	b.Grow(prefixLen)
+
 	half := prefixLen >> 1
 	if half > 0 {
 		b.WriteString(prefix[:half])
 	}
+
 	if prefix[half] != '0' {
 		b.WriteByte('0')
 	} else {
 		b.WriteByte('1')
 	}
+
 	if half+1 < prefixLen {
 		b.WriteString(prefix[half+1:])
 	}
+
 	sameLen = b.String()
 
 	src = testEncodeLongSrcCases[0].srcBytes
+
 	return
 }

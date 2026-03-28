@@ -29,6 +29,8 @@ import (
 )
 
 func TestNewBufferedReaderSize(t *testing.T) {
+	t.Parallel()
+
 	r := strings.NewReader("123456")
 	bufr := bufio.NewReader(r)
 	bufr64 := bufio.NewReaderSize(r, 64)
@@ -38,8 +40,12 @@ func TestNewBufferedReaderSize(t *testing.T) {
 	br64 := inout.NewBufferedReaderSize(r, 64)
 	br128 := inout.NewBufferedReaderSize(r, 128)
 	br256 := inout.NewBufferedReaderSize(r, 256)
-	var nBufR *bufio.Reader      // a nil *bufio.Reader
-	var nbr inout.BufferedReader // a nil inout.BufferedReader
+
+	var (
+		nBufR *bufio.Reader        // a nil *bufio.Reader
+		nbr   inout.BufferedReader // a nil inout.BufferedReader
+	)
+
 	const Size128 int = 128
 
 	testCases := []struct {
@@ -50,23 +56,89 @@ func TestNewBufferedReaderSize(t *testing.T) {
 		wantAsUnderlying bool
 		wantAsSelf       bool
 	}{
-		{name: "on r", r: r, argSize: Size128, wantSize: Size128},
-		{name: "on bufr", r: bufr, argSize: Size128, wantAsUnderlying: true},
-		{name: "on bufr64", r: bufr64, argSize: Size128, wantSize: Size128},
-		{name: "on bufr128", r: bufr128, argSize: Size128, wantAsUnderlying: true},
-		{name: "on bufr256", r: bufr256, argSize: Size128, wantAsUnderlying: true},
-		{name: "on br", r: br, argSize: Size128, wantAsSelf: true},
-		{name: "on br64", r: br64, argSize: Size128, wantSize: Size128},
-		{name: "on br128", r: br128, argSize: Size128, wantAsSelf: true},
-		{name: "on br256", r: br256, argSize: Size128, wantAsSelf: true},
-		{name: "on r?size=0", r: r, argSize: 0, wantSize: inout.MinReadBufferSize},
-		{name: "on <nil>", argSize: Size128, wantSize: Size128},
-		{name: "on nBufR", r: nBufR, argSize: Size128, wantSize: Size128},
-		{name: "on nbr", r: nbr, argSize: Size128, wantSize: Size128},
+		{
+			name:     "on_r",
+			r:        r,
+			argSize:  Size128,
+			wantSize: Size128,
+		},
+		{
+			name:             "on_bufr",
+			r:                bufr,
+			argSize:          Size128,
+			wantAsUnderlying: true,
+		},
+		{
+			name:     "on_bufr64",
+			r:        bufr64,
+			argSize:  Size128,
+			wantSize: Size128,
+		},
+		{
+			name:             "on_bufr128",
+			r:                bufr128,
+			argSize:          Size128,
+			wantAsUnderlying: true,
+		},
+		{
+			name:             "on_bufr256",
+			r:                bufr256,
+			argSize:          Size128,
+			wantAsUnderlying: true,
+		},
+		{
+			name:       "on_br",
+			r:          br,
+			argSize:    Size128,
+			wantAsSelf: true,
+		},
+		{
+			name:     "on_br64",
+			r:        br64,
+			argSize:  Size128,
+			wantSize: Size128,
+		},
+		{
+			name:       "on_br128",
+			r:          br128,
+			argSize:    Size128,
+			wantAsSelf: true,
+		},
+		{
+			name:       "on_br256",
+			r:          br256,
+			argSize:    Size128,
+			wantAsSelf: true,
+		},
+		{
+			name:     "on_r?size=0",
+			r:        r,
+			argSize:  0,
+			wantSize: inout.MinReadBufferSize,
+		},
+		{
+			name:     "on_<nil>",
+			argSize:  Size128,
+			wantSize: Size128,
+		},
+		{
+			name:     "on_nBufR",
+			r:        nBufR,
+			argSize:  Size128,
+			wantSize: Size128,
+		},
+		{
+			name:     "on_nbr",
+			r:        nbr,
+			argSize:  Size128,
+			wantSize: Size128,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			b := inout.NewBufferedReaderSize(tc.r, tc.argSize)
 			switch {
 			case tc.wantSize != 0:
@@ -74,7 +146,8 @@ func TestNewBufferedReaderSize(t *testing.T) {
 					t.Errorf("got size %d; want %d", n, tc.wantSize)
 				}
 			case tc.wantAsUnderlying:
-				if b.(*inout.ResettableBufferedReaderImpl).GetBufferedReader() != tc.r {
+				r := b.(*inout.ResettableBufferedReaderImpl).GetBufferedReader()
+				if r != tc.r {
 					t.Error("underlying buffered reader is not input")
 				}
 			case tc.wantAsSelf:
@@ -89,6 +162,8 @@ func TestNewBufferedReaderSize(t *testing.T) {
 }
 
 func TestNewBufferedWriterSize(t *testing.T) {
+	t.Parallel()
+
 	w := bytes.NewBuffer(make([]byte, 0, 10))
 	bufw := bufio.NewWriter(w)
 	bufw64 := bufio.NewWriterSize(w, 64)
@@ -98,8 +173,12 @@ func TestNewBufferedWriterSize(t *testing.T) {
 	bw64 := inout.NewBufferedWriterSize(w, 64)
 	bw128 := inout.NewBufferedWriterSize(w, 128)
 	bw256 := inout.NewBufferedWriterSize(w, 256)
-	var nBufW *bufio.Writer      // a nil *bufio.Writer
-	var nbw inout.BufferedWriter // a nil inout.BufferedWriter
+
+	var (
+		nBufW *bufio.Writer        // a nil *bufio.Writer
+		nbw   inout.BufferedWriter // a nil inout.BufferedWriter
+	)
+
 	const Size128 int = 128
 
 	testCases := []struct {
@@ -110,23 +189,89 @@ func TestNewBufferedWriterSize(t *testing.T) {
 		wantAsUnderlying bool
 		wantAsSelf       bool
 	}{
-		{name: "on w", w: w, argSize: Size128, wantSize: Size128},
-		{name: "on bufw", w: bufw, argSize: Size128, wantAsUnderlying: true},
-		{name: "on bufw64", w: bufw64, argSize: Size128, wantSize: Size128},
-		{name: "on bufw128", w: bufw128, argSize: Size128, wantAsUnderlying: true},
-		{name: "on bufw256", w: bufw256, argSize: Size128, wantAsUnderlying: true},
-		{name: "on bw", w: bw, argSize: Size128, wantAsSelf: true},
-		{name: "on bw64", w: bw64, argSize: Size128, wantSize: Size128},
-		{name: "on bw128", w: bw128, argSize: Size128, wantAsSelf: true},
-		{name: "on bw256", w: bw256, argSize: Size128, wantAsSelf: true},
-		{name: "on w?size=0", w: w, argSize: 0, wantSize: inout.DefaultBufferSize},
-		{name: "on <nil>", argSize: Size128, wantSize: Size128},
-		{name: "on nBufW", w: nBufW, argSize: Size128, wantSize: Size128},
-		{name: "on nbw", w: nbw, argSize: Size128, wantSize: Size128},
+		{
+			name:     "on_w",
+			w:        w,
+			argSize:  Size128,
+			wantSize: Size128,
+		},
+		{
+			name:             "on_bufw",
+			w:                bufw,
+			argSize:          Size128,
+			wantAsUnderlying: true,
+		},
+		{
+			name:     "on_bufw64",
+			w:        bufw64,
+			argSize:  Size128,
+			wantSize: Size128,
+		},
+		{
+			name:             "on_bufw128",
+			w:                bufw128,
+			argSize:          Size128,
+			wantAsUnderlying: true,
+		},
+		{
+			name:             "on_bufw256",
+			w:                bufw256,
+			argSize:          Size128,
+			wantAsUnderlying: true,
+		},
+		{
+			name:       "on_bw",
+			w:          bw,
+			argSize:    Size128,
+			wantAsSelf: true,
+		},
+		{
+			name:     "on_bw64",
+			w:        bw64,
+			argSize:  Size128,
+			wantSize: Size128,
+		},
+		{
+			name:       "on_bw128",
+			w:          bw128,
+			argSize:    Size128,
+			wantAsSelf: true,
+		},
+		{
+			name:       "on_bw256",
+			w:          bw256,
+			argSize:    Size128,
+			wantAsSelf: true,
+		},
+		{
+			name:     "on_w?size=0",
+			w:        w,
+			argSize:  0,
+			wantSize: inout.DefaultBufferSize,
+		},
+		{
+			name:     "on_<nil>",
+			argSize:  Size128,
+			wantSize: Size128,
+		},
+		{
+			name:     "on_nBufW",
+			w:        nBufW,
+			argSize:  Size128,
+			wantSize: Size128,
+		},
+		{
+			name:     "on_nbw",
+			w:        nbw,
+			argSize:  Size128,
+			wantSize: Size128,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			b := inout.NewBufferedWriterSize(tc.w, tc.argSize)
 			switch {
 			case tc.wantSize != 0:
@@ -134,7 +279,8 @@ func TestNewBufferedWriterSize(t *testing.T) {
 					t.Errorf("got size %d; want %d", n, tc.wantSize)
 				}
 			case tc.wantAsUnderlying:
-				if b.(*inout.ResettableBufferedWriterImpl).GetBufferedWriter() != tc.w {
+				w := b.(*inout.ResettableBufferedWriterImpl).GetBufferedWriter()
+				if w != tc.w {
 					t.Error("underlying buffered writer is not input")
 				}
 			case tc.wantAsSelf:

@@ -28,7 +28,10 @@ import (
 )
 
 func TestResettableBufferedReader_Reset(t *testing.T) {
+	t.Parallel()
+
 	const BufferSize int = 256
+
 	data := strings.Repeat("z", BufferSize+10)
 	testCases := []struct {
 		name         string
@@ -43,12 +46,18 @@ func TestResettableBufferedReader_Reset(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			br := inout.NewBufferedReaderSize(
-				strings.NewReader(data), BufferSize)
+				strings.NewReader(data),
+				BufferSize,
+			)
+
 			_, err := br.ReadByte() // read one byte to fill the buffer
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			buffered := br.Buffered()
 			if buffered != BufferSize-1 {
 				t.Fatalf("got Buffered %d after reading one byte; want %d",
@@ -58,7 +67,9 @@ func TestResettableBufferedReader_Reset(t *testing.T) {
 			} else {
 				br.Reset(tc.r)
 			}
-			if newBuffered := br.Buffered(); newBuffered != tc.wantBuffered {
+
+			newBuffered := br.Buffered()
+			if newBuffered != tc.wantBuffered {
 				t.Errorf("got Buffered %d after resetting; want %d",
 					newBuffered, tc.wantBuffered)
 			}
@@ -67,7 +78,10 @@ func TestResettableBufferedReader_Reset(t *testing.T) {
 }
 
 func TestResettableBufferedWriter_Reset(t *testing.T) {
+	t.Parallel()
+
 	const BufferSize int = 256
+
 	testCases := []struct {
 		name          string
 		toItself      bool
@@ -82,16 +96,21 @@ func TestResettableBufferedWriter_Reset(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			bw := inout.NewBufferedWriterSize(io.Discard, BufferSize)
+
 			err := bw.WriteByte('z') // write one byte to fill the buffer
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			buffered := bw.Buffered()
 			if buffered != 1 {
 				t.Fatalf("got Buffered %d after writing one byte; want 1",
 					buffered)
 			}
+
 			available := bw.Available()
 			if available != BufferSize-1 {
 				t.Fatalf("got Available %d after writing one byte; want %d",
@@ -101,11 +120,15 @@ func TestResettableBufferedWriter_Reset(t *testing.T) {
 			} else {
 				bw.Reset(tc.w)
 			}
-			if newBuffered := bw.Buffered(); newBuffered != tc.wantBuffered {
+
+			newBuffered := bw.Buffered()
+			if newBuffered != tc.wantBuffered {
 				t.Errorf("got Buffered %d after resetting; want %d",
 					newBuffered, tc.wantBuffered)
 			}
-			if newAvailable := bw.Available(); newAvailable != tc.wantAvailable {
+
+			newAvailable := bw.Available()
+			if newAvailable != tc.wantAvailable {
 				t.Errorf("got Available %d after resetting; want %d",
 					newAvailable, tc.wantAvailable)
 			}

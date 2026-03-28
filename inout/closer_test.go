@@ -37,22 +37,29 @@ func (tc *testCloser) Close() error {
 	if tc.closed {
 		msg := "call testCloser.Close again" // don't use *ClosedError here
 		tc.tb.Error(msg)
+
 		return errors.AutoNew(msg)
 	}
+
 	tc.closed = tc.err == nil
+
 	return tc.err
 }
 
 func TestNoOpCloser(t *testing.T) {
+	t.Parallel()
+
 	noc := inout.NewNoOpCloser()
 	if noc.Closed() {
 		t.Error("noc.Closed was true before first call to Close")
 	}
+
 	for i := 1; i <= 10; i++ {
 		err := noc.Close()
 		if err != nil {
 			t.Errorf("error on %d call to Close: %v", i, err)
 		}
+
 		if !noc.Closed() {
 			t.Errorf("noc.Closed was false after %d call to Close", i)
 		}
@@ -60,15 +67,19 @@ func TestNoOpCloser(t *testing.T) {
 }
 
 func TestNoErrorCloser(t *testing.T) {
+	t.Parallel()
+
 	nec := inout.WrapNoErrorCloser(&testCloser{tb: t})
 	if nec.Closed() {
 		t.Error("nec.Closed was true before first call to Close")
 	}
+
 	for i := 1; i <= 10; i++ {
 		err := nec.Close()
 		if err != nil {
 			t.Errorf("error on %d call to Close: %v", i, err)
 		}
+
 		if !nec.Closed() {
 			t.Errorf("nec.Closed was false after %d call to Close", i)
 		}
@@ -76,17 +87,22 @@ func TestNoErrorCloser(t *testing.T) {
 }
 
 func TestErrorCloser(t *testing.T) {
+	t.Parallel()
+
 	ec := inout.WrapErrorCloser(&testCloser{tb: t}, "testCloser", nil)
 	if ec.Closed() {
 		t.Error("ec.Closed was true before first call to Close")
 	}
+
 	err := ec.Close()
 	if err != nil {
 		t.Error("error on first call to Close:", err)
 	}
+
 	if !ec.Closed() {
 		t.Error("ec.Closed was false after first call to Close")
 	}
+
 	for i := 2; i <= 10; i++ {
 		err = ec.Close()
 		if err == nil {
@@ -94,6 +110,7 @@ func TestErrorCloser(t *testing.T) {
 		} else if !errors.Is(err, inout.ErrClosed) {
 			t.Errorf("error on %d call to Close: %v", i, err)
 		}
+
 		if !ec.Closed() {
 			t.Errorf("ec.Closed was false after %d call to Close", i)
 		}
@@ -101,16 +118,24 @@ func TestErrorCloser(t *testing.T) {
 }
 
 func TestMultiCloser(t *testing.T) {
-	testMultiCloser(t, false, false)
-	testMultiCloser(t, false, true)
-	testMultiCloser(t, true, false)
-	testMultiCloser(t, true, true)
+	t.Parallel()
+
+	subtestMultiCloser(t, false, false)
+	subtestMultiCloser(t, false, true)
+	subtestMultiCloser(t, true, false)
+	subtestMultiCloser(t, true, true)
 }
 
-func testMultiCloser(t *testing.T, tryAll, noError bool) {
+func subtestMultiCloser( //nolint:thelper // this is the main body, not a helper
+	t *testing.T,
+	tryAll bool,
+	noError bool,
+) {
 	t.Run(
 		fmt.Sprintf("tryAll=%t&noError=%t", tryAll, noError),
 		func(t *testing.T) {
+			t.Parallel()
+
 			failErr := errors.New("an error to simulate a failed call to Close")
 			closers := []io.Closer{
 				&testCloser{tb: t, err: failErr},
@@ -125,17 +150,23 @@ func testMultiCloser(t *testing.T, tryAll, noError bool) {
 			if mc.Closed() {
 				t.Error("mc.Closed was true before the first call to mc.Close")
 			}
+
 			for i, closer := range closers {
 				closed, ok := mc.CloserClosed(closer)
+
 				if !ok {
-					t.Errorf("the %d closer is in mc but mc.CloserClosed returned (%t, %t)",
+					t.Errorf("the %d closer is in mc "+
+						"but mc.CloserClosed returned (%t, %t)",
 						i, closed, ok)
 				}
+
 				if closed {
-					t.Errorf("mc.CloserClosed for the %d closer was true before the first call to mc.Close",
+					t.Errorf("mc.CloserClosed for the %d closer was true "+
+						"before the first call to mc.Close",
 						i)
 				}
 			}
+
 			closed, ok := mc.CloserClosed(anotherCloser)
 			if closed || ok {
 				t.Errorf("mc.CloserClosed returned (%t, %t) for anotherCloser",
@@ -173,6 +204,9 @@ func testMultiCloserOneCall(
 	mc inout.MultiCloser,
 	callNo int,
 ) {
+	t.Helper()
+
+	// This t.Run must be sequential instead of parallel.
 	t.Run(fmt.Sprintf("callNo=%d", callNo), func(t *testing.T) {
 		testMultiCloserOneCallClose(t, tryAll, noError, failErr, mc, callNo)
 		testMultiCloserOneCallCloserClosed(
@@ -190,20 +224,33 @@ func testMultiCloserOneCallClose(
 	mc inout.MultiCloser,
 	callNo int,
 ) {
+	t.Helper()
+
 	err := mc.Close()
-	var wantErr error
-	var wantClosed bool
+
+	var (
+		wantErr    error
+		wantClosed bool
+	)
+
 	callString := "a failed call"
+
 	switch callNo {
 	case 0:
 		if tryAll {
-			el, ok := err.(errors.ErrorList)
+			// The type testing should not go along the Unwrap error tree,
+			// so type assertion is used here instead of errors.As.
+			el, ok := err.(errors.ErrorList) //nolint:errorlint // as stated above
 			if !ok {
-				t.Errorf("mc.Close returned %v (of type %[1]v), not an ErrorList",
+				t.Errorf("mc.Close returned %v (of type %[1]v), "+
+					"not an ErrorList",
 					err)
 			}
+
 			errs := el.ToList()
-			if len(errs) != 2 || errs[0] != failErr || errs[1] != failErr {
+			// Compare the interface directly here, don't use errors.Is.
+			if len(errs) != 2 ||
+				errs[0] != failErr || errs[1] != failErr { //nolint:err113,errorlint // as stated above
 				t.Errorf("mc.Close returned %v; want (%v, %[2]v)",
 					err, failErr)
 			}
@@ -219,12 +266,15 @@ func testMultiCloserOneCallClose(
 		if !noError {
 			wantErr = inout.ErrClosed
 		}
+
 		wantClosed = true
 		callString = "a call to the successfully closed mc"
 	}
+
 	if (!tryAll || callNo > 0) && !errors.Is(err, wantErr) {
 		t.Errorf("mc.Close returned %v; want %v", err, wantErr)
 	}
+
 	if mc.Closed() != wantClosed {
 		t.Errorf("mc.Closed returned %t after the %d call (%s) to Close",
 			!wantClosed, callNo, callString)
@@ -240,43 +290,66 @@ func testMultiCloserOneCallCloserClosed(
 	anotherCloser io.Closer,
 	mc inout.MultiCloser,
 ) {
+	t.Helper()
+
 	if tryAll {
 		for i, closer := range closers {
 			wantClosed := closer.(*testCloser).err == nil
 			closed, ok := mc.CloserClosed(closer)
+
 			if !ok {
-				t.Errorf("the %d closer is in mc but mc.CloserClosed returned (%t, %t)",
+				t.Errorf("the %d closer is in mc "+
+					"but mc.CloserClosed returned (%t, %t)",
 					i, closed, ok)
 			}
+
 			if closed != wantClosed {
 				t.Errorf("mc.CloserClosed for the %d closer was %t; want %t",
 					i, closed, wantClosed)
 			}
 		}
 	} else {
-		var idx int
-		for idx = len(closers) - 1; idx >= 0; idx-- {
-			if closers[idx].(*testCloser).err != nil {
-				break
-			}
-		}
-		for i, closer := range closers {
-			wantClosed := i > idx
-			closed, ok := mc.CloserClosed(closer)
-			if !ok {
-				t.Errorf("the %d closer is in mc but mc.CloserClosed returned (%t, %t)",
-					i, closed, ok)
-			}
-			if closed != wantClosed {
-				t.Errorf("mc.CloserClosed for the %d closer was %t; want %t",
-					i, closed, wantClosed)
-			}
-		}
+		testMultiCloserOneCallCloserClosedNotTryAll(t, closers, mc)
 	}
 
 	closed, ok := mc.CloserClosed(anotherCloser)
 	if closed || ok {
 		t.Errorf("mc.CloserClosed returned (%t, %t) for anotherCloser",
 			closed, ok)
+	}
+}
+
+// testMultiCloserOneCallCloserClosedNotTryAll is a subprocess of
+// testMultiCloserOneCallCloserClosed
+// that tests inout.MultiCloser.CloserClosed after calling Close
+// when tryAll is set to false.
+func testMultiCloserOneCallCloserClosedNotTryAll(
+	t *testing.T,
+	closers []io.Closer,
+	mc inout.MultiCloser,
+) {
+	t.Helper()
+
+	var idx int
+	for idx = len(closers) - 1; idx >= 0; idx-- {
+		if closers[idx].(*testCloser).err != nil {
+			break
+		}
+	}
+
+	for i, closer := range closers {
+		wantClosed := i > idx
+		closed, ok := mc.CloserClosed(closer)
+
+		if !ok {
+			t.Errorf("the %d closer is in mc "+
+				"but mc.CloserClosed returned (%t, %t)",
+				i, closed, ok)
+		}
+
+		if closed != wantClosed {
+			t.Errorf("mc.CloserClosed for the %d closer was %t; want %t",
+				i, closed, wantClosed)
+		}
 	}
 }

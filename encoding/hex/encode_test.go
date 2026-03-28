@@ -33,9 +33,13 @@ import (
 )
 
 func TestEncode_CompareWithOfficial(t *testing.T) {
-	srcs := [][]byte{nil, {}, []byte("Hello world! 你好，世界！")}
-	dst := make([]byte, stdhex.EncodedLen(len(srcs[len(srcs)-1])))
-	stdDst := make([]byte, len(dst))
+	t.Parallel()
+
+	srcs := [][]byte{
+		nil,
+		{},
+		[]byte("Hello world! \u4F60\u597D\uFF0C\u4E16\u754C\uFF01"),
+	}
 	for _, src := range srcs {
 		var srcName string
 		if src == nil {
@@ -43,11 +47,19 @@ func TestEncode_CompareWithOfficial(t *testing.T) {
 		} else {
 			srcName = strconv.QuoteToASCII(string(src))
 		}
+
 		t.Run("src="+srcName, func(t *testing.T) {
+			t.Parallel()
+
+			dst := make([]byte, stdhex.EncodedLen(len(srcs[len(srcs)-1])))
+			stdDst := make([]byte, len(dst))
 			n := hex.Encode(dst, src, false)
-			if n2 := stdhex.Encode(stdDst, src); n != n2 {
-				t.Fatalf("got n %d; want %d", n, n2)
+			stdN := stdhex.Encode(stdDst, src)
+
+			if n != stdN {
+				t.Fatalf("got n %d; want %d", n, stdN)
 			}
+
 			if !bytes.Equal(dst[:n], stdDst[:n]) {
 				t.Errorf("got %q; want %q", dst[:n], stdDst[:n])
 			}
@@ -56,18 +68,27 @@ func TestEncode_CompareWithOfficial(t *testing.T) {
 }
 
 func TestEncodedLen(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range testEncodeCases {
 		if tc.upper { // only use the lower cases to avoid redundant sources
 			continue
 		}
+
 		t.Run("src="+tc.srcName, func(t *testing.T) {
+			t.Parallel()
+
 			t.Run("type=int", func(t *testing.T) {
+				t.Parallel()
+
 				n := hex.EncodedLen(len(tc.srcStr))
 				if n != len(tc.dstStr) {
 					t.Errorf("got %d; want %d", n, len(tc.dstStr))
 				}
 			})
 			t.Run("type=int64", func(t *testing.T) {
+				t.Parallel()
+
 				n := hex.EncodedLen(int64(len(tc.srcStr)))
 				if n != int64(len(tc.dstStr)) {
 					t.Errorf("got %d; want %d", n, len(tc.dstStr))
@@ -78,10 +99,16 @@ func TestEncodedLen(t *testing.T) {
 }
 
 func TestEncodedLen_Negative(t *testing.T) {
+	t.Parallel()
+
 	t.Run("type=int", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodedLenNegative[int](t)
 	})
 	t.Run("type=int64", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodedLenNegative[int64](t)
 	})
 }
@@ -89,7 +116,10 @@ func TestEncodedLen_Negative(t *testing.T) {
 // testEncodedLenNegative is the common process of
 // the subtests of TestEncodedLen_Negative.
 func testEncodedLenNegative[Int constraints.SignedInteger](t *testing.T) {
+	t.Helper()
+
 	var n Int = -1
+
 	defer func() {
 		if e := recover(); e != nil {
 			msg, ok := e.(string)
@@ -99,24 +129,35 @@ func testEncodedLenNegative[Int constraints.SignedInteger](t *testing.T) {
 			}
 		}
 	}()
+
 	got := hex.EncodedLen(n) // want panic here
 	t.Errorf("want panic but got %d (%#[1]x)", got)
 }
 
 func TestEncodedLen_Overflow(t *testing.T) {
+	t.Parallel()
+
 	t.Run("type=int", func(t *testing.T) {
-		var n int = math.MaxInt>>1 + 1
+		t.Parallel()
+
+		n := math.MaxInt>>1 + 1
 		testEncodedLenOverflow(t, n)
 	})
 	t.Run("type=uint", func(t *testing.T) {
+		t.Parallel()
+
 		var n uint = math.MaxUint>>1 + 1
 		testEncodedLenOverflow(t, n)
 	})
 	t.Run("type=int64", func(t *testing.T) {
+		t.Parallel()
+
 		var n int64 = math.MaxInt64>>1 + 1
 		testEncodedLenOverflow(t, n)
 	})
 	t.Run("type=uint64", func(t *testing.T) {
+		t.Parallel()
+
 		var n uint64 = math.MaxUint64>>1 + 1
 		testEncodedLenOverflow(t, n)
 	})
@@ -125,6 +166,8 @@ func TestEncodedLen_Overflow(t *testing.T) {
 // testEncodedLenOverflow is the common process of
 // the subtests of TestEncodedLen_Overflow.
 func testEncodedLenOverflow[Int constraints.Integer](t *testing.T, n Int) {
+	t.Helper()
+
 	defer func() {
 		if e := recover(); e != nil {
 			msg, ok := e.(string)
@@ -134,23 +177,35 @@ func testEncodedLenOverflow[Int constraints.Integer](t *testing.T, n Int) {
 			}
 		}
 	}()
+
 	got := hex.EncodedLen(n) // want panic here
 	t.Errorf("want panic but got %d (%#[1]x)", got)
 }
 
 func TestEncode(t *testing.T) {
-	dst := make([]byte, testEncodeCasesDstMaxLen+1024)
+	t.Parallel()
+
 	for _, tc := range testEncodeCases {
 		t.Run(
 			fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper),
 			func(t *testing.T) {
+				t.Parallel()
+
 				t.Run("type=[]byte", func(t *testing.T) {
+					t.Parallel()
+
+					dst := make([]byte, testEncodeCasesDstMaxLen+1024)
+
 					n := hex.Encode(dst, tc.srcBytes, tc.upper)
 					if string(dst[:n]) != tc.dstStr {
 						t.Errorf("got %q; want %q", dst[:n], tc.dstStr)
 					}
 				})
 				t.Run("type=string", func(t *testing.T) {
+					t.Parallel()
+
+					dst := make([]byte, testEncodeCasesDstMaxLen+1024)
+
 					n := hex.Encode(dst, tc.srcStr, tc.upper)
 					if string(dst[:n]) != tc.dstStr {
 						t.Errorf("got %q; want %q", dst[:n], tc.dstStr)
@@ -162,6 +217,8 @@ func TestEncode(t *testing.T) {
 }
 
 func TestAppendEncode(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name string
 		p    []byte
@@ -172,38 +229,35 @@ func TestAppendEncode(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			for _, etc := range testEncodeCases {
+			t.Parallel()
+
+			for _, tec := range testEncodeCases {
 				t.Run(
-					fmt.Sprintf("src=%s&upper=%t", etc.srcName, etc.upper),
+					fmt.Sprintf("src=%s&upper=%t", tec.srcName, tec.upper),
 					func(t *testing.T) {
+						t.Parallel()
+
 						t.Run("type=[]byte", func(t *testing.T) {
-							dst := slices.Clone(tc.p)
-							want := string(tc.p) + etc.dstStr
-							got := hex.AppendEncode(
-								dst, etc.srcBytes, etc.upper)
-							if len(want) == 0 && (got == nil) != (tc.p == nil) {
-								if got == nil {
-									t.Errorf("got <nil>; want %q", want)
-								} else {
-									t.Errorf("got %q; want <nil>", got)
-								}
-							} else if string(got) != want {
-								t.Errorf("got %q; want %q", got, want)
-							}
+							t.Parallel()
+
+							testAppendEncode(
+								t,
+								tc.p,
+								tec.dstStr,
+								tec.srcBytes,
+								tec.upper,
+							)
 						})
 						t.Run("type=string", func(t *testing.T) {
-							dst := slices.Clone(tc.p)
-							want := string(tc.p) + etc.dstStr
-							got := hex.AppendEncode(dst, etc.srcStr, etc.upper)
-							if len(want) == 0 && (got == nil) != (tc.p == nil) {
-								if got == nil {
-									t.Errorf("got <nil>; want %q", want)
-								} else {
-									t.Errorf("got %q; want <nil>", got)
-								}
-							} else if string(got) != want {
-								t.Errorf("got %q; want %q", got, want)
-							}
+							t.Parallel()
+
+							testAppendEncode(
+								t,
+								tc.p,
+								tec.dstStr,
+								tec.srcStr,
+								tec.upper,
+							)
 						})
 					},
 				)
@@ -212,18 +266,51 @@ func TestAppendEncode(t *testing.T) {
 	}
 }
 
+// testAppendEncode is the common process of the subtests of TestAppendEncode.
+func testAppendEncode[Bytes constraints.ByteString](
+	t *testing.T,
+	p []byte,
+	dstStr string,
+	src Bytes,
+	upper bool,
+) {
+	t.Helper()
+
+	dst := slices.Clone(p)
+	want := string(p) + dstStr
+
+	got := hex.AppendEncode(dst, src, upper)
+	if len(want) == 0 && (got == nil) != (p == nil) {
+		if got == nil {
+			t.Errorf("got <nil>; want %q", want)
+		} else {
+			t.Errorf("got %q; want <nil>", got)
+		}
+	} else if string(got) != want {
+		t.Errorf("got %q; want %q", got, want)
+	}
+}
+
 func TestEncodeToString(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range testEncodeCases {
 		t.Run(
 			fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper),
 			func(t *testing.T) {
+				t.Parallel()
+
 				t.Run("type=[]byte", func(t *testing.T) {
+					t.Parallel()
+
 					s := hex.EncodeToString(tc.srcBytes, tc.upper)
 					if s != tc.dstStr {
 						t.Errorf("got %q; want %q", s, tc.dstStr)
 					}
 				})
 				t.Run("type=string", func(t *testing.T) {
+					t.Parallel()
+
 					s := hex.EncodeToString(tc.srcStr, tc.upper)
 					if s != tc.dstStr {
 						t.Errorf("got %q; want %q", s, tc.dstStr)
@@ -235,25 +322,23 @@ func TestEncodeToString(t *testing.T) {
 }
 
 func TestEncoder_Write(t *testing.T) {
-	buf := make([]byte, testEncodeCasesDstMaxLen+1024)
-	w := bytes.NewBuffer(buf)
-	upperEncoder := hex.NewEncoder(w, true)
-	lowerEncoder := hex.NewEncoder(w, false)
+	t.Parallel()
+
 	for _, tc := range testEncodeCases {
 		t.Run(
 			fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper),
 			func(t *testing.T) {
-				w.Reset()
-				var encoder hex.Encoder
-				if tc.upper {
-					encoder = upperEncoder
-				} else {
-					encoder = lowerEncoder
-				}
+				t.Parallel()
+
+				buf := make([]byte, 0, testEncodeCasesDstMaxLen+1024)
+				w := bytes.NewBuffer(buf)
+				encoder := hex.NewEncoder(w, tc.upper)
+
 				n, err := encoder.Write(tc.srcBytes)
 				if err != nil {
 					t.Fatal(err)
 				}
+
 				n = hex.EncodedLen(n)
 				if string(buf[:n]) != tc.dstStr {
 					t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
@@ -264,29 +349,29 @@ func TestEncoder_Write(t *testing.T) {
 }
 
 func TestEncoder_WriteByte(t *testing.T) {
-	buf := make([]byte, testEncodeCasesDstMaxLen+1024)
-	w := bytes.NewBuffer(buf)
-	upperEncoder := hex.NewEncoder(w, true)
-	lowerEncoder := hex.NewEncoder(w, false)
+	t.Parallel()
+
 	for _, tc := range testEncodeCases {
 		t.Run(
 			fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper),
 			func(t *testing.T) {
-				w.Reset()
-				var encoder hex.Encoder
-				if tc.upper {
-					encoder = upperEncoder
-				} else {
-					encoder = lowerEncoder
-				}
+				t.Parallel()
+
+				buf := make([]byte, 0, testEncodeCasesDstMaxLen+1024)
+				w := bytes.NewBuffer(buf)
+				encoder := hex.NewEncoder(w, tc.upper)
+
 				var n int
+
 				for _, b := range tc.srcBytes {
 					err := encoder.WriteByte(b)
 					if err != nil {
 						t.Fatalf("WriteByte(%q) - %v", b, err)
 					}
+
 					n++
 				}
+
 				n = hex.EncodedLen(n)
 				if string(buf[:n]) != tc.dstStr {
 					t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
@@ -297,25 +382,23 @@ func TestEncoder_WriteByte(t *testing.T) {
 }
 
 func TestEncoder_WriteString(t *testing.T) {
-	buf := make([]byte, testEncodeCasesDstMaxLen+1024)
-	w := bytes.NewBuffer(buf)
-	upperEncoder := hex.NewEncoder(w, true)
-	lowerEncoder := hex.NewEncoder(w, false)
+	t.Parallel()
+
 	for _, tc := range testEncodeCases {
 		t.Run(
 			fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper),
 			func(t *testing.T) {
-				w.Reset()
-				var encoder hex.Encoder
-				if tc.upper {
-					encoder = upperEncoder
-				} else {
-					encoder = lowerEncoder
-				}
+				t.Parallel()
+
+				buf := make([]byte, 0, testEncodeCasesDstMaxLen+1024)
+				w := bytes.NewBuffer(buf)
+				encoder := hex.NewEncoder(w, tc.upper)
+
 				n, err := encoder.WriteString(tc.srcStr)
 				if err != nil {
 					t.Fatal(err)
 				}
+
 				n = hex.EncodedLen(n)
 				if string(buf[:n]) != tc.dstStr {
 					t.Errorf("got %q; want %q", buf[:n], tc.dstStr)
@@ -326,25 +409,23 @@ func TestEncoder_WriteString(t *testing.T) {
 }
 
 func TestEncoder_ReadFrom(t *testing.T) {
-	buf := make([]byte, testEncodeCasesDstMaxLen+1024)
-	w := bytes.NewBuffer(buf)
-	upperEncoder := hex.NewEncoder(w, true)
-	lowerEncoder := hex.NewEncoder(w, false)
+	t.Parallel()
+
 	for _, tc := range testEncodeCases {
 		t.Run(
 			fmt.Sprintf("src=%s&upper=%t", tc.srcName, tc.upper),
 			func(t *testing.T) {
-				w.Reset()
-				var encoder hex.Encoder
-				if tc.upper {
-					encoder = upperEncoder
-				} else {
-					encoder = lowerEncoder
-				}
+				t.Parallel()
+
+				buf := make([]byte, 0, testEncodeCasesDstMaxLen+1024)
+				w := bytes.NewBuffer(buf)
+				encoder := hex.NewEncoder(w, tc.upper)
+
 				n, err := encoder.ReadFrom(strings.NewReader(tc.srcStr))
 				if err != nil {
 					t.Fatal(err)
 				}
+
 				n = hex.EncodedLen(n)
 				if string(buf[:n]) != tc.dstStr {
 					t.Errorf("got %q; want %q", buf[:n], tc.dstStr)

@@ -33,6 +33,7 @@ func (rbr *ResettableBufferedReaderImpl) GetBufferedReader() *bufio.Reader {
 	if rbr == nil {
 		return nil
 	}
+
 	return rbr.br
 }
 
@@ -42,5 +43,6 @@ func (rbw *ResettableBufferedWriterImpl) GetBufferedWriter() *bufio.Writer {
 	if rbw == nil {
 		return nil
 	}
+
 	return rbw.bw
 }

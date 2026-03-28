@@ -37,8 +37,11 @@ func (w errorWriter) Write([]byte) (n int, err error) {
 	return 0, errErrorWriter
 }
 
-func TestMustFunctionsWritePanic(t *testing.T) {
+func TestMustFunctionsWritePanicError(t *testing.T) {
+	t.Parallel()
+
 	var ew errorWriter
+
 	newBufferedWriter := func() inout.BufferedWriter {
 		return inout.NewBufferedWriterSize(ew, 1)
 	}
@@ -84,15 +87,20 @@ func TestMustFunctionsWritePanic(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			defer func() {
 				err := recover()
-				wp, ok := err.(*inout.WritePanic)
+
+				wp, ok := err.(*inout.WritePanicError)
 				if !ok {
-					t.Errorf("recover type %T; want *inout.WritePanic", err)
+					t.Errorf("recover type %T; want *inout.WritePanicError",
+						err)
 				} else if !errors.Is(wp, errErrorWriter) {
 					t.Error("errors.Is(wp, errErrorWriter) is false")
 				}
 			}()
+
 			tc.f()
 		})
 	}

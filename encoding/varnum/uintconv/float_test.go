@@ -54,10 +54,14 @@ var float64Uint64ByteReversalPair = []struct {
 }
 
 func TestFromFloat64ByteReversal(t *testing.T) {
+	t.Parallel()
+
 	for _, pair := range float64Uint64ByteReversalPair {
 		t.Run(
 			fmt.Sprintf("f=%v(bits=%#016X)", pair.f, math.Float64bits(pair.f)),
 			func(t *testing.T) {
+				t.Parallel()
+
 				got := uintconv.FromFloat64ByteReversal(pair.f)
 				if got != pair.u {
 					t.Errorf("got %#X; want %#X", got, pair.u)
@@ -68,8 +72,12 @@ func TestFromFloat64ByteReversal(t *testing.T) {
 }
 
 func TestToFloat64ByteReversal(t *testing.T) {
+	t.Parallel()
+
 	for _, pair := range float64Uint64ByteReversalPair {
 		t.Run(fmt.Sprintf("u=%#X", pair.u), func(t *testing.T) {
+			t.Parallel()
+
 			got := uintconv.ToFloat64ByteReversal(pair.u)
 			if math.IsNaN(pair.f) {
 				if !math.IsNaN(got) {

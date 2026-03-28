@@ -232,7 +232,7 @@ func TestWrite_AfterClose(t *testing.T) {
 			defer func() {
 				e := recover()
 				if tc.writePanic {
-					if wp, ok := e.(*inout.WritePanic); ok {
+					if wp, ok := e.(*inout.WritePanicError); ok {
 						if !errors.Is(wp, tc.wantErr) {
 							t.Errorf("got panic %v; want %v", e, tc.wantErr)
 						}

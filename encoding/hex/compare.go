@@ -32,6 +32,7 @@ func CanEncodeTo[Bytes1, Bytes2 constraints.ByteString](
 	if n != len(x) {
 		return false
 	}
+
 	for i := 0; i < n; i += 2 {
 		if x[i] < '0' || x[i+1] < '0' ||
 			lowercaseHexTable[src[i>>1]>>4] != x[i]|letterCaseDiff ||
@@ -39,6 +40,7 @@ func CanEncodeTo[Bytes1, Bytes2 constraints.ByteString](
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -56,6 +58,7 @@ func CanEncodeToPrefix[Bytes1, Bytes2 constraints.ByteString](
 	} else if n&1 > 0 { // n is odd
 		n--
 	}
+
 	for i := 0; i < n; i += 2 {
 		if prefix[i] < '0' || prefix[i+1] < '0' ||
 			lowercaseHexTable[src[i>>1]>>4] != prefix[i]|letterCaseDiff ||
@@ -63,10 +66,12 @@ func CanEncodeToPrefix[Bytes1, Bytes2 constraints.ByteString](
 			return false
 		}
 	}
+
 	if len(prefix)&1 > 0 { // len(prefix) is odd
 		// Here, n == len(prefix) - 1
 		return prefix[n] >= '0' &&
 			lowercaseHexTable[src[n>>1]>>4] == prefix[n]|letterCaseDiff
 	}
+
 	return true
 }

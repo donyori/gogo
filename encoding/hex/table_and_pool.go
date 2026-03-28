@@ -49,7 +49,7 @@ const letterCaseDiff byte = 'A' ^ 'a'
 // sourceBufferPool is a set of temporary buffers to load source data
 // from readers.
 //
-// The type of the buffers is *[sourceBufferLen]byte.
+// The type of the buffers is [*[sourceBufferLen]byte].
 var sourceBufferPool = sync.Pool{
 	New: func() any {
 		return new([sourceBufferLen]byte)
@@ -59,21 +59,25 @@ var sourceBufferPool = sync.Pool{
 // encodeBufferPool is a set of temporary buffers to hold encoding results
 // that will be written to destination writers.
 //
-// The type of the buffers is *[sourceBufferLen<<1]byte.
+// The type of the buffers is [*[sourceBufferLen<<1]byte].
 var encodeBufferPool = sync.Pool{
 	New: func() any {
 		return new([sourceBufferLen << 1]byte)
 	},
 }
 
+// int64SafeNumDigit is the safe length to hold the digits of
+// a hexadecimal representation of a signed 64-bit integer.
+const int64SafeNumDigit int = 16
+
 // int64BufferLen is the length of a buffer that holds
-// a hexadecimal representation of a 64-bit integer.
-const int64BufferLen int = 17
+// a hexadecimal representation of a signed 64-bit integer.
+const int64BufferLen = int64SafeNumDigit + 1
 
 // int64BufferPool is a set of temporary buffers to hold
-// the hexadecimal representation of a 64-bit integer.
+// the hexadecimal representation of a signed 64-bit integer.
 //
-// The type of the buffers is *[int64BufferLen]byte.
+// The type of the buffers is [*[int64BufferLen]byte].
 var int64BufferPool = sync.Pool{
 	New: func() any {
 		return new([int64BufferLen]byte)

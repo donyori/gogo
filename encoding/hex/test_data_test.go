@@ -38,13 +38,19 @@ type testEncodeCase struct {
 	upper    bool
 }
 
-var testEncodeCases []*testEncodeCase
-var testEncodeCasesDstMaxLen int
+var (
+	testEncodeCases          []*testEncodeCase
+	testEncodeCasesDstMaxLen int
 
-var testEncodeLongSrcCases [2]*testEncodeCase
+	testEncodeLongSrcCases [2]*testEncodeCase
+)
 
 func init() {
-	srcs := []string{"", "Hello world! 你好，世界！", ""}
+	srcs := []string{
+		"",
+		"Hello world! \u4F60\u597D\uFF0C\u4E16\u754C\uFF01",
+		"",
+	}
 	longBytes := randbytes.Make(
 		rand.NewChaCha8([32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))),
 		8192,
@@ -52,13 +58,16 @@ func init() {
 	srcs[2] = string(longBytes)
 	uppers := []bool{false, true}
 	testEncodeCases = make([]*testEncodeCase, len(srcs)*len(uppers))
+
 	var i int
+
 	for _, src := range srcs {
 		for _, upper := range uppers {
 			dst := stdhex.EncodeToString([]byte(src))
 			if upper {
 				dst = strings.ToUpper(dst)
 			}
+
 			tc := &testEncodeCase{
 				srcName: stringName(src),
 				dstName: stringName(dst),
@@ -66,21 +75,27 @@ func init() {
 				dstStr:  dst,
 				upper:   upper,
 			}
+
 			if len(src) == len(longBytes) {
 				tc.srcBytes = longBytes
+
 				var idx int
 				if upper {
 					idx = 1
 				}
+
 				testEncodeLongSrcCases[idx] = tc
 			} else if len(src) > 0 {
 				tc.srcBytes = []byte(src)
 			}
+
 			if len(dst) > 0 {
 				tc.dstBytes = []byte(dst)
 			}
+
 			testEncodeCases[i] = tc
 			i++
+
 			if testEncodeCasesDstMaxLen < len(dst) {
 				testEncodeCasesDstMaxLen = len(dst)
 			}
@@ -93,6 +108,7 @@ func stringName(s string) string {
 	if len(s) <= 40 {
 		return strconv.QuoteToASCII(s)
 	}
+
 	return fmt.Sprintf(
 		"<long string (%d) %s...%s>",
 		len(s),

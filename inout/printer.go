@@ -28,36 +28,39 @@ import (
 // MustFprintf is like fmt.Fprintf but panics when encountering an error.
 //
 // If it panics, the error value passed to the call to panic
-// must be exactly of type *WritePanic.
+// must be exactly of type *WritePanicError.
 func MustFprintf(w io.Writer, format string, arg ...any) (n int) {
 	n, err := fmt.Fprintf(w, format, arg...)
 	if err != nil {
-		panic(NewWritePanic(errors.AutoWrap(err)))
+		panic(NewWritePanicError(errors.AutoWrap(err)))
 	}
+
 	return
 }
 
 // MustFprint is like fmt.Fprint but panics when encountering an error.
 //
 // If it panics, the error value passed to the call to panic
-// must be exactly of type *WritePanic.
+// must be exactly of type *WritePanicError.
 func MustFprint(w io.Writer, arg ...any) (n int) {
 	n, err := fmt.Fprint(w, arg...)
 	if err != nil {
-		panic(NewWritePanic(errors.AutoWrap(err)))
+		panic(NewWritePanicError(errors.AutoWrap(err)))
 	}
+
 	return
 }
 
 // MustFprintln is like fmt.Fprintln but panics when encountering an error.
 //
 // If it panics, the error value passed to the call to panic
-// must be exactly of type *WritePanic.
+// must be exactly of type *WritePanicError.
 func MustFprintln(w io.Writer, arg ...any) (n int) {
 	n, err := fmt.Fprintln(w, arg...)
 	if err != nil {
-		panic(NewWritePanic(errors.AutoWrap(err)))
+		panic(NewWritePanicError(errors.AutoWrap(err)))
 	}
+
 	return
 }
 
@@ -70,7 +73,7 @@ type Printer interface {
 	// MustPrintf is like Printf but panics when encountering an error.
 	//
 	// If it panics, the error value passed to the call to panic
-	// must be exactly of type *WritePanic.
+	// must be exactly of type *WritePanicError.
 	MustPrintf(format string, arg ...any) (n int)
 
 	// Print formats arguments and writes to its underlying data stream.
@@ -80,7 +83,7 @@ type Printer interface {
 	// MustPrint is like Print but panics when encountering an error.
 	//
 	// If it panics, the error value passed to the call to panic
-	// must be exactly of type *WritePanic.
+	// must be exactly of type *WritePanicError.
 	MustPrint(arg ...any) (n int)
 
 	// Println formats arguments and writes to its underlying data stream.
@@ -90,6 +93,6 @@ type Printer interface {
 	// MustPrintln is like Println but panics when encountering an error.
 	//
 	// If it panics, the error value passed to the call to panic
-	// must be exactly of type *WritePanic.
+	// must be exactly of type *WritePanicError.
 	MustPrintln(arg ...any) (n int)
 }

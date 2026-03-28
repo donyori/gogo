@@ -70,7 +70,7 @@ var (
 
 const testFSZipOffsetName = "zip offset.zip"
 
-const testFSZipComment = "The end-of-central-directory comment 你好"
+const testFSZipComment = "The end-of-central-directory comment \u4F60\u597D"
 
 const testFSTarNonLocalFilename = "/non-local file.txt"
 

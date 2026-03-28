@@ -40,6 +40,7 @@ var (
 func init() {
 	uint64s = make([]uint64, 53)
 	uint64s[1], uint64s[2], uint64s[3], uint64s[4] = 1, 7, 8, 9
+
 	for i, x := range vlq.MinUint64s {
 		uint64s[5+i*5] = x - 2
 		uint64s[6+i*5] = x - 1
@@ -47,20 +48,23 @@ func init() {
 		uint64s[8+i*5] = x + 1
 		uint64s[9+i*5] = x + 2
 	}
+
 	uint64s[50] = math.MaxUint64 - 2
 	uint64s[51] = math.MaxUint64 - 1
 	uint64s[52] = math.MaxUint64
 
 	encodedUint64s = make([][]byte, 53)
 	for i := range 7 {
-		encodedUint64s[i] = []byte{byte(uint64s[i])}
+		encodedUint64s[i] = []byte{byte(uint64s[i])} //gosec:disable G115 -- these integers are less than 0x80
 	}
+
 	for i := 1; i <= len(vlq.MinUint64s); i++ {
 		for k, lastByte := range []byte{0, 1, 2, 0x7E, 0x7F} {
 			idx := 2 + i*5 + k
 			if idx >= 50 {
 				break
 			}
+
 			encodedUint64s[idx] = make([]byte, i+1)
 			for j := range i {
 				if k < 3 {
@@ -69,9 +73,11 @@ func init() {
 					encodedUint64s[idx][j] = 0xFF
 				}
 			}
+
 			encodedUint64s[idx][i] = lastByte
 		}
 	}
+
 	encodedUint64s[50] = []byte{
 		0x80, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0x7D,
 	}

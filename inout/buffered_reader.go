@@ -121,11 +121,13 @@ func NewBufferedReaderSize(r io.Reader, size int) ResettableBufferedReader {
 	if size < minReadBufferSize {
 		size = minReadBufferSize
 	}
+
 	if br, ok := r.(ResettableBufferedReader); ok && br.Size() >= size {
 		return br
 	} else if br, ok := r.(*resettableBufferedReader); ok {
 		return &resettableBufferedReader{bufio.NewReaderSize(br.br, size)}
 	}
+
 	br, ok := r.(*bufio.Reader)
 	if !ok || br == nil || br.Size() < size {
 		if ok && br == nil {
@@ -133,8 +135,10 @@ func NewBufferedReaderSize(r io.Reader, size int) ResettableBufferedReader {
 			// Panic should occur when reading.
 			r = nil
 		}
+
 		br = bufio.NewReaderSize(r, size)
 	}
+
 	return &resettableBufferedReader{br}
 }
 
@@ -152,16 +156,21 @@ func (rbr *resettableBufferedReader) UnreadByte() error {
 	return errors.AutoWrap(rbr.br.UnreadByte())
 }
 
-func (rbr *resettableBufferedReader) ConsumeByte(target byte, n int64) (
-	consumed int64, err error) {
+func (rbr *resettableBufferedReader) ConsumeByte(
+	target byte,
+	n int64,
+) (consumed int64, err error) {
 	consumed, err = rbr.ConsumeByteFunc(func(c byte) bool {
 		return c == target
 	}, n)
+
 	return consumed, errors.AutoWrap(err)
 }
 
 func (rbr *resettableBufferedReader) ConsumeByteFunc(
-	f func(c byte) bool, n int64) (consumed int64, err error) {
+	f func(c byte) bool,
+	n int64,
+) (consumed int64, err error) {
 	for n < 0 || consumed < n {
 		c, err := rbr.br.ReadByte()
 		if err != nil {
@@ -172,10 +181,13 @@ func (rbr *resettableBufferedReader) ConsumeByteFunc(
 				// Fail to put the byte back. The byte has been consumed.
 				consumed++
 			}
+
 			return consumed, errors.AutoWrap(err)
 		}
+
 		consumed++
 	}
+
 	return
 }
 
@@ -188,16 +200,21 @@ func (rbr *resettableBufferedReader) UnreadRune() error {
 	return errors.AutoWrap(rbr.br.UnreadRune())
 }
 
-func (rbr *resettableBufferedReader) ConsumeRune(target rune, n int64) (
-	consumed int64, err error) {
-	consumed, err = rbr.ConsumeRuneFunc(func(r rune, size int) bool {
+func (rbr *resettableBufferedReader) ConsumeRune(
+	target rune,
+	n int64,
+) (consumed int64, err error) {
+	consumed, err = rbr.ConsumeRuneFunc(func(r rune, _ int) bool {
 		return r == target
 	}, n)
+
 	return consumed, errors.AutoWrap(err)
 }
 
 func (rbr *resettableBufferedReader) ConsumeRuneFunc(
-	f func(r rune, size int) bool, n int64) (consumed int64, err error) {
+	f func(r rune, size int) bool,
+	n int64,
+) (consumed int64, err error) {
 	for n < 0 || consumed < n {
 		r, size, err := rbr.br.ReadRune()
 		if err != nil {
@@ -208,32 +225,43 @@ func (rbr *resettableBufferedReader) ConsumeRuneFunc(
 				// Fail to put the rune back. The rune has been consumed.
 				consumed++
 			}
+
 			return consumed, errors.AutoWrap(err)
 		}
+
 		consumed++
 	}
+
 	return
 }
 
-func (rbr *resettableBufferedReader) WriteTo(w io.Writer) (
-	n int64, err error) {
+func (rbr *resettableBufferedReader) WriteTo(w io.Writer) (n int64, err error) {
 	n, err = rbr.br.WriteTo(w)
 	return n, errors.AutoWrap(err)
 }
 
 func (rbr *resettableBufferedReader) ReadLine() (
-	line []byte, more bool, err error) {
+	line []byte,
+	more bool,
+	err error,
+) {
 	line, more, err = rbr.br.ReadLine()
 	return line, more, errors.AutoWrap(err)
 }
 
 func (rbr *resettableBufferedReader) ReadEntireLine() (
-	line []byte, err error) {
-	var parts [][]byte
-	var n int
+	line []byte,
+	err error,
+) {
+	var (
+		parts [][]byte
+		n     int
+	)
+
 	more := true
 	for more {
 		var t []byte
+
 		t, more, err = rbr.ReadLine()
 		if len(t) > 0 {
 			buf := make([]byte, len(t))
@@ -241,46 +269,58 @@ func (rbr *resettableBufferedReader) ReadEntireLine() (
 			parts = append(parts, buf)
 		}
 	}
+
 	if n == 0 {
 		return nil, errors.AutoWrap(err)
 	}
+
 	// If n > 0, set err to nil, as described in the document.
 	if len(parts) == 1 {
 		return parts[0], nil
 	}
+
 	line, err = make([]byte, n), nil
+
 	n = 0
 	for i := range parts {
 		n += copy(line[n:], parts[i])
 	}
+
 	return
 }
 
-func (rbr *resettableBufferedReader) WriteLineTo(w io.Writer) (
-	n int64, err error) {
+func (rbr *resettableBufferedReader) WriteLineTo(
+	w io.Writer,
+) (n int64, err error) {
 	errList, more := errors.NewErrorList(true), true
 	for more {
 		var line []byte
+
 		line, more, err = rbr.br.ReadLine()
 		if err != nil {
 			errList.Append(err)
 		}
+
 		if len(line) > 0 {
 			written, err := w.Write(line)
 			n += int64(written)
+
 			if err != nil {
 				errList.Append(err)
 			}
 		}
+
 		if errList.Erroneous() {
 			return n, errors.AutoWrap(errList.ToError())
 		}
 	}
+
 	return // err must be nil
 }
 
 func (rbr *resettableBufferedReader) IterLines(pErr *error) iter.Seq[[]byte] {
 	var readEntireLineErr error
+
 	return func(yield func([]byte) bool) {
 		if pErr != nil {
 			defer func(pErr *error) {
@@ -288,14 +328,18 @@ func (rbr *resettableBufferedReader) IterLines(pErr *error) iter.Seq[[]byte] {
 				if errors.Is(err, io.EOF) {
 					err = nil
 				}
+
 				*pErr = errors.AutoWrapSkip(err, 1) // skip = 1 to skip the inner function
 			}(pErr)
 		}
+
 		if readEntireLineErr != nil {
 			return
 		}
+
 		for {
 			var line []byte
+
 			line, readEntireLineErr = rbr.ReadEntireLine()
 			if readEntireLineErr != nil || yield != nil && !yield(line) {
 				return
@@ -305,8 +349,10 @@ func (rbr *resettableBufferedReader) IterLines(pErr *error) iter.Seq[[]byte] {
 }
 
 func (rbr *resettableBufferedReader) IterCountLines(
-	pErr *error) iter.Seq2[int64, []byte] {
+	pErr *error,
+) iter.Seq2[int64, []byte] {
 	var readEntireLineErr error
+
 	return func(yield func(int64, []byte) bool) {
 		if pErr != nil {
 			defer func(pErr *error) {
@@ -314,14 +360,18 @@ func (rbr *resettableBufferedReader) IterCountLines(
 				if errors.Is(err, io.EOF) {
 					err = nil
 				}
+
 				*pErr = errors.AutoWrapSkip(err, 1) // skip = 1 to skip the inner function
 			}(pErr)
 		}
+
 		if readEntireLineErr != nil {
 			return
 		}
+
 		for i := int64(0); ; i++ {
 			var line []byte
+
 			line, readEntireLineErr = rbr.ReadEntireLine()
 			if readEntireLineErr != nil || yield != nil && !yield(i, line) {
 				return
@@ -343,8 +393,7 @@ func (rbr *resettableBufferedReader) Peek(n int) (data []byte, err error) {
 	return data, errors.AutoWrap(err)
 }
 
-func (rbr *resettableBufferedReader) Discard(n int) (
-	discarded int, err error) {
+func (rbr *resettableBufferedReader) Discard(n int) (discarded int, err error) {
 	discarded, err = rbr.br.Discard(n)
 	return discarded, errors.AutoWrap(err)
 }
@@ -353,5 +402,6 @@ func (rbr *resettableBufferedReader) Reset(r io.Reader) {
 	if rbr == r {
 		return // do nothing if the resettableBufferedReader is reset to itself
 	}
+
 	rbr.br.Reset(r)
 }

@@ -97,11 +97,13 @@ func NewBufferedWriterSize(w io.Writer, size int) ResettableBufferedWriter {
 	if size <= 0 {
 		size = defaultBufferSize
 	}
+
 	if bw, ok := w.(ResettableBufferedWriter); ok && bw.Size() >= size {
 		return bw
 	} else if bw, ok := w.(*resettableBufferedWriter); ok {
 		return &resettableBufferedWriter{bufio.NewWriterSize(bw.bw, size)}
 	}
+
 	bw, ok := w.(*bufio.Writer)
 	if !ok || bw == nil || bw.Size() < size {
 		if ok && bw == nil {
@@ -109,8 +111,10 @@ func NewBufferedWriterSize(w io.Writer, size int) ResettableBufferedWriter {
 			// Panic should occur when writing.
 			w = nil
 		}
+
 		bw = bufio.NewWriterSize(w, size)
 	}
+
 	return &resettableBufferedWriter{bw}
 }
 
@@ -122,8 +126,9 @@ func (rbw *resettableBufferedWriter) Write(p []byte) (n int, err error) {
 func (rbw *resettableBufferedWriter) MustWrite(p []byte) (n int) {
 	n, err := rbw.bw.Write(p)
 	if err != nil {
-		panic(NewWritePanic(errors.AutoWrap(err)))
+		panic(NewWritePanicError(errors.AutoWrap(err)))
 	}
+
 	return
 }
 
@@ -134,7 +139,7 @@ func (rbw *resettableBufferedWriter) WriteByte(c byte) error {
 func (rbw *resettableBufferedWriter) MustWriteByte(c byte) {
 	err := rbw.bw.WriteByte(c)
 	if err != nil {
-		panic(NewWritePanic(errors.AutoWrap(err)))
+		panic(NewWritePanicError(errors.AutoWrap(err)))
 	}
 }
 
@@ -146,8 +151,9 @@ func (rbw *resettableBufferedWriter) WriteRune(r rune) (size int, err error) {
 func (rbw *resettableBufferedWriter) MustWriteRune(r rune) (size int) {
 	size, err := rbw.bw.WriteRune(r)
 	if err != nil {
-		panic(NewWritePanic(errors.AutoWrap(err)))
+		panic(NewWritePanicError(errors.AutoWrap(err)))
 	}
+
 	return
 }
 
@@ -159,29 +165,36 @@ func (rbw *resettableBufferedWriter) WriteString(s string) (n int, err error) {
 func (rbw *resettableBufferedWriter) MustWriteString(s string) (n int) {
 	n, err := rbw.bw.WriteString(s)
 	if err != nil {
-		panic(NewWritePanic(errors.AutoWrap(err)))
+		panic(NewWritePanicError(errors.AutoWrap(err)))
 	}
+
 	return
 }
 
-func (rbw *resettableBufferedWriter) ReadFrom(r io.Reader) (
-	n int64, err error) {
+func (rbw *resettableBufferedWriter) ReadFrom(
+	r io.Reader,
+) (n int64, err error) {
 	n, err = rbw.bw.ReadFrom(r)
 	return n, errors.AutoWrap(err)
 }
 
-func (rbw *resettableBufferedWriter) Printf(format string, arg ...any) (
-	n int, err error) {
+func (rbw *resettableBufferedWriter) Printf(
+	format string,
+	arg ...any,
+) (n int, err error) {
 	n, err = fmt.Fprintf(rbw.bw, format, arg...)
 	return n, errors.AutoWrap(err)
 }
 
-func (rbw *resettableBufferedWriter) MustPrintf(format string, arg ...any) (
-	n int) {
+func (rbw *resettableBufferedWriter) MustPrintf(
+	format string,
+	arg ...any,
+) (n int) {
 	n, err := fmt.Fprintf(rbw.bw, format, arg...)
 	if err != nil {
-		panic(NewWritePanic(errors.AutoWrap(err)))
+		panic(NewWritePanicError(errors.AutoWrap(err)))
 	}
+
 	return
 }
 
@@ -193,8 +206,9 @@ func (rbw *resettableBufferedWriter) Print(arg ...any) (n int, err error) {
 func (rbw *resettableBufferedWriter) MustPrint(arg ...any) (n int) {
 	n, err := fmt.Fprint(rbw.bw, arg...)
 	if err != nil {
-		panic(NewWritePanic(errors.AutoWrap(err)))
+		panic(NewWritePanicError(errors.AutoWrap(err)))
 	}
+
 	return
 }
 
@@ -206,8 +220,9 @@ func (rbw *resettableBufferedWriter) Println(arg ...any) (n int, err error) {
 func (rbw *resettableBufferedWriter) MustPrintln(arg ...any) (n int) {
 	n, err := fmt.Fprintln(rbw.bw, arg...)
 	if err != nil {
-		panic(NewWritePanic(errors.AutoWrap(err)))
+		panic(NewWritePanicError(errors.AutoWrap(err)))
 	}
+
 	return
 }
 
@@ -231,5 +246,6 @@ func (rbw *resettableBufferedWriter) Reset(w io.Writer) {
 	if rbw == w {
 		return // do nothing if the resettableBufferedWriter is reset to itself
 	}
+
 	rbw.bw.Reset(w)
 }

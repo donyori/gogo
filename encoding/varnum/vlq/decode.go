@@ -59,22 +59,30 @@ var ErrSrcTooLarge = errors.AutoNewCustom(
 // If err is nil, n is exactly Uint64EncodedLen(u).
 // If err is not nil, n is 0.
 func DecodeUint64(src []byte) (u uint64, n int, err error) {
+	const MaxByte byte = 0x7F
+
 	end := false
+
 	for _, b := range src {
 		n++
+
 		if b&0x80 == 0 {
 			u, end = u|uint64(b), true
 			break
 		}
-		u = u | uint64(b&0x7F) + 1
+
+		u = u | uint64(b&MaxByte) + 1
 		if u&0xFE00_0000_0000_0000 != 0 {
 			return 0, 0, errors.AutoWrap(ErrSrcTooLarge)
 		}
+
 		u <<= 7
 	}
+
 	if !end {
 		return 0, 0, errors.AutoWrap(ErrSrcIncomplete)
 	}
+
 	return
 }
 
@@ -94,6 +102,7 @@ func DecodeInt64(src []byte) (i int64, n int, err error) {
 	if err != nil {
 		return 0, 0, errors.AutoWrap(err)
 	}
+
 	return uintconv.ToInt64Zigzag(u), n, nil
 }
 
@@ -116,5 +125,6 @@ func DecodeFloat64(src []byte) (f float64, n int, err error) {
 	if err != nil {
 		return 0, 0, errors.AutoWrap(err)
 	}
+
 	return uintconv.ToFloat64ByteReversal(u), n, nil
 }

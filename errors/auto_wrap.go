@@ -266,6 +266,7 @@ func IsAutoWrappedError(err error) bool {
 
 //revive:disable:error-return
 // In the following two functions, the error returned is the main result.
+// It should be the first return value instead of the final one.
 
 // UnwrapAutoWrappedError unwraps err and returns the result and true
 // if err is an AutoWrappedError.
@@ -309,8 +310,9 @@ func UnwrapAllAutoWrappedErrors(err error) (error, bool) {
 // It returns the full function names and the final unwrapping result.
 //
 // If err is not an AutoWrappedError, it returns nil and err itself.
-func ListFunctionNamesInAutoWrappedErrors(err error) (
-	names []string, root error) {
+func ListFunctionNamesInAutoWrappedErrors(
+	err error,
+) (names []string, root error) {
 	root = err
 	for {
 		// The type testing should not go along the Unwrap error tree,
