@@ -919,8 +919,12 @@ func testReadFromTestFS(
 // testTarFile tests the i-th tar file.
 //
 // It reports whether to stop testing.
-func testTarFile(t *testing.T, r filesys.Reader, i int, hdr *tar.Header) (
-	stop bool) {
+func testTarFile(
+	t *testing.T,
+	r filesys.Reader,
+	i int,
+	hdr *tar.Header,
+) (stop bool) {
 	switch {
 	case i >= len(testFSTarFiles):
 		t.Error("tar headers more than", len(testFSTarFiles))

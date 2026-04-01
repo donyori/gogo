@@ -70,6 +70,7 @@ func New[Item any](capacity int) Stack[Item] {
 	if capacity <= 0 {
 		capacity = defaultCapacity
 	}
+
 	return &stackSlice[Item]{
 		buf: make([]Item, 0, capacity),
 	}
@@ -110,9 +111,11 @@ func (s *stackSlice[Item]) Reserve(capacity int) {
 	if capacity <= 0 {
 		capacity = defaultCapacity
 	}
+
 	if capacity <= cap(s.buf) {
 		return
 	}
+
 	buf := make([]Item, len(s.buf), capacity)
 	copy(buf, s.buf)
 	s.buf = buf
@@ -126,9 +129,11 @@ func (s *stackSlice[Item]) Pop() Item {
 	if len(s.buf) == 0 {
 		panic(errors.AutoMsg(emptyStackPanicMessage))
 	}
+
 	x := s.buf[len(s.buf)-1]
 	clear(s.buf[len(s.buf)-1:]) // avoid memory leak
 	s.buf = s.buf[:len(s.buf)-1]
+
 	return x
 }
 
@@ -136,5 +141,6 @@ func (s *stackSlice[Item]) Peek() Item {
 	if len(s.buf) == 0 {
 		panic(errors.AutoMsg(emptyStackPanicMessage))
 	}
+
 	return s.buf[len(s.buf)-1]
 }

@@ -138,14 +138,18 @@ type Reader interface {
 	//
 	// The returned iterator is never nil
 	// but is a no-op iterator if err is not nil.
-	IterTarFiles(pErr *error, acceptNonLocalNames bool) (
-		seq iter.Seq[*tar.Header], err error)
+	IterTarFiles(
+		pErr *error,
+		acceptNonLocalNames bool,
+	) (seq iter.Seq[*tar.Header], err error)
 
 	// IterIndexTarFiles returns a single-use iterator
 	// over index-header pairs in the tar archive.
 	// It is similar to method IterTarFiles but with indices.
-	IterIndexTarFiles(pErr *error, acceptNonLocalNames bool) (
-		seq2 iter.Seq2[int, *tar.Header], err error)
+	IterIndexTarFiles(
+		pErr *error,
+		acceptNonLocalNames bool,
+	) (seq2 iter.Seq2[int, *tar.Header], err error)
 
 	// ZipEnabled returns true if the file is archived by ZIP
 	// and is not opened in raw mode.
@@ -237,8 +241,11 @@ type reader struct {
 // and it is also closed by this function when encountering an error.
 //
 // This function panics if file is nil.
-func Read(file fs.File, opts *ReadOptions, closeFile bool) (
-	r Reader, err error) {
+func Read(
+	file fs.File,
+	opts *ReadOptions,
+	closeFile bool,
+) (r Reader, err error) {
 	if file == nil {
 		panic(errors.AutoMsg("file is nil"))
 	}
@@ -316,8 +323,11 @@ func Read(file fs.File, opts *ReadOptions, closeFile bool) (
 // The file is closed when the returned reader is closed.
 //
 // This function panics if fsys is nil.
-func ReadFromFS(fsys fs.FS, name string, opts *ReadOptions) (
-	r Reader, err error) {
+func ReadFromFS(
+	fsys fs.FS,
+	name string,
+	opts *ReadOptions,
+) (r Reader, err error) {
 	if fsys == nil {
 		panic(errors.AutoMsg("fsys is nil"))
 	}
@@ -517,8 +527,10 @@ func (fr *reader) UnreadByte() error {
 	return errors.AutoWrap(fr.br.UnreadByte())
 }
 
-func (fr *reader) ConsumeByte(target byte, n int64) (
-	consumed int64, err error) {
+func (fr *reader) ConsumeByte(
+	target byte,
+	n int64,
+) (consumed int64, err error) {
 	if fr.err != nil {
 		return 0, errors.AutoWrap(fr.err)
 	}
@@ -526,8 +538,10 @@ func (fr *reader) ConsumeByte(target byte, n int64) (
 	return consumed, errors.AutoWrap(err)
 }
 
-func (fr *reader) ConsumeByteFunc(f func(c byte) bool, n int64) (
-	consumed int64, err error) {
+func (fr *reader) ConsumeByteFunc(
+	f func(c byte) bool,
+	n int64,
+) (consumed int64, err error) {
 	if fr.err != nil {
 		return 0, errors.AutoWrap(fr.err)
 	}
@@ -550,8 +564,10 @@ func (fr *reader) UnreadRune() error {
 	return errors.AutoWrap(fr.br.UnreadRune())
 }
 
-func (fr *reader) ConsumeRune(target rune, n int64) (
-	consumed int64, err error) {
+func (fr *reader) ConsumeRune(
+	target rune,
+	n int64,
+) (consumed int64, err error) {
 	if fr.err != nil {
 		return 0, errors.AutoWrap(fr.err)
 	}
@@ -559,8 +575,10 @@ func (fr *reader) ConsumeRune(target rune, n int64) (
 	return consumed, errors.AutoWrap(err)
 }
 
-func (fr *reader) ConsumeRuneFunc(f func(r rune, size int) bool, n int64) (
-	consumed int64, err error) {
+func (fr *reader) ConsumeRuneFunc(
+	f func(r rune, size int) bool,
+	n int64,
+) (consumed int64, err error) {
 	if fr.err != nil {
 		return 0, errors.AutoWrap(fr.err)
 	}
@@ -682,8 +700,10 @@ func (fr *reader) TarNext() (hdr *tar.Header, err error) {
 	return hdr, errors.AutoWrap(err)
 }
 
-func (fr *reader) IterTarFiles(pErr *error, acceptNonLocalNames bool) (
-	seq iter.Seq[*tar.Header], err error) {
+func (fr *reader) IterTarFiles(
+	pErr *error,
+	acceptNonLocalNames bool,
+) (seq iter.Seq[*tar.Header], err error) {
 	if fr.tr == nil {
 		return noOpSeq, errors.AutoWrap(ErrNotTar)
 	} else if fr.c.Closed() {
@@ -718,8 +738,10 @@ func (fr *reader) IterTarFiles(pErr *error, acceptNonLocalNames bool) (
 	}, nil
 }
 
-func (fr *reader) IterIndexTarFiles(pErr *error, acceptNonLocalNames bool) (
-	seq2 iter.Seq2[int, *tar.Header], err error) {
+func (fr *reader) IterIndexTarFiles(
+	pErr *error,
+	acceptNonLocalNames bool,
+) (seq2 iter.Seq2[int, *tar.Header], err error) {
 	if fr.tr == nil {
 		return noOpSeq2, errors.AutoWrap(ErrNotTar)
 	} else if fr.c.Closed() {
@@ -805,7 +827,9 @@ func (fr *reader) IterZipFiles() (seq iter.Seq[*zip.File], err error) {
 }
 
 func (fr *reader) IterIndexZipFiles() (
-	seq2 iter.Seq2[int, *zip.File], err error) {
+	seq2 iter.Seq2[int, *zip.File],
+	err error,
+) {
 	files, err := fr.ZipFiles()
 	if err != nil || len(files) == 0 {
 		return noOpSeq2, errors.AutoWrap(err)

@@ -89,6 +89,7 @@ func New[Item any](capacity int) Queue[Item] {
 	if capacity > 0 {
 		size = getBufferSize(capacity)
 	}
+
 	return &queueSliceRing[Item]{
 		buf: make([]Item, size),
 		r:   -1,
@@ -99,10 +100,12 @@ func (q *queueSliceRing[Item]) Len() int {
 	if q.r < 0 {
 		return 0
 	}
+
 	n := q.w - q.r
 	if n <= 0 {
 		n += len(q.buf)
 	}
+
 	return n
 }
 
@@ -115,13 +118,16 @@ func (q *queueSliceRing[Item]) Range(handler func(x Item) (cont bool)) {
 				return
 			}
 		}
+
 		return
 	}
+
 	for i := q.r; i < len(q.buf); i++ {
 		if !handler(q.buf[i]) {
 			return
 		}
 	}
+
 	for i := range q.w {
 		if !handler(q.buf[i]) {
 			return
@@ -147,6 +153,7 @@ func (q *queueSliceRing[Item]) RemoveAll() {
 		clear(q.buf[:q.w]) // avoid memory leak
 		clear(q.buf[q.r:]) // avoid memory leak
 	}
+
 	q.r, q.w = -1, 0
 }
 
@@ -158,9 +165,11 @@ func (q *queueSliceRing[Item]) Reserve(capacity int) {
 	if capacity <= 0 {
 		capacity = defaultCapacity
 	}
+
 	if capacity <= len(q.buf) {
 		return
 	}
+
 	q.resize(getBufferSize(capacity))
 }
 
@@ -169,6 +178,7 @@ func (q *queueSliceRing[Item]) Enqueue(x Item) {
 		if len(q.buf) == 0 { // there is no buffer, possibly caused by Clear()
 			q.buf = make([]Item, defaultCapacity) // make a buffer with the default capacity
 		}
+
 		q.r = 0
 	} else if q.r == q.w { // the buffer is full
 		n := len(q.buf) << 1
@@ -176,8 +186,10 @@ func (q *queueSliceRing[Item]) Enqueue(x Item) {
 			panic(errors.AutoMsg(fmt.Sprintf(
 				"buffer size overflows; required %d (%#[1]x)", uint(n))))
 		}
+
 		q.resize(n)
 	}
+
 	q.buf[q.w] = x
 	// (q.w+1)&^len(q.buf) is equivalent to (q.w+1)%len(q.buf)
 	// as 0 <= q.w < len(q.buf) and len(q.buf) is a power of two.
@@ -188,6 +200,7 @@ func (q *queueSliceRing[Item]) Dequeue() Item {
 	if q.r < 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))
 	}
+
 	x := q.buf[q.r]
 	clear(q.buf[q.r:][:1]) // avoid memory leak
 	// (q.r+1)&^len(q.buf) is equivalent to (q.r+1)%len(q.buf)
@@ -196,6 +209,7 @@ func (q *queueSliceRing[Item]) Dequeue() Item {
 	if q.r == q.w { // r meets w: the queue is now empty
 		q.r, q.w = -1, 0
 	}
+
 	return x
 }
 
@@ -203,6 +217,7 @@ func (q *queueSliceRing[Item]) Peek() Item {
 	if q.r < 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))
 	}
+
 	return q.buf[q.r]
 }
 
@@ -212,6 +227,7 @@ func (q *queueSliceRing[Item]) Peek() Item {
 // Caller should guarantee that size >= q.Len() and size is a power of two.
 func (q *queueSliceRing[Item]) resize(size int) {
 	buf := make([]Item, size)
+
 	if q.r >= 0 { // the queue is nonempty
 		// Copy data from q.buf to the front of buf and
 		// set q.r and q.w.
@@ -222,8 +238,10 @@ func (q *queueSliceRing[Item]) resize(size int) {
 			copy(buf[copy(buf, q.buf[q.r:]):], q.buf[:q.w])
 			q.w += len(q.buf) - q.r
 		}
+
 		q.r = 0
 	}
+
 	q.buf = buf
 }
 
@@ -235,17 +253,19 @@ func (q *queueSliceRing[Item]) resize(size int) {
 //
 // Caller should guarantee that capacity > 0.
 func getBufferSize(capacity int) int {
-	size := 1 << (bits.Len(uint(capacity)) - 1)
+	size := 1 << (bits.Len(uint(capacity)) - 1) //gosec:disable G115 -- capacity is positive
 	if size != capacity {
 		size <<= 1
 	}
+
 	if size < capacity {
 		panic(errors.AutoMsg(fmt.Sprintf(
 			"buffer size overflows; "+
 				"specified capacity %d (%#[1]x), "+
 				"required buffer size %d (%#[2]x) "+
 				"(buffer size must be a power of two)",
-			capacity, uint(size))))
+			capacity, uint(size)))) //gosec:disable G115 -- the conversion is for printing the bits
 	}
+
 	return size
 }

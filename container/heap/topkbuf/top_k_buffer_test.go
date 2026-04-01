@@ -52,12 +52,16 @@ func init() {
 }
 
 func TestNew(t *testing.T) {
+	t.Parallel()
+
 	testCases := make([]struct {
 		data []int
 		k    int
 		want []int
 	}, len(dataList)*maxK)
+
 	var idx int
+
 	for _, data := range dataList {
 		for k := 1; k <= maxK; k++ {
 			testCases[idx].data = data
@@ -71,10 +75,14 @@ func TestNew(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("k=%d&data=%s", tc.k, sliceToName(tc.data)),
 			func(t *testing.T) {
+				t.Parallel()
+
 				tkb := topkbuf.New(IntLess, tc.k)
+
 				if k := tkb.K(); k != tc.k {
 					t.Errorf("got K %d; want %d", k, tc.k)
 				}
+
 				tkb.Add(tc.data...)
 				checkTopKBufferByDrain(t, tkb, tc.want)
 			},
@@ -83,20 +91,20 @@ func TestNew(t *testing.T) {
 }
 
 func TestTopKBuffer_Len(t *testing.T) {
+	t.Parallel()
+
 	testCases := make([]struct {
 		data    []int
 		k, want int
 	}, len(dataList)*maxK)
+
 	var idx int
+
 	for _, data := range dataList {
 		for k := 1; k <= maxK; k++ {
 			testCases[idx].data = data
 			testCases[idx].k = k
-			if len(data) < k {
-				testCases[idx].want = len(data)
-			} else {
-				testCases[idx].want = k
-			}
+			testCases[idx].want = min(len(data), k)
 			idx++
 		}
 	}
@@ -105,6 +113,8 @@ func TestTopKBuffer_Len(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("k=%d&data=%s", tc.k, sliceToName(tc.data)),
 			func(t *testing.T) {
+				t.Parallel()
+
 				tkb := newTopKBuffer(tc.k, tc.data)
 				if n := tkb.Len(); n != tc.want {
 					t.Errorf("got %d; want %d", n, tc.want)
@@ -115,12 +125,16 @@ func TestTopKBuffer_Len(t *testing.T) {
 }
 
 func TestTopKBuffer_Range(t *testing.T) {
+	t.Parallel()
+
 	testCases := make([]struct {
 		data []int
 		k    int
 		want []int
 	}, len(dataList)*maxK)
+
 	var idx int
+
 	for _, data := range dataList {
 		for k := 1; k <= maxK; k++ {
 			testCases[idx].data = data
@@ -135,14 +149,18 @@ func TestTopKBuffer_Range(t *testing.T) {
 		for _, x := range tc.want {
 			counterMap[x]++
 		}
+
 		t.Run(
 			fmt.Sprintf("k=%d&data=%s", tc.k, sliceToName(tc.data)),
 			func(t *testing.T) {
+				t.Parallel()
+
 				tkb := newTopKBuffer(tc.k, tc.data)
 				tkb.Range(func(x int) (cont bool) {
 					counterMap[x]--
 					return true
 				})
+
 				for x, ctr := range counterMap {
 					if ctr > 0 {
 						t.Error("insufficient accesses to", x)
@@ -156,22 +174,30 @@ func TestTopKBuffer_Range(t *testing.T) {
 }
 
 func TestTopKBuffer_Range_NilHandler(t *testing.T) {
+	t.Parallel()
+
 	tkb := newTopKBuffer(maxK, dataList[len(dataList)-1])
+
 	defer func() {
 		if e := recover(); e != nil {
 			t.Error("panic -", e)
 		}
 	}()
+
 	tkb.Range(nil)
 }
 
 func TestTopKBuffer_IterItems(t *testing.T) {
+	t.Parallel()
+
 	testCases := make([]struct {
 		data []int
 		k    int
 		want []int
 	}, len(dataList)*maxK)
+
 	var idx int
+
 	for _, data := range dataList {
 		for k := 1; k <= maxK; k++ {
 			testCases[idx].data = data
@@ -182,51 +208,71 @@ func TestTopKBuffer_IterItems(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		counterMap := make(map[int]int, len(tc.want))
-		for _, x := range tc.want {
-			counterMap[x]++
-		}
 		t.Run(
 			fmt.Sprintf("k=%d&data=%s", tc.k, sliceToName(tc.data)),
 			func(t *testing.T) {
-				tkb := newTopKBuffer(tc.k, tc.data)
-				seq := tkb.IterItems()
-				if seq == nil {
-					t.Fatal("got nil iterator")
-				}
-				counterMapCopy := maps.Clone(counterMap)
-				for x := range seq {
-					counterMap[x]--
-				}
-				for x, ctr := range counterMap {
-					if ctr > 0 {
-						t.Error("insufficient accesses to", x)
-					} else if ctr < 0 {
-						t.Error("too many accesses to", x)
-					}
-				}
-				// Rewind the iterator and test it again.
-				for x := range seq {
-					counterMapCopy[x]--
-				}
-				for x, ctr := range counterMapCopy {
-					if ctr > 0 {
-						t.Error("rewind - insufficient accesses to", x)
-					} else if ctr < 0 {
-						t.Error("rewind - too many accesses to", x)
-					}
-				}
+				t.Parallel()
+
+				testTopKBufferIterItems(t, tc.data, tc.k, tc.want)
 			},
 		)
 	}
 }
 
+// testTopKBufferIterItems is the main process of TestTopKBuffer_IterItems.
+func testTopKBufferIterItems(t *testing.T, data []int, k int, want []int) {
+	t.Helper()
+
+	counterMap := make(map[int]int, len(want))
+	for _, x := range want {
+		counterMap[x]++
+	}
+
+	tkb := newTopKBuffer(k, data)
+
+	seq := tkb.IterItems()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+
+	counterMapCopy := maps.Clone(counterMap)
+
+	for x := range seq {
+		counterMap[x]--
+	}
+
+	for x, ctr := range counterMap {
+		if ctr > 0 {
+			t.Error("insufficient accesses to", x)
+		} else if ctr < 0 {
+			t.Error("too many accesses to", x)
+		}
+	}
+
+	// Rewind the iterator and test it again.
+	for x := range seq {
+		counterMapCopy[x]--
+	}
+
+	for x, ctr := range counterMapCopy {
+		if ctr > 0 {
+			t.Error("rewind - insufficient accesses to", x)
+		} else if ctr < 0 {
+			t.Error("rewind - too many accesses to", x)
+		}
+	}
+}
+
 func TestTopKBuffer_Clear(t *testing.T) {
+	t.Parallel()
+
 	for _, data := range dataList {
 		for k := 1; k <= maxK; k++ {
 			t.Run(
 				fmt.Sprintf("k=%d&data=%s", k, sliceToName(data)),
 				func(t *testing.T) {
+					t.Parallel()
+
 					tkb := newTopKBuffer(k, data)
 					tkb.Clear()
 					checkTopKBufferByDrain(t, tkb, nil)
@@ -237,11 +283,15 @@ func TestTopKBuffer_Clear(t *testing.T) {
 }
 
 func TestTopKBuffer_RemoveAll(t *testing.T) {
+	t.Parallel()
+
 	for _, data := range dataList {
 		for k := 1; k <= maxK; k++ {
 			t.Run(
 				fmt.Sprintf("k=%d&data=%s", k, sliceToName(data)),
 				func(t *testing.T) {
+					t.Parallel()
+
 					tkb := newTopKBuffer(k, data)
 					tkb.RemoveAll()
 					checkTopKBufferByDrain(t, tkb, nil)
@@ -252,11 +302,15 @@ func TestTopKBuffer_RemoveAll(t *testing.T) {
 }
 
 func TestTopKBuffer_K(t *testing.T) {
+	t.Parallel()
+
 	for _, data := range dataList {
 		for k := 1; k <= maxK; k++ {
 			t.Run(
 				fmt.Sprintf("k=%d&data=%s", k, sliceToName(data)),
 				func(t *testing.T) {
+					t.Parallel()
+
 					tkb := newTopKBuffer(k, data)
 					if got := tkb.K(); got != k {
 						t.Errorf("got %d; want %d", got, k)
@@ -268,6 +322,8 @@ func TestTopKBuffer_K(t *testing.T) {
 }
 
 func TestTopKBuffer_Add(t *testing.T) {
+	t.Parallel()
+
 	xsList := [][]int{nil, {}, {-1}, {0}, {1}, {7}, {-1, 0, 1}, {0, 0, 7}}
 
 	testCases := make([]struct {
@@ -275,7 +331,9 @@ func TestTopKBuffer_Add(t *testing.T) {
 		k        int
 		xs, want []int
 	}, len(dataList)*maxK*len(xsList))
+
 	var idx int
+
 	for _, data := range dataList {
 		for k := 1; k <= maxK; k++ {
 			for _, xs := range xsList {
@@ -293,9 +351,15 @@ func TestTopKBuffer_Add(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("k=%d&data=%s&xs=%s",
-				tc.k, sliceToName(tc.data), sliceToName(tc.xs)),
+			fmt.Sprintf(
+				"k=%d&data=%s&xs=%s",
+				tc.k,
+				sliceToName(tc.data),
+				sliceToName(tc.xs),
+			),
 			func(t *testing.T) {
+				t.Parallel()
+
 				tkb := newTopKBuffer(tc.k, tc.data)
 				tkb.Add(tc.xs...)
 				checkTopKBufferByDrain(t, tkb, tc.want)
@@ -305,12 +369,16 @@ func TestTopKBuffer_Add(t *testing.T) {
 }
 
 func TestTopKBuffer_Drain(t *testing.T) {
+	t.Parallel()
+
 	testCases := make([]struct {
 		data []int
 		k    int
 		want []int
 	}, len(dataList)*maxK)
+
 	var idx int
+
 	for _, data := range dataList {
 		for k := 1; k <= maxK; k++ {
 			testCases[idx].data = data
@@ -324,6 +392,8 @@ func TestTopKBuffer_Drain(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("k=%d&data=%s", tc.k, sliceToName(tc.data)),
 			func(t *testing.T) {
+				t.Parallel()
+
 				tkb := newTopKBuffer(tc.k, tc.data)
 				if topK := tkb.Drain(); !slices.Equal(topK, tc.want) {
 					t.Errorf("got %v; want %v", topK, tc.want)
@@ -336,6 +406,7 @@ func TestTopKBuffer_Drain(t *testing.T) {
 func newTopKBuffer(k int, data []int) topkbuf.TopKBuffer[int] {
 	tkb := topkbuf.New(IntLess, k)
 	tkb.Add(data...)
+
 	return tkb
 }
 
@@ -353,9 +424,11 @@ func copyAndSort(data []int) []int {
 	if data == nil {
 		return nil
 	}
+
 	sorted := make([]int, len(data))
 	copy(sorted, data)
 	slices.Sort(sorted)
+
 	return sorted
 }
 
@@ -366,9 +439,11 @@ func kSuffixAndReverse[Item any](s []Item, k int) []Item {
 	} else if len(s) > k {
 		s = s[len(s)-k:]
 	}
+
 	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
 		s[i], s[j] = s[j], s[i]
 	}
+
 	return s
 }
 
@@ -378,6 +453,8 @@ func checkTopKBufferByDrain[Item comparable](
 	tkb topkbuf.TopKBuffer[Item],
 	want []Item,
 ) {
+	t.Helper()
+
 	if topK := tkb.Drain(); !slices.Equal(topK, want) {
 		t.Errorf("tkb contains %v; want %v", topK, want)
 	}

@@ -44,8 +44,11 @@ import (
 // In particular, if newHash[i] is nil or returns nil,
 // checksums[i] is an empty string.
 // If len(newHash) is 0, checksums is nil.
-func Checksum(filename string, upper bool, newHash ...func() hash.Hash) (
-	checksums []string, err error) {
+func Checksum(
+	filename string,
+	upper bool,
+	newHash ...func() hash.Hash,
+) (checksums []string, err error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, errors.AutoWrap(err)

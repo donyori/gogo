@@ -35,6 +35,8 @@ type (
 )
 
 func TestGoMap_Len(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		gm   *SIGM
 		want int
@@ -47,7 +49,10 @@ func TestGoMap_Len(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("gm="+gmPtrToName(tc.gm), func(t *testing.T) {
-			if n := tc.gm.Len(); n != tc.want {
+			t.Parallel()
+
+			n := tc.gm.Len()
+			if n != tc.want {
 				t.Errorf("got %d; want %d", n, tc.want)
 			}
 		})
@@ -55,6 +60,8 @@ func TestGoMap_Len(t *testing.T) {
 }
 
 func TestGoMap_Range(t *testing.T) {
+	t.Parallel()
+
 	gm := SIGM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
 	want := SIM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
 	m := make(SIM, len(gm))
@@ -62,15 +69,20 @@ func TestGoMap_Range(t *testing.T) {
 		m[x.Key] = x.Value
 		return true
 	})
+
 	if unequal.Map(m, want) {
 		t.Errorf("got %s; want %s", mapToString(m), mapToString(want))
 	}
 }
 
 func TestGoMap_Range_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	gms := []*SIGM{nil, new(SIGM), {}}
 	for _, gm := range gms {
 		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
+			t.Parallel()
+
 			gm.Range(func(x mapping.Entry[string, int]) (cont bool) {
 				t.Error("handler was called, x:", x)
 				return true
@@ -80,34 +92,46 @@ func TestGoMap_Range_NilAndEmpty(t *testing.T) {
 }
 
 func TestGoMap_Range_NilHandler(t *testing.T) {
+	t.Parallel()
+
 	gm := SIGM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
+
 	defer func() {
 		if e := recover(); e != nil {
 			t.Error("panic -", e)
 		}
 	}()
+
 	gm.Range(nil)
 }
 
 func TestGoMap_IterItems(t *testing.T) {
+	t.Parallel()
+
 	gm := SIGM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
 	want := SIM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
+
 	seq := gm.IterItems()
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	gotData := make(SIM, len(gm))
 	for x := range seq {
 		gotData[x.Key] = x.Value
 	}
+
 	if unequal.Map(gotData, want) {
 		t.Errorf("got %s; want %s", mapToString(gotData), mapToString(want))
 	}
+
 	// Rewind the iterator and test it again.
 	clear(gotData)
+
 	for x := range seq {
 		gotData[x.Key] = x.Value
 	}
+
 	if unequal.Map(gotData, want) {
 		t.Errorf("rewind - got %s; want %s",
 			mapToString(gotData), mapToString(want))
@@ -115,13 +139,18 @@ func TestGoMap_IterItems(t *testing.T) {
 }
 
 func TestGoMap_IterItems_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	gms := []*SIGM{nil, new(SIGM), {}}
 	for _, gm := range gms {
 		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
+			t.Parallel()
+
 			seq := gm.IterItems()
 			if seq == nil {
 				t.Fatal("got nil iterator")
 			}
+
 			for x := range seq {
 				t.Error("yielded", x)
 			}
@@ -130,6 +159,8 @@ func TestGoMap_IterItems_NilAndEmpty(t *testing.T) {
 }
 
 func TestGoMap_Clear(t *testing.T) {
+	t.Parallel()
+
 	dataList := []SIM{
 		nil,
 		{},
@@ -141,7 +172,10 @@ func TestGoMap_Clear(t *testing.T) {
 		m := maps.Clone(data)
 		gm := (*SIGM)(&m)
 		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
+			t.Parallel()
+
 			gm.Clear()
+
 			if gm == nil || *gm != nil {
 				t.Errorf("got %s; want <nil>", gmPtrToName(gm))
 			}
@@ -150,7 +184,10 @@ func TestGoMap_Clear(t *testing.T) {
 
 	var nilGM *SIGM
 	t.Run("gm="+gmPtrToName(nilGM), func(t *testing.T) {
+		t.Parallel()
+
 		nilGM.Clear()
+
 		if nilGM != nil {
 			t.Errorf("got %s; want <nil>", gmPtrToName(nilGM))
 		}
@@ -158,6 +195,8 @@ func TestGoMap_Clear(t *testing.T) {
 }
 
 func TestGoMap_RemoveAll(t *testing.T) {
+	t.Parallel()
+
 	dataList := []SIM{
 		nil,
 		{},
@@ -169,7 +208,10 @@ func TestGoMap_RemoveAll(t *testing.T) {
 		m := maps.Clone(data)
 		gm := (*SIGM)(&m)
 		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
+			t.Parallel()
+
 			gm.RemoveAll()
+
 			if m != nil {
 				if gm == nil || *gm == nil || len(*gm) != 0 {
 					t.Errorf("got %s; want {}", gmPtrToName(gm))
@@ -182,7 +224,10 @@ func TestGoMap_RemoveAll(t *testing.T) {
 
 	var nilGM *SIGM
 	t.Run("gm="+gmPtrToName(nilGM), func(t *testing.T) {
+		t.Parallel()
+
 		nilGM.RemoveAll()
+
 		if nilGM != nil {
 			t.Errorf("got %s; want <nil>", gmPtrToName(nilGM))
 		}
@@ -190,6 +235,8 @@ func TestGoMap_RemoveAll(t *testing.T) {
 }
 
 func TestGoMap_Filter(t *testing.T) {
+	t.Parallel()
+
 	filterList := []func(x mapping.Entry[string, int]) (keep bool){
 		func(x mapping.Entry[string, int]) (keep bool) {
 			return len(x.Key) == 1 && x.Key[0] >= 'A' && x.Key[0] <= 'Z'
@@ -209,8 +256,11 @@ func TestGoMap_Filter(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("filterIdx=%d", tc.filterIdx), func(t *testing.T) {
+			t.Parallel()
+
 			gm := SIGM(maps.Clone(data))
 			gm.Filter(filterList[tc.filterIdx])
+
 			if goMapWrong(&gm, tc.want) {
 				t.Errorf("got %s; want %s",
 					mapToString(gm), mapToString(tc.want))
@@ -220,9 +270,13 @@ func TestGoMap_Filter(t *testing.T) {
 }
 
 func TestGoMap_Filter_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	gms := []*SIGM{nil, new(SIGM), {}}
 	for _, gm := range gms {
 		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
+			t.Parallel()
+
 			gm.Filter(func(x mapping.Entry[string, int]) (keep bool) {
 				t.Error("handler was called, x:", x)
 				return true
@@ -232,16 +286,21 @@ func TestGoMap_Filter_NilAndEmpty(t *testing.T) {
 }
 
 func TestGoMap_IterKeys(t *testing.T) {
+	t.Parallel()
+
 	gm := SIGM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
 	want := []string{"A", "B", "C", "a", "b", "c"}
+
 	seq := gm.IterKeys()
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	gotData := slices.Sorted(seq)
 	if !slices.Equal(gotData, want) {
 		t.Errorf("got %q; want %q", gotData, want)
 	}
+
 	// Rewind the iterator and test it again.
 	gotData = slices.Sorted(seq)
 	if !slices.Equal(gotData, want) {
@@ -250,13 +309,18 @@ func TestGoMap_IterKeys(t *testing.T) {
 }
 
 func TestGoMap_IterKeys_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	gms := []*SIGM{nil, new(SIGM), {}}
 	for _, gm := range gms {
 		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
+			t.Parallel()
+
 			seq := gm.IterKeys()
 			if seq == nil {
 				t.Fatal("got nil iterator")
 			}
+
 			for k := range seq {
 				t.Error("yielded", k)
 			}
@@ -265,16 +329,21 @@ func TestGoMap_IterKeys_NilAndEmpty(t *testing.T) {
 }
 
 func TestGoMap_IterValues(t *testing.T) {
+	t.Parallel()
+
 	gm := SIGM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
 	want := []int{-3, -2, -1, 1, 2, 3}
+
 	seq := gm.IterValues()
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	gotData := slices.Sorted(seq)
 	if !slices.Equal(gotData, want) {
 		t.Errorf("got %d; want %d", gotData, want)
 	}
+
 	// Rewind the iterator and test it again.
 	gotData = slices.Sorted(seq)
 	if !slices.Equal(gotData, want) {
@@ -283,13 +352,18 @@ func TestGoMap_IterValues(t *testing.T) {
 }
 
 func TestGoMap_IterValues_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	gms := []*SIGM{nil, new(SIGM), {}}
 	for _, gm := range gms {
 		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
+			t.Parallel()
+
 			seq := gm.IterValues()
 			if seq == nil {
 				t.Fatal("got nil iterator")
 			}
+
 			for v := range seq {
 				t.Error("yielded", v)
 			}
@@ -298,16 +372,21 @@ func TestGoMap_IterValues_NilAndEmpty(t *testing.T) {
 }
 
 func TestGoMap_IterKeyValues(t *testing.T) {
+	t.Parallel()
+
 	gm := SIGM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
 	want := SIM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
+
 	seq2 := gm.IterKeyValues()
 	if seq2 == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	gotData := maps.Collect(seq2)
 	if unequal.Map(gotData, want) {
 		t.Errorf("got %s; want %s", mapToString(gotData), mapToString(want))
 	}
+
 	// Rewind the iterator and test it again.
 	gotData = maps.Collect(seq2)
 	if unequal.Map(gotData, want) {
@@ -317,13 +396,18 @@ func TestGoMap_IterKeyValues(t *testing.T) {
 }
 
 func TestGoMap_IterKeyValues_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	gms := []*SIGM{nil, new(SIGM), {}}
 	for _, gm := range gms {
 		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
+			t.Parallel()
+
 			seq2 := gm.IterKeyValues()
 			if seq2 == nil {
 				t.Fatal("got nil iterator")
 			}
+
 			for k, v := range seq2 {
 				t.Errorf("yielded %s: %d", k, v)
 			}
@@ -332,8 +416,12 @@ func TestGoMap_IterKeyValues_NilAndEmpty(t *testing.T) {
 }
 
 func TestGoMap_Get(t *testing.T) {
+	t.Parallel()
+
 	data := SIM{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3}
+
 	const Absent = "absent"
+
 	testCases := []struct {
 		data  SIM // if data is nil, gm is (*SIGM)(nil)
 		k     string
@@ -361,13 +449,17 @@ func TestGoMap_Get(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
+
 		if tc.data != nil {
 			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		}
+
 		t.Run(
 			fmt.Sprintf("gm=%s&key=%+q", gmPtrToName(gm), tc.k),
 			func(t *testing.T) {
+				t.Parallel()
+
 				v, p := gm.Get(tc.k)
 				if v != tc.wantV || p != tc.wantP {
 					t.Errorf("got (%d, %t); want (%d, %t)",
@@ -379,6 +471,8 @@ func TestGoMap_Get(t *testing.T) {
 }
 
 func TestGoMap_Set(t *testing.T) {
+	t.Parallel()
+
 	data := SIM{"A": 1, "B": 2, "C": 3}
 	testCases := []struct {
 		data SIM // if data is nil, gm is new(SIGM)
@@ -399,16 +493,21 @@ func TestGoMap_Set(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
+
 		if tc.data != nil {
 			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		} else {
 			gm = new(SIGM)
 		}
+
 		t.Run(
 			fmt.Sprintf("gm=%s&key=%+q&value=%d", gmPtrToName(gm), tc.k, tc.v),
 			func(t *testing.T) {
+				t.Parallel()
+
 				gm.Set(tc.k, tc.v)
+
 				if goMapWrong(gm, tc.want) {
 					t.Errorf("got %s; want %s",
 						gmPtrToName(gm), mapToString(tc.want))
@@ -419,15 +518,20 @@ func TestGoMap_Set(t *testing.T) {
 }
 
 func TestGoMap_Set_Panic(t *testing.T) {
+	t.Parallel()
+
 	defer func() {
 		_ = recover()
 	}()
+
 	var gm *SIGM
 	gm.Set("A", 1) // want panic here
 	t.Error("want panic but not")
 }
 
 func TestGoMap_GetAndSet(t *testing.T) {
+	t.Parallel()
+
 	data := SIM{"A": 1, "B": 2, "C": 3}
 	testCases := []struct {
 		data  SIM // if data is nil, gm is new(SIGM)
@@ -450,20 +554,26 @@ func TestGoMap_GetAndSet(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
+
 		if tc.data != nil {
 			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		} else {
 			gm = new(SIGM)
 		}
+
 		t.Run(
 			fmt.Sprintf("gm=%s&key=%+q&value=%d", gmPtrToName(gm), tc.k, tc.v),
 			func(t *testing.T) {
+				t.Parallel()
+
 				v, p := gm.GetAndSet(tc.k, tc.v)
+
 				if goMapWrong(gm, tc.wantM) {
 					t.Errorf("got map %s; want %s",
 						gmPtrToName(gm), mapToString(tc.wantM))
 				}
+
 				if v != tc.wantV || p != tc.wantP {
 					t.Errorf("got (%d, %t); want (%d, %t)",
 						v, p, tc.wantV, tc.wantP)
@@ -474,15 +584,21 @@ func TestGoMap_GetAndSet(t *testing.T) {
 }
 
 func TestGoMap_GetAndSet_Panic(t *testing.T) {
+	t.Parallel()
+
 	defer func() {
 		_ = recover()
 	}()
+
 	var gm *SIGM
+
 	v, p := gm.GetAndSet("A", 1) // want panic here
 	t.Errorf("want panic but got (%d, %t)", v, p)
 }
 
 func TestGoMap_SetMap(t *testing.T) {
+	t.Parallel()
+
 	data := SIM{"A": 1, "B": 2, "C": 3}
 	m1 := new(SIGM)
 	m2 := &SIGM{"A": 2, "B": 3}
@@ -505,16 +621,21 @@ func TestGoMap_SetMap(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
+
 		if tc.data != nil {
 			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		} else {
 			gm = new(SIGM)
 		}
+
 		t.Run(
 			fmt.Sprintf("gm=%s&m=%s", gmPtrToName(gm), gmPtrToName(tc.m)),
 			func(t *testing.T) {
+				t.Parallel()
+
 				gm.SetMap(tc.m)
+
 				if goMapWrong(gm, tc.want) {
 					t.Errorf("got %s; want %s",
 						gmPtrToName(gm), mapToString(tc.want))
@@ -525,6 +646,8 @@ func TestGoMap_SetMap(t *testing.T) {
 }
 
 func TestGoMap_SetMap_Panic(t *testing.T) {
+	t.Parallel()
+
 	m1 := new(SIGM)
 	m2 := &SIGM{"A": 2, "B": 3}
 	testCases := []struct {
@@ -541,6 +664,8 @@ func TestGoMap_SetMap_Panic(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("gm=%s&m=%s", gmPtrToName(gm), gmPtrToName(tc.m)),
 			func(t *testing.T) {
+				t.Parallel()
+
 				defer func() {
 					e := recover()
 					if tc.wantPanic {
@@ -551,6 +676,7 @@ func TestGoMap_SetMap_Panic(t *testing.T) {
 						t.Error("panic -", e)
 					}
 				}()
+
 				gm.SetMap(tc.m)
 			},
 		)
@@ -558,6 +684,8 @@ func TestGoMap_SetMap_Panic(t *testing.T) {
 }
 
 func TestGoMap_GetAndSetMap(t *testing.T) {
+	t.Parallel()
+
 	data := SIM{"A": 1, "B": 2, "C": 3}
 	m1 := new(SIGM)
 	m2 := &SIGM{"A": 2, "B": 3}
@@ -581,20 +709,26 @@ func TestGoMap_GetAndSetMap(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
+
 		if tc.data != nil {
 			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		} else {
 			gm = new(SIGM)
 		}
+
 		t.Run(
 			fmt.Sprintf("gm=%s&m=%s", gmPtrToName(gm), gmPtrToName(tc.m)),
 			func(t *testing.T) {
+				t.Parallel()
+
 				p := gm.GetAndSetMap(tc.m)
+
 				if goMapWrong(gm, tc.wantM) {
 					t.Errorf("got map %s; want %s",
 						gmPtrToName(gm), mapToString(tc.wantM))
 				}
+
 				if mapItfWrong(p, tc.wantP) {
 					t.Errorf("got %s; want %s",
 						mapItfToString(p), mapToString(tc.wantP))
@@ -605,6 +739,8 @@ func TestGoMap_GetAndSetMap(t *testing.T) {
 }
 
 func TestGoMap_GetAndSetMap_Panic(t *testing.T) {
+	t.Parallel()
+
 	m1 := new(SIGM)
 	m2 := &SIGM{"A": 2, "B": 3}
 	testCases := []struct {
@@ -621,11 +757,14 @@ func TestGoMap_GetAndSetMap_Panic(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("gm=%s&m=%s", gmPtrToName(gm), gmPtrToName(tc.m)),
 			func(t *testing.T) {
+				t.Parallel()
+
 				defer func() {
 					if e := recover(); !tc.wantPanic && e != nil {
 						t.Error("panic -", e)
 					}
 				}()
+
 				p := gm.GetAndSetMap(tc.m)
 				if tc.wantPanic {
 					t.Error("want panic but got", mapItfToString(p))
@@ -638,6 +777,8 @@ func TestGoMap_GetAndSetMap_Panic(t *testing.T) {
 }
 
 func TestGoMap_Remove(t *testing.T) {
+	t.Parallel()
+
 	data := SIM{"A": 1, "B": 2, "C": 3}
 	testCases := []struct {
 		data SIM // if data is nil, gm is (*SIGM)(nil)
@@ -673,14 +814,19 @@ func TestGoMap_Remove(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
+
 		if tc.data != nil {
 			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		}
+
 		t.Run(
 			fmt.Sprintf("gm=%s&key=%s", gmPtrToName(gm), keysToName(tc.ks)),
 			func(t *testing.T) {
+				t.Parallel()
+
 				gm.Remove(tc.ks...)
+
 				if goMapWrong(gm, tc.want) {
 					t.Errorf("got %s; want %s",
 						gmPtrToName(gm), mapToString(tc.want))
@@ -691,6 +837,8 @@ func TestGoMap_Remove(t *testing.T) {
 }
 
 func TestGoMap_GetAndRemove(t *testing.T) {
+	t.Parallel()
+
 	data := SIM{"A": 1, "B": 2, "C": 3}
 	testCases := []struct {
 		data  SIM // if data is nil, gm is (*SIGM)(nil)
@@ -714,18 +862,24 @@ func TestGoMap_GetAndRemove(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
+
 		if tc.data != nil {
 			m := maps.Clone(tc.data)
 			gm = (*SIGM)(&m)
 		}
+
 		t.Run(
 			fmt.Sprintf("gm=%s&key=%+q", gmPtrToName(gm), tc.k),
 			func(t *testing.T) {
+				t.Parallel()
+
 				v, p := gm.GetAndRemove(tc.k)
+
 				if goMapWrong(gm, tc.wantM) {
 					t.Errorf("got map %s; want %s",
 						gmPtrToName(gm), mapToString(tc.wantM))
 				}
+
 				if v != tc.wantV || p != tc.wantP {
 					t.Errorf("got (%d, %t); want (%d, %t)",
 						v, p, tc.wantV, tc.wantP)
@@ -746,6 +900,7 @@ func gmPtrToName(p *SIGM) string {
 	if p == nil {
 		return fmt.Sprintf("(%T)<nil>", p)
 	}
+
 	return mapToString(*p)
 }
 
@@ -772,6 +927,7 @@ func mapToString(m SIM) string {
 			case value1 > value2:
 				return 1
 			}
+
 			return 0
 		},
 	})
@@ -801,6 +957,7 @@ func mapItfToString(m mapping.Map[string, int]) string {
 			case value1 > value2:
 				return 1
 			}
+
 			return 0
 		},
 	})
@@ -810,6 +967,7 @@ func goMapWrong(gm *SIGM, want SIM) bool {
 	if gm == nil {
 		return want != nil
 	}
+
 	return mapItfWrong(gm, want)
 }
 
@@ -819,14 +977,19 @@ func mapItfWrong(m mapping.Map[string, int], want SIM) bool {
 	} else if want == nil || m.Len() != len(want) {
 		return true
 	}
+
 	ok := true
+
 	m.Range(func(x mapping.Entry[string, int]) (cont bool) {
 		var v int
+
 		v, ok = want[x.Key]
 		if ok {
 			ok = x.Value == v
 		}
+
 		return ok
 	})
+
 	return !ok
 }

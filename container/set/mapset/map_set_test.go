@@ -54,6 +54,8 @@ func init() {
 }
 
 func TestNew(t *testing.T) {
+	t.Parallel()
+
 	var n int
 	for _, data := range dataList {
 		n += len(data) + 3
@@ -64,7 +66,9 @@ func TestNew(t *testing.T) {
 		capacity int
 		want     map[int]struct{}
 	}, n)
+
 	var idx int
+
 	for i, data := range dataList {
 		for c := -1; c <= len(data)+1; c++ {
 			testCases[idx].data = data
@@ -78,8 +82,11 @@ func TestNew(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("cap=%d&data=%s", tc.capacity, sliceToName(tc.data)),
 			func(t *testing.T) {
+				t.Parallel()
+
 				ms := mapset.New[int](tc.capacity)
 				ms.Add(tc.data...)
+
 				if setWrong(ms, tc.want) {
 					t.Errorf("got %s; want %s",
 						setToString(ms), mapKeyToString(tc.want))
@@ -90,9 +97,14 @@ func TestNew(t *testing.T) {
 }
 
 func TestMapSet_Len(t *testing.T) {
+	t.Parallel()
+
 	for i, data := range dataList {
 		want := len(dataSetList[i])
+
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
+			t.Parallel()
+
 			ms := newMapSet(data)
 			if n := ms.Len(); n != want {
 				t.Errorf("got %d; want %d", n, want)
@@ -102,17 +114,23 @@ func TestMapSet_Len(t *testing.T) {
 }
 
 func TestMapSet_Range(t *testing.T) {
+	t.Parallel()
+
 	for i, data := range dataList {
 		counterMap := make(map[int]int, len(dataSetList[i]))
 		for x := range dataSetList[i] {
 			counterMap[x] = 1
 		}
+
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
+			t.Parallel()
+
 			ms := newMapSet(data)
 			ms.Range(func(x int) (cont bool) {
 				counterMap[x]--
 				return true
 			})
+
 			for x, ctr := range counterMap {
 				if ctr > 0 {
 					t.Error("insufficient accesses to", x)
@@ -125,58 +143,85 @@ func TestMapSet_Range(t *testing.T) {
 }
 
 func TestMapSet_Range_NilHandler(t *testing.T) {
+	t.Parallel()
+
 	ms := newMapSet(dataList[len(dataList)-1])
+
 	defer func() {
 		if e := recover(); e != nil {
 			t.Error("panic -", e)
 		}
 	}()
+
 	ms.Range(nil)
 }
 
 func TestMapSet_IterItems(t *testing.T) {
+	t.Parallel()
+
 	for i, data := range dataList {
 		counterMap := make(map[int]int, len(dataSetList[i]))
 		for x := range dataSetList[i] {
 			counterMap[x] = 1
 		}
+
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
-			ms := newMapSet(data)
-			seq := ms.IterItems()
-			if seq == nil {
-				t.Fatal("got nil iterator")
-			}
-			counterMapCopy := maps.Clone(counterMap)
-			for x := range seq {
-				counterMap[x]--
-			}
-			for x, ctr := range counterMap {
-				if ctr > 0 {
-					t.Error("insufficient accesses to", x)
-				} else if ctr < 0 {
-					t.Error("too many accesses to", x)
-				}
-			}
-			// Rewind the iterator and test it again.
-			for x := range seq {
-				counterMapCopy[x]--
-			}
-			for x, ctr := range counterMapCopy {
-				if ctr > 0 {
-					t.Error("rewind - insufficient accesses to", x)
-				} else if ctr < 0 {
-					t.Error("rewind - too many accesses to", x)
-				}
-			}
+			t.Parallel()
+
+			testMapSetIterItems(t, data, counterMap)
 		})
 	}
 }
 
+// testMapSetIterItems is the main process of TestMapSet_IterItems.
+func testMapSetIterItems(t *testing.T, data []int, counterMap map[int]int) {
+	t.Helper()
+
+	ms := newMapSet(data)
+
+	seq := ms.IterItems()
+	if seq == nil {
+		t.Fatal("got nil iterator")
+	}
+
+	counterMapCopy := maps.Clone(counterMap)
+
+	for x := range seq {
+		counterMap[x]--
+	}
+
+	for x, ctr := range counterMap {
+		if ctr > 0 {
+			t.Error("insufficient accesses to", x)
+		} else if ctr < 0 {
+			t.Error("too many accesses to", x)
+		}
+	}
+
+	// Rewind the iterator and test it again.
+	for x := range seq {
+		counterMapCopy[x]--
+	}
+
+	for x, ctr := range counterMapCopy {
+		if ctr > 0 {
+			t.Error("rewind - insufficient accesses to", x)
+		} else if ctr < 0 {
+			t.Error("rewind - too many accesses to", x)
+		}
+	}
+}
+
 func TestMapSet_Clear(t *testing.T) {
+	t.Parallel()
+
 	for _, data := range dataList {
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
+			t.Parallel()
+
 			ms := newMapSet(data)
 			ms.Clear()
+
 			if setWrong(ms, map[int]struct{}{}) {
 				t.Errorf("got %s; want {}", setToString(ms))
 			}
@@ -185,10 +230,15 @@ func TestMapSet_Clear(t *testing.T) {
 }
 
 func TestMapSet_RemoveAll(t *testing.T) {
+	t.Parallel()
+
 	for _, data := range dataList {
 		t.Run("data="+sliceToName(data), func(t *testing.T) {
+			t.Parallel()
+
 			ms := newMapSet(data)
 			ms.RemoveAll()
+
 			if setWrong(ms, map[int]struct{}{}) {
 				t.Errorf("got %s; want {}", setToString(ms))
 			}
@@ -197,6 +247,8 @@ func TestMapSet_RemoveAll(t *testing.T) {
 }
 
 func TestMapSet_Filter(t *testing.T) {
+	t.Parallel()
+
 	filterList := []func(x int) (keep bool){
 		func(x int) (keep bool) {
 			return x > 1
@@ -211,28 +263,38 @@ func TestMapSet_Filter(t *testing.T) {
 		filterIdx int
 		want      map[int]struct{}
 	}, len(dataList)*len(filterList))
+
 	var idx int
+
 	for _, data := range dataList {
 		for filterIdx, filter := range filterList {
 			testCases[idx].data = data
 			testCases[idx].filterIdx = filterIdx
+
 			testCases[idx].want = make(map[int]struct{}, len(data))
 			for _, x := range data {
 				if filter(x) {
 					testCases[idx].want[x] = struct{}{}
 				}
 			}
+
 			idx++
 		}
 	}
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("data=%s&filterIdx=%d",
-				sliceToName(tc.data), tc.filterIdx),
+			fmt.Sprintf(
+				"data=%s&filterIdx=%d",
+				sliceToName(tc.data),
+				tc.filterIdx,
+			),
 			func(t *testing.T) {
+				t.Parallel()
+
 				ms := newMapSet(tc.data)
 				ms.Filter(filterList[tc.filterIdx])
+
 				if setWrong(ms, tc.want) {
 					t.Errorf("got %s; want %s",
 						setToString(ms), mapKeyToString(tc.want))
@@ -243,6 +305,8 @@ func TestMapSet_Filter(t *testing.T) {
 }
 
 func TestMapSet_ContainsItem(t *testing.T) {
+	t.Parallel()
+
 	const MaxX int = 6
 
 	testCases := make([]struct {
@@ -250,7 +314,9 @@ func TestMapSet_ContainsItem(t *testing.T) {
 		x    int
 		want bool
 	}, len(dataList)*(MaxX+2))
+
 	var idx int
+
 	for i, data := range dataList {
 		for x := -1; x <= MaxX; x++ {
 			testCases[idx].data = data
@@ -264,6 +330,8 @@ func TestMapSet_ContainsItem(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("data=%s&x=%d", sliceToName(tc.data), tc.x),
 			func(t *testing.T) {
+				t.Parallel()
+
 				ms := newMapSet(tc.data)
 				if got := ms.ContainsItem(tc.x); got != tc.want {
 					t.Errorf("got %t; want %t", got, tc.want)
@@ -274,6 +342,8 @@ func TestMapSet_ContainsItem(t *testing.T) {
 }
 
 func TestMapSet_ContainsSet(t *testing.T) {
+	t.Parallel()
+
 	setDataList := [][]int{
 		nil,
 		{0},
@@ -295,21 +365,26 @@ func TestMapSet_ContainsSet(t *testing.T) {
 		s    set.Set[int]
 		want bool
 	}, len(dataList)*len(setList))
+
 	var idx int
+
 	for i, data := range dataList {
 		for _, s := range setList {
 			testCases[idx].data = data
 			testCases[idx].s = s
 			want := true
+
 			if s != nil {
 				s.Range(func(x int) (cont bool) {
 					if _, ok := dataSetList[i][x]; !ok {
 						want = false
 						return false
 					}
+
 					return true
 				})
 			}
+
 			testCases[idx].want = want
 			idx++
 		}
@@ -317,9 +392,14 @@ func TestMapSet_ContainsSet(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("data=%s&s=%s",
-				sliceToName(tc.data), setToString(tc.s)),
+			fmt.Sprintf(
+				"data=%s&s=%s",
+				sliceToName(tc.data),
+				setToString(tc.s),
+			),
 			func(t *testing.T) {
+				t.Parallel()
+
 				ms := newMapSet(tc.data)
 				if got := ms.ContainsSet(tc.s); got != tc.want {
 					t.Errorf("got %t; want %t", got, tc.want)
@@ -330,6 +410,8 @@ func TestMapSet_ContainsSet(t *testing.T) {
 }
 
 func TestMapSet_ContainsAny(t *testing.T) {
+	t.Parallel()
+
 	ctnrDataList := [][]int{
 		nil,
 		{},
@@ -352,26 +434,35 @@ func TestMapSet_ContainsAny(t *testing.T) {
 		data, c []int
 		want    bool
 	}, len(dataList)*len(ctnrDataList))
+
 	var idx int
+
 	for i, data := range dataList {
 		for _, ctnr := range ctnrDataList {
 			testCases[idx].data = data
 			testCases[idx].c = ctnr
+
 			for _, x := range ctnr {
 				if _, ok := dataSetList[i][x]; ok {
 					testCases[idx].want = true
 					break
 				}
 			}
+
 			idx++
 		}
 	}
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("data=%s&c=%s",
-				sliceToName(tc.data), sliceToName(tc.c)),
+			fmt.Sprintf(
+				"data=%s&c=%s",
+				sliceToName(tc.data),
+				sliceToName(tc.c),
+			),
 			func(t *testing.T) {
+				t.Parallel()
+
 				ms := newMapSet(tc.data)
 				if got := ms.ContainsAny(IntSDAPtr(&tc.c)); got != tc.want {
 					t.Errorf("got %t; want %t", got, tc.want)
@@ -382,19 +473,25 @@ func TestMapSet_ContainsAny(t *testing.T) {
 }
 
 func TestMapSet_Add(t *testing.T) {
+	t.Parallel()
+
 	testCases := make([]struct {
 		data, x []int
 		want    map[int]struct{}
 	}, len(dataList)*len(dataList))
+
 	var idx int
+
 	for i, data := range dataList {
 		for _, x := range dataList {
 			testCases[idx].data = data
 			testCases[idx].x = x
+
 			want := maps.Clone(dataSetList[i])
 			for _, item := range x {
 				want[item] = struct{}{}
 			}
+
 			testCases[idx].want = want
 			idx++
 		}
@@ -402,11 +499,17 @@ func TestMapSet_Add(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("data=%s&x=%s",
-				sliceToName(tc.data), sliceToName(tc.x)),
+			fmt.Sprintf(
+				"data=%s&x=%s",
+				sliceToName(tc.data),
+				sliceToName(tc.x),
+			),
 			func(t *testing.T) {
+				t.Parallel()
+
 				ms := newMapSet(tc.data)
 				ms.Add(tc.x...)
+
 				if setWrong(ms, tc.want) {
 					t.Errorf("got %s; want %s",
 						setToString(ms), mapKeyToString(tc.want))
@@ -417,19 +520,25 @@ func TestMapSet_Add(t *testing.T) {
 }
 
 func TestMapSet_Remove(t *testing.T) {
+	t.Parallel()
+
 	testCases := make([]struct {
 		data, x []int
 		want    map[int]struct{}
 	}, len(dataList)*len(dataList))
+
 	var idx int
+
 	for i, data := range dataList {
 		for _, x := range dataList {
 			testCases[idx].data = data
 			testCases[idx].x = x
+
 			want := maps.Clone(dataSetList[i])
 			for _, item := range x {
 				delete(want, item)
 			}
+
 			testCases[idx].want = want
 			idx++
 		}
@@ -437,11 +546,17 @@ func TestMapSet_Remove(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("data=%s&x=%s",
-				sliceToName(tc.data), sliceToName(tc.x)),
+			fmt.Sprintf(
+				"data=%s&x=%s",
+				sliceToName(tc.data),
+				sliceToName(tc.x),
+			),
 			func(t *testing.T) {
+				t.Parallel()
+
 				ms := newMapSet(tc.data)
 				ms.Remove(tc.x...)
+
 				if setWrong(ms, tc.want) {
 					t.Errorf("got %s; want %s",
 						setToString(ms), mapKeyToString(tc.want))
@@ -452,6 +567,8 @@ func TestMapSet_Remove(t *testing.T) {
 }
 
 func TestMapSet_Union(t *testing.T) {
+	t.Parallel()
+
 	setDataList := [][]int{
 		nil,
 		{0},
@@ -473,18 +590,22 @@ func TestMapSet_Union(t *testing.T) {
 		s    set.Set[int]
 		want map[int]struct{}
 	}, len(dataList)*len(setList))
+
 	var idx int
+
 	for i, data := range dataList {
 		for _, s := range setList {
 			testCases[idx].data = data
 			testCases[idx].s = s
 			want := maps.Clone(dataSetList[i])
+
 			if s != nil {
 				s.Range(func(x int) (cont bool) {
 					want[x] = struct{}{}
 					return true
 				})
 			}
+
 			testCases[idx].want = want
 			idx++
 		}
@@ -492,11 +613,17 @@ func TestMapSet_Union(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("data=%s&s=%s",
-				sliceToName(tc.data), setToString(tc.s)),
+			fmt.Sprintf(
+				"data=%s&s=%s",
+				sliceToName(tc.data),
+				setToString(tc.s),
+			),
 			func(t *testing.T) {
+				t.Parallel()
+
 				ms := newMapSet(tc.data)
 				ms.Union(tc.s)
+
 				if setWrong(ms, tc.want) {
 					t.Errorf("got %s; want %s",
 						setToString(ms), mapKeyToString(tc.want))
@@ -507,6 +634,8 @@ func TestMapSet_Union(t *testing.T) {
 }
 
 func TestMapSet_Intersect(t *testing.T) {
+	t.Parallel()
+
 	setDataList := [][]int{
 		nil,
 		{0},
@@ -528,11 +657,14 @@ func TestMapSet_Intersect(t *testing.T) {
 		s    set.Set[int]
 		want map[int]struct{}
 	}, len(dataList)*len(setList))
+
 	var idx int
+
 	for i, data := range dataList {
 		for _, s := range setList {
 			testCases[idx].data = data
 			testCases[idx].s = s
+
 			var want map[int]struct{}
 			if s != nil {
 				want = maps.Clone(dataSetList[i])
@@ -544,6 +676,7 @@ func TestMapSet_Intersect(t *testing.T) {
 			} else {
 				want = map[int]struct{}{}
 			}
+
 			testCases[idx].want = want
 			idx++
 		}
@@ -551,21 +684,41 @@ func TestMapSet_Intersect(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("data=%s&s=%s",
-				sliceToName(tc.data), setToString(tc.s)),
+			fmt.Sprintf(
+				"data=%s&s=%s",
+				sliceToName(tc.data),
+				setToString(tc.s),
+			),
 			func(t *testing.T) {
-				ms := newMapSet(tc.data)
-				ms.Intersect(tc.s)
-				if setWrong(ms, tc.want) {
-					t.Errorf("got %s; want %s",
-						setToString(ms), mapKeyToString(tc.want))
-				}
+				t.Parallel()
+
+				testMapSetIntersect(t, tc.data, tc.s, tc.want)
 			},
 		)
 	}
 }
 
+// testMapSetIntersect is the main process of TestMapSet_Intersect.
+func testMapSetIntersect(
+	t *testing.T,
+	data []int,
+	s set.Set[int],
+	want map[int]struct{},
+) {
+	t.Helper()
+
+	ms := newMapSet(data)
+	ms.Intersect(s)
+
+	if setWrong(ms, want) {
+		t.Errorf("got %s; want %s",
+			setToString(ms), mapKeyToString(want))
+	}
+}
+
 func TestMapSet_Subtract(t *testing.T) {
+	t.Parallel()
+
 	setDataList := [][]int{
 		nil,
 		{0},
@@ -587,18 +740,22 @@ func TestMapSet_Subtract(t *testing.T) {
 		s    set.Set[int]
 		want map[int]struct{}
 	}, len(dataList)*len(setList))
+
 	var idx int
+
 	for i, data := range dataList {
 		for _, s := range setList {
 			testCases[idx].data = data
 			testCases[idx].s = s
 			want := maps.Clone(dataSetList[i])
+
 			if s != nil {
 				s.Range(func(x int) (cont bool) {
 					delete(want, x)
 					return true
 				})
 			}
+
 			testCases[idx].want = want
 			idx++
 		}
@@ -606,11 +763,17 @@ func TestMapSet_Subtract(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("data=%s&s=%s",
-				sliceToName(tc.data), setToString(tc.s)),
+			fmt.Sprintf(
+				"data=%s&s=%s",
+				sliceToName(tc.data),
+				setToString(tc.s),
+			),
 			func(t *testing.T) {
+				t.Parallel()
+
 				ms := newMapSet(tc.data)
 				ms.Subtract(tc.s)
+
 				if setWrong(ms, tc.want) {
 					t.Errorf("got %s; want %s",
 						setToString(ms), mapKeyToString(tc.want))
@@ -621,6 +784,8 @@ func TestMapSet_Subtract(t *testing.T) {
 }
 
 func TestMapSet_DisjunctiveUnion(t *testing.T) {
+	t.Parallel()
+
 	setDataList := [][]int{
 		nil,
 		{0},
@@ -642,52 +807,90 @@ func TestMapSet_DisjunctiveUnion(t *testing.T) {
 		s    set.Set[int]
 		want map[int]struct{}
 	}, len(dataList)*len(setList))
+
 	var idx int
+
 	for i, data := range dataList {
 		for _, s := range setList {
 			testCases[idx].data = data
 			testCases[idx].s = s
-			var want map[int]struct{}
-			if s != nil {
-				want = make(map[int]struct{}, len(data)+s.Len())
-				for _, x := range data {
-					if !s.ContainsItem(x) {
-						want[x] = struct{}{}
-					}
-				}
-				s.Range(func(x int) (cont bool) {
-					if _, ok := dataSetList[i][x]; !ok {
-						want[x] = struct{}{}
-					}
-					return true
-				})
-			} else {
-				want = dataSetList[i]
-			}
-			testCases[idx].want = want
+			testCases[idx].want = getMapSetDisjunctiveUnionTestCaseWant(
+				i,
+				data,
+				s,
+			)
 			idx++
 		}
 	}
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("data=%s&s=%s",
-				sliceToName(tc.data), setToString(tc.s)),
+			fmt.Sprintf(
+				"data=%s&s=%s",
+				sliceToName(tc.data),
+				setToString(tc.s),
+			),
 			func(t *testing.T) {
-				ms := newMapSet(tc.data)
-				ms.DisjunctiveUnion(tc.s)
-				if setWrong(ms, tc.want) {
-					t.Errorf("got %s; want %s",
-						setToString(ms), mapKeyToString(tc.want))
-				}
+				t.Parallel()
+
+				testMapSetDisjunctiveUnion(t, tc.data, tc.s, tc.want)
 			},
 		)
+	}
+}
+
+// getMapSetDisjunctiveUnionTestCaseWant returns the wanted set
+// (of type [map[int]struct{}]) corresponding to the test case of
+// TestMapSet_DisjunctiveUnion.
+func getMapSetDisjunctiveUnionTestCaseWant(
+	dataIdx int,
+	data []int,
+	s set.Set[int],
+) map[int]struct{} {
+	if s == nil {
+		return dataSetList[dataIdx]
+	}
+
+	want := make(map[int]struct{}, len(data)+s.Len())
+	for _, x := range data {
+		if !s.ContainsItem(x) {
+			want[x] = struct{}{}
+		}
+	}
+
+	s.Range(func(x int) (cont bool) {
+		if _, ok := dataSetList[dataIdx][x]; !ok {
+			want[x] = struct{}{}
+		}
+
+		return true
+	})
+
+	return want
+}
+
+// testMapSetDisjunctiveUnion is the main process of
+// TestMapSet_DisjunctiveUnion.
+func testMapSetDisjunctiveUnion(
+	t *testing.T,
+	data []int,
+	s set.Set[int],
+	want map[int]struct{},
+) {
+	t.Helper()
+
+	ms := newMapSet(data)
+	ms.DisjunctiveUnion(s)
+
+	if setWrong(ms, want) {
+		t.Errorf("got %s; want %s", setToString(ms), mapKeyToString(want))
 	}
 }
 
 func newMapSet(data []int) set.Set[int] {
 	ms := mapset.New[int](len(data))
 	ms.Add(data...)
+
 	return ms
 }
 
@@ -705,11 +908,13 @@ func setToString(s set.Set[int]) string {
 	if s == nil {
 		return "<nil>"
 	}
+
 	m := make(map[int]struct{}, s.Len())
 	s.Range(func(x int) (cont bool) {
 		m[x] = struct{}{}
 		return true
 	})
+
 	return mapKeyToString(m)
 }
 
@@ -725,6 +930,7 @@ func mapKeyToString[V any](m map[int]V) string {
 			} else if key1 > key2 {
 				return 1
 			}
+
 			return 0
 		},
 	})
@@ -736,18 +942,22 @@ func setWrong(s set.Set[int], want map[int]struct{}) bool {
 	} else if want == nil || s.Len() != len(want) {
 		return true
 	}
+
 	counterMap := make(map[int]int, len(want))
 	for x := range want {
 		counterMap[x] = 1
 	}
+
 	s.Range(func(x int) (cont bool) {
 		counterMap[x]--
 		return true
 	})
+
 	for _, ctr := range counterMap {
 		if ctr != 0 {
 			return true
 		}
 	}
+
 	return false
 }

@@ -80,6 +80,7 @@ func New[Item any](lessFn compare.LessFunc[Item], k int) TopKBuffer[Item] {
 	} else if k <= 0 {
 		panic(errors.AutoMsg(fmt.Sprintf("k (%d) is nonpositive", k)))
 	}
+
 	return &topKBuffer[Item]{
 		k:      k,
 		lessFn: lessFn,
@@ -124,7 +125,9 @@ func (tkb *topKBuffer[Item]) Add(x ...Item) {
 	if len(x) == 0 {
 		return
 	}
+
 	tkb.pq.Reserve(tkb.k)
+
 	r := tkb.k - tkb.pq.Len()
 	if len(x) <= r {
 		tkb.pq.Enqueue(x...)
@@ -132,6 +135,7 @@ func (tkb *topKBuffer[Item]) Add(x ...Item) {
 	} else if r > 0 {
 		tkb.pq.Enqueue(x[:r]...)
 	}
+
 	for _, item := range x[r:] {
 		if top := tkb.pq.Top(); tkb.lessFn(top, item) {
 			tkb.pq.ReplaceTop(item)
@@ -144,9 +148,11 @@ func (tkb *topKBuffer[Item]) Drain() []Item {
 	if n == 0 {
 		return nil
 	}
+
 	result := make([]Item, n)
 	for i := n - 1; i >= 0; i-- {
 		result[i] = tkb.pq.Dequeue()
 	}
+
 	return result
 }

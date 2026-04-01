@@ -31,6 +31,8 @@ import (
 )
 
 func TestGetBufferSize(t *testing.T) {
+	t.Parallel()
+
 	for _, capacity := range []int{
 		1, 2, 3, 4,
 		6, 7, 8, 9, 10,
@@ -43,6 +45,8 @@ func TestGetBufferSize(t *testing.T) {
 		}
 
 		t.Run(fmt.Sprintf("cap=%d", capacity), func(t *testing.T) {
+			t.Parallel()
+
 			got := queue.GetBufferSize(capacity)
 			if got != want {
 				t.Errorf("got %#x; want %#x", got, want)
@@ -52,10 +56,14 @@ func TestGetBufferSize(t *testing.T) {
 }
 
 func TestGetBufferSize_Overflow(t *testing.T) {
+	t.Parallel()
+
 	wantSizeInPanicMsg := uint(math.MaxInt + 1)
 
 	for _, capacity := range []int{math.MaxInt>>1 + 2, math.MaxInt} {
 		t.Run(fmt.Sprintf("cap=%d", capacity), func(t *testing.T) {
+			t.Parallel()
+
 			defer func() {
 				if e := recover(); e != nil {
 					s, ok := e.(string)
@@ -77,12 +85,17 @@ func TestGetBufferSize_Overflow(t *testing.T) {
 }
 
 func TestNew(t *testing.T) {
+	t.Parallel()
+
 	for capacity := -1; capacity <= 33; capacity++ {
 		wantInitCap := queue.DefaultCapacity
 		if capacity > 0 {
 			wantInitCap = queue.GetBufferSize(capacity)
 		}
+
 		t.Run(fmt.Sprintf("cap=%d", capacity), func(t *testing.T) {
+			t.Parallel()
+
 			q := queue.New[int](capacity)
 			if q == nil {
 				t.Error("got nil queue")
@@ -94,6 +107,8 @@ func TestNew(t *testing.T) {
 }
 
 func TestQueue_Range(t *testing.T) {
+	t.Parallel()
+
 	data := []int{0, 1, 2, 3, 3, 4, 0, 1, 2, 3, 3, 4}
 	want := []int{0, 1, 2, 3, 3, 4}
 
@@ -101,17 +116,22 @@ func TestQueue_Range(t *testing.T) {
 	for _, x := range data {
 		q.Enqueue(x)
 	}
+
 	got := make([]int, 0, len(data))
+
 	q.Range(func(x int) (cont bool) {
 		got = append(got, x)
 		return len(got) < len(data)>>1
 	})
+
 	if !slices.Equal(got, want) {
 		t.Errorf("got %v; want %v", got, want)
 	}
 }
 
 func TestQueue_Range_Empty(t *testing.T) {
+	t.Parallel()
+
 	q := queue.New[int](0)
 	q.Range(func(x int) (cont bool) {
 		t.Error("handler was called, x:", x)
@@ -120,20 +140,27 @@ func TestQueue_Range_Empty(t *testing.T) {
 }
 
 func TestQueue_Range_NilHandler(t *testing.T) {
+	t.Parallel()
+
 	data := []int{0, 1, 2, 3, 3, 4, 0, 1, 2, 3, 3, 4}
+
 	q := queue.New[int](0)
 	for _, x := range data {
 		q.Enqueue(x)
 	}
+
 	defer func() {
 		if e := recover(); e != nil {
 			t.Error("panic -", e)
 		}
 	}()
+
 	q.Range(nil)
 }
 
 func TestQueue_IterItems(t *testing.T) {
+	t.Parallel()
+
 	data := []int{0, 1, 2, 3, 3, 4, 5, 6, 7, 8, 8, 9}
 	want := []int{0, 1, 2, 3, 3, 4}
 
@@ -141,10 +168,12 @@ func TestQueue_IterItems(t *testing.T) {
 	for _, x := range data {
 		q.Enqueue(x)
 	}
+
 	seq := q.IterItems()
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	gotData := make([]int, 0, len(data))
 	for x := range seq {
 		gotData = append(gotData, x)
@@ -152,9 +181,11 @@ func TestQueue_IterItems(t *testing.T) {
 			break
 		}
 	}
+
 	if !slices.Equal(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
 	}
+
 	// Rewind the iterator and test it again.
 	gotData = gotData[:0]
 	for x := range seq {
@@ -163,23 +194,30 @@ func TestQueue_IterItems(t *testing.T) {
 			break
 		}
 	}
+
 	if !slices.Equal(gotData, want) {
 		t.Errorf("rewind - got %v; want %v", gotData, want)
 	}
 }
 
 func TestQueue_IterItems_Empty(t *testing.T) {
+	t.Parallel()
+
 	q := queue.New[int](0)
+
 	seq := q.IterItems()
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	for x := range seq {
 		t.Error("yielded", x)
 	}
 }
 
 func TestQueue_Reserve(t *testing.T) {
+	t.Parallel()
+
 	dataList := [][]int{
 		nil,
 		{},
@@ -198,23 +236,29 @@ func TestQueue_Reserve(t *testing.T) {
 		wantRangeData []int
 		wantCap       int
 	}, len(dataList)*len(capList))
+
 	var idx int
+
 	for _, data := range dataList {
 		for _, capacity := range capList {
 			testCases[idx].data = data
 			testCases[idx].capacity = capacity
 			testCases[idx].wantRangeData = slices.Clone(data)
+
 			initCap := len(data)
 			if initCap == 0 {
 				initCap = queue.DefaultCapacity
 			}
+
 			testCases[idx].wantCap = capacity
 			if testCases[idx].wantCap <= 0 {
 				testCases[idx].wantCap = queue.DefaultCapacity
 			}
+
 			if testCases[idx].wantCap < initCap {
 				testCases[idx].wantCap = initCap
 			}
+
 			testCases[idx].wantCap = queue.GetBufferSize(testCases[idx].wantCap)
 			idx++
 		}
@@ -228,79 +272,84 @@ func TestQueue_Reserve(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("cap=%d&data=%s", tc.capacity, dataName),
 			func(t *testing.T) {
-				q := queue.New[int](len(tc.data))
-				for _, x := range tc.data {
-					q.Enqueue(x)
-				}
-				q.Reserve(tc.capacity)
-				if c := q.Cap(); c != tc.wantCap {
-					t.Errorf("got capacity %d; want %d", c, tc.wantCap)
-				}
-				rangeData := make([]int, 0, q.Len())
-				q.Range(func(x int) (cont bool) {
-					rangeData = append(rangeData, x)
-					return true
-				})
-				if !slices.Equal(rangeData, tc.wantRangeData) {
-					t.Errorf("got data by q.Range %v; want %v",
-						rangeData, tc.wantRangeData)
-				}
+				t.Parallel()
+
+				testQueueReserve(
+					t,
+					tc.data,
+					tc.capacity,
+					tc.wantRangeData,
+					tc.wantCap,
+				)
 			},
 		)
 	}
 }
 
+// testQueueReserve is the main process of TestQueue_Reserve.
+func testQueueReserve(
+	t *testing.T,
+	data []int,
+	capacity int,
+	wantRangeData []int,
+	wantCap int,
+) {
+	t.Helper()
+
+	q := queue.New[int](len(data))
+	for _, x := range data {
+		q.Enqueue(x)
+	}
+
+	q.Reserve(capacity)
+
+	if c := q.Cap(); c != wantCap {
+		t.Errorf("got capacity %d; want %d", c, wantCap)
+	}
+
+	rangeData := make([]int, 0, q.Len())
+	q.Range(func(x int) (cont bool) {
+		rangeData = append(rangeData, x)
+		return true
+	})
+
+	if !slices.Equal(rangeData, wantRangeData) {
+		t.Errorf("got data by q.Range %v; want %v", rangeData, wantRangeData)
+	}
+}
+
 func TestQueue_EnqueueNAndDequeueN(t *testing.T) {
+	t.Parallel()
+
 	ns := make([]int, 33, 36)
 	for i := range ns {
 		ns[i] = i + 1
 	}
+
 	ns = append(ns, 63, 4096, 524288)
 
 	for _, n := range ns {
 		t.Run(fmt.Sprintf("n=%d", n), func(t *testing.T) {
+			t.Parallel()
+
 			q := queue.New[int](0)
 			if qn := q.Len(); qn != 0 {
 				t.Fatalf("initial - q.Len() %d; want 0", qn)
 			}
 
 			testQueueEnqueueNAndDequeueNEnqueueStage(t, n, q)
+
 			if t.Failed() {
 				return
 			}
 
 			testQueueEnqueueNAndDequeueNDequeueStage(t, n, q)
+
 			if t.Failed() {
 				return
 			}
 
-			finalCap := q.Cap()
-			q.RemoveAll()
-			if qn := q.Len(); qn != 0 {
-				t.Errorf("after q.RemoveAll() - got q.Len() %d; want 0", qn)
-			}
-			if c := q.Cap(); c != finalCap {
-				t.Errorf("after q.RemoveAll() - got q.Cap() %d; want %d",
-					c, finalCap)
-			}
-
-			q.Clear()
-			if qn := q.Len(); qn != 0 {
-				t.Errorf("after q.Clear() - got q.Len() %d; want 0", qn)
-			}
-			if c := q.Cap(); c != 0 {
-				t.Errorf("after q.Clear() - got q.Cap() %d; want 0", c)
-			}
-
-			q.RemoveAll()
-			if qn := q.Len(); qn != 0 {
-				t.Errorf("after q.Clear() then q.RemoveAll() - got q.Len() %d; want 0",
-					qn)
-			}
-			if c := q.Cap(); c != 0 {
-				t.Errorf("after q.Clear() then q.RemoveAll() - got q.Cap() %d; want 0",
-					c)
-			}
+			testQueueEnqueueAndDequeueTearDownStage(t, q)
 		})
 	}
 }
@@ -312,19 +361,25 @@ func testQueueEnqueueNAndDequeueNEnqueueStage(
 	n int,
 	q queue.Queue[int],
 ) {
+	t.Helper()
+
 	wantCap := q.Cap()
 	for x := 1; !t.Failed() && x <= n; x++ {
 		if wantCap < x {
 			wantCap <<= 1
 		}
+
 		q.Enqueue(x)
+
 		if qn := q.Len(); qn != x {
 			t.Errorf("after q.Enqueue(%d) - got q.Len() %d; want %[1]d", x, qn)
 		}
+
 		if c := q.Cap(); c != wantCap {
 			t.Errorf("after q.Enqueue(%d) - got q.Cap() %d; want %d",
 				x, c, wantCap)
 		}
+
 		if front := q.Peek(); front != 1 {
 			t.Errorf("after q.Enqueue(%d) - got q.Peek() %d; want 1", x, front)
 		}
@@ -338,6 +393,8 @@ func testQueueEnqueueNAndDequeueNDequeueStage(
 	n int,
 	q queue.Queue[int],
 ) {
+	t.Helper()
+
 	finalCap := q.Cap()
 
 	for x := 1; !t.Failed() && x <= n; x++ {
@@ -345,14 +402,17 @@ func testQueueEnqueueNAndDequeueNDequeueStage(
 		if got != x {
 			t.Errorf("got No.%d q.Dequeue() %d; want %[1]d", x, got)
 		}
+
 		if qn := q.Len(); qn != n-x {
 			t.Errorf("after No.%d q.Dequeue() - got q.Len() %d; want %d",
 				x, qn, n-x)
 		}
+
 		if c := q.Cap(); c != finalCap {
 			t.Errorf("after No.%d q.Dequeue() - got q.Cap() %d; want %d",
 				x, c, finalCap)
 		}
+
 		if x < n {
 			if front := q.Peek(); front != x+1 {
 				t.Errorf("after No.%d q.Dequeue() - got q.Peek() %d; want %d",
@@ -363,21 +423,29 @@ func testQueueEnqueueNAndDequeueNDequeueStage(
 }
 
 func TestQueue_RandomEnqueueAndDequeue(t *testing.T) {
+	t.Parallel()
+
 	q := queue.New[int](0)
 	if qn := q.Len(); qn != 0 {
 		t.Fatalf("initial - q.Len() %d; want 0", qn)
 	}
 
-	random := rand.New(rand.NewChaCha8(
-		[32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))))
-	var queueData []int
-	var enqueueCtr, dequeueCtr int
+	random := rand.New(rand.NewChaCha8( //gosec:disable G404 -- math/rand/v2 is reproducible
+		[32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456")),
+	))
+
+	var (
+		queueData  []int
+		enqueueCtr int
+		dequeueCtr int
+	)
 
 	// Enqueue and dequeue a total of N items.
 	// Each time randomly enqueue a portion of them
 	// and then randomly dequeue a portion of items in the queue.
 
 	const N int = 1 << 20
+
 	n := N // the number of remaining items to be enqueued
 
 	// When n >= 3, enqueue randomly 1 to (2/3)n items
@@ -386,27 +454,54 @@ func TestQueue_RandomEnqueueAndDequeue(t *testing.T) {
 		enqueueN := 1 + random.IntN(n/3<<1)
 		n -= enqueueN
 		testQueueRandomEnqueueAndDequeueEnqueueStage(
-			t, enqueueN, &enqueueCtr, &queueData, q)
+			t,
+			enqueueN,
+			&enqueueCtr,
+			&queueData,
+			q,
+		)
+
 		if t.Failed() {
 			return
 		}
+
 		testQueueRandomEnqueueAndDequeueDequeueStage(
-			t, 1+random.IntN(len(queueData)), &dequeueCtr, &queueData, q)
+			t,
+			1+random.IntN(len(queueData)),
+			&dequeueCtr,
+			&queueData,
+			q,
+		)
+
 		if t.Failed() {
 			return
 		}
 	}
 	// When n < 3, enqueue all remaining items and then dequeue all items.
 	testQueueRandomEnqueueAndDequeueEnqueueStage(
-		t, n, &enqueueCtr, &queueData, q)
+		t,
+		n,
+		&enqueueCtr,
+		&queueData,
+		q,
+	)
+
 	if t.Failed() {
 		return
 	}
+
 	testQueueRandomEnqueueAndDequeueDequeueStage(
-		t, len(queueData), &dequeueCtr, &queueData, q)
+		t,
+		len(queueData),
+		&dequeueCtr,
+		&queueData,
+		q,
+	)
+
 	if t.Failed() {
 		return
 	}
+
 	// An unnecessary test on enqueueCtr and dequeueCtr
 	// to verify whether all the N items have been enqueued and dequeued:
 	if enqueueCtr != N || dequeueCtr != N {
@@ -414,32 +509,7 @@ func TestQueue_RandomEnqueueAndDequeue(t *testing.T) {
 			enqueueCtr, dequeueCtr, N)
 	}
 
-	finalCap := q.Cap()
-	q.RemoveAll()
-	if qn := q.Len(); qn != 0 {
-		t.Errorf("after q.RemoveAll() - got q.Len() %d; want 0", qn)
-	}
-	if c := q.Cap(); c != finalCap {
-		t.Errorf("after q.RemoveAll() - got q.Cap() %d; want %d", c, finalCap)
-	}
-
-	q.Clear()
-	if qn := q.Len(); qn != 0 {
-		t.Errorf("after q.Clear() - got q.Len() %d; want 0", qn)
-	}
-	if c := q.Cap(); c != 0 {
-		t.Errorf("after q.Clear() - got q.Cap() %d; want 0", c)
-	}
-
-	q.RemoveAll()
-	if qn := q.Len(); qn != 0 {
-		t.Errorf("after q.Clear() then q.RemoveAll() - got q.Len() %d; want 0",
-			qn)
-	}
-	if c := q.Cap(); c != 0 {
-		t.Errorf("after q.Clear() then q.RemoveAll() - got q.Cap() %d; want 0",
-			c)
-	}
+	testQueueEnqueueAndDequeueTearDownStage(t, q)
 }
 
 // testQueueRandomEnqueueAndDequeueEnqueueStage is a subprocess of
@@ -451,23 +521,30 @@ func testQueueRandomEnqueueAndDequeueEnqueueStage(
 	pQueueData *[]int,
 	q queue.Queue[int],
 ) {
+	t.Helper()
+
 	wantCap := q.Cap()
+
 	for i := 0; !t.Failed() && i < n; i++ {
 		*pEnqueueCtr++
 		*pQueueData = append(*pQueueData, *pEnqueueCtr)
+
 		if wantCap < len(*pQueueData) {
 			wantCap <<= 1
 		}
 
 		q.Enqueue(*pEnqueueCtr)
+
 		if qn := q.Len(); qn != len(*pQueueData) {
 			t.Errorf("after q.Enqueue(%d) - got q.Len() %d; want %d",
 				*pEnqueueCtr, qn, len(*pQueueData))
 		}
+
 		if c := q.Cap(); c != wantCap {
 			t.Errorf("after q.Enqueue(%d) - got q.Cap() %d; want %d",
 				*pEnqueueCtr, c, wantCap)
 		}
+
 		if front := q.Peek(); front != (*pQueueData)[0] {
 			t.Errorf("after q.Enqueue(%d) - got q.Peek() %d; want %d",
 				*pEnqueueCtr, front, (*pQueueData)[0])
@@ -484,6 +561,8 @@ func testQueueRandomEnqueueAndDequeueDequeueStage(
 	pQueueData *[]int,
 	q queue.Queue[int],
 ) {
+	t.Helper()
+
 	wantCap := q.Cap()
 
 	for i := 0; !t.Failed() && i < n; i++ {
@@ -496,14 +575,17 @@ func testQueueRandomEnqueueAndDequeueDequeueStage(
 			t.Errorf("got No.%d q.Dequeue() %d; want %d",
 				*pDequeueCtr, got, want)
 		}
+
 		if qn := q.Len(); qn != len(*pQueueData) {
 			t.Errorf("after No.%d q.Dequeue() - got q.Len() %d; want %d",
 				*pDequeueCtr, qn, len(*pQueueData))
 		}
+
 		if c := q.Cap(); c != wantCap {
 			t.Errorf("after No.%d q.Dequeue() - got q.Cap() %d; want %d",
 				*pDequeueCtr, c, wantCap)
 		}
+
 		if len(*pQueueData) > 0 {
 			if front := q.Peek(); front != (*pQueueData)[0] {
 				t.Errorf("after No.%d q.Dequeue() - got q.Peek() %d; want %d",
@@ -513,34 +595,83 @@ func testQueueRandomEnqueueAndDequeueDequeueStage(
 	}
 }
 
+// testQueueEnqueueAndDequeueTearDownStage is the common subprocess of
+// TestQueue_EnqueueNAndDequeueN and TestQueue_RandomEnqueueAndDequeue
+// for the tearing down stage.
+func testQueueEnqueueAndDequeueTearDownStage(t *testing.T, q queue.Queue[int]) {
+	t.Helper()
+
+	finalCap := q.Cap()
+
+	q.RemoveAll()
+
+	if qn := q.Len(); qn != 0 {
+		t.Errorf("after q.RemoveAll() - got q.Len() %d; want 0", qn)
+	}
+
+	if c := q.Cap(); c != finalCap {
+		t.Errorf("after q.RemoveAll() - got q.Cap() %d; want %d", c, finalCap)
+	}
+
+	q.Clear()
+
+	if qn := q.Len(); qn != 0 {
+		t.Errorf("after q.Clear() - got q.Len() %d; want 0", qn)
+	}
+
+	if c := q.Cap(); c != 0 {
+		t.Errorf("after q.Clear() - got q.Cap() %d; want 0", c)
+	}
+
+	q.RemoveAll()
+
+	if qn := q.Len(); qn != 0 {
+		t.Errorf("after q.Clear() then q.RemoveAll() - got q.Len() %d; want 0",
+			qn)
+	}
+
+	if c := q.Cap(); c != 0 {
+		t.Errorf("after q.Clear() then q.RemoveAll() - got q.Cap() %d; want 0",
+			c)
+	}
+}
+
 func TestQueue_EnqueueAfterClear(t *testing.T) {
 	// This tests whether the queue is reusable after Clear().
+	t.Parallel()
 
 	q := queue.New[int](0)
+
 	const N int = 10
 	for range N {
 		q.Enqueue(1)
 	}
+
 	if n := q.Len(); n != N {
 		t.Errorf("before q.Clear() - got q.Len() %d; want %d", n, N)
 	}
 
 	q.Clear()
+
 	if n := q.Len(); n != 0 {
 		t.Errorf("after q.Clear() - got q.Len() %d; want 0", n)
 	}
+
 	if c := q.Cap(); c != 0 {
 		t.Errorf("after q.Clear() - got q.Cap() %d; want 0", c)
 	}
 
 	q.Enqueue(2)
+
 	if n := q.Len(); n != 1 {
 		t.Errorf("after q.Enqueue(2) - got q.Len() %d; want 1", n)
 	}
+
 	if c := q.Cap(); c != queue.DefaultCapacity {
 		t.Errorf("after q.Enqueue(2) - got q.Cap() %d; want %d",
 			c, queue.DefaultCapacity)
 	}
+
 	if front := q.Peek(); front != 2 {
 		t.Errorf("after q.Enqueue(2) - got q.Peek() %d; want 2", front)
 	}

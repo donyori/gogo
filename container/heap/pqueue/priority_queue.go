@@ -104,9 +104,11 @@ func New[Item any](
 	if lessFn == nil {
 		panic(errors.AutoMsg("lessFn is nil"))
 	}
+
 	if capacity <= 0 {
 		capacity = defaultCapacity
 	}
+
 	s := make([]Item, 0, capacity)
 	pq := &priorityQueue[Item]{
 		odaHeapAdapter[Item]{
@@ -114,6 +116,7 @@ func New[Item any](
 		},
 	}
 	heap.Init(pq.oha)
+
 	return pq
 }
 
@@ -154,6 +157,7 @@ func (pq *priorityQueue[Item]) Reserve(capacity int) {
 	if capacity <= 0 {
 		capacity = defaultCapacity
 	}
+
 	pq.oha.ODA.Reserve(capacity)
 }
 
@@ -172,6 +176,7 @@ func (pq *priorityQueue[Item]) Dequeue() Item {
 	if pq.oha.Len() == 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))
 	}
+
 	return heap.Pop(pq.oha).(Item)
 }
 
@@ -179,6 +184,7 @@ func (pq *priorityQueue[Item]) Top() Item {
 	if pq.oha.Len() == 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))
 	}
+
 	return pq.oha.ODA.Front()
 }
 
@@ -186,8 +192,10 @@ func (pq *priorityQueue[Item]) ReplaceTop(newX Item) Item {
 	if pq.oha.Len() == 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))
 	}
+
 	pq.oha.ODA.SetFront(newX)
 	heap.Fix(pq.oha, 0)
+
 	return pq.oha.ODA.Front()
 }
 
@@ -202,6 +210,7 @@ func (oha odaHeapAdapter[Item]) Len() int {
 	if oha.ODA == nil {
 		return 0
 	}
+
 	return oha.ODA.Len()
 }
 

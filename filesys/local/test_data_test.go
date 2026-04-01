@@ -149,8 +149,9 @@ type zipHeaderBody struct {
 // It also returns any error encountered.
 //
 // Caller should guarantee that the file name has the suffix ".zip".
-func lazyLoadZipFile(name string) (
-	fileMap map[string]*zipHeaderBody, err error) {
+func lazyLoadZipFile(
+	name string,
+) (fileMap map[string]*zipHeaderBody, err error) {
 	data, err := lazyLoadTestData(name)
 	if err != nil {
 		return nil, errors.AutoWrap(err)
@@ -188,8 +189,10 @@ func lazyLoadZipFile(name string) (
 // They are in hexadecimal representation, lowercase.
 //
 // lazyCalculateChecksums panics if anyone in newHash is nil or returns nil.
-func lazyCalculateChecksums(name string, newHash ...func() hash.Hash) (
-	checksums []string, err error) {
+func lazyCalculateChecksums(
+	name string,
+	newHash ...func() hash.Hash,
+) (checksums []string, err error) {
 	data, err := lazyLoadTestData(name)
 	if err != nil || len(newHash) == 0 {
 		return nil, errors.AutoWrap(err)

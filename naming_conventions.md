@@ -54,11 +54,13 @@ keywords or other identifiers such as standard packages.
 | --------------------------------------- | ------------------- |
 | buffer                                  | ^b, buf, ^p         |
 | builder                                 | ^b                  |
+| container                               | ctnr                |
 | continue                                | \*cont              |
 | counter                                 | ctr                 |
 | decompressor                            | dcomp               |
 | default                                 | \*dflt              |
 | function                                | ^f, fn, func        |
+| index                                   | ^i, idx             |
 | input/output                            | \*inout (InOut), io |
 | iterator                                | iter                |
 | number (indicating amount, quantity)    | n\-, num\-          |

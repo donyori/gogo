@@ -45,6 +45,7 @@ func New[Item comparable](capacity int) set.Set[Item] {
 	} else {
 		ms.m = make(map[Item]struct{})
 	}
+
 	return ms
 }
 
@@ -97,17 +98,21 @@ func (ms *mapSet[Item]) ContainsSet(s set.Set[Item]) bool {
 	if s == nil {
 		return true
 	}
+
 	n := s.Len()
 	if n == 0 {
 		return true
 	} else if n > len(ms.m) {
 		return false
 	}
+
 	var ok bool
+
 	s.Range(func(x Item) (cont bool) {
 		_, ok = ms.m[x]
 		return ok
 	})
+
 	return ok
 }
 
@@ -115,11 +120,14 @@ func (ms *mapSet[Item]) ContainsAny(c container.Container[Item]) bool {
 	if c == nil || c.Len() == 0 {
 		return false
 	}
+
 	var ok bool
+
 	c.Range(func(x Item) (cont bool) {
 		_, ok = ms.m[x]
 		return !ok
 	})
+
 	return ok
 }
 
@@ -139,6 +147,7 @@ func (ms *mapSet[Item]) Union(s set.Set[Item]) {
 	if s == nil || s.Len() == 0 {
 		return
 	}
+
 	s.Range(func(x Item) (cont bool) {
 		ms.m[x] = struct{}{}
 		return true
@@ -150,6 +159,7 @@ func (ms *mapSet[Item]) Intersect(s set.Set[Item]) {
 		ms.m = make(map[Item]struct{})
 		return
 	}
+
 	for x := range ms.m {
 		if !s.ContainsItem(x) {
 			delete(ms.m, x)
@@ -161,6 +171,7 @@ func (ms *mapSet[Item]) Subtract(s set.Set[Item]) {
 	if s == nil || s.Len() == 0 {
 		return
 	}
+
 	s.Range(func(x Item) (cont bool) {
 		delete(ms.m, x)
 		return true
@@ -171,12 +182,14 @@ func (ms *mapSet[Item]) DisjunctiveUnion(s set.Set[Item]) {
 	if s == nil || s.Len() == 0 {
 		return
 	}
+
 	s.Range(func(x Item) (cont bool) {
 		if _, ok := ms.m[x]; ok {
 			delete(ms.m, x)
 		} else {
 			ms.m[x] = struct{}{}
 		}
+
 		return true
 	})
 }

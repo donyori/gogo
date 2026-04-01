@@ -48,6 +48,7 @@ func (gm *GoMap[Key, Value]) Len() int {
 	if gm != nil {
 		n = len(*gm)
 	}
+
 	return n
 }
 
@@ -105,6 +106,7 @@ func (gm *GoMap[Key, Value]) Filter(
 		for k, v := range *gm {
 			if !filter(Entry[Key, Value]{Key: k, Value: v}) {
 				var zero Value
+
 				(*gm)[k] = zero // avoid memory leak
 				delete(*gm, k)
 			}
@@ -170,6 +172,7 @@ func (gm *GoMap[Key, Value]) Get(key Key) (value Value, present bool) {
 	if gm != nil {
 		value, present = (*gm)[key]
 	}
+
 	return
 }
 
@@ -183,6 +186,7 @@ func (gm *GoMap[Key, Value]) Set(key Key, value Value) {
 	} else if *gm == nil {
 		*gm = make(GoMap[Key, Value])
 	}
+
 	(*gm)[key] = value
 }
 
@@ -194,8 +198,10 @@ func (gm *GoMap[Key, Value]) Set(key Key, value Value) {
 // the key was present before calling GetAndSet.
 //
 // It panics if gm is nil.
-func (gm *GoMap[Key, Value]) GetAndSet(key Key, value Value) (
-	previous Value, present bool) {
+func (gm *GoMap[Key, Value]) GetAndSet(
+	key Key,
+	value Value,
+) (previous Value, present bool) {
 	switch {
 	case gm == nil:
 		panic(errors.AutoMsg(nilGoMapPointerPanicMessage))
@@ -204,7 +210,9 @@ func (gm *GoMap[Key, Value]) GetAndSet(key Key, value Value) (
 	default:
 		*gm = make(GoMap[Key, Value])
 	}
+
 	(*gm)[key] = value
+
 	return
 }
 
@@ -216,6 +224,7 @@ func (gm *GoMap[Key, Value]) SetMap(m Map[Key, Value]) {
 	if m == nil {
 		return
 	}
+
 	n := m.Len()
 	switch {
 	case n == 0:
@@ -225,6 +234,7 @@ func (gm *GoMap[Key, Value]) SetMap(m Map[Key, Value]) {
 	case *gm == nil:
 		*gm = make(GoMap[Key, Value], n)
 	}
+
 	m.Range(func(entry Entry[Key, Value]) (cont bool) {
 		(*gm)[entry.Key] = entry.Value
 		return true
@@ -240,11 +250,13 @@ func (gm *GoMap[Key, Value]) SetMap(m Map[Key, Value]) {
 // GetAndSetMap returns nil.
 //
 // It panics if m is not nil or empty and gm is nil.
-func (gm *GoMap[Key, Value]) GetAndSetMap(m Map[Key, Value]) (
-	previous Map[Key, Value]) {
+func (gm *GoMap[Key, Value]) GetAndSetMap(
+	m Map[Key, Value],
+) (previous Map[Key, Value]) {
 	if m == nil {
 		return
 	}
+
 	n := m.Len()
 	switch {
 	case n == 0:
@@ -253,28 +265,36 @@ func (gm *GoMap[Key, Value]) GetAndSetMap(m Map[Key, Value]) (
 		panic(errors.AutoMsg(nilGoMapPointerPanicMessage))
 	case *gm == nil:
 		*gm = make(GoMap[Key, Value], n)
+
 		m.Range(func(entry Entry[Key, Value]) (cont bool) {
 			(*gm)[entry.Key] = entry.Value
 			return true
 		})
+
 		return
 	}
 
 	prev := new(GoMap[Key, Value])
+
 	m.Range(func(entry Entry[Key, Value]) (cont bool) {
 		v, ok := (*gm)[entry.Key]
 		if ok {
 			if *prev == nil {
 				*prev = make(GoMap[Key, Value])
 			}
+
 			(*prev)[entry.Key] = v
 		}
+
 		(*gm)[entry.Key] = entry.Value
+
 		return true
 	})
+
 	if len(*prev) > 0 {
 		previous = prev
 	}
+
 	return
 }
 
@@ -287,6 +307,7 @@ func (gm *GoMap[Key, Value]) Remove(key ...Key) {
 		for _, k := range key {
 			if _, ok := (*gm)[k]; ok {
 				var zero Value
+
 				(*gm)[k] = zero // avoid memory leak
 				delete(*gm, k)
 			}
@@ -300,16 +321,19 @@ func (gm *GoMap[Key, Value]) Remove(key ...Key) {
 // Unlike Remove, GetAndRemove returns the previous value (if any)
 // bound to the key and an indicator present to report whether
 // the key was present before calling GetAndRemove.
-func (gm *GoMap[Key, Value]) GetAndRemove(key Key) (
-	previous Value, present bool) {
+func (gm *GoMap[Key, Value]) GetAndRemove(
+	key Key,
+) (previous Value, present bool) {
 	if gm != nil && len(*gm) > 0 {
 		previous, present = (*gm)[key]
 		if present {
 			var zero Value
+
 			(*gm)[key] = zero // avoid memory leak
 			delete(*gm, key)
 		}
 	}
+
 	return
 }
 
