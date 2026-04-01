@@ -36,6 +36,8 @@ import (
 type IntSDA = array.SliceDynamicArray[int]
 
 func TestSliceDynamicArray_Len(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		sda  *IntSDA
 		want int
@@ -48,7 +50,10 @@ func TestSliceDynamicArray_Len(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("s="+sdaPtrToName(tc.sda), func(t *testing.T) {
-			if n := tc.sda.Len(); n != tc.want {
+			t.Parallel()
+
+			n := tc.sda.Len()
+			if n != tc.want {
 				t.Errorf("got %d; want %d", n, tc.want)
 			}
 		})
@@ -56,6 +61,8 @@ func TestSliceDynamicArray_Len(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Range(t *testing.T) {
+	t.Parallel()
+
 	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
 	want := []int{0, 1, 2, 3, 4}
 	gotData := make([]int, 0, len(sda))
@@ -63,15 +70,20 @@ func TestSliceDynamicArray_Range(t *testing.T) {
 		gotData = append(gotData, x)
 		return len(gotData) < len(sda)>>1
 	})
+
 	if unequal.Slice(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
 	}
 }
 
 func TestSliceDynamicArray_Range_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	sdas := []*IntSDA{nil, new(IntSDA), {}}
 	for _, sda := range sdas {
 		t.Run("s="+sdaPtrToName(sda), func(t *testing.T) {
+			t.Parallel()
+
 			sda.Range(func(x int) (cont bool) {
 				t.Error("handler was called, x:", x)
 				return true
@@ -81,22 +93,30 @@ func TestSliceDynamicArray_Range_NilAndEmpty(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Range_NilHandler(t *testing.T) {
+	t.Parallel()
+
 	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
+
 	defer func() {
 		if e := recover(); e != nil {
 			t.Error("panic -", e)
 		}
 	}()
+
 	sda.Range(nil)
 }
 
 func TestSliceDynamicArray_IterItems(t *testing.T) {
+	t.Parallel()
+
 	sda := IntSDA{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
 	want := []int{0, 1, 2, 3, 4}
+
 	seq := sda.IterItems()
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	gotData := make([]int, 0, len(sda))
 	for x := range seq {
 		gotData = append(gotData, x)
@@ -104,9 +124,11 @@ func TestSliceDynamicArray_IterItems(t *testing.T) {
 			break
 		}
 	}
+
 	if unequal.Slice(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
 	}
+
 	// Rewind the iterator and test it again.
 	gotData = gotData[:0]
 	for x := range seq {
@@ -115,19 +137,25 @@ func TestSliceDynamicArray_IterItems(t *testing.T) {
 			break
 		}
 	}
+
 	if unequal.Slice(gotData, want) {
 		t.Errorf("rewind - got %v; want %v", gotData, want)
 	}
 }
 
 func TestSliceDynamicArray_IterItems_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	sdas := []*IntSDA{nil, new(IntSDA), {}}
 	for _, sda := range sdas {
 		t.Run("s="+sdaPtrToName(sda), func(t *testing.T) {
+			t.Parallel()
+
 			seq := sda.IterItems()
 			if seq == nil {
 				t.Fatal("got nil iterator")
 			}
+
 			for x := range seq {
 				t.Error("yielded", x)
 			}
@@ -136,6 +164,8 @@ func TestSliceDynamicArray_IterItems_NilAndEmpty(t *testing.T) {
 }
 
 func TestSliceDynamicArray_RangeBackward(t *testing.T) {
+	t.Parallel()
+
 	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
 	want := []int{4, 3, 2, 1, 0}
 	gotData := make([]int, 0, len(sda))
@@ -143,15 +173,20 @@ func TestSliceDynamicArray_RangeBackward(t *testing.T) {
 		gotData = append(gotData, x)
 		return len(gotData) < len(sda)>>1
 	})
+
 	if unequal.Slice(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
 	}
 }
 
 func TestSliceDynamicArray_RangeBackward_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	sdas := []*IntSDA{nil, new(IntSDA), {}}
 	for _, sda := range sdas {
 		t.Run("s="+sdaPtrToName(sda), func(t *testing.T) {
+			t.Parallel()
+
 			sda.RangeBackward(func(x int) (cont bool) {
 				t.Error("handler was called, x:", x)
 				return true
@@ -161,22 +196,30 @@ func TestSliceDynamicArray_RangeBackward_NilAndEmpty(t *testing.T) {
 }
 
 func TestSliceDynamicArray_RangeBackward_NilHandler(t *testing.T) {
+	t.Parallel()
+
 	sda := IntSDA{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
+
 	defer func() {
 		if e := recover(); e != nil {
 			t.Error("panic -", e)
 		}
 	}()
+
 	sda.RangeBackward(nil)
 }
 
 func TestSliceDynamicArray_IterItemsBackward(t *testing.T) {
+	t.Parallel()
+
 	sda := IntSDA{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
 	want := []int{9, 8, 7, 6, 5}
+
 	seq := sda.IterItemsBackward()
 	if seq == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	gotData := make([]int, 0, len(sda))
 	for x := range seq {
 		gotData = append(gotData, x)
@@ -184,9 +227,11 @@ func TestSliceDynamicArray_IterItemsBackward(t *testing.T) {
 			break
 		}
 	}
+
 	if unequal.Slice(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
 	}
+
 	// Rewind the iterator and test it again.
 	gotData = gotData[:0]
 	for x := range seq {
@@ -195,19 +240,25 @@ func TestSliceDynamicArray_IterItemsBackward(t *testing.T) {
 			break
 		}
 	}
+
 	if unequal.Slice(gotData, want) {
 		t.Errorf("rewind - got %v; want %v", gotData, want)
 	}
 }
 
 func TestSliceDynamicArray_IterItemsBackward_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	sdas := []*IntSDA{nil, new(IntSDA), {}}
 	for _, sda := range sdas {
 		t.Run("s="+sdaPtrToName(sda), func(t *testing.T) {
+			t.Parallel()
+
 			seq := sda.IterItemsBackward()
 			if seq == nil {
 				t.Fatal("got nil iterator")
 			}
+
 			for x := range seq {
 				t.Error("yielded", x)
 			}
@@ -216,6 +267,8 @@ func TestSliceDynamicArray_IterItemsBackward_NilAndEmpty(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Front(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		sda  IntSDA
 		want int
@@ -230,7 +283,10 @@ func TestSliceDynamicArray_Front(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("s="+sliceToName(tc.sda), func(t *testing.T) {
-			if x := tc.sda.Front(); x != tc.want {
+			t.Parallel()
+
+			x := tc.sda.Front()
+			if x != tc.want {
 				t.Errorf("got %d; want %d", x, tc.want)
 			}
 		})
@@ -238,6 +294,8 @@ func TestSliceDynamicArray_Front(t *testing.T) {
 }
 
 func TestSliceDynamicArray_SetFront(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		data []int
 		x    int
@@ -255,8 +313,11 @@ func TestSliceDynamicArray_SetFront(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("s=%s&x=%d", sliceToName(tc.data), tc.x),
 			func(t *testing.T) {
+				t.Parallel()
+
 				sda := copySda(tc.data)
 				sda.SetFront(tc.x)
+
 				if unequal.Slice(sda, tc.want) {
 					t.Errorf("got %v; want %v", sda, tc.want)
 				}
@@ -266,6 +327,8 @@ func TestSliceDynamicArray_SetFront(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Back(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		sda  IntSDA
 		want int
@@ -280,7 +343,10 @@ func TestSliceDynamicArray_Back(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("s="+sliceToName(tc.sda), func(t *testing.T) {
-			if x := tc.sda.Back(); x != tc.want {
+			t.Parallel()
+
+			x := tc.sda.Back()
+			if x != tc.want {
 				t.Errorf("got %d; want %d", x, tc.want)
 			}
 		})
@@ -288,6 +354,8 @@ func TestSliceDynamicArray_Back(t *testing.T) {
 }
 
 func TestSliceDynamicArray_SetBack(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		data []int
 		x    int
@@ -305,8 +373,11 @@ func TestSliceDynamicArray_SetBack(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("s=%s&x=%d", sliceToName(tc.data), tc.x),
 			func(t *testing.T) {
+				t.Parallel()
+
 				sda := copySda(tc.data)
 				sda.SetBack(tc.x)
+
 				if unequal.Slice(sda, tc.want) {
 					t.Errorf("got %v; want %v", sda, tc.want)
 				}
@@ -316,6 +387,8 @@ func TestSliceDynamicArray_SetBack(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Reverse(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		data, want []int
 	}{
@@ -329,8 +402,11 @@ func TestSliceDynamicArray_Reverse(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("s="+sliceToName(tc.data), func(t *testing.T) {
+			t.Parallel()
+
 			sda := copySda(tc.data)
 			sda.Reverse()
+
 			if unequal.Slice(sda, tc.want) {
 				t.Errorf("got %v; want %v", sda, tc.want)
 			}
@@ -339,7 +415,10 @@ func TestSliceDynamicArray_Reverse(t *testing.T) {
 
 	var nilSDA *IntSDA
 	t.Run("s="+sdaPtrToName(nilSDA), func(t *testing.T) {
+		t.Parallel()
+
 		nilSDA.Reverse()
+
 		if nilSDA != nil {
 			t.Errorf("got %v; want <nil>", nilSDA)
 		}
@@ -347,12 +426,16 @@ func TestSliceDynamicArray_Reverse(t *testing.T) {
 }
 
 func TestSliceDynamicArray_IterIndexItems(t *testing.T) {
+	t.Parallel()
+
 	sda := IntSDA{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
 	want := [][2]int{{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}
+
 	seq2 := sda.IterIndexItems()
 	if seq2 == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	gotData := make([][2]int, 0, len(sda))
 	for i, x := range seq2 {
 		gotData = append(gotData, [2]int{i, x})
@@ -360,9 +443,11 @@ func TestSliceDynamicArray_IterIndexItems(t *testing.T) {
 			break
 		}
 	}
+
 	if unequal.Slice(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
 	}
+
 	// Rewind the iterator and test it again.
 	gotData = gotData[:0]
 	for i, x := range seq2 {
@@ -371,19 +456,25 @@ func TestSliceDynamicArray_IterIndexItems(t *testing.T) {
 			break
 		}
 	}
+
 	if unequal.Slice(gotData, want) {
 		t.Errorf("rewind - got %v; want %v", gotData, want)
 	}
 }
 
 func TestSliceDynamicArray_IterIndexItems_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	sdas := []*IntSDA{nil, new(IntSDA), {}}
 	for _, sda := range sdas {
 		t.Run("s="+sdaPtrToName(sda), func(t *testing.T) {
+			t.Parallel()
+
 			seq2 := sda.IterIndexItems()
 			if seq2 == nil {
 				t.Fatal("got nil iterator")
 			}
+
 			for i, x := range seq2 {
 				t.Errorf("yielded %d: %d", i, x)
 			}
@@ -392,12 +483,16 @@ func TestSliceDynamicArray_IterIndexItems_NilAndEmpty(t *testing.T) {
 }
 
 func TestSliceDynamicArray_IterIndexItemsBackward(t *testing.T) {
+	t.Parallel()
+
 	sda := IntSDA{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
 	want := [][2]int{{9, 9}, {8, 8}, {7, 7}, {6, 6}, {5, 5}}
+
 	seq2 := sda.IterIndexItemsBackward()
 	if seq2 == nil {
 		t.Fatal("got nil iterator")
 	}
+
 	gotData := make([][2]int, 0, len(sda))
 	for i, x := range seq2 {
 		gotData = append(gotData, [2]int{i, x})
@@ -405,9 +500,11 @@ func TestSliceDynamicArray_IterIndexItemsBackward(t *testing.T) {
 			break
 		}
 	}
+
 	if unequal.Slice(gotData, want) {
 		t.Errorf("got %v; want %v", gotData, want)
 	}
+
 	// Rewind the iterator and test it again.
 	gotData = gotData[:0]
 	for i, x := range seq2 {
@@ -416,19 +513,25 @@ func TestSliceDynamicArray_IterIndexItemsBackward(t *testing.T) {
 			break
 		}
 	}
+
 	if unequal.Slice(gotData, want) {
 		t.Errorf("rewind - got %v; want %v", gotData, want)
 	}
 }
 
 func TestSliceDynamicArray_IterIndexItemsBackward_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	sdas := []*IntSDA{nil, new(IntSDA), {}}
 	for _, sda := range sdas {
 		t.Run("s="+sdaPtrToName(sda), func(t *testing.T) {
+			t.Parallel()
+
 			seq2 := sda.IterIndexItemsBackward()
 			if seq2 == nil {
 				t.Fatal("got nil iterator")
 			}
+
 			for i, x := range seq2 {
 				t.Errorf("yielded %d: %d", i, x)
 			}
@@ -437,6 +540,8 @@ func TestSliceDynamicArray_IterIndexItemsBackward_NilAndEmpty(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Get(t *testing.T) {
+	t.Parallel()
+
 	sda := IntSDA{2, 3, 4, 5, 6}
 	testCases := []struct {
 		i, want int
@@ -450,7 +555,10 @@ func TestSliceDynamicArray_Get(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("i=%d", tc.i), func(t *testing.T) {
-			if x := sda.Get(tc.i); x != tc.want {
+			t.Parallel()
+
+			x := sda.Get(tc.i)
+			if x != tc.want {
 				t.Errorf("got %d; want %d", x, tc.want)
 			}
 		})
@@ -458,6 +566,8 @@ func TestSliceDynamicArray_Get(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Set(t *testing.T) {
+	t.Parallel()
+
 	data := []int{0, 1, 2, 3, 4}
 	testCases := []struct {
 		i, x int
@@ -472,8 +582,11 @@ func TestSliceDynamicArray_Set(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("i=%d&x=%d", tc.i, tc.x), func(t *testing.T) {
+			t.Parallel()
+
 			sda := copySda(data)
 			sda.Set(tc.i, tc.x)
+
 			if unequal.Slice(sda, tc.want) {
 				t.Errorf("got %v; want %v", sda, tc.want)
 			}
@@ -482,6 +595,8 @@ func TestSliceDynamicArray_Set(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Swap(t *testing.T) {
+	t.Parallel()
+
 	data := []int{0, 1, 2, 3, 4}
 	n := len(data)
 
@@ -489,7 +604,9 @@ func TestSliceDynamicArray_Swap(t *testing.T) {
 		i, j int
 		want []int
 	}, n*n)
+
 	var idx int
+
 	for i := range n {
 		for j := range n {
 			testCases[idx].i, testCases[idx].j = i, j
@@ -503,8 +620,11 @@ func TestSliceDynamicArray_Swap(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("i=%d&j=%d", tc.i, tc.j), func(t *testing.T) {
+			t.Parallel()
+
 			sda := copySda(data)
 			sda.Swap(tc.i, tc.j)
+
 			if unequal.Slice(sda, tc.want) {
 				t.Errorf("got %v; want %v", sda, tc.want)
 			}
@@ -513,6 +633,8 @@ func TestSliceDynamicArray_Swap(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Slice(t *testing.T) {
+	t.Parallel()
+
 	sda := IntSDA{0, 1, 2, 3, 4}
 	n := len(sda)
 
@@ -520,7 +642,9 @@ func TestSliceDynamicArray_Slice(t *testing.T) {
 		begin, end int
 		want       []int
 	}, n*(n+3)>>1) // (n+1)+n+(n-1)+...+2 = n*((n+1)+2)/2 = n*(n+3)/2
+
 	var idx int
+
 	for begin := range n {
 		for end := begin; end <= n; end++ {
 			testCases[idx].begin, testCases[idx].end = begin, end
@@ -535,13 +659,18 @@ func TestSliceDynamicArray_Slice(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("begin=%d&end=%d", tc.begin, tc.end),
 			func(t *testing.T) {
+				t.Parallel()
+
 				slice := sda.Slice(tc.begin, tc.end)
 				s := make([]int, slice.Len())
+
 				var i int
+
 				slice.Range(func(x int) (cont bool) {
 					s[i], i = x, i+1
 					return true
 				})
+
 				if unequal.Slice(s, tc.want) {
 					t.Errorf("got %v; want %v", s, tc.want)
 				}
@@ -551,11 +680,16 @@ func TestSliceDynamicArray_Slice(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Clear(t *testing.T) {
+	t.Parallel()
+
 	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
 	for _, data := range dataList {
 		t.Run("s="+sliceToName(data), func(t *testing.T) {
+			t.Parallel()
+
 			sda := copySda(data)
 			sda.Clear()
+
 			if sda != nil {
 				t.Errorf("got %v; want <nil>", sda)
 			}
@@ -564,7 +698,10 @@ func TestSliceDynamicArray_Clear(t *testing.T) {
 
 	var nilSDA *IntSDA
 	t.Run("s="+sdaPtrToName(nilSDA), func(t *testing.T) {
+		t.Parallel()
+
 		nilSDA.Clear()
+
 		if nilSDA != nil {
 			t.Errorf("got %v; want <nil>", nilSDA)
 		}
@@ -572,14 +709,20 @@ func TestSliceDynamicArray_Clear(t *testing.T) {
 }
 
 func TestSliceDynamicArray_RemoveAll(t *testing.T) {
+	t.Parallel()
+
 	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
 	for _, data := range dataList {
 		t.Run("s="+sliceToName(data), func(t *testing.T) {
+			t.Parallel()
+
 			sda := copySda(data)
 			sda.RemoveAll()
+
 			if data != nil {
 				if sda == nil || len(sda) != 0 || cap(sda) != cap(data) {
-					t.Errorf("got %v (len: %d, cap: %v); want [] (len: 0, cap: %d)",
+					t.Errorf("got %v (len: %d, cap: %v); "+
+						"want [] (len: 0, cap: %d)",
 						sda, len(sda), cap(sda), cap(data))
 				}
 			} else if sda != nil {
@@ -590,7 +733,10 @@ func TestSliceDynamicArray_RemoveAll(t *testing.T) {
 
 	var nilSDA *IntSDA
 	t.Run("s="+sdaPtrToName(nilSDA), func(t *testing.T) {
+		t.Parallel()
+
 		nilSDA.RemoveAll()
+
 		if nilSDA != nil {
 			t.Errorf("got %v; want <nil>", nilSDA)
 		}
@@ -598,6 +744,8 @@ func TestSliceDynamicArray_RemoveAll(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Cap(t *testing.T) {
+	t.Parallel()
+
 	sda1 := make(IntSDA, 0, 3)
 	sda2 := IntSDA{1, 2, 3}[:1]
 	testCases := []struct {
@@ -617,10 +765,14 @@ func TestSliceDynamicArray_Cap(t *testing.T) {
 		if tc.sda != nil {
 			sdaCap = cap(*tc.sda)
 		}
+
 		t.Run(
 			fmt.Sprintf("s=%s&cap=%d", sdaPtrToName(tc.sda), sdaCap),
 			func(t *testing.T) {
-				if c := tc.sda.Cap(); c != tc.want {
+				t.Parallel()
+
+				c := tc.sda.Cap()
+				if c != tc.want {
 					t.Errorf("got %d; want %d", c, tc.want)
 				}
 			},
@@ -629,6 +781,8 @@ func TestSliceDynamicArray_Cap(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Reserve(t *testing.T) {
+	t.Parallel()
+
 	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
 	capList := []int{-1, 0, 1, 2, 3, 4}
 
@@ -638,23 +792,29 @@ func TestSliceDynamicArray_Reserve(t *testing.T) {
 		wantSda  []int
 		wantCap  int
 	}, len(dataList)*len(capList))
+
 	var idx int
+
 	for _, data := range dataList {
 		for _, capacity := range capList {
 			testCases[idx].data = data
 			testCases[idx].capacity = capacity
+
 			if data != nil {
 				testCases[idx].wantSda = data
 			} else {
 				testCases[idx].wantSda = []int{}
 			}
+
 			testCases[idx].wantCap = capacity
 			if testCases[idx].wantCap <= 0 {
 				testCases[idx].wantCap = array.DefaultReserveCapacity
 			}
+
 			if testCases[idx].wantCap < cap(data) {
 				testCases[idx].wantCap = cap(data)
 			}
+
 			idx++
 		}
 	}
@@ -663,11 +823,15 @@ func TestSliceDynamicArray_Reserve(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("s=%s&cap=%d", sliceToName(tc.data), tc.capacity),
 			func(t *testing.T) {
+				t.Parallel()
+
 				sda := copySda(tc.data)
 				sda.Reserve(tc.capacity)
+
 				if c := cap(sda); c != tc.wantCap {
 					t.Errorf("got capacity %d; want %d", c, tc.wantCap)
 				}
+
 				if unequal.Slice(sda, tc.wantSda) {
 					t.Errorf("data changed; got %v; want %v", sda, tc.wantSda)
 				}
@@ -677,6 +841,8 @@ func TestSliceDynamicArray_Reserve(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Filter(t *testing.T) {
+	t.Parallel()
+
 	dataList := [][]int{nil, {}, {0}, {-1, 0, 1}, {-2, -1, 0, 1, 2}}
 	filterList := []func(x int) (keep bool){
 		func(x int) (keep bool) {
@@ -692,11 +858,14 @@ func TestSliceDynamicArray_Filter(t *testing.T) {
 		filterIdx int
 		want      []int
 	}, len(dataList)*len(filterList))
+
 	var idx int
+
 	for _, data := range dataList {
 		for filterIdx, filter := range filterList {
 			testCases[idx].data = data
 			testCases[idx].filterIdx = filterIdx
+
 			if len(data) > 0 {
 				want := make([]int, 0, len(data))
 				for _, x := range data {
@@ -704,39 +873,72 @@ func TestSliceDynamicArray_Filter(t *testing.T) {
 						want = append(want, x)
 					}
 				}
+
 				testCases[idx].want = want
 			} else if data != nil {
 				testCases[idx].want = data
 			}
+
 			idx++
 		}
 	}
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("s=%s&filterIdx=%d",
-				sliceToName(tc.data), tc.filterIdx),
+			fmt.Sprintf(
+				"s=%s&filterIdx=%d",
+				sliceToName(tc.data),
+				tc.filterIdx,
+			),
 			func(t *testing.T) {
-				sda := copySda(tc.data)
-				var ptrBefore, ptrAfter *[0]int
-				ptrBefore = (*[0]int)(sda)
-				sda.Filter(filterList[tc.filterIdx])
-				ptrAfter = (*[0]int)(sda)
-				if unequal.Slice(sda, tc.want) {
-					t.Errorf("got %v; want %v", sda, tc.want)
-				}
-				if ptrAfter != ptrBefore {
-					t.Error("allocated new array, not in-place")
-				}
+				t.Parallel()
+
+				testSliceDynamicArrayFilter(
+					t,
+					tc.data,
+					filterList[tc.filterIdx],
+					tc.want,
+				)
 			},
 		)
 	}
 }
 
+// testSliceDynamicArrayFilter is the main process of
+// TestSliceDynamicArray_Filter.
+func testSliceDynamicArrayFilter(
+	t *testing.T,
+	data []int,
+	filter func(x int) (keep bool),
+	want []int,
+) {
+	t.Helper()
+
+	sda := copySda(data)
+
+	var ptrBefore, ptrAfter *[0]int
+
+	ptrBefore = (*[0]int)(sda)
+	sda.Filter(filter)
+	ptrAfter = (*[0]int)(sda)
+
+	if unequal.Slice(sda, want) {
+		t.Errorf("got %v; want %v", sda, want)
+	}
+
+	if ptrAfter != ptrBefore {
+		t.Error("allocated new array, not in-place")
+	}
+}
+
 func TestSliceDynamicArray_Filter_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
 	sdas := []*IntSDA{nil, new(IntSDA), {}}
 	for _, sda := range sdas {
 		t.Run("s="+sdaPtrToName(sda), func(t *testing.T) {
+			t.Parallel()
+
 			sda.Filter(func(x int) (keep bool) {
 				t.Error("handler was called, x:", x)
 				return true
@@ -746,6 +948,8 @@ func TestSliceDynamicArray_Filter_NilAndEmpty(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Push(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		data []int
 		x    int
@@ -761,8 +965,11 @@ func TestSliceDynamicArray_Push(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("s=%s&x=%d", sliceToName(tc.data), tc.x),
 			func(t *testing.T) {
+				t.Parallel()
+
 				sda := copySda(tc.data)
 				sda.Push(tc.x)
+
 				if unequal.Slice(sda, tc.want) {
 					t.Errorf("got %v; want %v", sda, tc.want)
 				}
@@ -772,6 +979,8 @@ func TestSliceDynamicArray_Push(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Pop(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		data, wantSda []int
 		wantX         int
@@ -784,8 +993,11 @@ func TestSliceDynamicArray_Pop(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("s="+sliceToName(tc.data), func(t *testing.T) {
+			t.Parallel()
+
 			sda := copySda(tc.data)
 			x := sda.Pop()
+
 			if unequal.Slice(sda, tc.wantSda) || x != tc.wantX {
 				t.Errorf("got %v, %d; want %v, %d",
 					sda, x, tc.wantSda, tc.wantX)
@@ -795,6 +1007,8 @@ func TestSliceDynamicArray_Pop(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Append(t *testing.T) {
+	t.Parallel()
+
 	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
 	seqList := []sequence.Sequence[int]{
 		nil,
@@ -813,34 +1027,46 @@ func TestSliceDynamicArray_Append(t *testing.T) {
 		seq  sequence.Sequence[int]
 		want []int
 	}, len(dataList)*len(seqList))
+
 	var idx int
+
 	for _, data := range dataList {
 		for _, seq := range seqList {
 			testCases[idx].data = data
 			testCases[idx].seq = seq
+
 			seqLen := sequenceLen(seq)
 			if seqLen > 0 {
 				want := make([]int, len(data)+seqLen)
 				i := copy(want, data)
+
 				seq.Range(func(x int) (cont bool) {
 					want[i], i = x, i+1
 					return true
 				})
+
 				testCases[idx].want = want
 			} else {
 				testCases[idx].want = data
 			}
+
 			idx++
 		}
 	}
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("s=%s&seq=%s",
-				sliceToName(tc.data), sequenceToName(tc.seq)),
+			fmt.Sprintf(
+				"s=%s&seq=%s",
+				sliceToName(tc.data),
+				sequenceToName(tc.seq),
+			),
 			func(t *testing.T) {
+				t.Parallel()
+
 				sda := copySda(tc.data)
 				sda.Append(tc.seq)
+
 				if unequal.Slice(sda, tc.want) {
 					t.Errorf("got %v; want %v", sda, tc.want)
 				}
@@ -850,6 +1076,8 @@ func TestSliceDynamicArray_Append(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Truncate(t *testing.T) {
+	t.Parallel()
+
 	data := []int{0, 1, 2, 3, 4}
 	n := len(data)
 
@@ -858,18 +1086,23 @@ func TestSliceDynamicArray_Truncate(t *testing.T) {
 		want []int
 	}, n+2)
 	testCases[0].i, testCases[0].want = -1, data
+
 	idx := 1
 	for i := range n {
 		testCases[idx].i = i
 		testCases[idx].want = data[:i]
 		idx++
 	}
+
 	testCases[idx].i, testCases[idx].want = n, data
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("i=%d", tc.i), func(t *testing.T) {
+			t.Parallel()
+
 			sda := copySda(data)
 			sda.Truncate(tc.i)
+
 			if unequal.Slice(sda, tc.want) {
 				t.Errorf("got %v; want %v", sda, tc.want)
 			}
@@ -878,6 +1111,8 @@ func TestSliceDynamicArray_Truncate(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Insert(t *testing.T) {
+	t.Parallel()
+
 	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
 	x := 3
 
@@ -885,12 +1120,15 @@ func TestSliceDynamicArray_Insert(t *testing.T) {
 	for _, data := range dataList {
 		numTestCase += len(data) + 1
 	}
+
 	testCases := make([]struct {
 		data []int
 		i    int
 		want []int
 	}, numTestCase)
+
 	var idx int
+
 	for _, data := range dataList {
 		for i := 0; i <= len(data); i++ {
 			testCases[idx].data = data
@@ -908,8 +1146,11 @@ func TestSliceDynamicArray_Insert(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("s=%s&i=%d", sliceToName(tc.data), tc.i),
 			func(t *testing.T) {
+				t.Parallel()
+
 				sda := copySda(tc.data)
 				sda.Insert(tc.i, x)
+
 				if unequal.Slice(sda, tc.want) {
 					t.Errorf("got %v; want %v", sda, tc.want)
 				}
@@ -919,6 +1160,8 @@ func TestSliceDynamicArray_Insert(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Remove(t *testing.T) {
+	t.Parallel()
+
 	data := []int{0, 1, 2, 3, 4}
 	testCases := []struct {
 		i       int
@@ -934,8 +1177,11 @@ func TestSliceDynamicArray_Remove(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("i=%d", tc.i), func(t *testing.T) {
+			t.Parallel()
+
 			sda := copySda(data)
 			x := sda.Remove(tc.i)
+
 			if unequal.Slice(sda, tc.wantSda) || x != tc.wantX {
 				t.Errorf("got %v, %d; want %v, %d",
 					sda, x, tc.wantSda, tc.wantX)
@@ -945,6 +1191,8 @@ func TestSliceDynamicArray_Remove(t *testing.T) {
 }
 
 func TestSliceDynamicArray_RemoveWithoutOrder(t *testing.T) {
+	t.Parallel()
+
 	data := []int{0, 1, 2, 3, 4}
 	testCases := []struct {
 		i       int
@@ -960,8 +1208,11 @@ func TestSliceDynamicArray_RemoveWithoutOrder(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("i=%d", tc.i), func(t *testing.T) {
+			t.Parallel()
+
 			sda := copySda(data)
 			x := sda.RemoveWithoutOrder(tc.i)
+
 			if sliceUnequalWithoutOrder(sda, tc.wantSda) || x != tc.wantX {
 				t.Errorf("got %v, %d; want %v, %d",
 					sda, x, tc.wantSda, tc.wantX)
@@ -971,6 +1222,8 @@ func TestSliceDynamicArray_RemoveWithoutOrder(t *testing.T) {
 }
 
 func TestSliceDynamicArray_InsertSequence(t *testing.T) {
+	t.Parallel()
+
 	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
 	seqList := []sequence.Sequence[int]{
 		nil,
@@ -988,24 +1241,30 @@ func TestSliceDynamicArray_InsertSequence(t *testing.T) {
 	for _, data := range dataList {
 		numTestCase += len(data) + 1
 	}
+
 	numTestCase *= len(seqList)
+
 	testCases := make([]struct {
 		data []int
 		i    int
 		seq  sequence.Sequence[int]
 		want []int
 	}, numTestCase)
+
 	var idx int
+
 	for _, data := range dataList {
 		for _, seq := range seqList {
 			for i := 0; i <= len(data); i++ {
 				testCases[idx].data = data
 				testCases[idx].i = i
 				testCases[idx].seq = seq
+
 				seqLen := sequenceLen(seq)
 				if seqLen > 0 {
 					want := make([]int, len(data)+seqLen)
 					j := copy(want, data[:i])
+
 					seq.Range(func(x int) (cont bool) {
 						want[j], j = x, j+1
 						return true
@@ -1015,6 +1274,7 @@ func TestSliceDynamicArray_InsertSequence(t *testing.T) {
 				} else {
 					testCases[idx].want = data
 				}
+
 				idx++
 			}
 		}
@@ -1022,11 +1282,18 @@ func TestSliceDynamicArray_InsertSequence(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("s=%s&i=%d&seq=%s",
-				sliceToName(tc.data), tc.i, sequenceToName(tc.seq)),
+			fmt.Sprintf(
+				"s=%s&i=%d&seq=%s",
+				sliceToName(tc.data),
+				tc.i,
+				sequenceToName(tc.seq),
+			),
 			func(t *testing.T) {
+				t.Parallel()
+
 				sda := copySda(tc.data)
 				sda.InsertSequence(tc.i, tc.seq)
+
 				if unequal.Slice(sda, tc.want) {
 					t.Errorf("got %v; want %v", sda, tc.want)
 				}
@@ -1036,6 +1303,8 @@ func TestSliceDynamicArray_InsertSequence(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Cut(t *testing.T) {
+	t.Parallel()
+
 	data := []int{0, 1, 2, 3, 4}
 	n := len(data)
 
@@ -1043,7 +1312,9 @@ func TestSliceDynamicArray_Cut(t *testing.T) {
 		begin, end int
 		want       []int
 	}, n*(n+3)>>1) // (n+1)+n+(n-1)+...+2 = n*((n+1)+2)/2 = n*(n+3)/2
+
 	var idx int
+
 	for begin := range n {
 		for end := begin; end <= n; end++ {
 			testCases[idx].begin, testCases[idx].end = begin, end
@@ -1059,8 +1330,11 @@ func TestSliceDynamicArray_Cut(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("begin=%d&end=%d", tc.begin, tc.end),
 			func(t *testing.T) {
+				t.Parallel()
+
 				sda := copySda(data)
 				sda.Cut(tc.begin, tc.end)
+
 				if unequal.Slice(sda, tc.want) {
 					t.Errorf("got %v; want %v", sda, tc.want)
 				}
@@ -1070,6 +1344,8 @@ func TestSliceDynamicArray_Cut(t *testing.T) {
 }
 
 func TestSliceDynamicArray_CutWithoutOrder(t *testing.T) {
+	t.Parallel()
+
 	data := []int{0, 1, 2, 3, 4}
 	n := len(data)
 
@@ -1077,7 +1353,9 @@ func TestSliceDynamicArray_CutWithoutOrder(t *testing.T) {
 		begin, end int
 		want       []int
 	}, n*(n+3)>>1) // (n+1)+n+(n-1)+...+2 = n*((n+1)+2)/2 = n*(n+3)/2
+
 	var idx int
+
 	for begin := range n {
 		for end := begin; end <= n; end++ {
 			testCases[idx].begin, testCases[idx].end = begin, end
@@ -1093,8 +1371,11 @@ func TestSliceDynamicArray_CutWithoutOrder(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("begin=%d&end=%d", tc.begin, tc.end),
 			func(t *testing.T) {
+				t.Parallel()
+
 				sda := copySda(data)
 				sda.CutWithoutOrder(tc.begin, tc.end)
+
 				if sliceUnequalWithoutOrder(sda, tc.want) {
 					t.Errorf("got %v; want %v", sda, tc.want)
 				}
@@ -1104,6 +1385,8 @@ func TestSliceDynamicArray_CutWithoutOrder(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Extend(t *testing.T) {
+	t.Parallel()
+
 	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
 	nList := []int{0, 1, 2, 3}
 
@@ -1112,16 +1395,20 @@ func TestSliceDynamicArray_Extend(t *testing.T) {
 		n    int
 		want []int
 	}, len(dataList)*len(nList))
+
 	var idx int
+
 	for _, data := range dataList {
 		for _, n := range nList {
 			testCases[idx].data = data
 			testCases[idx].n = n
+
 			if data != nil || n > 0 {
 				want := make([]int, len(data)+n)
 				copy(want, data)
 				testCases[idx].want = want
 			}
+
 			idx++
 		}
 	}
@@ -1130,8 +1417,11 @@ func TestSliceDynamicArray_Extend(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("s=%s&n=%d", sliceToName(tc.data), tc.n),
 			func(t *testing.T) {
+				t.Parallel()
+
 				sda := copySda(tc.data)
 				sda.Extend(tc.n)
+
 				if unequal.Slice(sda, tc.want) {
 					t.Errorf("got %v; want %v", sda, tc.want)
 				}
@@ -1141,6 +1431,8 @@ func TestSliceDynamicArray_Extend(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Expand(t *testing.T) {
+	t.Parallel()
+
 	dataList := [][]int{nil, {}, {0}, {0, 1}, {0, 1, 2}}
 	nList := []int{0, 1, 2, 3}
 
@@ -1148,24 +1440,30 @@ func TestSliceDynamicArray_Expand(t *testing.T) {
 	for _, data := range dataList {
 		numTestCase += len(data) + 1
 	}
+
 	numTestCase *= len(nList)
+
 	testCases := make([]struct {
 		data []int
 		i, n int
 		want []int
 	}, numTestCase)
+
 	var idx int
+
 	for _, data := range dataList {
 		for _, n := range nList {
 			for i := 0; i <= len(data); i++ {
 				testCases[idx].data = data
 				testCases[idx].i, testCases[idx].n = i, n
+
 				if data != nil || n > 0 {
 					want := make([]int, len(data)+n)
 					copy(want, data[:i])
 					copy(want[i+n:], data[i:])
 					testCases[idx].want = want
 				}
+
 				idx++
 			}
 		}
@@ -1175,8 +1473,11 @@ func TestSliceDynamicArray_Expand(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("s=%s&i=%d&n=%d", sliceToName(tc.data), tc.i, tc.n),
 			func(t *testing.T) {
+				t.Parallel()
+
 				sda := copySda(tc.data)
 				sda.Expand(tc.i, tc.n)
+
 				if unequal.Slice(sda, tc.want) {
 					t.Errorf("got %v; want %v", sda, tc.want)
 				}
@@ -1186,6 +1487,8 @@ func TestSliceDynamicArray_Expand(t *testing.T) {
 }
 
 func TestSliceDynamicArray_Shrink(t *testing.T) {
+	t.Parallel()
+
 	dataList := [][]int{
 		nil, {}, {0}, {0, 1}, {0, 1, 2},
 		make([]int, 0, 1), make([]int, 0, 2),
@@ -1198,6 +1501,7 @@ func TestSliceDynamicArray_Shrink(t *testing.T) {
 		wantCap    int
 		isNewArray bool
 	}, len(dataList))
+
 	var idx int
 	for _, data := range dataList {
 		testCases[idx].data = data
@@ -1210,17 +1514,24 @@ func TestSliceDynamicArray_Shrink(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("s=%s(cap=%d)", sliceToName(tc.data), cap(tc.data)),
 			func(t *testing.T) {
+				t.Parallel()
+
 				sda := copySda(tc.data)
+
 				var ptrBefore, ptrAfter *[0]int
+
 				ptrBefore = (*[0]int)(sda)
 				sda.Shrink()
 				ptrAfter = (*[0]int)(sda)
+
 				if c := cap(sda); c != tc.wantCap {
 					t.Errorf("got capacity %d; want %d", c, tc.wantCap)
 				}
+
 				if unequal.Slice(sda, tc.data) {
 					t.Errorf("data changed; got %v; want %v", sda, tc.data)
 				}
+
 				if tc.isNewArray {
 					if ptrAfter == ptrBefore {
 						t.Error("should allocate a new array")
@@ -1247,6 +1558,7 @@ func sdaPtrToName[T any](p *array.SliceDynamicArray[T]) string {
 	if p == nil {
 		return fmt.Sprintf("(%T)<nil>", p)
 	}
+
 	return sliceToName(*p)
 }
 
@@ -1255,21 +1567,27 @@ func sequenceToName[Item any](s sequence.Sequence[Item]) string {
 	if s == nil {
 		return typeStr + "<nil>"
 	}
+
 	var b strings.Builder
 	b.Grow(len(typeStr) + s.Len()*3 + 2)
 	b.WriteString(typeStr)
 	b.WriteByte('[')
+
 	var notFirst bool
+
 	s.Range(func(x Item) (cont bool) {
 		if notFirst {
 			b.WriteByte(',')
 		} else {
 			notFirst = true
 		}
+
 		_, _ = fmt.Fprintf(&b, "%v", x) // ignore error as error is always nil
+
 		return true
 	})
 	b.WriteByte(']')
+
 	return b.String()
 }
 
@@ -1277,6 +1595,7 @@ func sequenceLen[Item any](s sequence.Sequence[Item]) int {
 	if s == nil {
 		return 0
 	}
+
 	return s.Len()
 }
 
@@ -1284,8 +1603,10 @@ func copySda[Item any](data []Item) array.SliceDynamicArray[Item] {
 	if data == nil {
 		return nil
 	}
+
 	sda := make(array.SliceDynamicArray[Item], len(data), cap(data))
 	copy(sda, data)
+
 	return sda
 }
 
@@ -1305,6 +1626,7 @@ func newSequence[Item any](data []Item) *sequenceImpl[Item] {
 	for _, x := range data {
 		seq.linkedList.PushBack(x)
 	}
+
 	return seq
 }
 
@@ -1312,6 +1634,7 @@ func (s *sequenceImpl[Item]) Len() int {
 	if s == nil {
 		return 0
 	}
+
 	return s.linkedList.Len()
 }
 
@@ -1321,6 +1644,7 @@ func (s *sequenceImpl[Item]) Front() Item {
 	} else if s.useFrontAndNext {
 		return s.linkedList.Front().Value.(Item)
 	}
+
 	return s.linkedList.Back().Value.(Item)
 }
 
@@ -1341,6 +1665,7 @@ func (s *sequenceImpl[Item]) Back() Item {
 	} else if s.useFrontAndNext {
 		return s.linkedList.Back().Value.(Item)
 	}
+
 	return s.linkedList.Front().Value.(Item)
 }
 
@@ -1371,6 +1696,7 @@ func (s *sequenceImpl[Item]) Range(handler func(x Item) (cont bool)) {
 			if !handler(elem.Value.(Item)) {
 				return
 			}
+
 			elem = elem.Next()
 		}
 	default:
@@ -1379,6 +1705,7 @@ func (s *sequenceImpl[Item]) Range(handler func(x Item) (cont bool)) {
 			if !handler(elem.Value.(Item)) {
 				return
 			}
+
 			elem = elem.Prev()
 		}
 	}
@@ -1398,6 +1725,7 @@ func (s *sequenceImpl[Item]) RangeBackward(handler func(x Item) (cont bool)) {
 			if !handler(elem.Value.(Item)) {
 				return
 			}
+
 			elem = elem.Prev()
 		}
 	default:
@@ -1406,6 +1734,7 @@ func (s *sequenceImpl[Item]) RangeBackward(handler func(x Item) (cont bool)) {
 			if !handler(elem.Value.(Item)) {
 				return
 			}
+
 			elem = elem.Next()
 		}
 	}

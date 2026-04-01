@@ -74,13 +74,16 @@ func WrapSlice[Item any](
 		if cmpFn == nil {
 			panic(errors.AutoMsg("both lessFn and cmpFn are nil"))
 		}
+
 		lessFn = cmpFn.ToLess()
 	} else if cmpFn == nil {
 		cmpFn = lessFn.ToCompare()
 	}
+
 	if slicePtr == nil {
 		slicePtr = new([]Item)
 	}
+
 	return &sliceOrderedDynamicArray[Item]{
 		SliceDynamicArray: (*SliceDynamicArray[Item])(slicePtr),
 		lessFn:            lessFn,
@@ -129,23 +132,27 @@ func WrapFloatSlice[Item constraints.Float](
 
 func (soda *sliceOrderedDynamicArray[Item]) Min() Item {
 	soda.checkNonempty()
+
 	m := (*soda.SliceDynamicArray)[0]
 	for i := 1; i < len(*soda.SliceDynamicArray); i++ {
 		if soda.lessFn((*soda.SliceDynamicArray)[i], m) {
 			m = (*soda.SliceDynamicArray)[i]
 		}
 	}
+
 	return m
 }
 
 func (soda *sliceOrderedDynamicArray[Item]) Max() Item {
 	soda.checkNonempty()
+
 	m := (*soda.SliceDynamicArray)[0]
 	for i := 1; i < len(*soda.SliceDynamicArray); i++ {
 		if soda.lessFn(m, (*soda.SliceDynamicArray)[i]) {
 			m = (*soda.SliceDynamicArray)[i]
 		}
 	}
+
 	return m
 }
 
@@ -158,6 +165,7 @@ func (soda *sliceOrderedDynamicArray[Item]) IsSorted() bool {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -171,6 +179,7 @@ func (soda *sliceOrderedDynamicArray[Item]) SortStable() {
 
 func (soda *sliceOrderedDynamicArray[Item]) Less(i, j int) bool {
 	soda.checkNonempty()
+
 	return soda.lessFn(
 		(*soda.SliceDynamicArray)[i],
 		(*soda.SliceDynamicArray)[j],
@@ -179,6 +188,7 @@ func (soda *sliceOrderedDynamicArray[Item]) Less(i, j int) bool {
 
 func (soda *sliceOrderedDynamicArray[Item]) Compare(i, j int) int {
 	soda.checkNonempty()
+
 	return soda.cmpFn(
 		(*soda.SliceDynamicArray)[i],
 		(*soda.SliceDynamicArray)[j],

@@ -24,8 +24,8 @@ import (
 	"github.com/donyori/gogo/container/sequence"
 )
 
-// ArraySpecific is an interface that groups the array-specific methods.
-type ArraySpecific[Item any] interface {
+// arraySpecific is an interface that groups the array-specific methods.
+type arraySpecific[Item any] interface {
 	// IterIndexItems returns an iterator over index-item pairs in the array,
 	// traversing it from first to last.
 	//
@@ -67,7 +67,7 @@ type ArraySpecific[Item any] interface {
 // Array is an interface that represents a direct-access sequence.
 type Array[Item any] interface {
 	sequence.Sequence[Item]
-	ArraySpecific[Item]
+	arraySpecific[Item]
 }
 
 // OrderedArray is an interface representing a direct-access sequence
@@ -76,7 +76,7 @@ type Array[Item any] interface {
 // It conforms to interface sort.Interface.
 type OrderedArray[Item any] interface {
 	sequence.OrderedSequence[Item]
-	ArraySpecific[Item]
+	arraySpecific[Item]
 
 	// Less reports whether the item at index i is less than that at index j.
 	//
