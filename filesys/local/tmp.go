@@ -39,6 +39,12 @@ var ErrContainsPathSeparator = errors.AutoNewCustom(
 	0,
 )
 
+// Constants from Numerical Recipes, for a linear congruential generator.
+const (
+	lcgMultiplier uint32 = 1664525
+	lcgAddend     uint32 = 1013904223
+)
+
 // Tmp creates and opens a new temporary file in the directory dir,
 // with specified permission perm (before umask),
 // for reading and writing (the associated file descriptor has mode os.O_RDWR).
@@ -64,16 +70,22 @@ func Tmp(dir, prefix, suffix string, perm fs.FileMode) (f *os.File, err error) {
 	} else if dir == "" {
 		dir = os.TempDir()
 	}
+
 	prefix = filepath.Join(dir, prefix)
-	r := uint32(time.Now().UnixNano() + int64(os.Getpid())*1000)
+
+	// It is just for getting a random number,
+	// so integer overflow does not matter here.
+	r := uint32(time.Now().UnixNano() + int64(os.Getpid())*1000) //gosec:disable G115 -- as stated above
 	for range 100 {
 		f, err = os.OpenFile(prefix+strconv.FormatUint(uint64(r), 36)+suffix,
 			os.O_RDWR|os.O_CREATE|os.O_EXCL, perm)
 		if err == nil || !errors.Is(err, fs.ErrExist) {
 			return f, errors.AutoWrap(err)
 		}
-		r = r*1664525 + 1013904223 // constants from Numerical Recipes, for a linear congruential generator
+
+		r = r*lcgMultiplier + lcgAddend
 	}
+
 	return f, errors.AutoWrap(err)
 }
 
@@ -106,25 +118,36 @@ func TmpDir(
 	} else if dir == "" {
 		dir = os.TempDir()
 	}
+
 	prefix = filepath.Join(dir, prefix)
-	r := uint32(time.Now().UnixNano() + int64(os.Getpid())*1000)
+
+	// It is just for getting a random number,
+	// so integer overflow does not matter here.
+	r := uint32(time.Now().UnixNano() + int64(os.Getpid())*1000) //gosec:disable G115 -- as stated above
 	for range 100 {
 		name = prefix + strconv.FormatUint(uint64(r), 36) + suffix
+
 		err = os.Mkdir(name, perm)
 		if err == nil {
 			return
 		}
+
 		if errors.Is(err, fs.ErrNotExist) {
-			// It may because dir doesn't exist. Try to report dir doesn't exist.
-			if _, err := os.Lstat(dir); errors.Is(err, fs.ErrNotExist) {
+			// It may because dir doesn't exist.
+			// Try to report dir doesn't exist.
+			_, err := os.Lstat(dir)
+			if errors.Is(err, fs.ErrNotExist) {
 				return "", errors.AutoWrap(err)
 			}
 		}
+
 		if !errors.Is(err, fs.ErrExist) {
 			return "", errors.AutoWrap(err)
 		}
-		r = r*1664525 + 1013904223 // constants from Numerical Recipes, for a linear congruential generator
+
+		r = r*lcgMultiplier + lcgAddend
 	}
+
 	return "", errors.AutoWrap(err)
 }
 
@@ -138,10 +161,12 @@ func checkTmpPrefixAndSuffix(prefix, suffix string) error {
 			return ErrContainsPathSeparator // don't wrap the error here
 		}
 	}
+
 	for i := range len(suffix) {
 		if os.IsPathSeparator(suffix[i]) {
 			return ErrContainsPathSeparator // don't wrap the error here
 		}
 	}
+
 	return nil
 }

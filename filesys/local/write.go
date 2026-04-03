@@ -46,18 +46,23 @@ func writeOpenFile(
 		return nil, errors.AutoNew(
 			"failed to open file for writing: name is empty")
 	}
+
 	name = filepath.Clean(name)
+
 	if mkDirs {
 		err = os.MkdirAll(filepath.Dir(name), perm)
 		if err != nil {
 			return nil, errors.AutoWrap(err)
 		}
 	}
+
 	f, err := os.OpenFile(name, flag, perm)
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
+
 	w, err = filesys.Write(f, opts, true)
+
 	return w, errors.AutoWrap(err)
 }
 
@@ -82,7 +87,13 @@ func WriteTrunc(
 	opts *filesys.WriteOptions,
 ) (w filesys.Writer, err error) {
 	w, err = writeOpenFile(
-		name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm, mkDirs, opts)
+		name,
+		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+		perm,
+		mkDirs,
+		opts,
+	)
+
 	return w, errors.AutoWrap(err)
 }
 
@@ -107,7 +118,13 @@ func WriteAppend(
 	opts *filesys.WriteOptions,
 ) (w filesys.Writer, err error) {
 	w, err = writeOpenFile(
-		name, os.O_WRONLY|os.O_CREATE|os.O_APPEND, perm, mkDirs, opts)
+		name,
+		os.O_WRONLY|os.O_CREATE|os.O_APPEND,
+		perm,
+		mkDirs,
+		opts,
+	)
+
 	return w, errors.AutoWrap(err)
 }
 
@@ -132,6 +149,12 @@ func WriteExcl(
 	opts *filesys.WriteOptions,
 ) (w filesys.Writer, err error) {
 	w, err = writeOpenFile(
-		name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm, mkDirs, opts)
+		name,
+		os.O_WRONLY|os.O_CREATE|os.O_EXCL,
+		perm,
+		mkDirs,
+		opts,
+	)
+
 	return w, errors.AutoWrap(err)
 }

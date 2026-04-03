@@ -48,10 +48,13 @@ func Read(
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
+
 	f, err := os.Open(name)
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
+
 	r, err = filesys.Read(f, opts, true)
+
 	return r, errors.AutoWrap(err)
 }

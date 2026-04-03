@@ -37,60 +37,70 @@ import (
 )
 
 func TestWrite_Raw(t *testing.T) {
+	t.Parallel()
+
 	for _, name := range testFSFilenames {
 		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
+			t.Parallel()
+
 			file := &WritableFileImpl{Name: name}
 			data := testFS[name].Data
 			writeFile(t, file, data, &filesys.WriteOptions{Raw: true})
+
 			if !t.Failed() && !bytes.Equal(file.Data, data) {
-				t.Errorf(
-					"file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
-					len(file.Data),
-					file.Data,
-					len(data),
-					data,
-				)
+				t.Errorf("file contents - got (len: %d)\n%s\n"+
+					"want (len: %d)\n%s",
+					len(file.Data), file.Data, len(data), data)
 			}
 		})
 	}
 }
 
 func TestWrite_Basic(t *testing.T) {
+	t.Parallel()
+
 	for _, name := range testFSBasicFilenames {
 		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
+			t.Parallel()
+
 			file := &WritableFileImpl{Name: name}
 			data := testFS[name].Data
 			writeFile(t, file, data, nil)
+
 			if !t.Failed() && !bytes.Equal(file.Data, data) {
-				t.Errorf(
-					"file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
-					len(file.Data),
-					file.Data,
-					len(data),
-					data,
-				)
+				t.Errorf("file contents - got (len: %d)\n%s\n"+
+					"want (len: %d)\n%s",
+					len(file.Data), file.Data, len(data), data)
 			}
 		})
 	}
 }
 
 func TestWrite_Gz(t *testing.T) {
+	t.Parallel()
+
 	for _, name := range testFSGzFilenames {
 		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
+			t.Parallel()
+
 			file := &WritableFileImpl{Name: name}
+
 			data := writeGzFile(t, file)
 			if t.Failed() {
 				return
 			}
+
 			gr, err := gzip.NewReader(bytes.NewReader(file.Data))
 			if err != nil {
 				t.Fatal("create gzip reader -", err)
 			}
 			defer func(gr *gzip.Reader) {
-				if err := gr.Close(); err != nil {
+				err := gr.Close()
+				if err != nil {
 					t.Error("close gzip reader -", err)
 				}
 			}(gr)
+
 			got, err := io.ReadAll(gr)
 			if err != nil {
 				t.Error("decompress gzip -", err)
@@ -103,10 +113,15 @@ func TestWrite_Gz(t *testing.T) {
 }
 
 func TestWrite_TarTgz(t *testing.T) {
+	t.Parallel()
+
 	for _, name := range append(testFSTarFilenames, testFSTgzFilenames...) {
 		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
+			t.Parallel()
+
 			file := &WritableFileImpl{Name: name}
 			writeTarFiles(t, file)
+
 			if !t.Failed() {
 				testTarTgzFile(t, file, testFSTarFiles)
 			}
@@ -115,10 +130,15 @@ func TestWrite_TarTgz(t *testing.T) {
 }
 
 func TestWrite_TarAddFS(t *testing.T) {
+	t.Parallel()
+
 	for _, name := range append(testFSTarFilenames, testFSTgzFilenames...) {
 		t.Run(fmt.Sprintf("file=%+q", name), func(t *testing.T) {
+			t.Parallel()
+
 			file := &WritableFileImpl{Name: name}
 			writeTarFS(t, file)
+
 			if !t.Failed() {
 				testTarTgzFile(t, file, testTarFSWalkFiles)
 			}
@@ -127,6 +147,8 @@ func TestWrite_TarAddFS(t *testing.T) {
 }
 
 func TestWrite_Zip(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name string
 		f    func(w filesys.Writer, name string) error
@@ -145,8 +167,11 @@ func TestWrite_Zip(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			file := &WritableFileImpl{Name: "test-write.zip"}
 			writeZipFiles(t, file, tc.f)
+
 			if !t.Failed() {
 				testZipFile(t, file, testFSZipFileNameBodyMap)
 			}
@@ -155,8 +180,11 @@ func TestWrite_Zip(t *testing.T) {
 }
 
 func TestWrite_Zip_Raw(t *testing.T) {
+	t.Parallel()
+
 	buf := new(bytes.Buffer)
 	zw := zip.NewWriter(buf)
+
 	for name, body := range testFSZipFileNameBodyMap {
 		w, err := zw.CreateHeader(&zip.FileHeader{
 			Name:   name,
@@ -167,11 +195,13 @@ func TestWrite_Zip_Raw(t *testing.T) {
 		} else if len(name) > 0 && name[len(name)-1] == '/' {
 			continue
 		}
+
 		_, err = w.Write([]byte(body))
 		if err != nil {
 			t.Fatalf("write zip file %q - %v", name, err)
 		}
 	}
+
 	err := zw.Close()
 	if err != nil {
 		t.Fatal("close zip writer -", err)
@@ -189,61 +219,374 @@ func TestWrite_Zip_Raw(t *testing.T) {
 				return w.ZipCreateRaw(&f.FileHeader)
 			}
 		}
+
 		return fmt.Errorf("unknown file %q", name)
 	})
+
 	if !t.Failed() {
 		testZipFile(t, file, testFSZipFileNameBodyMap)
 	}
 }
 
 func TestWrite_ZipAddFS(t *testing.T) {
+	t.Parallel()
+
 	file := &WritableFileImpl{Name: "test-write.zip"}
 	writeZipFS(t, file)
+
 	if !t.Failed() {
 		testZipFile(t, file, testZipFSNameBodyMap)
 	}
 }
 
-type writeAfterCloseTestCase struct {
+const (
+	writeAfterCloseRegFile = "test-write-after-close.txt"
+	writeAfterCloseTarFile = "test-write-after-close.tar"
+	writeAfterCloseZipFile = "test-write-after-close.zip"
+)
+
+var writeAfterCloseTestCases = []struct {
 	methodName string
 	filename   string
 	f          func(t *testing.T, w filesys.Writer) error
 	wantErr    error
 	writePanic bool
+}{
+	{
+		"Close",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.Close()
+		},
+		nil,
+		false,
+	},
+	{
+		"Closed",
+		writeAfterCloseRegFile,
+		func(t *testing.T, w filesys.Writer) error {
+			t.Helper()
+
+			if !w.Closed() {
+				t.Error("w.Closed - got false; want true")
+			}
+
+			return nil
+		},
+		nil,
+		false,
+	},
+	{
+		"Write",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			_, err := w.Write(nil)
+			return err
+		},
+		filesys.ErrFileWriterClosed,
+		false,
+	},
+	{
+		"MustWrite",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			w.MustWrite(nil)
+			return nil
+		},
+		filesys.ErrFileWriterClosed,
+		true,
+	},
+	{
+		"WriteByte",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.WriteByte('0')
+		},
+		filesys.ErrFileWriterClosed,
+		false,
+	},
+	{
+		"MustWriteByte",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			w.MustWriteByte('0')
+			return nil
+		},
+		filesys.ErrFileWriterClosed,
+		true,
+	},
+	{
+		"WriteRune",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			_, err := w.WriteRune('汉')
+			return err
+		},
+		filesys.ErrFileWriterClosed,
+		false,
+	},
+	{
+		"MustWriteRune",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			w.MustWriteRune('汉')
+			return nil
+		},
+		filesys.ErrFileWriterClosed,
+		true,
+	},
+	{
+		"WriteString",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			_, err := w.WriteString("")
+			return err
+		},
+		filesys.ErrFileWriterClosed,
+		false,
+	},
+	{
+		"MustWriteString",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			w.MustWriteString("")
+			return nil
+		},
+		filesys.ErrFileWriterClosed,
+		true,
+	},
+	{
+		"ReadFrom",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			_, err := w.ReadFrom(nil)
+			return err
+		},
+		filesys.ErrFileWriterClosed,
+		false,
+	},
+	{
+		"Printf",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			_, err := w.Printf("")
+			return err
+		},
+		filesys.ErrFileWriterClosed,
+		false,
+	},
+	{
+		"MustPrintf",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			w.MustPrintf("")
+			return nil
+		},
+		filesys.ErrFileWriterClosed,
+		true,
+	},
+	{
+		"Print",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			_, err := w.Print()
+			return err
+		},
+		filesys.ErrFileWriterClosed,
+		false,
+	},
+	{
+		"MustPrint",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			w.MustPrint()
+			return nil
+		},
+		filesys.ErrFileWriterClosed,
+		true,
+	},
+	{
+		"Println",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			_, err := w.Println()
+			return err
+		},
+		filesys.ErrFileWriterClosed,
+		false,
+	},
+	{
+		"MustPrintln",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			w.MustPrintln()
+			return nil
+		},
+		filesys.ErrFileWriterClosed,
+		true,
+	},
+	{
+		"Flush-noBufferedData",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.Flush()
+		},
+		nil,
+		false,
+	},
+	{
+		"TarWriteHeader-notTar",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.TarWriteHeader(nil)
+		},
+		filesys.ErrNotTar,
+		false,
+	},
+	{
+		"TarWriteHeader-isTar",
+		writeAfterCloseTarFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.TarWriteHeader(nil)
+		},
+		filesys.ErrFileWriterClosed,
+		false,
+	},
+	{
+		"TarAddFS-notTar",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.TarAddFS(nil)
+		},
+		filesys.ErrNotTar,
+		false,
+	},
+	{
+		"TarAddFS-isTar",
+		writeAfterCloseTarFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.TarAddFS(nil)
+		},
+		filesys.ErrFileWriterClosed,
+		false,
+	},
+	{
+		"ZipCreate-notZip",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.ZipCreate("")
+		},
+		filesys.ErrNotZip,
+		false,
+	},
+	{
+		"ZipCreate-isZip",
+		writeAfterCloseZipFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.ZipCreate("")
+		},
+		filesys.ErrFileWriterClosed,
+		false,
+	},
+	{
+		"ZipCreateHeader-notZip",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.ZipCreateHeader(nil)
+		},
+		filesys.ErrNotZip,
+		false,
+	},
+	{
+		"ZipCreateHeader-isZip",
+		writeAfterCloseZipFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.ZipCreateHeader(nil)
+		},
+		filesys.ErrFileWriterClosed,
+		false,
+	},
+	{
+		"ZipCreateRaw-notZip",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.ZipCreateRaw(nil)
+		},
+		filesys.ErrNotZip,
+		false,
+	},
+	{
+		"ZipCreateRaw-isZip",
+		writeAfterCloseZipFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.ZipCreateRaw(nil)
+		},
+		filesys.ErrFileWriterClosed,
+		false,
+	},
+	{
+		"ZipCopy-notZip",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.ZipCopy(nil)
+		},
+		filesys.ErrNotZip,
+		false,
+	},
+	{
+		"ZipCopy-isZip",
+		writeAfterCloseZipFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.ZipCopy(nil)
+		},
+		filesys.ErrFileWriterClosed,
+		false,
+	},
+	{
+		"ZipAddFS-notZip",
+		writeAfterCloseRegFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.ZipAddFS(nil)
+		},
+		filesys.ErrNotZip,
+		false,
+	},
+	{
+		"ZipAddFS-isZip",
+		writeAfterCloseZipFile,
+		func(_ *testing.T, w filesys.Writer) error {
+			return w.ZipAddFS(nil)
+		},
+		filesys.ErrFileWriterClosed,
+		false,
+	},
 }
 
 func TestWrite_AfterClose(t *testing.T) {
-	const RegFile = "test-write-after-close.txt"
-	const TarFile = "test-write-after-close.tar"
-	const ZipFile = "test-write-after-close.zip"
+	t.Parallel()
 
-	for _, tc := range getTestCasesForTestWriteAfterClose(
-		RegFile, TarFile, ZipFile) {
+	for _, tc := range writeAfterCloseTestCases {
 		t.Run("method="+tc.methodName, func(t *testing.T) {
+			t.Parallel()
+
 			file := &WritableFileImpl{Name: tc.filename}
+
 			w, err := filesys.Write(file, nil, true)
 			if err != nil {
 				t.Fatal("create -", err)
 			}
+
 			err = w.Close()
 			if err != nil {
 				t.Fatal("close -", err)
 			}
-			defer func() {
-				e := recover()
-				if tc.writePanic {
-					if wp, ok := e.(*inout.WritePanicError); ok {
-						if !errors.Is(wp, tc.wantErr) {
-							t.Errorf("got panic %v; want %v", e, tc.wantErr)
-						}
-					} else {
-						t.Errorf("got panic %v (type: %[1]T); want *inout.WritePanic",
-							e)
-					}
-				} else if e != nil {
-					t.Error("panic -", e)
-				}
-			}()
+
+			defer testWriteAfterCloseRecoverAndCheck(
+				t,
+				tc.writePanic,
+				tc.wantErr,
+			)
+
 			err = tc.f(t, w)
 			if tc.writePanic {
 				t.Error("want panic but got", err)
@@ -252,346 +595,68 @@ func TestWrite_AfterClose(t *testing.T) {
 			}
 		})
 	}
-
-	t.Run("method=Flush-hasBufferedData", func(t *testing.T) {
-		file := &WritableFileImpl{Name: RegFile}
-		const Input = "Flush should return nil"
-		w, err := filesys.Write(
-			file, &filesys.WriteOptions{BufSize: len(Input) + 10}, true)
-		if err != nil {
-			t.Fatal("create -", err)
-		}
-		_, err = w.WriteString(Input)
-		if err != nil {
-			t.Fatal("write string -", err)
-		} else if n := w.Buffered(); n != len(Input) {
-			t.Fatalf("got w.Buffered %d; want %d", n, len(Input))
-		}
-		err = w.Close()
-		if err != nil {
-			t.Fatal("close -", err)
-		}
-		err = w.Flush()
-		// The buffered data should be flushed in Close, so err should be nil.
-		if err != nil {
-			t.Errorf("got error %v; want nil", err)
-		}
-	})
 }
 
-// getTestCasesForTestWriteAfterClose returns test cases
-// for TestWrite_AfterClose.
-func getTestCasesForTestWriteAfterClose(
-	regFile string,
-	tarFile string,
-	zipFile string,
-) []writeAfterCloseTestCase {
-	return []writeAfterCloseTestCase{
-		{
-			"Close",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.Close()
-			},
-			nil,
-			false,
-		},
-		{
-			"Closed",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				if !w.Closed() {
-					t.Error("w.Closed - got false; want true")
-				}
-				return nil
-			},
-			nil,
-			false,
-		},
-		{
-			"Write",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				_, err := w.Write(nil)
-				return err
-			},
-			filesys.ErrFileWriterClosed,
-			false,
-		},
-		{
-			"MustWrite",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				w.MustWrite(nil)
-				return nil
-			},
-			filesys.ErrFileWriterClosed,
-			true,
-		},
-		{
-			"WriteByte",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.WriteByte('0')
-			},
-			filesys.ErrFileWriterClosed,
-			false,
-		},
-		{
-			"MustWriteByte",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				w.MustWriteByte('0')
-				return nil
-			},
-			filesys.ErrFileWriterClosed,
-			true,
-		},
-		{
-			"WriteRune",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				_, err := w.WriteRune('汉')
-				return err
-			},
-			filesys.ErrFileWriterClosed,
-			false,
-		},
-		{
-			"MustWriteRune",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				w.MustWriteRune('汉')
-				return nil
-			},
-			filesys.ErrFileWriterClosed,
-			true,
-		},
-		{
-			"WriteString",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				_, err := w.WriteString("")
-				return err
-			},
-			filesys.ErrFileWriterClosed,
-			false,
-		},
-		{
-			"MustWriteString",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				w.MustWriteString("")
-				return nil
-			},
-			filesys.ErrFileWriterClosed,
-			true,
-		},
-		{
-			"ReadFrom",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				_, err := w.ReadFrom(nil)
-				return err
-			},
-			filesys.ErrFileWriterClosed,
-			false,
-		},
-		{
-			"Printf",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				_, err := w.Printf("")
-				return err
-			},
-			filesys.ErrFileWriterClosed,
-			false,
-		},
-		{
-			"MustPrintf",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				w.MustPrintf("")
-				return nil
-			},
-			filesys.ErrFileWriterClosed,
-			true,
-		},
-		{
-			"Print",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				_, err := w.Print()
-				return err
-			},
-			filesys.ErrFileWriterClosed,
-			false,
-		},
-		{
-			"MustPrint",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				w.MustPrint()
-				return nil
-			},
-			filesys.ErrFileWriterClosed,
-			true,
-		},
-		{
-			"Println",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				_, err := w.Println()
-				return err
-			},
-			filesys.ErrFileWriterClosed,
-			false,
-		},
-		{
-			"MustPrintln",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				w.MustPrintln()
-				return nil
-			},
-			filesys.ErrFileWriterClosed,
-			true,
-		},
-		{
-			"Flush-noBufferedData",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.Flush()
-			},
-			nil,
-			false,
-		},
-		{
-			"TarWriteHeader-notTar",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.TarWriteHeader(nil)
-			},
-			filesys.ErrNotTar,
-			false,
-		},
-		{
-			"TarWriteHeader-isTar",
-			tarFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.TarWriteHeader(nil)
-			},
-			filesys.ErrFileWriterClosed,
-			false,
-		},
-		{
-			"TarAddFS-notTar",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.TarAddFS(nil)
-			},
-			filesys.ErrNotTar,
-			false,
-		},
-		{
-			"TarAddFS-isTar",
-			tarFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.TarAddFS(nil)
-			},
-			filesys.ErrFileWriterClosed,
-			false,
-		},
-		{
-			"ZipCreate-notZip",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.ZipCreate("")
-			},
-			filesys.ErrNotZip,
-			false,
-		},
-		{
-			"ZipCreate-isZip",
-			zipFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.ZipCreate("")
-			},
-			filesys.ErrFileWriterClosed,
-			false,
-		},
-		{
-			"ZipCreateHeader-notZip",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.ZipCreateHeader(nil)
-			},
-			filesys.ErrNotZip,
-			false,
-		},
-		{
-			"ZipCreateHeader-isZip",
-			zipFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.ZipCreateHeader(nil)
-			},
-			filesys.ErrFileWriterClosed,
-			false,
-		},
-		{
-			"ZipCreateRaw-notZip",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.ZipCreateRaw(nil)
-			},
-			filesys.ErrNotZip,
-			false,
-		},
-		{
-			"ZipCreateRaw-isZip",
-			zipFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.ZipCreateRaw(nil)
-			},
-			filesys.ErrFileWriterClosed,
-			false,
-		},
-		{
-			"ZipCopy-notZip",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.ZipCopy(nil)
-			},
-			filesys.ErrNotZip,
-			false,
-		},
-		{
-			"ZipCopy-isZip",
-			zipFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.ZipCopy(nil)
-			},
-			filesys.ErrFileWriterClosed,
-			false,
-		},
-		{
-			"ZipAddFS-notZip",
-			regFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.ZipAddFS(nil)
-			},
-			filesys.ErrNotZip,
-			false,
-		},
-		{
-			"ZipAddFS-isZip",
-			zipFile,
-			func(t *testing.T, w filesys.Writer) error {
-				return w.ZipAddFS(nil)
-			},
-			filesys.ErrFileWriterClosed,
-			false,
-		},
+// testWriteAfterCloseRecoverAndCheck is a deferred function in
+// TestWrite_AfterClose that recovers the possible panicking goroutine
+// and checks the error.
+func testWriteAfterCloseRecoverAndCheck(
+	t *testing.T,
+	writePanic bool,
+	wantErr error,
+) {
+	t.Helper()
+
+	e := recover()
+	if !writePanic {
+		if e != nil {
+			t.Error("panic -", e)
+		}
+
+		return
+	}
+
+	if wp, ok := e.(*inout.WritePanicError); ok {
+		if !errors.Is(wp, wantErr) {
+			t.Errorf("got panic %v; want %v", e, wantErr)
+		}
+	} else {
+		t.Errorf("got panic %v (type: %[1]T); want *inout.WritePanic", e)
+	}
+}
+
+func TestWrite_AfterClose_FlushHasBufferedData(t *testing.T) {
+	t.Parallel()
+
+	file := &WritableFileImpl{Name: writeAfterCloseRegFile}
+
+	const Input = "Flush should return nil"
+
+	w, err := filesys.Write(
+		file,
+		&filesys.WriteOptions{BufSize: len(Input) + 10},
+		true,
+	)
+	if err != nil {
+		t.Fatal("create -", err)
+	}
+
+	_, err = w.WriteString(Input)
+	if err != nil {
+		t.Fatal("write string -", err)
+	} else if n := w.Buffered(); n != len(Input) {
+		t.Fatalf("got w.Buffered %d; want %d", n, len(Input))
+	}
+
+	err = w.Close()
+	if err != nil {
+		t.Fatal("close -", err)
+	}
+
+	err = w.Flush()
+	// The buffered data should be flushed in Close, so err should be nil.
+	if err != nil {
+		t.Errorf("got error %v; want nil", err)
 	}
 }
 
@@ -604,16 +669,20 @@ func writeFile(
 	data []byte,
 	opts *filesys.WriteOptions,
 ) {
+	t.Helper()
+
 	w, err := filesys.Write(file, opts, true)
 	if err != nil {
 		t.Error("create -", err)
 		return
 	}
 	defer func(w filesys.Writer) {
-		if err := w.Close(); err != nil {
+		err := w.Close()
+		if err != nil {
 			t.Error("close -", err)
 		}
 	}(w)
+
 	n, err := w.Write(data)
 	if n != len(data) || err != nil {
 		t.Errorf("write - got (%d, %v); want (%d, nil)", n, err, len(data))
@@ -628,14 +697,19 @@ func writeFile(
 // Caller should set file.Name before calling this function and
 // guarantee that file.Name has extension ".gz".
 func writeGzFile(t *testing.T, file *WritableFileImpl) (data []byte) {
+	t.Helper()
+
 	dataFilename := file.Name[:len(file.Name)-3]
+
 	mapFile := testFS[dataFilename]
 	if mapFile == nil {
 		t.Errorf("file %q does not exist", dataFilename)
 		return
 	}
+
 	data = mapFile.Data
 	writeFile(t, file, data, nil)
+
 	return
 }
 
@@ -645,16 +719,20 @@ func writeGzFile(t *testing.T, file *WritableFileImpl) (data []byte) {
 // Caller should set file.Name before calling this function and
 // guarantee that file.Name has extension ".tar", ".tar.gz", or ".tgz".
 func writeTarFiles(t *testing.T, file *WritableFileImpl) {
+	t.Helper()
+
 	w, err := filesys.Write(file, nil, true)
 	if err != nil {
 		t.Error("create -", err)
 		return
 	}
 	defer func(w filesys.Writer) {
-		if err := w.Close(); err != nil {
+		err := w.Close()
+		if err != nil {
 			t.Error("close -", err)
 		}
 	}(w)
+
 	for i := range testFSTarFiles {
 		hdr := &tar.Header{
 			Name:    testFSTarFiles[i].name,
@@ -662,22 +740,28 @@ func writeTarFiles(t *testing.T, file *WritableFileImpl) {
 			Mode:    0600,
 			ModTime: time.Now(),
 		}
+
 		err = w.TarWriteHeader(hdr)
 		if err != nil {
 			t.Errorf("write No.%d tar header - %v", i, err)
 			return
 		}
+
 		var n int
+
 		n, err = w.WriteString(testFSTarFiles[i].body)
 		if filesys.TarHeaderIsDir(hdr) {
 			if n != 0 || !errors.Is(err, filesys.ErrIsDir) {
-				t.Errorf("write No.%d tar file body - got (%d, %v); want (0, %v)",
+				t.Errorf("write No.%d tar file body - got (%d, %v); "+
+					"want (0, %v)",
 					i, n, err, filesys.ErrIsDir)
+
 				return
 			}
 		} else if n != len(testFSTarFiles[i].body) || err != nil {
 			t.Errorf("write No.%d tar file body - got (%d, %v); want (%d, nil)",
 				i, n, err, len(testFSTarFiles[i].body))
+
 			return
 		}
 	}
@@ -689,16 +773,20 @@ func writeTarFiles(t *testing.T, file *WritableFileImpl) {
 // Caller should set file.Name before calling this function and
 // guarantee that file.Name has extension ".tar", ".tar.gz", or ".tgz".
 func writeTarFS(t *testing.T, file *WritableFileImpl) {
+	t.Helper()
+
 	w, err := filesys.Write(file, nil, true)
 	if err != nil {
 		t.Error("create -", err)
 		return
 	}
 	defer func(w filesys.Writer) {
-		if err := w.Close(); err != nil {
+		err := w.Close()
+		if err != nil {
 			t.Error("close -", err)
 		}
 	}(w)
+
 	err = w.TarAddFS(testTarFS)
 	if err != nil {
 		t.Error("add FS -", err)
@@ -715,21 +803,38 @@ func testTarTgzFile(
 	file *WritableFileImpl,
 	wantFiles []fileNameBody,
 ) {
+	t.Helper()
+
 	var r io.Reader = bytes.NewReader(file.Data)
-	ext := path.Ext(file.Name)
-	if ext == ".gz" || ext == ".tgz" {
+	switch path.Ext(file.Name) {
+	case filesys.GzipExtension, filesys.TarGzipSingleExtension:
 		gr, err := gzip.NewReader(r)
 		if err != nil {
 			t.Error("create gzip reader -", err)
 			return
 		}
 		defer func(gr *gzip.Reader) {
-			if err := gr.Close(); err != nil {
+			err := gr.Close()
+			if err != nil {
 				t.Error("close gzip reader -", err)
 			}
 		}(gr)
+
 		r = gr
 	}
+
+	testTarTgzFileCheckTarEntries(t, r, wantFiles)
+}
+
+// testTarTgzFileCheckTarEntries is a subprocess of testTarTgzFile
+// that checks entries in the tar archive.
+func testTarTgzFileCheckTarEntries(
+	t *testing.T,
+	r io.Reader,
+	wantFiles []fileNameBody,
+) {
+	t.Helper()
+
 	tr := tar.NewReader(r)
 	for i := 0; ; i++ {
 		hdr, err := tr.Next()
@@ -740,9 +845,12 @@ func testTarTgzFile(
 					t.Errorf("tar header number: %d != %d, but got EOF",
 						i, len(wantFiles))
 				}
+
 				return // end of archive
 			}
+
 			t.Errorf("read No.%d tar header - %v", i, err)
+
 			return
 		case i >= len(wantFiles):
 			t.Error("tar headers more than", len(wantFiles))
@@ -754,22 +862,19 @@ func testTarTgzFile(
 			t.Errorf("No.%d tar header name unequal - got %q; want %q",
 				i, hdr.Name, wantFiles[i].name)
 		}
+
 		if hdr.FileInfo().IsDir() {
 			continue
 		}
+
 		body, err := io.ReadAll(tr)
 		if err != nil {
 			t.Errorf("read No.%d tar file body - %v", i, err)
 			return
 		} else if string(body) != wantFiles[i].body {
-			t.Errorf(
-				"got No.%d tar file body (len: %d)\n%s\nwant (len: %d)\n%s",
-				i,
-				len(body),
-				body,
-				len(wantFiles[i].body),
-				wantFiles[i].body,
-			)
+			t.Errorf("got No.%d tar file body (len: %d)\n%s\n"+
+				"want (len: %d)\n%s",
+				i, len(body), body, len(wantFiles[i].body), wantFiles[i].body)
 		}
 	}
 }
@@ -788,6 +893,8 @@ func writeZipFiles(
 	file *WritableFileImpl,
 	createFn func(w filesys.Writer, name string) error,
 ) {
+	t.Helper()
+
 	w, err := filesys.Write(
 		file,
 		&filesys.WriteOptions{
@@ -801,7 +908,8 @@ func writeZipFiles(
 		return
 	}
 	defer func(w filesys.Writer) {
-		if err := w.Close(); err != nil {
+		err := w.Close()
+		if err != nil {
 			t.Error("close -", err)
 		}
 	}(w)
@@ -810,23 +918,28 @@ func writeZipFiles(
 		writeZipFilesZipCopy(t, w)
 		return
 	}
+
 	for name, body := range testFSZipFileNameBodyMap {
 		err = createFn(w, name)
 		if err != nil {
 			t.Errorf("create %q - %v", name, err)
 			return
 		}
+
 		var n int
+
 		n, err = w.WriteString(body)
 		if len(name) > 0 && name[len(name)-1] == '/' {
 			if n != 0 || !errors.Is(err, filesys.ErrIsDir) {
 				t.Errorf("write %q file body - got (%d, %v); want (0, %v)",
 					name, n, err, filesys.ErrIsDir)
+
 				return
 			}
 		} else if n != len(body) || err != nil {
 			t.Errorf("write %q file body - got (%d, %v); want (%d, nil)",
 				name, n, err, len(body))
+
 			return
 		}
 	}
@@ -835,6 +948,8 @@ func writeZipFiles(
 // writeZipFilesZipCopy is a subprocess of writeZipFiles
 // that writes the ZIP file through ZipCopy.
 func writeZipFilesZipCopy(t *testing.T, w filesys.Writer) {
+	t.Helper()
+
 	zipFile, err := testFS.Open(testFSZipFilenames[0])
 	if err != nil {
 		t.Errorf("open zip file %q - %v", testFSZipFilenames[0], err)
@@ -843,21 +958,25 @@ func writeZipFilesZipCopy(t *testing.T, w filesys.Writer) {
 	defer func(f fs.File) {
 		_ = f.Close() // ignore error
 	}(zipFile)
+
 	zipInfo, err := zipFile.Stat()
 	if err != nil {
 		t.Errorf("zip file %q stat - %v", testFSZipFilenames[0], err)
 		return
 	}
+
 	zr, err := zip.NewReader(zipFile.(io.ReaderAt), zipInfo.Size())
 	if err != nil {
 		t.Error("create zip reader -", err)
 	}
+
 	for _, f := range zr.File {
 		err = w.ZipCopy(f)
 		if err != nil {
 			t.Errorf("copy %q - %v", f.Name, err)
 			return
 		}
+
 		_, err = w.Write(nil)
 		if !errors.Is(err, filesys.ErrZipWriteBeforeCreate) {
 			t.Errorf("call Write after ZipCopy - got %v; want %v",
@@ -872,6 +991,8 @@ func writeZipFilesZipCopy(t *testing.T, w filesys.Writer) {
 // Caller should set file.Name before calling this function and
 // guarantee that file.Name has extension ".zip".
 func writeZipFS(t *testing.T, file *WritableFileImpl) {
+	t.Helper()
+
 	w, err := filesys.Write(
 		file,
 		&filesys.WriteOptions{
@@ -885,10 +1006,12 @@ func writeZipFS(t *testing.T, file *WritableFileImpl) {
 		return
 	}
 	defer func(w filesys.Writer) {
-		if err := w.Close(); err != nil {
+		err := w.Close()
+		if err != nil {
 			t.Error("close -", err)
 		}
 	}(w)
+
 	err = w.ZipAddFS(testZipFS)
 	if err != nil {
 		t.Error("add FS -", err)
@@ -904,14 +1027,18 @@ func testZipFile(
 	file *WritableFileImpl,
 	wantFileNameBodyMap map[string]string,
 ) {
+	t.Helper()
+
 	r, err := zip.NewReader(bytes.NewReader(file.Data), int64(len(file.Data)))
 	if err != nil {
 		t.Error("create zip reader -", err)
 		return
 	}
+
 	if r.Comment != testFSZipComment {
 		t.Errorf("got comment %q; want %q", r.Comment, testFSZipComment)
 	}
+
 	if len(r.File) != len(wantFileNameBodyMap) {
 		t.Errorf("got %d zip files; want %d",
 			len(r.File), len(wantFileNameBodyMap))
@@ -923,32 +1050,31 @@ func testZipFile(
 			t.Errorf("unknown zip file %q", file.Name)
 			continue
 		}
+
 		isDir := len(file.Name) > 0 && file.Name[len(file.Name)-1] == '/'
 		if d := file.FileInfo().IsDir(); d != isDir {
 			t.Errorf("got IsDir %t; want %t", d, isDir)
 		}
+
 		if isDir {
 			continue
 		}
+
 		rc, err := file.Open()
 		if err != nil {
 			t.Errorf("open %q - %v", file.Name, err)
 			return
 		}
+
 		data, err := io.ReadAll(rc)
 		_ = rc.Close() // ignore error
+
 		if err != nil {
 			t.Errorf("read %q - %v", file.Name, err)
 			return
 		} else if string(data) != body {
-			t.Errorf(
-				"%q file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
-				file.Name,
-				len(data),
-				data,
-				len(body),
-				body,
-			)
+			t.Errorf("%q file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
+				file.Name, len(data), data, len(body), body)
 		}
 	}
 }

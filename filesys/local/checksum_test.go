@@ -18,6 +18,7 @@
 
 package local_test
 
+//gosec:disable G501 -- MD5 is just used as a simple hash algorithm for testing
 import (
 	"crypto/md5"
 	"crypto/sha256"
@@ -36,18 +37,28 @@ import (
 )
 
 func TestChecksum(t *testing.T) {
+	t.Parallel()
+
 	newHashes := []func() hash.Hash{sha256.New, md5.New, nil, newNilHash}
+
 	for _, entry := range testFileEntries {
 		filename := entry.Name()
 		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			t.Parallel()
+
 			name := filepath.Join(TestDataDir, filename)
+
 			checksums, err := lazyCalculateChecksums(
-				name, newHashes[:len(newHashes)-2]...)
+				name,
+				newHashes[:len(newHashes)-2]...,
+			)
 			if err != nil {
 				t.Fatal("calculate checksums -", err)
 			}
+
 			wantLower := make([]string, len(newHashes))
 			wantUpper := make([]string, len(newHashes))
+
 			for i := range checksums {
 				wantLower[i] = strings.ToLower(checksums[i])
 				wantUpper[i] = strings.ToUpper(checksums[i])
@@ -58,7 +69,10 @@ func TestChecksum(t *testing.T) {
 				if upper {
 					want = wantUpper
 				}
+
 				t.Run(fmt.Sprintf("upper=%t", upper), func(t *testing.T) {
+					t.Parallel()
+
 					got, err := local.Checksum(name, upper, newHashes...)
 					if err != nil {
 						t.Error("checksum -", err)
@@ -72,15 +86,22 @@ func TestChecksum(t *testing.T) {
 }
 
 func TestVerifyChecksum(t *testing.T) {
+	t.Parallel()
+
 	nonExistFilename := filepath.Join(TestDataDir, "nonexist")
 
 	t.Run(`file="nonexist"`, func(t *testing.T) {
+		t.Parallel()
+
 		testCases := verifyChecksumTestCases(t, nonExistFilename)
 		if t.Failed() {
 			return
 		}
+
 		for _, tc := range testCases {
 			t.Run("hvs="+tc.hvsName, func(t *testing.T) {
+				t.Parallel()
+
 				got := local.VerifyChecksum(nonExistFilename, tc.hvs...)
 				if got {
 					t.Error("got true; want false")
@@ -92,13 +113,19 @@ func TestVerifyChecksum(t *testing.T) {
 	for _, entry := range testFileEntries {
 		filename := entry.Name()
 		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			t.Parallel()
+
 			name := filepath.Join(TestDataDir, filename)
+
 			testCases := verifyChecksumTestCases(t, name)
 			if t.Failed() {
 				return
 			}
+
 			for _, tc := range testCases {
 				t.Run("hvs="+tc.hvsName, func(t *testing.T) {
+					t.Parallel()
+
 					got := local.VerifyChecksum(name, tc.hvs...)
 					if got != tc.want {
 						t.Errorf("got %t; want %t", got, tc.want)
@@ -120,7 +147,10 @@ func verifyChecksumTestCases(t *testing.T, name string) []struct {
 	hvs     []filesys.HashVerifier
 	want    bool
 } {
+	t.Helper()
+
 	newHash := sha256.New
+
 	checksums, err := lazyCalculateChecksums(name, newHash)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -157,19 +187,24 @@ func verifyChecksumTestCases(t *testing.T, name string) []struct {
 				},
 			}
 		}
+
 		t.Error("calculate checksums -", err)
+
 		return nil
 	}
 
 	checksum := checksums[0]
 	wrongChecksum := strings.Repeat("0", len(checksum))
+
 	if wrongChecksum == checksum {
 		wrongChecksum = wrongChecksum[:len(wrongChecksum)-1] + "1"
 	}
+
 	prefixVerifiers := make([]filesys.HashVerifier, len(checksum)+1)
 	for i := range prefixVerifiers {
 		prefixVerifiers[i] = filesys.NewHashVerifier(newHash, checksum[:i])
 	}
+
 	duplicateVerifier1 := filesys.NewHashVerifier(newHash, checksum)
 	duplicateVerifier2 := filesys.NewHashVerifier(newHash, checksum)
 

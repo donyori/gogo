@@ -72,6 +72,7 @@ func Checksum(
 			_ = f.Close() // ignore error
 		}(file)
 	}
+
 	err = checksumTestDir(file)
 	if err != nil || len(newHash) == 0 {
 		return nil, errors.AutoWrap(err)
@@ -81,29 +82,35 @@ func Checksum(
 	hs := make([]hash.Hash, len(newHash))
 	ws := make([]io.Writer, 0, len(newHash))
 	bs := make([]uint, 0, len(newHash))
+
 	for i := range newHash {
 		if newHash[i] != nil {
 			hs[i] = newHash[i]()
 			if hs[i] != nil {
 				ws = append(ws, hs[i])
-				bs = append(bs, uint(hs[i].BlockSize()))
+				bs = append(bs, uint(hs[i].BlockSize())) //gosec:disable G115 -- the block size is nonnegative
 			}
 		}
 	}
+
 	if len(ws) == 0 {
 		return
 	}
+
 	w := ws[0]
 	bufSize := bs[0]
+
 	if len(ws) > 1 {
 		w = io.MultiWriter(ws...)
 		bufSize = mathalgo.LCM(bs...) // make bufSize a multiple of the block sizes
 	}
+
+	const NumBitOf4096 int = 13
 	if bufSize == 0 {
 		// Act as a safeguard for the hash.Hash
 		// whose BlockSize returns 0.
 		bufSize = 5120 // = (2^10) * 5
-	} else if shift := 13 - bits.Len(bufSize); shift > 0 {
+	} else if shift := NumBitOf4096 - bits.Len(bufSize); shift > 0 {
 		bufSize <<= shift // make bufSize at least 4096
 	}
 
@@ -111,11 +118,13 @@ func Checksum(
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
+
 	for i := range hs {
 		if hs[i] != nil {
 			checksums[i] = hex.EncodeToString(hs[i].Sum(nil), upper)
 		}
 	}
+
 	return
 }
 
@@ -128,6 +137,7 @@ func checksumTestDir(file fs.File) error {
 	} else if info.IsDir() {
 		return errors.AutoWrap(ErrIsDir)
 	}
+
 	return nil
 }
 
@@ -160,10 +170,12 @@ func ChecksumFromFS(
 	if fsys == nil {
 		panic(errors.AutoMsg("fsys is nil"))
 	}
+
 	f, err := fsys.Open(name)
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
+
 	return Checksum(f, true, upper, newHash...)
 }
 
@@ -201,10 +213,12 @@ func NewHashVerifier(newHash func() hash.Hash, prefixHex string) HashVerifier {
 		panic(errors.AutoMsg(fmt.Sprintf(
 			"prefixHex (%q) is not hexadecimal", prefixHex)))
 	}
+
 	h := newHash()
 	if h == nil {
 		panic(errors.AutoMsg("newHash returns nil"))
 	}
+
 	return &hashVerifier{
 		h:         h,
 		prefixHex: prefixHex,
@@ -264,10 +278,12 @@ func VerifyChecksum(file fs.File, closeFile bool, hv ...HashVerifier) bool {
 			_ = f.Close() // ignore error
 		}(file)
 	}
+
 	info, err := file.Stat()
 	if err != nil || info.IsDir() {
 		return false
 	}
+
 	hv = nonNilDeduplicatedHashVerifiers(hv)
 	if len(hv) == 0 {
 		return true
@@ -275,21 +291,26 @@ func VerifyChecksum(file fs.File, closeFile bool, hv ...HashVerifier) bool {
 
 	ws := make([]io.Writer, len(hv))
 	bs := make([]uint, len(hv))
+
 	for i := range hv {
 		ws[i] = hv[i]
-		bs[i] = uint(hv[i].BlockSize())
+		bs[i] = uint(hv[i].BlockSize()) //gosec:disable G115 -- the block size is nonnegative
 	}
+
 	w := ws[0]
 	bufSize := bs[0]
+
 	if len(ws) > 1 {
 		w = io.MultiWriter(ws...)
 		bufSize = mathalgo.LCM(bs...) // make bufSize a multiple of the block sizes
 	}
+
+	const NumBitOf4096 int = 13
 	if bufSize == 0 {
 		// Act as a safeguard for the hash.Hash
 		// whose BlockSize returns 0.
 		bufSize = 5120 // = (2^10) * 5
-	} else if shift := 13 - bits.Len(bufSize); shift > 0 {
+	} else if shift := NumBitOf4096 - bits.Len(bufSize); shift > 0 {
 		bufSize <<= shift // make bufSize at least 4096
 	}
 
@@ -297,11 +318,13 @@ func VerifyChecksum(file fs.File, closeFile bool, hv ...HashVerifier) bool {
 	if err != nil {
 		return false
 	}
+
 	for _, v := range hv {
 		if !v.Match() {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -319,6 +342,7 @@ func nonNilDeduplicatedHashVerifiers(hv []HashVerifier) []HashVerifier {
 	set := make(map[HashVerifier]struct{}, 1+len(hv))
 	set[nil] = struct{}{}
 	original := true
+
 	for i, v := range hv {
 		if original {
 			if _, ok := set[v]; ok {
@@ -331,9 +355,11 @@ func nonNilDeduplicatedHashVerifiers(hv []HashVerifier) []HashVerifier {
 			result, set[v] = append(result, v), struct{}{}
 		}
 	}
+
 	if len(result) == 0 {
 		return nil
 	}
+
 	return result
 }
 
@@ -355,9 +381,11 @@ func VerifyChecksumFromFS(fsys fs.FS, name string, hv ...HashVerifier) bool {
 	if fsys == nil {
 		return false
 	}
+
 	f, err := fsys.Open(name)
 	if err != nil {
 		return false
 	}
+
 	return VerifyChecksum(f, true, hv...)
 }

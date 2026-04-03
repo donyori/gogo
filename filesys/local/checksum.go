@@ -53,6 +53,7 @@ func Checksum(
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
+
 	return filesys.Checksum(f, true, upper, newHash...)
 }
 
@@ -75,5 +76,6 @@ func VerifyChecksum(filename string, hv ...filesys.HashVerifier) bool {
 	if err != nil {
 		return false
 	}
+
 	return filesys.VerifyChecksum(f, true, hv...)
 }

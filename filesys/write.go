@@ -262,6 +262,7 @@ func Write(
 	if file == nil {
 		panic(errors.AutoMsg("file is nil"))
 	}
+
 	info, err := file.Stat()
 	if err != nil {
 		return nil, errors.AutoWrap(err)
@@ -272,12 +273,14 @@ func Write(
 	if opts == nil {
 		opts = defaultWriteOptions
 	}
+
 	if opts.DeflateLv < -2 || opts.DeflateLv > 9 {
 		return nil, errors.AutoWrap(fmt.Errorf(
 			"option DeflateLv (%d) is out of range [-2, 9]",
 			opts.DeflateLv,
 		))
 	}
+
 	if len(opts.ZipComment) > maxUint16 {
 		return nil, errors.AutoWrap(fmt.Errorf(
 			"option ZipComment (len: %d) exceeds %d bytes",
@@ -287,16 +290,20 @@ func Write(
 	}
 
 	el := errors.NewErrorList(true)
+
 	defer func() {
 		if el.Erroneous() {
 			w, err = nil, errors.AutoWrapSkip(el.ToError(), 1) // skip = 1 to skip the inner function
 		}
 	}()
 
-	closers := make([]io.Closer, 0, 3)
+	const MaxNumCloser int = 3
+
+	closers := make([]io.Closer, 0, MaxNumCloser)
 	if closeFile {
 		closers = append(closers, file)
 	}
+
 	defer func() {
 		if el.Erroneous() {
 			for i := len(closers) - 1; i >= 0; i-- {
@@ -319,12 +326,13 @@ func Write(
 	}
 	maps.DeleteFunc(
 		fw.opts.ZipComp,
-		func(method uint16, comp zip.Compressor) bool {
+		func(_ uint16, comp zip.Compressor) bool {
 			return comp == nil
 		},
 	)
 	w = fw
 	el.Append(fw.init(info, &closers))
+
 	return
 }
 
@@ -336,7 +344,9 @@ func (fw *writer) init(info fs.FileInfo, pClosers *[]io.Closer) error {
 	if err != nil {
 		return err
 	}
+
 	fw.initCloserAndBuffer(*pClosers)
+
 	return nil
 }
 
@@ -347,62 +357,86 @@ func (fw *writer) initRaw(info fs.FileInfo, pClosers *[]io.Closer) error {
 	if fw.opts.Raw {
 		return nil
 	}
+
 	name := strings.ToLower(info.Name())
+
 	var ext string
+
 	loop := true
 	for loop {
 		name = name[:len(name)-len(ext)]
 		ext = path.Ext(name)
+
 		switch ext {
-		case ".tgz":
-			name = name[:len(name)-len(ext)] + ".tar.gz"
+		case TarGzipSingleExtension:
+			name = name[:len(name)-len(ext)] + TarGzipConcatenateExtension
 			ext = ""
-		case ".gz":
+		case GzipExtension:
 			gw, err := gzip.NewWriterLevel(fw.uw, fw.opts.DeflateLv)
 			if err != nil {
 				return err
 			}
+
 			*pClosers = append(*pClosers, gw)
 			fw.uw = gw
-		case ".tar":
+		case TarExtension:
 			fw.tw = tar.NewWriter(fw.uw)
 			*pClosers = append(*pClosers, fw.tw)
 			fw.uw = fw.tw
 			loop = false
-		case ".zip":
-			fw.zw = zip.NewWriter(fw.uw)
-			*pClosers = append(*pClosers, fw.zw)
-			if fw.opts.ZipOffset > 0 {
-				fw.zw.SetOffset(fw.opts.ZipOffset)
+		case ZipExtension:
+			err := fw.initZip(pClosers)
+			if err != nil {
+				return err
 			}
-			if fw.opts.ZipComment != "" {
-				err := fw.zw.SetComment(fw.opts.ZipComment)
-				if err != nil {
-					return err
-				}
-			}
-			noDeflate := true
-			for method, comp := range fw.opts.ZipComp {
-				if method == zip.Deflate {
-					noDeflate = false
-				}
-				fw.zw.RegisterCompressor(method, comp)
-			}
-			if noDeflate {
-				fw.zw.RegisterCompressor(
-					zip.Deflate,
-					func(w io.Writer) (io.WriteCloser, error) {
-						return flate.NewWriter(w, fw.opts.DeflateLv)
-					},
-				)
-			}
-			fw.uw = zipWriteBeforeCreateErrorWriter
-			fw.err = ErrZipWriteBeforeCreate
+
 			loop = false
 		default:
 			loop = false
 		}
 	}
+
+	return nil
+}
+
+// initZip is a subprocess of initRaw that deals with a ZIP archive.
+func (fw *writer) initZip(pClosers *[]io.Closer) error {
+	fw.zw = zip.NewWriter(fw.uw)
+	*pClosers = append(*pClosers, fw.zw)
+
+	if fw.opts.ZipOffset > 0 {
+		fw.zw.SetOffset(fw.opts.ZipOffset)
+	}
+
+	if fw.opts.ZipComment != "" {
+		err := fw.zw.SetComment(fw.opts.ZipComment)
+		if err != nil {
+			return err
+		}
+	}
+
+	noDeflate := true
+
+	for method, comp := range fw.opts.ZipComp {
+		if method == zip.Deflate {
+			noDeflate = false
+		}
+
+		fw.zw.RegisterCompressor(method, comp)
+	}
+
+	if noDeflate {
+		fw.zw.RegisterCompressor(
+			zip.Deflate,
+			func(w io.Writer) (io.WriteCloser, error) {
+				return flate.NewWriter(w, fw.opts.DeflateLv)
+			},
+		)
+	}
+
+	fw.uw = zipWriteBeforeCreateErrorWriter
+	fw.err = ErrZipWriteBeforeCreate
+
 	return nil
 }
 
@@ -416,6 +450,7 @@ func (fw *writer) initCloserAndBuffer(closers []io.Closer) {
 	default:
 		fw.c = inout.NewMultiCloser(true, true, closers...)
 	}
+
 	fw.bw = inout.NewBufferedWriterSize(fw.uw, fw.opts.BufSize)
 }
 
@@ -423,12 +458,15 @@ func (fw *writer) Close() error {
 	if fw.c.Closed() {
 		return nil
 	}
+
 	flushErr := fw.bw.Flush()
 	closeErr := fw.c.Close()
+
 	if fw.c.Closed() {
 		fw.uw, fw.err = closedErrorWriter, ErrFileWriterClosed
 		fw.bw.Reset(fw.uw)
 	}
+
 	return errors.AutoWrap(errors.Combine(flushErr, closeErr))
 }
 
@@ -440,7 +478,9 @@ func (fw *writer) Write(p []byte) (n int, err error) {
 	if fw.err != nil {
 		return 0, errors.AutoWrap(fw.err)
 	}
+
 	n, err = fw.bw.Write(p)
+
 	return n, errors.AutoWrap(err)
 }
 
@@ -449,6 +489,7 @@ func (fw *writer) MustWrite(p []byte) (n int) {
 	if err != nil {
 		panic(inout.NewWritePanicError(errors.AutoWrap(err)))
 	}
+
 	return
 }
 
@@ -456,6 +497,7 @@ func (fw *writer) WriteByte(c byte) error {
 	if fw.err != nil {
 		return errors.AutoWrap(fw.err)
 	}
+
 	return errors.AutoWrap(fw.bw.WriteByte(c))
 }
 
@@ -470,7 +512,9 @@ func (fw *writer) WriteRune(r rune) (size int, err error) {
 	if fw.err != nil {
 		return 0, errors.AutoWrap(fw.err)
 	}
+
 	size, err = fw.bw.WriteRune(r)
+
 	return size, errors.AutoWrap(err)
 }
 
@@ -479,6 +523,7 @@ func (fw *writer) MustWriteRune(r rune) (size int) {
 	if err != nil {
 		panic(inout.NewWritePanicError(errors.AutoWrap(err)))
 	}
+
 	return
 }
 
@@ -486,7 +531,9 @@ func (fw *writer) WriteString(s string) (n int, err error) {
 	if fw.err != nil {
 		return 0, errors.AutoWrap(fw.err)
 	}
+
 	n, err = fw.bw.WriteString(s)
+
 	return n, errors.AutoWrap(err)
 }
 
@@ -495,6 +542,7 @@ func (fw *writer) MustWriteString(s string) (n int) {
 	if err != nil {
 		panic(inout.NewWritePanicError(errors.AutoWrap(err)))
 	}
+
 	return
 }
 
@@ -502,7 +550,9 @@ func (fw *writer) ReadFrom(r io.Reader) (n int64, err error) {
 	if fw.err != nil {
 		return 0, errors.AutoWrap(fw.err)
 	}
+
 	n, err = fw.bw.ReadFrom(r)
+
 	return n, errors.AutoWrap(err)
 }
 
@@ -510,7 +560,9 @@ func (fw *writer) Printf(format string, arg ...any) (n int, err error) {
 	if fw.err != nil {
 		return 0, errors.AutoWrap(fw.err)
 	}
+
 	n, err = fw.bw.Printf(format, arg...)
+
 	return n, errors.AutoWrap(err)
 }
 
@@ -519,6 +571,7 @@ func (fw *writer) MustPrintf(format string, arg ...any) (n int) {
 	if err != nil {
 		panic(inout.NewWritePanicError(errors.AutoWrap(err)))
 	}
+
 	return
 }
 
@@ -526,7 +579,9 @@ func (fw *writer) Print(arg ...any) (n int, err error) {
 	if fw.err != nil {
 		return 0, errors.AutoWrap(fw.err)
 	}
+
 	n, err = fw.bw.Print(arg...)
+
 	return n, errors.AutoWrap(err)
 }
 
@@ -535,6 +590,7 @@ func (fw *writer) MustPrint(arg ...any) (n int) {
 	if err != nil {
 		panic(inout.NewWritePanicError(errors.AutoWrap(err)))
 	}
+
 	return
 }
 
@@ -542,7 +598,9 @@ func (fw *writer) Println(arg ...any) (n int, err error) {
 	if fw.err != nil {
 		return 0, errors.AutoWrap(fw.err)
 	}
+
 	n, err = fw.bw.Println(arg...)
+
 	return n, errors.AutoWrap(err)
 }
 
@@ -551,6 +609,7 @@ func (fw *writer) MustPrintln(arg ...any) (n int) {
 	if err != nil {
 		panic(inout.NewWritePanicError(errors.AutoWrap(err)))
 	}
+
 	return
 }
 
@@ -562,6 +621,7 @@ func (fw *writer) Flush() error {
 	} else if fw.err != nil {
 		return errors.AutoWrap(fw.err)
 	}
+
 	return errors.AutoWrap(fw.bw.Flush())
 }
 
@@ -586,6 +646,7 @@ func (fw *writer) TarWriteHeader(hdr *tar.Header) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
+
 	err = fw.tw.WriteHeader(hdr)
 	switch {
 	case err != nil:
@@ -595,7 +656,9 @@ func (fw *writer) TarWriteHeader(hdr *tar.Header) error {
 	default:
 		fw.uw, fw.err = fw.tw, nil
 	}
+
 	fw.bw.Reset(fw.uw)
+
 	return nil
 }
 
@@ -606,6 +669,7 @@ func (fw *writer) TarAddFS(fsys fs.FS) error {
 	} else if fsys == nil {
 		return nil
 	}
+
 	return errors.AutoWrap(fw.tw.AddFS(fsys))
 }
 
@@ -648,8 +712,10 @@ func (fw *writer) ZipCopy(f *zip.File) error {
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
+
 	fw.uw, fw.err = zipWriteBeforeCreateErrorWriter, ErrZipWriteBeforeCreate
 	fw.bw.Reset(fw.uw)
+
 	return errors.AutoWrap(fw.zw.Copy(f))
 }
 
@@ -660,17 +726,20 @@ func (fw *writer) ZipAddFS(fsys fs.FS) error {
 	} else if fsys == nil {
 		return nil
 	}
+
 	err = fw.zw.AddFS(fsys)
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
+
 	fw.uw, fw.err = zipWriteBeforeCreateErrorWriter, ErrZipWriteBeforeCreate
 	fw.bw.Reset(fw.uw)
+
 	return nil
 }
 
 func (fw *writer) Options() *WriteOptions {
-	opts := &WriteOptions{
+	return &WriteOptions{
 		BufSize:    fw.opts.BufSize,
 		Raw:        fw.opts.Raw,
 		DeflateLv:  fw.opts.DeflateLv,
@@ -678,7 +747,6 @@ func (fw *writer) Options() *WriteOptions {
 		ZipComment: fw.opts.ZipComment,
 		ZipComp:    maps.Clone(fw.opts.ZipComp),
 	}
-	return opts
 }
 
 func (fw *writer) FileStat() (info fs.FileInfo, err error) {
@@ -694,6 +762,7 @@ func (fw *writer) tarCheckAndFlush() error {
 	} else if fw.c.Closed() {
 		return errors.AutoWrap(ErrFileWriterClosed)
 	}
+
 	return errors.AutoWrap(fw.bw.Flush())
 }
 
@@ -706,6 +775,7 @@ func (fw *writer) zipCheckAndFlush() error {
 	} else if fw.c.Closed() {
 		return errors.AutoWrap(ErrFileWriterClosed)
 	}
+
 	return errors.AutoWrap(fw.bw.Flush())
 }
 
@@ -729,10 +799,13 @@ func (fw *writer) zipCreateFunc(
 	if err != nil {
 		return errors.AutoWrap(err)
 	}
+
 	w, err := f()
+
 	if fh != nil {
 		name = fh.Name
 	}
+
 	if err == nil {
 		if len(name) == 0 || name[len(name)-1] != '/' {
 			fw.uw, fw.err = w, nil
@@ -743,7 +816,9 @@ func (fw *writer) zipCreateFunc(
 		fw.uw = zipWriteBeforeCreateErrorWriter
 		fw.err = ErrZipWriteBeforeCreate
 	}
+
 	fw.bw.Reset(fw.uw)
+
 	return errors.AutoWrap(err)
 }
 
@@ -765,6 +840,7 @@ func (ew *errorWriter) ReadFrom(io.Reader) (n int64, err error) {
 	if errors.Is(ew.err, io.EOF) {
 		return 0, nil
 	}
+
 	return 0, errors.AutoWrap(ew.err)
 }
 

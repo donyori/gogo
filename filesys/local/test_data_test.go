@@ -34,6 +34,7 @@ import (
 	"sync"
 
 	"github.com/donyori/gogo/errors"
+	"github.com/donyori/gogo/filesys"
 )
 
 const TestDataDir = "testdata"
@@ -45,6 +46,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
 	testFileEntries = make([]fs.DirEntry, 0, len(entries))
 	for _, entry := range entries {
 		if entry != nil && !entry.IsDir() {
@@ -68,19 +70,23 @@ var (
 func lazyLoadTestData(name string) (data []byte, err error) {
 	loadTestDataLock.Lock()
 	defer loadTestDataLock.Unlock()
+
 	if testDataMap != nil {
 		data = testDataMap[name]
 		if data != nil {
 			return
 		}
 	}
+
 	data, err = os.ReadFile(name)
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	} else if testDataMap == nil {
 		testDataMap = make(map[string][]byte, len(testFileEntries))
 	}
+
 	testDataMap[name] = data
+
 	return
 }
 
@@ -104,10 +110,11 @@ func lazyLoadTarFile(name string) (files []tarFileNameBody, err error) {
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
+
 	var r io.Reader = bytes.NewReader(data)
-	ext := filepath.Ext(name)
-	switch ext {
-	case ".gz", ".tgz":
+
+	switch filepath.Ext(name) {
+	case filesys.GzipExtension, filesys.TarGzipSingleExtension:
 		gr, err := gzip.NewReader(r)
 		if err != nil {
 			return nil, errors.AutoWrap(err)
@@ -115,10 +122,12 @@ func lazyLoadTarFile(name string) (files []tarFileNameBody, err error) {
 		defer func(gr *gzip.Reader) {
 			_ = gr.Close() // ignore error
 		}(gr)
+
 		r = gr
-	case ".bz2", ".tbz":
+	case filesys.Bzip2Extension, filesys.TarBzip2SingleExtension:
 		r = bzip2.NewReader(r)
 	}
+
 	tr := tar.NewReader(r)
 	for {
 		hdr, err := tr.Next()
@@ -127,10 +136,12 @@ func lazyLoadTarFile(name string) (files []tarFileNameBody, err error) {
 		} else if err != nil {
 			return files, errors.AutoWrap(err)
 		}
+
 		data, err := io.ReadAll(tr)
 		if err != nil {
 			return files, errors.AutoWrap(err)
 		}
+
 		files = append(files, tarFileNameBody{name: hdr.Name, body: data})
 	}
 }
@@ -156,26 +167,31 @@ func lazyLoadZipFile(
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
+
 	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
+
 	fileMap = make(map[string]*zipHeaderBody, len(zr.File))
 	for _, file := range zr.File {
 		rc, err := file.Open()
 		if err != nil {
 			return nil, errors.AutoWrap(err)
 		}
+
 		body, err := io.ReadAll(rc)
 		if err != nil {
 			return nil, errors.AutoWrap(err)
 		}
+
 		_ = rc.Close() // ignore error
 		fileMap[file.Name] = &zipHeaderBody{
 			header: &file.FileHeader,
 			body:   body,
 		}
 	}
+
 	return
 }
 
@@ -197,29 +213,37 @@ func lazyCalculateChecksums(
 	if err != nil || len(newHash) == 0 {
 		return nil, errors.AutoWrap(err)
 	}
+
 	hs := make([]hash.Hash, len(newHash))
 	ws := make([]io.Writer, len(newHash))
+
 	for i := range newHash {
 		if newHash[i] == nil {
 			panic(errors.AutoMsg(fmt.Sprintf("newHash[%d] is nil", i)))
 		}
+
 		hs[i] = newHash[i]()
 		if hs[i] == nil {
 			panic(errors.AutoMsg(fmt.Sprintf("newHash[%d] returns nil", i)))
 		}
+
 		ws[i] = hs[i]
 	}
+
 	w := ws[0]
 	if len(ws) > 1 {
 		w = io.MultiWriter(ws...)
 	}
+
 	_, err = w.Write(data)
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
+
 	checksums = make([]string, len(hs))
 	for i := range hs {
 		checksums[i] = hex.EncodeToString(hs[i].Sum(nil))
 	}
+
 	return
 }

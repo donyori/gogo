@@ -27,78 +27,112 @@ import (
 )
 
 func TestTmp_Sync(t *testing.T) {
+	t.Parallel()
+
 	tmpRoot := t.TempDir()
+
 	const N int = 10
-	var mutex sync.Mutex
-	var wg sync.WaitGroup
+
+	var (
+		mutex sync.Mutex
+		wg    sync.WaitGroup
+	)
+
 	files := make([]string, 0, N)
 	wg.Add(N)
+
 	for i := range N {
 		go func(no int) {
 			defer wg.Done()
+
 			f, err := local.Tmp(tmpRoot, "f.", ".tmp", 0740)
+
 			mutex.Lock()
 			defer mutex.Unlock()
+
 			if err != nil {
 				t.Error("Goroutine", no, "local.Tmp -", err)
 				return
 			}
+
 			defer func(f *os.File) {
-				if err := f.Close(); err != nil {
+				err := f.Close()
+				if err != nil {
 					t.Error("Goroutine", no, "close file -", err)
 				}
 			}(f)
+
 			files = append(files, f.Name())
 		}(i)
 	}
+
 	wg.Wait()
+
 	if t.Failed() {
 		return
 	} else if n := len(files); n != N {
 		t.Errorf("got %d files; want %d", n, N)
 	}
+
 	set := make(map[string]struct{})
 	for _, filename := range files {
 		if _, ok := set[filename]; ok {
 			t.Error("collided filename", filename)
 			continue
 		}
+
 		set[filename] = struct{}{}
 	}
 }
 
 func TestTmpDir_Sync(t *testing.T) {
+	t.Parallel()
+
 	tmpRoot := t.TempDir()
+
 	const N int = 10
-	var mutex sync.Mutex
-	var wg sync.WaitGroup
+
+	var (
+		mutex sync.Mutex
+		wg    sync.WaitGroup
+	)
+
 	dirs := make([]string, 0, N)
 	wg.Add(N)
+
 	for i := range N {
 		go func(no int) {
 			defer wg.Done()
+
 			dir, err := local.TmpDir(tmpRoot, "tmp-", "", 0700)
+
 			mutex.Lock()
 			defer mutex.Unlock()
+
 			if err != nil {
 				t.Error("Goroutine", no, "local.TmpDir -", err)
 				return
 			}
+
 			dirs = append(dirs, dir)
 		}(i)
 	}
+
 	wg.Wait()
+
 	if t.Failed() {
 		return
 	} else if n := len(dirs); n != N {
 		t.Errorf("got %d dirs; want %d", n, N)
 	}
+
 	set := make(map[string]struct{})
 	for _, dir := range dirs {
 		if _, ok := set[dir]; ok {
 			t.Error("collided directory", dir)
 			continue
 		}
+
 		set[dir] = struct{}{}
 	}
 }

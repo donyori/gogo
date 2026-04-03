@@ -33,69 +33,106 @@ import (
 )
 
 func TestChecksum(t *testing.T) {
+	t.Parallel()
+
 	for _, filename := range testFSFilenames {
 		checksums := testFSChecksumMap[filename]
 		newHashes := make([]func() hash.Hash, len(checksums)+2)
 		wantLower := make([]string, len(newHashes))
 		wantUpper := make([]string, len(newHashes))
+
 		for i := range checksums {
 			newHashes[i] = checksums[i].hash.New
 			wantLower[i] = strings.ToLower(checksums[i].checksum)
 			wantUpper[i] = strings.ToUpper(checksums[i].checksum)
 		}
+
 		newHashes[len(newHashes)-1] = newNilHash
 
 		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			t.Parallel()
+
 			for _, upper := range []bool{false, true} {
 				want := wantLower
 				if upper {
 					want = wantUpper
 				}
+
 				t.Run(fmt.Sprintf("upper=%t", upper), func(t *testing.T) {
-					file, err := testFS.Open(filename)
-					if err != nil {
-						t.Fatal("open file -", err)
-					}
-					defer func(f fs.File) {
-						if err := f.Close(); err != nil {
-							t.Error("close file -", err)
-						}
-					}(file)
-					got, err := filesys.Checksum(
-						file, false, upper, newHashes...)
-					if err != nil {
-						t.Error("checksum -", err)
-					} else if !slices.Equal(got, want) {
-						t.Errorf("got %v\nwant %v", got, want)
-					}
+					t.Parallel()
+
+					testChecksum(t, filename, newHashes, upper, want)
 				})
 			}
 		})
 	}
 }
 
+// testChecksum is the main process of TestChecksum.
+func testChecksum(
+	t *testing.T,
+	filename string,
+	newHashes []func() hash.Hash,
+	upper bool,
+	want []string,
+) {
+	t.Helper()
+
+	file, err := testFS.Open(filename)
+	if err != nil {
+		t.Error("open file -", err)
+		return
+	}
+	defer func(f fs.File) {
+		err := f.Close()
+		if err != nil {
+			t.Error("close file -", err)
+		}
+	}(file)
+
+	got, err := filesys.Checksum(file, false, upper, newHashes...)
+	if err != nil {
+		t.Error("checksum -", err)
+	} else if !slices.Equal(got, want) {
+		t.Errorf("got %v\nwant %v", got, want)
+	}
+}
+
 func TestChecksumFromFS(t *testing.T) {
+	t.Parallel()
+
 	for _, filename := range testFSFilenames {
 		checksums := testFSChecksumMap[filename]
 		newHashes := make([]func() hash.Hash, len(checksums)+2)
 		wantLower := make([]string, len(newHashes))
 		wantUpper := make([]string, len(newHashes))
+
 		for i := range checksums {
 			newHashes[i] = checksums[i].hash.New
 			wantLower[i] = strings.ToLower(checksums[i].checksum)
 			wantUpper[i] = strings.ToUpper(checksums[i].checksum)
 		}
+
 		newHashes[len(newHashes)-1] = newNilHash
 
 		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			t.Parallel()
+
 			for _, upper := range []bool{false, true} {
 				want := wantLower
 				if upper {
 					want = wantUpper
 				}
+
 				t.Run(fmt.Sprintf("upper=%t", upper), func(t *testing.T) {
+					t.Parallel()
+
 					got, err := filesys.ChecksumFromFS(
-						testFS, filename, upper, newHashes...)
+						testFS,
+						filename,
+						upper,
+						newHashes...,
+					)
 					if err != nil {
 						t.Error("checksum -", err)
 					} else if !slices.Equal(got, want) {
@@ -108,8 +145,13 @@ func TestChecksumFromFS(t *testing.T) {
 }
 
 func TestNewHashVerifier(t *testing.T) {
-	const PanicPrefix = "github.com/donyori/gogo/filesys.NewHashVerifier: "
-	const ToBeFilledIn = "-"
+	t.Parallel()
+
+	const (
+		PanicPrefix  = "github.com/donyori/gogo/filesys.NewHashVerifier: "
+		ToBeFilledIn = "-"
+	)
+
 	testCases := []struct {
 		newHashName string
 		newHash     func() hash.Hash
@@ -193,6 +235,8 @@ func TestNewHashVerifier(t *testing.T) {
 			tc.prefixHex,
 			len(tc.prefixHex),
 		), func(t *testing.T) {
+			t.Parallel()
+
 			defer func() {
 				e := recover()
 				if tc.panicMsg != "" {
@@ -204,6 +248,7 @@ func TestNewHashVerifier(t *testing.T) {
 					t.Error("panic -", e)
 				}
 			}()
+
 			got := filesys.NewHashVerifier(tc.newHash, tc.prefixHex)
 			if tc.panicMsg != "" {
 				t.Error("want panic but got", got)
@@ -215,29 +260,27 @@ func TestNewHashVerifier(t *testing.T) {
 }
 
 func TestVerifyChecksum(t *testing.T) {
-	t.Run("file=<nil>", func(t *testing.T) {
-		for _, tc := range verifyChecksumTestCases("") {
-			t.Run("hvs="+tc.hvsName, func(t *testing.T) {
-				if got := filesys.VerifyChecksum(nil, true, tc.hvs...); got {
-					t.Error("got true; want false")
-				}
-			})
-		}
-	})
+	t.Parallel()
 
 	for _, filename := range testFSFilenames {
 		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			t.Parallel()
+
 			for _, tc := range verifyChecksumTestCases(filename) {
 				t.Run("hvs="+tc.hvsName, func(t *testing.T) {
+					t.Parallel()
+
 					file, err := testFS.Open(filename)
 					if err != nil {
 						t.Fatal("open file -", err)
 					}
 					defer func(f fs.File) {
-						if err := f.Close(); err != nil {
+						err := f.Close()
+						if err != nil {
 							t.Error("close file -", err)
 						}
 					}(file)
+
 					got := filesys.VerifyChecksum(file, false, tc.hvs...)
 					if got != tc.want {
 						t.Errorf("got %t; want %t", got, tc.want)
@@ -248,38 +291,37 @@ func TestVerifyChecksum(t *testing.T) {
 	}
 }
 
+func TestVerifyChecksum_NilFile(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range verifyChecksumTestCases("") {
+		t.Run("hvs="+tc.hvsName, func(t *testing.T) {
+			t.Parallel()
+
+			got := filesys.VerifyChecksum(nil, true, tc.hvs...)
+			if got {
+				t.Error("got true; want false")
+			}
+		})
+	}
+}
+
 func TestVerifyChecksumFromFS(t *testing.T) {
-	nilAndNonExistTestCases := verifyChecksumTestCases("")
-
-	t.Run(`fsys=<nil>&file=""`, func(t *testing.T) {
-		for _, tc := range nilAndNonExistTestCases {
-			t.Run("hvs="+tc.hvsName, func(t *testing.T) {
-				got := filesys.VerifyChecksumFromFS(nil, "", tc.hvs...)
-				if got {
-					t.Error("got true; want false")
-				}
-			})
-		}
-	})
-
-	t.Run(`file="nonexist"`, func(t *testing.T) {
-		for _, tc := range nilAndNonExistTestCases {
-			t.Run("hvs="+tc.hvsName, func(t *testing.T) {
-				got := filesys.VerifyChecksumFromFS(
-					testFS, "nonexist", tc.hvs...)
-				if got {
-					t.Error("got true; want false")
-				}
-			})
-		}
-	})
+	t.Parallel()
 
 	for _, filename := range testFSFilenames {
 		t.Run(fmt.Sprintf("file=%+q", filename), func(t *testing.T) {
+			t.Parallel()
+
 			for _, tc := range verifyChecksumTestCases(filename) {
 				t.Run("hvs="+tc.hvsName, func(t *testing.T) {
+					t.Parallel()
+
 					got := filesys.VerifyChecksumFromFS(
-						testFS, filename, tc.hvs...)
+						testFS,
+						filename,
+						tc.hvs...,
+					)
 					if got != tc.want {
 						t.Errorf("got %t; want %t", got, tc.want)
 					}
@@ -289,7 +331,49 @@ func TestVerifyChecksumFromFS(t *testing.T) {
 	}
 }
 
+func TestVerifyChecksumFromFS_NilFSAndNonExistFile(t *testing.T) {
+	t.Parallel()
+
+	nilAndNonExistTestCases := verifyChecksumTestCases("")
+
+	t.Run(`fsys=<nil>&file=""`, func(t *testing.T) {
+		t.Parallel()
+
+		for _, tc := range nilAndNonExistTestCases {
+			t.Run("hvs="+tc.hvsName, func(t *testing.T) {
+				t.Parallel()
+
+				got := filesys.VerifyChecksumFromFS(nil, "", tc.hvs...)
+				if got {
+					t.Error("got true; want false")
+				}
+			})
+		}
+	})
+
+	t.Run(`file="nonexist"`, func(t *testing.T) {
+		t.Parallel()
+
+		for _, tc := range nilAndNonExistTestCases {
+			t.Run("hvs="+tc.hvsName, func(t *testing.T) {
+				t.Parallel()
+
+				got := filesys.VerifyChecksumFromFS(
+					testFS,
+					"nonexist",
+					tc.hvs...,
+				)
+				if got {
+					t.Error("got true; want false")
+				}
+			})
+		}
+	})
+}
+
 func TestNonNilDeduplicatedHashVerifiers(t *testing.T) {
+	t.Parallel()
+
 	hvs := make([]filesys.HashVerifier, 3)
 	for i := range hvs {
 		hvs[i] = filesys.NewHashVerifier(sha256.New, "")
@@ -387,13 +471,20 @@ func TestNonNilDeduplicatedHashVerifiers(t *testing.T) {
 		},
 		{
 			"0+1+1+1+2+0",
-			[]filesys.HashVerifier{hvs[0], hvs[1], hvs[1], hvs[1], hvs[2], hvs[0]},
+			[]filesys.HashVerifier{
+				hvs[0], hvs[1], hvs[1],
+				hvs[1], hvs[2], hvs[0],
+			},
 			[]filesys.HashVerifier{hvs[0], hvs[1], hvs[2]},
 			false,
 		},
 		{
 			"nil+0+1+nil+1+1+nil+2+2+0",
-			[]filesys.HashVerifier{nil, hvs[0], hvs[1], nil, hvs[1], hvs[1], nil, hvs[2], hvs[2], hvs[0]},
+			[]filesys.HashVerifier{
+				nil, hvs[0], hvs[1],
+				nil, hvs[1], hvs[1],
+				nil, hvs[2], hvs[2], hvs[0],
+			},
 			[]filesys.HashVerifier{hvs[0], hvs[1], hvs[2]},
 			false,
 		},
@@ -401,32 +492,57 @@ func TestNonNilDeduplicatedHashVerifiers(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("hvs="+tc.hvsName, func(t *testing.T) {
-			var input []filesys.HashVerifier
-			if tc.hvs != nil {
-				input = make([]filesys.HashVerifier, len(tc.hvs))
-				copy(input, tc.hvs)
-			}
-			got := filesys.NonNilDeduplicatedHashVerifiers(input)
-			if tc.want != nil {
-				if !compare.AnySliceEqual(got, tc.want) {
-					t.Errorf("got (len: %d) %v; want (len: %d) %v",
-						len(got), got, len(tc.want), tc.want)
-				}
-			} else if got != nil {
-				t.Errorf("got (len: %d) %v; want <nil>", len(got), got)
-			}
-			if underlyingArrayEqual(input, got) != tc.equalUnderlying {
-				if tc.equalUnderlying {
-					t.Error("return value and input have different underlying arrays, but want the same one")
-				} else {
-					t.Error("return value and input have the same underlying array, but want different")
-				}
-			}
-			if !compare.AnySliceEqual(input, tc.hvs) ||
-				cap(input) != cap(tc.hvs) {
-				t.Error("input has been modified")
-			}
+			t.Parallel()
+
+			testNonNilDeduplicatedHashVerifiers(
+				t,
+				tc.hvs,
+				tc.want,
+				tc.equalUnderlying,
+			)
 		})
+	}
+}
+
+// testNonNilDeduplicatedHashVerifiers is the main process of
+// TestNonNilDeduplicatedHashVerifiers.
+func testNonNilDeduplicatedHashVerifiers(
+	t *testing.T,
+	hvs []filesys.HashVerifier,
+	want []filesys.HashVerifier,
+	equalUnderlying bool,
+) {
+	t.Helper()
+
+	var input []filesys.HashVerifier
+	if hvs != nil {
+		input = make([]filesys.HashVerifier, len(hvs))
+		copy(input, hvs)
+	}
+
+	got := filesys.NonNilDeduplicatedHashVerifiers(input)
+	if want != nil {
+		if !compare.AnySliceEqual(got, want) {
+			t.Errorf("got (len: %d) %v; want (len: %d) %v",
+				len(got), got, len(want), want)
+		}
+	} else if got != nil {
+		t.Errorf("got (len: %d) %v; want <nil>", len(got), got)
+	}
+
+	if underlyingArrayEqual(input, got) != equalUnderlying {
+		if equalUnderlying {
+			t.Error("return value and input have different underlying arrays," +
+				" but want the same one")
+		} else {
+			t.Error("return value and input have the same underlying array," +
+				" but want different")
+		}
+	}
+
+	if !compare.AnySliceEqual(input, hvs) ||
+		cap(input) != cap(hvs) {
+		t.Error("input has been modified")
 	}
 }
 
@@ -481,13 +597,16 @@ func verifyChecksumTestCases(filename string) []struct {
 	newHash := checksums[0].hash.New
 	checksum := checksums[0].checksum
 	wrongChecksum := strings.Repeat("0", len(checksum))
+
 	if wrongChecksum == checksum {
 		wrongChecksum = wrongChecksum[:len(wrongChecksum)-1] + "1"
 	}
+
 	prefixVerifiers := make([]filesys.HashVerifier, len(checksum)+1)
 	for i := range prefixVerifiers {
 		prefixVerifiers[i] = filesys.NewHashVerifier(newHash, checksum[:i])
 	}
+
 	duplicateVerifier1 := filesys.NewHashVerifier(newHash, checksum)
 	duplicateVerifier2 := filesys.NewHashVerifier(newHash, checksum)
 
@@ -595,6 +714,8 @@ func verifyChecksumTestCases(filename string) []struct {
 func underlyingArrayEqual(a, b []filesys.HashVerifier) bool {
 	return a != nil && b != nil &&
 		(*[0]filesys.HashVerifier)(a) == (*[0]filesys.HashVerifier)(b)
+
 	// Before Go 1.17, can use:
-	//  (*reflect.SliceHeader)(unsafe.Pointer(&a)).Data == (*reflect.SliceHeader)(unsafe.Pointer(&b)).Data
+	//
+	//	(*reflect.SliceHeader)(unsafe.Pointer(&a)).Data == (*reflect.SliceHeader)(unsafe.Pointer(&b)).Data
 }

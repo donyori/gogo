@@ -62,12 +62,16 @@ func (wf *WritableFileImpl) Write(p []byte) (n int, err error) {
 	if wf == nil {
 		return 0, errors.AutoNew("*WritableFileImpl is nil")
 	}
+
 	wf.lock.Lock()
 	defer wf.lock.Unlock()
+
 	if wf.closed {
 		return 0, errors.AutoWrap(fs.ErrClosed)
 	}
+
 	wf.Data = append(wf.Data, p...)
+
 	return len(p), nil
 }
 
@@ -75,9 +79,12 @@ func (wf *WritableFileImpl) Close() error {
 	if wf == nil {
 		return errors.AutoNew("*WritableFileImpl is nil")
 	}
+
 	wf.lock.Lock()
 	defer wf.lock.Unlock()
+
 	wf.closed = true
+
 	return nil
 }
 
@@ -85,6 +92,7 @@ func (wf *WritableFileImpl) Stat() (info fs.FileInfo, err error) {
 	if wf == nil {
 		return nil, errors.AutoNew("*WritableFileImpl is nil")
 	}
+
 	return &writableFileInfo{f: wf}, nil
 }
 

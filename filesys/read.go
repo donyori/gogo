@@ -249,6 +249,7 @@ func Read(
 	if file == nil {
 		panic(errors.AutoMsg("file is nil"))
 	}
+
 	info, err := file.Stat()
 	if err != nil {
 		return nil, errors.AutoWrap(err)
@@ -259,9 +260,11 @@ func Read(
 	if opts == nil {
 		opts = new(ReadOptions)
 	}
+
 	size := info.Size()
+	// Check whether opts.Offset < 0 to avoid overflow.
 	if opts.Offset != 0 &&
-		(size < opts.Offset || opts.Offset < 0 && size+opts.Offset < 0) { // check whether opts.Offset < 0 to avoid overflow
+		(size < opts.Offset || opts.Offset < 0 && size+opts.Offset < 0) {
 		return nil, errors.AutoWrap(fmt.Errorf(
 			"option Offset (%d) is out of range; file size: %d",
 			opts.Offset,
@@ -270,16 +273,20 @@ func Read(
 	}
 
 	el := errors.NewErrorList(true)
+
 	defer func() {
 		if el.Erroneous() {
 			r, err = nil, errors.AutoWrapSkip(el.ToError(), 1) // skip = 1 to skip the inner function
 		}
 	}()
 
-	closers := make([]io.Closer, 0, 2)
+	const MaxNumCloser int = 2
+
+	closers := make([]io.Closer, 0, MaxNumCloser)
 	if closeFile {
 		closers = append(closers, file)
 	}
+
 	defer func() {
 		if el.Erroneous() {
 			for i := len(closers) - 1; i >= 0; i-- {
@@ -302,12 +309,13 @@ func Read(
 	}
 	maps.DeleteFunc(
 		fr.opts.ZipDcomp,
-		func(method uint16, dcomp zip.Decompressor) bool {
+		func(_ uint16, dcomp zip.Decompressor) bool {
 			return dcomp == nil
 		},
 	)
 	r = fr
 	el.Append(fr.init(info, size, &closers))
+
 	return
 }
 
@@ -331,11 +339,14 @@ func ReadFromFS(
 	if fsys == nil {
 		panic(errors.AutoMsg("fsys is nil"))
 	}
+
 	f, err := fsys.Open(name)
 	if err != nil {
 		return nil, errors.AutoWrap(err)
 	}
+
 	r, err = Read(f, opts, true)
+
 	return r, errors.AutoWrap(err)
 }
 
@@ -351,11 +362,14 @@ func (fr *reader) init(
 	if err != nil {
 		return err
 	}
+
 	err = fr.initRaw(info, n, pClosers)
 	if err != nil {
 		return err
 	}
+
 	fr.initCloserAndBuffer(*pClosers)
+
 	return nil
 }
 
@@ -366,40 +380,49 @@ func (fr *reader) initOffsetAndLimit(size int64) (n int64, err error) {
 	if fr.opts.Offset == 0 && fr.opts.Limit <= 0 {
 		return size, nil
 	}
+
 	offset := fr.opts.Offset
 	if offset < 0 {
 		offset += size
 	}
+
 	n = size - offset
+
 	if r, ok := fr.ur.(io.ReaderAt); ok {
 		// If fr.ur is an io.ReaderAt, use io.SectionReader
 		// so that fr.ur is still an io.ReaderAt.
 		if fr.opts.Limit > 0 && fr.opts.Limit < n {
 			n = fr.opts.Limit
 		}
+
 		fr.ur = io.NewSectionReader(r, offset, n)
+
 		return
-	} else if fr.opts.Offset > 0 {
-		if seeker, ok := fr.ur.(io.Seeker); ok {
-			_, err = seeker.Seek(fr.opts.Offset, io.SeekStart)
-		} else {
-			// Discard fr.opts.Offset bytes.
-			_, err = io.CopyN(io.Discard, fr.ur, fr.opts.Offset)
+	}
+
+	if fr.opts.Offset != 0 {
+		seekWhence := io.SeekStart
+		nDiscardBytes := fr.opts.Offset // discard fr.opts.Offset bytes if fr.opts.Offset > 0
+
+		if fr.opts.Offset < 0 {
+			seekWhence = io.SeekEnd
+			nDiscardBytes = offset // discard (size + fr.opts.Offset) bytes
 		}
-	} else if fr.opts.Offset < 0 {
+
 		if seeker, ok := fr.ur.(io.Seeker); ok {
-			_, err = seeker.Seek(fr.opts.Offset, io.SeekEnd)
+			_, err = seeker.Seek(fr.opts.Offset, seekWhence)
 		} else {
-			// Discard (size + fr.opts.Offset) bytes.
-			_, err = io.CopyN(io.Discard, fr.ur, offset)
+			_, err = io.CopyN(io.Discard, fr.ur, nDiscardBytes)
 		}
 	}
+
 	if err != nil {
 		return 0, err
 	} else if fr.opts.Limit > 0 && fr.opts.Limit < n {
 		n = fr.opts.Limit
 		fr.ur = io.LimitReader(fr.ur, n)
 	}
+
 	return
 }
 
@@ -416,58 +439,80 @@ func (fr *reader) initRaw(
 	if fr.opts.Raw {
 		return nil
 	}
+
 	name := strings.ToLower(info.Name())
+
 	var ext string
+
 	loop := true
 	for loop {
 		name = name[:len(name)-len(ext)]
 		ext = path.Ext(name)
+
 		switch ext {
-		case ".tgz":
-			name = name[:len(name)-len(ext)] + ".tar.gz"
+		case TarGzipSingleExtension:
+			name = name[:len(name)-len(ext)] + TarGzipConcatenateExtension
 			ext = ""
-		case ".tbz":
-			name = name[:len(name)-len(ext)] + ".tar.bz2"
+		case TarBzip2SingleExtension:
+			name = name[:len(name)-len(ext)] + TarBzip2ConcatenateExtension
 			ext = ""
-		case ".gz":
+		case GzipExtension:
 			gr, err := gzip.NewReader(fr.ur)
 			if err != nil {
 				return err
 			}
+
 			*pClosers = append(*pClosers, gr)
 			fr.ur = gr
-		case ".bz2":
+		case Bzip2Extension:
 			fr.ur = bzip2.NewReader(fr.ur)
-		case ".tar":
+		case TarExtension:
 			fr.tr = tar.NewReader(fr.ur)
 			fr.ur = fr.tr
 			loop = false
-		case ".zip":
-			r, ok := fr.ur.(io.ReaderAt)
-			var err error
-			if !ok {
-				if fr.opts.ZipReaderAtFunc != nil {
-					r, size, err = fr.opts.ZipReaderAtFunc(fr.ur)
-					if err != nil {
-						return err
-					}
-				} else {
-					return errors.New("cannot wrap to io.ReaderAt")
-				}
-			}
-			fr.zr, err = zip.NewReader(r, size)
+		case ZipExtension:
+			err := fr.initZip(size)
 			if err != nil {
 				return err
 			}
-			for method, dcomp := range fr.opts.ZipDcomp {
-				fr.zr.RegisterDecompressor(method, dcomp)
-			}
-			fr.ur, fr.err = readZipErrorReader, ErrReadZip
+
 			loop = false
 		default:
 			loop = false
 		}
 	}
+
+	return nil
+}
+
+// initZip is a subprocess of initRaw that deals with a ZIP archive.
+func (fr *reader) initZip(size int64) error {
+	r, ok := fr.ur.(io.ReaderAt)
+
+	var err error
+
+	if !ok {
+		if fr.opts.ZipReaderAtFunc != nil {
+			r, size, err = fr.opts.ZipReaderAtFunc(fr.ur)
+			if err != nil {
+				return err
+			}
+		} else {
+			return errors.New("cannot wrap to io.ReaderAt")
+		}
+	}
+
+	fr.zr, err = zip.NewReader(r, size)
+	if err != nil {
+		return err
+	}
+
+	for method, dcomp := range fr.opts.ZipDcomp {
+		fr.zr.RegisterDecompressor(method, dcomp)
+	}
+
+	fr.ur, fr.err = readZipErrorReader, ErrReadZip
+
 	return nil
 }
 
@@ -481,6 +526,7 @@ func (fr *reader) initCloserAndBuffer(closers []io.Closer) {
 	default:
 		fr.c = inout.NewMultiCloser(true, true, closers...)
 	}
+
 	if fr.opts.BufSize <= 0 {
 		fr.br = inout.NewBufferedReader(fr.ur)
 	} else {
@@ -492,11 +538,13 @@ func (fr *reader) Close() error {
 	if fr.c.Closed() {
 		return nil
 	}
+
 	err := fr.c.Close()
 	if fr.c.Closed() {
 		fr.ur, fr.err = closedErrorReader, ErrFileReaderClosed
 		fr.br.Reset(fr.ur)
 	}
+
 	return errors.AutoWrap(err)
 }
 
@@ -508,7 +556,9 @@ func (fr *reader) Read(p []byte) (n int, err error) {
 	if fr.err != nil {
 		return 0, errors.AutoWrap(fr.err)
 	}
+
 	n, err = fr.br.Read(p)
+
 	return n, errors.AutoWrap(err)
 }
 
@@ -516,7 +566,9 @@ func (fr *reader) ReadByte() (byte, error) {
 	if fr.err != nil {
 		return 0, errors.AutoWrap(fr.err)
 	}
+
 	c, err := fr.br.ReadByte()
+
 	return c, errors.AutoWrap(err)
 }
 
@@ -524,6 +576,7 @@ func (fr *reader) UnreadByte() error {
 	if fr.err != nil {
 		return errors.AutoWrap(fr.err)
 	}
+
 	return errors.AutoWrap(fr.br.UnreadByte())
 }
 
@@ -534,7 +587,9 @@ func (fr *reader) ConsumeByte(
 	if fr.err != nil {
 		return 0, errors.AutoWrap(fr.err)
 	}
+
 	consumed, err = fr.br.ConsumeByte(target, n)
+
 	return consumed, errors.AutoWrap(err)
 }
 
@@ -545,7 +600,9 @@ func (fr *reader) ConsumeByteFunc(
 	if fr.err != nil {
 		return 0, errors.AutoWrap(fr.err)
 	}
+
 	consumed, err = fr.br.ConsumeByteFunc(f, n)
+
 	return consumed, errors.AutoWrap(err)
 }
 
@@ -553,7 +610,9 @@ func (fr *reader) ReadRune() (r rune, size int, err error) {
 	if fr.err != nil {
 		return 0, 0, errors.AutoWrap(fr.err)
 	}
+
 	r, size, err = fr.br.ReadRune()
+
 	return r, size, errors.AutoWrap(err)
 }
 
@@ -561,6 +620,7 @@ func (fr *reader) UnreadRune() error {
 	if fr.err != nil {
 		return errors.AutoWrap(fr.err)
 	}
+
 	return errors.AutoWrap(fr.br.UnreadRune())
 }
 
@@ -571,7 +631,9 @@ func (fr *reader) ConsumeRune(
 	if fr.err != nil {
 		return 0, errors.AutoWrap(fr.err)
 	}
+
 	consumed, err = fr.br.ConsumeRune(target, n)
+
 	return consumed, errors.AutoWrap(err)
 }
 
@@ -582,7 +644,9 @@ func (fr *reader) ConsumeRuneFunc(
 	if fr.err != nil {
 		return 0, errors.AutoWrap(fr.err)
 	}
+
 	consumed, err = fr.br.ConsumeRuneFunc(f, n)
+
 	return consumed, errors.AutoWrap(err)
 }
 
@@ -590,7 +654,9 @@ func (fr *reader) WriteTo(w io.Writer) (n int64, err error) {
 	if fr.err != nil {
 		return 0, errors.AutoWrap(fr.err)
 	}
+
 	n, err = fr.br.WriteTo(w)
+
 	return n, errors.AutoWrap(err)
 }
 
@@ -598,7 +664,9 @@ func (fr *reader) ReadLine() (line []byte, more bool, err error) {
 	if fr.err != nil {
 		return nil, false, errors.AutoWrap(fr.err)
 	}
+
 	line, more, err = fr.br.ReadLine()
+
 	return line, more, errors.AutoWrap(err)
 }
 
@@ -606,7 +674,9 @@ func (fr *reader) ReadEntireLine() (line []byte, err error) {
 	if fr.err != nil {
 		return nil, errors.AutoWrap(fr.err)
 	}
+
 	line, err = fr.br.ReadEntireLine()
+
 	return line, errors.AutoWrap(err)
 }
 
@@ -614,7 +684,9 @@ func (fr *reader) WriteLineTo(w io.Writer) (n int64, err error) {
 	if fr.err != nil {
 		return 0, errors.AutoWrap(fr.err)
 	}
+
 	n, err = fr.br.WriteLineTo(w)
+
 	return n, errors.AutoWrap(err)
 }
 
@@ -623,13 +695,16 @@ func (fr *reader) IterLines(pErr *error) iter.Seq[[]byte] {
 		if pErr == nil {
 			return noOpSeq
 		}
+
 		// Make a dedicated variable to ensure that
 		// the iterator reports the same error each time.
 		err := fr.err
+
 		return func(func([]byte) bool) {
 			*pErr = errors.AutoWrap(err)
 		}
 	}
+
 	return fr.br.IterLines(pErr)
 }
 
@@ -638,13 +713,16 @@ func (fr *reader) IterCountLines(pErr *error) iter.Seq2[int64, []byte] {
 		if pErr == nil {
 			return noOpSeq2
 		}
+
 		// Make a dedicated variable to ensure that
 		// the iterator reports the same error each time.
 		err := fr.err
+
 		return func(func(int64, []byte) bool) {
 			*pErr = errors.AutoWrap(err)
 		}
 	}
+
 	return fr.br.IterCountLines(pErr)
 }
 
@@ -660,7 +738,9 @@ func (fr *reader) Peek(n int) (data []byte, err error) {
 	if fr.err != nil {
 		return nil, errors.AutoWrap(fr.err)
 	}
+
 	data, err = fr.br.Peek(n)
+
 	return data, errors.AutoWrap(err)
 }
 
@@ -668,7 +748,9 @@ func (fr *reader) Discard(n int) (discarded int, err error) {
 	if fr.err != nil {
 		return 0, errors.AutoWrap(fr.err)
 	}
+
 	discarded, err = fr.br.Discard(n)
+
 	return discarded, errors.AutoWrap(err)
 }
 
@@ -682,10 +764,12 @@ func (fr *reader) TarNext() (hdr *tar.Header, err error) {
 	} else if fr.c.Closed() {
 		return nil, errors.AutoWrap(ErrFileReaderClosed)
 	}
+
 	hdr, err = fr.tr.Next()
 	if err == nil && hdr != nil && !filepath.IsLocal(hdr.Name) {
 		err = tar.ErrInsecurePath
 	}
+
 	switch {
 	case err != nil &&
 		!errors.Is(err, io.EOF) &&
@@ -696,7 +780,9 @@ func (fr *reader) TarNext() (hdr *tar.Header, err error) {
 	default:
 		fr.ur, fr.err = fr.tr, nil
 	}
+
 	fr.br.Reset(fr.ur)
+
 	return hdr, errors.AutoWrap(err)
 }
 
@@ -709,33 +795,50 @@ func (fr *reader) IterTarFiles(
 	} else if fr.c.Closed() {
 		return noOpSeq, errors.AutoWrap(ErrFileReaderClosed)
 	}
+
 	var tarNextErr error
+
 	return func(yield func(*tar.Header) bool) {
-		if pErr != nil {
-			defer func(pErr *error) {
-				err := tarNextErr
-				if errors.Is(err, io.EOF) ||
-					acceptNonLocalNames && errors.Is(err, tar.ErrInsecurePath) {
-					err = nil
-				}
-				*pErr = errors.AutoWrapSkip(err, 1) // skip = 1 to skip the inner function
-			}(pErr)
+		fr.tarFile(pErr, acceptNonLocalNames, yield, &tarNextErr)
+	}, nil
+}
+
+// tarFile processes one tar header in the iterator returned by IterTarFiles.
+func (fr *reader) tarFile(
+	pErr *error,
+	acceptNonLocalNames bool,
+	yield func(*tar.Header) bool,
+	pTarNextErr *error,
+) {
+	if pErr != nil {
+		defer func(pErr *error) {
+			err := *pTarNextErr
+			if errors.Is(err, io.EOF) ||
+				acceptNonLocalNames && errors.Is(err, tar.ErrInsecurePath) {
+				err = nil
+			}
+
+			*pErr = errors.AutoWrapSkip(err, 1) // skip = 1 to skip the inner function
+		}(pErr)
+	}
+
+	if *pTarNextErr != nil {
+		return
+	}
+
+	for {
+		var hdr *tar.Header
+
+		hdr, *pTarNextErr = fr.TarNext()
+
+		if acceptNonLocalNames && errors.Is(*pTarNextErr, tar.ErrInsecurePath) {
+			*pTarNextErr = nil
 		}
-		if tarNextErr != nil {
+
+		if *pTarNextErr != nil || yield != nil && !yield(hdr) {
 			return
 		}
-		for {
-			var hdr *tar.Header
-			hdr, tarNextErr = fr.TarNext()
-			if acceptNonLocalNames &&
-				errors.Is(tarNextErr, tar.ErrInsecurePath) {
-				tarNextErr = nil
-			}
-			if tarNextErr != nil || yield != nil && !yield(hdr) {
-				return
-			}
-		}
-	}, nil
+	}
 }
 
 func (fr *reader) IterIndexTarFiles(
@@ -747,33 +850,51 @@ func (fr *reader) IterIndexTarFiles(
 	} else if fr.c.Closed() {
 		return noOpSeq2, errors.AutoWrap(ErrFileReaderClosed)
 	}
+
 	var tarNextErr error
+
 	return func(yield func(int, *tar.Header) bool) {
-		if pErr != nil {
-			defer func(pErr *error) {
-				err := tarNextErr
-				if errors.Is(err, io.EOF) ||
-					acceptNonLocalNames && errors.Is(err, tar.ErrInsecurePath) {
-					err = nil
-				}
-				*pErr = errors.AutoWrapSkip(err, 1) // skip = 1 to skip the inner function
-			}(pErr)
+		fr.indexTarFile(pErr, acceptNonLocalNames, yield, &tarNextErr)
+	}, nil
+}
+
+// indexTarFile processes one index-header pair
+// in the iterator returned by IterIndexTarFiles.
+func (fr *reader) indexTarFile(
+	pErr *error,
+	acceptNonLocalNames bool,
+	yield func(int, *tar.Header) bool,
+	pTarNextErr *error,
+) {
+	if pErr != nil {
+		defer func(pErr *error) {
+			err := *pTarNextErr
+			if errors.Is(err, io.EOF) ||
+				acceptNonLocalNames && errors.Is(err, tar.ErrInsecurePath) {
+				err = nil
+			}
+
+			*pErr = errors.AutoWrapSkip(err, 1) // skip = 1 to skip the inner function
+		}(pErr)
+	}
+
+	if *pTarNextErr != nil {
+		return
+	}
+
+	for i := 0; ; i++ {
+		var hdr *tar.Header
+
+		hdr, *pTarNextErr = fr.TarNext()
+
+		if acceptNonLocalNames && errors.Is(*pTarNextErr, tar.ErrInsecurePath) {
+			*pTarNextErr = nil
 		}
-		if tarNextErr != nil {
+
+		if *pTarNextErr != nil || yield != nil && !yield(i, hdr) {
 			return
 		}
-		for i := 0; ; i++ {
-			var hdr *tar.Header
-			hdr, tarNextErr = fr.TarNext()
-			if acceptNonLocalNames &&
-				errors.Is(tarNextErr, tar.ErrInsecurePath) {
-				tarNextErr = nil
-			}
-			if tarNextErr != nil || yield != nil && !yield(i, hdr) {
-				return
-			}
-		}
-	}, nil
+	}
 }
 
 func (fr *reader) ZipEnabled() bool {
@@ -786,7 +907,9 @@ func (fr *reader) ZipOpen(name string) (file fs.File, err error) {
 	} else if fr.c.Closed() {
 		return nil, errors.AutoWrap(ErrFileReaderClosed)
 	}
+
 	file, err = fr.zr.Open(name)
+
 	return file, errors.AutoWrap(err)
 }
 
@@ -799,6 +922,7 @@ func (fr *reader) ZipFiles() (files []*zip.File, err error) {
 	case len(fr.zr.File) == 0:
 		return
 	}
+
 	files = make([]*zip.File, len(fr.zr.File))
 	copy(files, fr.zr.File)
 	slices.SortFunc(files, func(a, b *zip.File) int {
@@ -807,8 +931,10 @@ func (fr *reader) ZipFiles() (files []*zip.File, err error) {
 		} else if a.Name > b.Name {
 			return 1
 		}
+
 		return 0
 	})
+
 	return
 }
 
@@ -817,6 +943,7 @@ func (fr *reader) IterZipFiles() (seq iter.Seq[*zip.File], err error) {
 	if err != nil || len(files) == 0 {
 		return noOpSeq, errors.AutoWrap(err)
 	}
+
 	return func(yield func(*zip.File) bool) {
 		for _, file := range files {
 			if !yield(file) {
@@ -834,6 +961,7 @@ func (fr *reader) IterIndexZipFiles() (
 	if err != nil || len(files) == 0 {
 		return noOpSeq2, errors.AutoWrap(err)
 	}
+
 	return func(yield func(int, *zip.File) bool) {
 		for i, file := range files {
 			if !yield(i, file) {
@@ -849,11 +977,12 @@ func (fr *reader) ZipComment() (comment string, err error) {
 	} else if fr.c.Closed() {
 		return "", errors.AutoWrap(ErrFileReaderClosed)
 	}
+
 	return fr.zr.Comment, nil
 }
 
 func (fr *reader) Options() *ReadOptions {
-	opts := &ReadOptions{
+	return &ReadOptions{
 		BufSize:         fr.opts.BufSize,
 		Offset:          fr.opts.Offset,
 		Limit:           fr.opts.Limit,
@@ -861,7 +990,6 @@ func (fr *reader) Options() *ReadOptions {
 		ZipDcomp:        maps.Clone(fr.opts.ZipDcomp),
 		ZipReaderAtFunc: fr.opts.ZipReaderAtFunc,
 	}
-	return opts
 }
 
 func (fr *reader) FileStat() (info fs.FileInfo, err error) {
@@ -895,6 +1023,7 @@ func (er *errorReader) WriteTo(io.Writer) (n int64, err error) {
 	if errors.Is(er.err, io.EOF) {
 		return 0, nil
 	}
+
 	return 0, errors.AutoWrap(er.err)
 }
 

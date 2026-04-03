@@ -64,7 +64,12 @@ type CaptureToStringFunc func() (s string, err error, first bool)
 // has already been captured elsewhere.
 func CaptureStdoutToString() (f CaptureToStringFunc, err error) {
 	f, err = captureOutputFileToString(
-		"stdout", &os.Stdout, stdoutBackup, &captureStdoutLock)
+		"stdout",
+		&os.Stdout,
+		stdoutBackup,
+		&captureStdoutLock,
+	)
+
 	return f, errors.AutoWrap(err)
 }
 
@@ -81,7 +86,12 @@ func CaptureStdoutToString() (f CaptureToStringFunc, err error) {
 // has already been captured elsewhere.
 func CaptureStderrToString() (f CaptureToStringFunc, err error) {
 	f, err = captureOutputFileToString(
-		"stderr", &os.Stderr, stderrBackup, &captureStderrLock)
+		"stderr",
+		&os.Stderr,
+		stderrBackup,
+		&captureStderrLock,
+	)
+
 	return f, errors.AutoWrap(err)
 }
 
@@ -98,12 +108,15 @@ func captureOutputFileToString(
 	if name == "" {
 		name = "the file"
 	}
+
 	locker.Lock()
 	defer locker.Unlock()
+
 	if *filePtr != backup {
 		return nil, errors.AutoWrap(fmt.Errorf(
 			"%s has been captured elsewhere", name))
 	}
+
 	r, w, err := os.Pipe()
 	if err != nil {
 		return nil, errors.AutoWrap(err)
@@ -116,40 +129,53 @@ func captureOutputFileToString(
 		s   string
 		err error
 	}
+
 	c := make(chan stringError, 1)
 	go func(r *os.File, c chan<- stringError) {
 		defer close(c)
+
 		var b strings.Builder
+
 		_, err := io.Copy(&b, r)
 		c <- stringError{s: b.String(), err: errors.AutoWrap(err)}
 	}(r, c)
+
 	*filePtr = w // replace the file with the writer side of the pipe
+
 	var result stringError
+
 	once := concurrency.NewOnce(func() {
 		locker.Lock()
 		defer locker.Unlock()
+
 		*filePtr = backup // restore the file before closing the pipe
 		closeErr := w.Close()
+
 		strErr, ok := <-c
 		if ok {
 			result = strErr
 		} else {
 			result.err = errors.AutoNew("capturer goroutine interrupted")
 		}
+
 		if closeErr != nil {
 			result.err = errors.Combine(errors.AutoWrap(closeErr), result.err)
 		}
 	})
+
 	return func() (s string, err error, first bool) {
 		first, p := once.DoRecover()
 		s, err = result.s, result.err
+
 		if p != nil {
 			pe, ok := p.(error)
 			if !ok {
 				pe = fmt.Errorf("%v", p)
 			}
+
 			err = errors.Combine(err, errors.AutoWrap(pe))
 		}
+
 		return
 	}, nil
 }
