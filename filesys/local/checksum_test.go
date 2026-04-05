@@ -53,7 +53,7 @@ func TestChecksum(t *testing.T) {
 				newHashes[:len(newHashes)-2]...,
 			)
 			if err != nil {
-				t.Fatal("calculate checksums -", err)
+				t.Fatal("calculate checksums:", err)
 			}
 
 			wantLower := make([]string, len(newHashes))
@@ -75,7 +75,7 @@ func TestChecksum(t *testing.T) {
 
 					got, err := local.Checksum(name, upper, newHashes...)
 					if err != nil {
-						t.Error("checksum -", err)
+						t.Error("checksum:", err)
 					} else if !slices.Equal(got, want) {
 						t.Errorf("got %v\nwant %v", got, want)
 					}
@@ -188,7 +188,7 @@ func verifyChecksumTestCases(t *testing.T, name string) []struct {
 			}
 		}
 
-		t.Error("calculate checksums -", err)
+		t.Error("calculate checksums:", err)
 
 		return nil
 	}

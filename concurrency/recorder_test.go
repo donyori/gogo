@@ -119,11 +119,11 @@ func goroutineTestRecorderReader(
 			s = "round " + strconv.Itoa(round)
 		}
 		if got := r.Len(); got != len(wantAll) {
-			t.Errorf("reader %d, %s - got Len %d; want %d",
+			t.Errorf("reader %d, %s, got Len %d; want %d",
 				rank, s, got, len(wantAll))
 		}
 		if gotX, gotOK := r.Last(); gotX != wantLastX || gotOK != wantLastOK {
-			t.Errorf("reader %d, %s - got Last (%d, %t); want (%d, %t)",
+			t.Errorf("reader %d, %s, got Last (%d, %t); want (%d, %t)",
 				rank, s, gotX, gotOK, wantLastX, wantLastOK)
 		}
 		if got := r.All(); (got == nil) != (wantAll == nil) ||
@@ -131,15 +131,15 @@ func goroutineTestRecorderReader(
 			switch {
 			case got == nil:
 				// wantAll is not nil.
-				t.Errorf("reader %d, %s - got All <nil>; want %v",
+				t.Errorf("reader %d, %s, got All <nil>; want %v",
 					rank, s, wantAll)
 			case wantAll == nil:
 				// got is not nil.
-				t.Errorf("reader %d, %s - got All %v; want <nil>",
+				t.Errorf("reader %d, %s, got All %v; want <nil>",
 					rank, s, got)
 			default:
 				// Both got and wantAll are not nil.
-				t.Errorf("reader %d, %s - got All %v; want %v",
+				t.Errorf("reader %d, %s, got All %v; want %v",
 					rank, s, got, wantAll)
 			}
 		}

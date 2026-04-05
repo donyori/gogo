@@ -174,7 +174,7 @@ func TestVertexSequence_IterItems(t *testing.T) {
 			iterateAndCheck(t, "", len(data), seq, gotData, want)
 
 			// Rewind the iterator and test it again.
-			iterateAndCheck(t, "rewind - ", len(data), seq, gotData[:0], want)
+			iterateAndCheck(t, "rewind, ", len(data), seq, gotData[:0], want)
 		})
 	}
 }
@@ -269,7 +269,7 @@ func TestVertexSequence_IterItemsBackward(t *testing.T) {
 			iterateAndCheck(t, "", len(data), seq, gotData, want)
 
 			// Rewind the iterator and test it again.
-			iterateAndCheck(t, "rewind - ", len(data), seq, gotData[:0], want)
+			iterateAndCheck(t, "rewind, ", len(data), seq, gotData[:0], want)
 		})
 	}
 }
@@ -347,7 +347,7 @@ func TestVertexSequence_IterIndexItems(t *testing.T) {
 			iterateAndCheck2(t, "", len(data), seq2, gotData, want)
 
 			// Rewind the iterator and test it again.
-			iterateAndCheck2(t, "rewind - ", len(data), seq2, gotData[:0], want)
+			iterateAndCheck2(t, "rewind, ", len(data), seq2, gotData[:0], want)
 		})
 	}
 }
@@ -399,7 +399,7 @@ func TestVertexSequence_IterIndexItemsBackward(t *testing.T) {
 			iterateAndCheck2(t, "", len(data), seq2, gotData, want)
 
 			// Rewind the iterator and test it again.
-			iterateAndCheck2(t, "rewind - ", len(data), seq2, gotData[:0], want)
+			iterateAndCheck2(t, "rewind, ", len(data), seq2, gotData[:0], want)
 		})
 	}
 }

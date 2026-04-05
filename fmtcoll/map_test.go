@@ -225,7 +225,7 @@ func testFormatMapToString(
 
 			got, err := f(tc, dataList, commonFormatList, compareKeyValueFn)
 			if err != nil {
-				t.Error("err -", err)
+				t.Error("err:", err)
 			} else if got != tc.want {
 				t.Errorf("got %#q; want %#q", got, tc.want)
 			}

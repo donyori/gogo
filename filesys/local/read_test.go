@@ -51,23 +51,23 @@ func TestRead_Raw(t *testing.T) {
 
 			r, err := local.Read(name, &filesys.ReadOptions{Raw: true})
 			if err != nil {
-				t.Fatal("create -", err)
+				t.Fatal("create:", err)
 			}
 			defer func(r filesys.Reader) {
 				err := r.Close()
 				if err != nil {
-					t.Error("close -", err)
+					t.Error("close:", err)
 				}
 			}(r)
 
 			data, err := lazyLoadTestData(name)
 			if err != nil {
-				t.Fatal("read file -", err)
+				t.Fatal("read file:", err)
 			}
 
 			err = iotest.TestReader(r, data)
 			if err != nil {
-				t.Error("test read -", err)
+				t.Error("test read:", err)
 			}
 		})
 	}
@@ -92,23 +92,23 @@ func TestRead_Basic(t *testing.T) {
 
 			r, err := local.Read(name, nil)
 			if err != nil {
-				t.Fatal("create -", err)
+				t.Fatal("create:", err)
 			}
 			defer func(r filesys.Reader) {
 				err := r.Close()
 				if err != nil {
-					t.Error("close -", err)
+					t.Error("close:", err)
 				}
 			}(r)
 
 			data, err := lazyLoadTestData(name)
 			if err != nil {
-				t.Fatal("read file -", err)
+				t.Fatal("read file:", err)
 			}
 
 			err = iotest.TestReader(r, data)
 			if err != nil {
-				t.Error("test read -", err)
+				t.Error("test read:", err)
 			}
 		})
 	}
@@ -140,43 +140,43 @@ func testReadGz(t *testing.T, filename string) {
 
 	r, err := local.Read(name, nil)
 	if err != nil {
-		t.Error("create -", err)
+		t.Error("create:", err)
 		return
 	}
 	defer func(r filesys.Reader) {
 		err := r.Close()
 		if err != nil {
-			t.Error("close -", err)
+			t.Error("close:", err)
 		}
 	}(r)
 
 	data, err := lazyLoadTestData(name)
 	if err != nil {
-		t.Error("read file -", err)
+		t.Error("read file:", err)
 		return
 	}
 
 	gr, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
-		t.Error("create gzip reader -", err)
+		t.Error("create gzip reader:", err)
 		return
 	}
 	defer func(gr *gzip.Reader) {
 		err := gr.Close()
 		if err != nil {
-			t.Error("close gzip reader -", err)
+			t.Error("close gzip reader:", err)
 		}
 	}(gr)
 
 	want, err := io.ReadAll(gr)
 	if err != nil {
-		t.Error("decompress gzip -", err)
+		t.Error("decompress gzip:", err)
 		return
 	}
 
 	err = iotest.TestReader(r, want)
 	if err != nil {
-		t.Error("test read -", err)
+		t.Error("test read:", err)
 	}
 }
 
@@ -197,28 +197,28 @@ func TestRead_Bz2(t *testing.T) {
 
 			r, err := local.Read(name, nil)
 			if err != nil {
-				t.Fatal("create -", err)
+				t.Fatal("create:", err)
 			}
 			defer func(r filesys.Reader) {
 				err := r.Close()
 				if err != nil {
-					t.Error("close -", err)
+					t.Error("close:", err)
 				}
 			}(r)
 
 			data, err := lazyLoadTestData(name)
 			if err != nil {
-				t.Fatal("read file -", err)
+				t.Fatal("read file:", err)
 			}
 
 			want, err := io.ReadAll(bzip2.NewReader(bytes.NewReader(data)))
 			if err != nil {
-				t.Fatal("decompress bzip2 -", err)
+				t.Fatal("decompress bzip2:", err)
 			}
 
 			err = iotest.TestReader(r, want)
 			if err != nil {
-				t.Error("test read -", err)
+				t.Error("test read:", err)
 			}
 		})
 	}
@@ -274,18 +274,18 @@ func testReadTarTgzTbzFunc( //nolint:thelper // this is the main body, not a hel
 
 			r, err := local.Read(name, nil)
 			if err != nil {
-				t.Fatal("create -", err)
+				t.Fatal("create:", err)
 			}
 			defer func(r filesys.Reader) {
 				err := r.Close()
 				if err != nil {
-					t.Error("close -", err)
+					t.Error("close:", err)
 				}
 			}(r)
 
 			files, err := lazyLoadTarFile(name)
 			if err != nil {
-				t.Fatal("load tar file -", err)
+				t.Fatal("load tar file:", err)
 			}
 
 			f(t, r, files)
@@ -316,7 +316,7 @@ func testReadTarTgzTbz(
 				return // end of archive
 			}
 
-			t.Fatalf("read No.%d tar header - %v", i, err)
+			t.Fatalf("read No.%d tar header: %v", i, err)
 		}
 
 		testTarFileReadFromR(t, r, files, i, hdr)
@@ -338,7 +338,7 @@ func testReadTarTgzTbzSeq(
 
 	seq, err := r.IterTarFiles(&outErr, false)
 	if err != nil {
-		t.Fatal("create iterator -", err)
+		t.Fatal("create iterator:", err)
 	} else if seq == nil {
 		t.Fatal("got nil iterator")
 	}
@@ -389,7 +389,7 @@ func testReadTarTgzTbzSeq2(
 
 	seq2, err := r.IterIndexTarFiles(&outErr, false)
 	if err != nil {
-		t.Fatal("create iterator -", err)
+		t.Fatal("create iterator:", err)
 	} else if seq2 == nil {
 		t.Fatal("got nil iterator")
 	}
@@ -448,20 +448,20 @@ func testTarFileReadFromR(
 		t.Errorf("No.%d got nil tar header", i)
 		return
 	case hdr.Name != files[i].name:
-		t.Errorf("No.%d tar header name unequal - got %q; want %q",
+		t.Errorf("No.%d tar header name unequal, got %q; want %q",
 			i, hdr.Name, files[i].name)
 	}
 
 	if TarHeaderIsDir(hdr) {
 		_, err := r.Read([]byte{})
 		if !errors.Is(err, filesys.ErrIsDir) {
-			t.Errorf("No.%d tar read file body - got %v; want %v",
+			t.Errorf("No.%d tar read file body, got %v; want %v",
 				i, err, filesys.ErrIsDir)
 		}
 	} else {
 		err := iotest.TestReader(r, files[i].body)
 		if err != nil {
-			t.Errorf("No.%d tar test read - %v", i, err)
+			t.Errorf("No.%d tar test read: %v", i, err)
 		}
 	}
 }
@@ -507,18 +507,18 @@ func testReadZipFunc( //nolint:thelper // this is the main body, not a helper
 
 			r, err := local.Read(name, nil)
 			if err != nil {
-				t.Fatal("create -", err)
+				t.Fatal("create:", err)
 			}
 			defer func(r filesys.Reader) {
 				err := r.Close()
 				if err != nil {
-					t.Error("close -", err)
+					t.Error("close:", err)
 				}
 			}(r)
 
 			fileMap, err := lazyLoadZipFile(name)
 			if err != nil {
-				t.Fatal("load zip file -", err)
+				t.Fatal("load zip file:", err)
 			}
 
 			f(t, r, fileMap)
@@ -539,7 +539,7 @@ func testReadZip( //nolint:thelper // this is the main body, not a helper
 ) {
 	zipFiles, err := r.ZipFiles()
 	if err != nil {
-		t.Fatal("ZipFiles -", err)
+		t.Fatal("ZipFiles:", err)
 	} else if len(zipFiles) != len(fileMap) {
 		t.Errorf("got %d zip files; want %d", len(zipFiles), len(fileMap))
 	}
@@ -562,7 +562,7 @@ func testReadZipSeqMain( //nolint:thelper // this is the main body, not a helper
 ) {
 	seq, err := r.IterZipFiles()
 	if err != nil {
-		t.Fatal("create iterator -", err)
+		t.Fatal("create iterator:", err)
 	} else if seq == nil {
 		t.Fatal("got nil iterator")
 	}
@@ -585,7 +585,7 @@ func testReadZipSeqSub( //nolint:thelper // this is the main body, not a helper
 ) {
 	var logPrefix, subtestNameSuffix string
 	if isRewound {
-		logPrefix, subtestNameSuffix = "rewind - ", "&rewind"
+		logPrefix, subtestNameSuffix = "rewind, ", "&rewind"
 	}
 
 	var i int
@@ -613,7 +613,7 @@ func testReadZipSeq2Main( //nolint:thelper // this is the main body, not a helpe
 ) {
 	seq2, err := r.IterIndexZipFiles()
 	if err != nil {
-		t.Fatal("create iterator -", err)
+		t.Fatal("create iterator:", err)
 	} else if seq2 == nil {
 		t.Fatal("got nil iterator")
 	}
@@ -636,7 +636,7 @@ func testReadZipSeq2Sub( //nolint:thelper // this is the main body, not a helper
 ) {
 	var logPrefix, subtestNameSuffix string
 	if isRewound {
-		logPrefix, subtestNameSuffix = "rewind - ", "&rewind"
+		logPrefix, subtestNameSuffix = "rewind, ", "&rewind"
 	}
 
 	var ctr int
@@ -699,26 +699,22 @@ func testZipFileReadFromR( //nolint:thelper // this is the main body, not a help
 
 			rc, err := file.Open()
 			if err != nil {
-				t.Fatal("open -", err)
+				t.Fatal("open:", err)
 			}
 			defer func(rc io.ReadCloser) {
 				err := rc.Close()
 				if err != nil {
-					t.Error("close -", err)
+					t.Error("close:", err)
 				}
 			}(rc)
 
 			data, err := io.ReadAll(rc)
 			if err != nil {
-				t.Error("read -", err)
+				t.Error("read:", err)
 			} else if !bytes.Equal(data, hb.body) {
-				t.Errorf(
-					"file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
-					len(data),
-					data,
-					len(hb.body),
-					hb.body,
-				)
+				t.Errorf("file contents, got (len: %d)\n%s\n"+
+					"want (len: %d)\n%s",
+					len(data), data, len(hb.body), hb.body)
 			}
 		},
 	)
@@ -731,7 +727,7 @@ func TestRead_Offset(t *testing.T) {
 
 	data, err := lazyLoadTestData(name)
 	if err != nil {
-		t.Fatal("read file -", err)
+		t.Fatal("read file:", err)
 	}
 
 	size := int64(len(data))
@@ -779,19 +775,19 @@ func testReadOffsetSuccessfully(
 
 	r, err := local.Read(name, &filesys.ReadOptions{Offset: offset, Raw: true})
 	if err != nil {
-		t.Error("create -", err)
+		t.Error("create:", err)
 		return
 	}
 	defer func(r filesys.Reader) {
 		err := r.Close()
 		if err != nil {
-			t.Error("close -", err)
+			t.Error("close:", err)
 		}
 	}(r)
 
 	err = iotest.TestReader(r, content)
 	if err != nil {
-		t.Error("test read -", err)
+		t.Error("test read:", err)
 	}
 }
 
@@ -809,13 +805,13 @@ func testReadOffsetOutOfRange(
 	if err == nil {
 		_ = r.Close() // ignore error
 
-		t.Error("create - no error but offset is out of range")
+		t.Error("create: no error but offset is out of range")
 	} else if !strings.HasSuffix(err.Error(), fmt.Sprintf(
 		"option Offset (%d) is out of range; file size: %d",
 		offset,
 		size,
 	)) {
-		t.Error("create -", err)
+		t.Error("create:", err)
 	}
 }
 

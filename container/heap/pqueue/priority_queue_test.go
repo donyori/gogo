@@ -145,7 +145,7 @@ func TestPriorityQueue_Range_NilHandler(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -201,9 +201,9 @@ func testPriorityQueueIterItems(t *testing.T, data []int) {
 
 	for x, ctr := range counterMapCopy {
 		if ctr > 0 {
-			t.Error("rewind - insufficient accesses to", x)
+			t.Error("rewind, insufficient accesses to", x)
 		} else if ctr < 0 {
-			t.Error("rewind - too many accesses to", x)
+			t.Error("rewind, too many accesses to", x)
 		}
 	}
 }

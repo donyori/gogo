@@ -155,7 +155,7 @@ func TestFunc_Reverse_Nil(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -177,7 +177,7 @@ func TestFunc_ToEqual_Nil(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -199,7 +199,7 @@ func TestFunc_ToLess_Nil(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -221,7 +221,7 @@ func TestFuncToReverse_Nil(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -243,7 +243,7 @@ func TestFuncToEqual_Nil(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -265,7 +265,7 @@ func TestFuncToLess_Nil(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 

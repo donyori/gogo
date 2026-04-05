@@ -276,17 +276,13 @@ func Write(
 
 	if opts.DeflateLv < -2 || opts.DeflateLv > 9 {
 		return nil, errors.AutoWrap(fmt.Errorf(
-			"option DeflateLv (%d) is out of range [-2, 9]",
-			opts.DeflateLv,
-		))
+			"option DeflateLv (%d) is out of range [-2, 9]", opts.DeflateLv))
 	}
 
 	if len(opts.ZipComment) > maxUint16 {
 		return nil, errors.AutoWrap(fmt.Errorf(
 			"option ZipComment (len: %d) exceeds %d bytes",
-			len(opts.ZipComment),
-			maxUint16,
-		))
+			len(opts.ZipComment), maxUint16))
 	}
 
 	el := errors.NewErrorList(true)

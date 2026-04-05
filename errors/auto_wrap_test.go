@@ -313,7 +313,7 @@ func getWantMessageForAutoWrapCustom(
 
 	var errMsg string
 
-	// Compare the interface directly here, don't use errors.Is.
+	// Compare the interface directly here. Don't use errors.Is.
 	//
 	//nolint:errorlint // as stated above
 	switch err {
@@ -388,7 +388,7 @@ func checkAutoWrapFamilyResult(
 ) {
 	t.Helper()
 
-	// Compare the interface directly here, don't use errors.Is.
+	// Compare the interface directly here. Don't use errors.Is.
 	if (got == inputErr) != wantEqual { //nolint:err113,errorlint // as stated above
 		if wantEqual {
 			t.Errorf("got %q; != tc.err", got)
@@ -408,7 +408,7 @@ func checkAutoWrapFamilyResult(
 
 	gotUnwrap := stderrors.Unwrap(got)
 
-	// Compare the interface directly here, don't use errors.Is.
+	// Compare the interface directly here. Don't use errors.Is.
 	if gotUnwrap != inputErr { //nolint:err113,errorlint // as stated above
 		t.Errorf("got unwrap %q; != tc.err", gotUnwrap)
 	}
@@ -487,7 +487,7 @@ func TestUnwrapAutoWrappedError(t *testing.T) {
 			errName = strconv.QuoteToASCII(tc.err.Error())
 		}
 
-		// Compare the interface directly here, don't use errors.Is.
+		// Compare the interface directly here. Don't use errors.Is.
 		wantBool := tc.err != tc.wantErr //nolint:err113,errorlint // as stated above
 
 		t.Run(fmt.Sprintf("case%d?err=%s", i, errName), func(t *testing.T) {
@@ -495,7 +495,7 @@ func TestUnwrapAutoWrappedError(t *testing.T) {
 
 			gotErr, gotBool := errors.UnwrapAutoWrappedError(tc.err)
 
-			// Compare the interface directly here, don't use errors.Is.
+			// Compare the interface directly here. Don't use errors.Is.
 			if gotErr != tc.wantErr || gotBool != wantBool { //nolint:err113,errorlint // as stated above
 				t.Errorf("got (%q, %t); want (%q, %t)",
 					gotErr, gotBool, tc.wantErr, wantBool)
@@ -535,7 +535,7 @@ func TestUnwrapAllAutoWrappedErrors(t *testing.T) {
 			errName = strconv.QuoteToASCII(tc.err.Error())
 		}
 
-		// Compare the interface directly here, don't use errors.Is.
+		// Compare the interface directly here. Don't use errors.Is.
 		wantBool := tc.err != tc.wantErr //nolint:err113,errorlint // as stated above
 
 		t.Run(fmt.Sprintf("case%d?err=%s", i, errName), func(t *testing.T) {
@@ -543,7 +543,7 @@ func TestUnwrapAllAutoWrappedErrors(t *testing.T) {
 
 			gotErr, gotBool := errors.UnwrapAllAutoWrappedErrors(tc.err)
 
-			// Compare the interface directly here, don't use errors.Is.
+			// Compare the interface directly here. Don't use errors.Is.
 			if gotErr != tc.wantErr || gotBool != wantBool { //nolint:err113,errorlint // as stated above
 				t.Errorf("got (%q, %t); want (%q, %t)",
 					gotErr, gotBool, tc.wantErr, wantBool)
@@ -636,7 +636,7 @@ func TestListFunctionNamesInAutoWrappedErrors(t *testing.T) {
 				t.Errorf("got names %v; want %v", gotNames, tc.wantNames)
 			}
 
-			// Compare the interface directly here, don't use errors.Is.
+			// Compare the interface directly here. Don't use errors.Is.
 			if gotRoot != tc.wantRoot { //nolint:err113,errorlint // as stated above
 				t.Errorf("got root %v; want %v", gotRoot, tc.wantRoot)
 			}

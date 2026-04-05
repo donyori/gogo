@@ -73,7 +73,7 @@ func TestGetBufferSize_Overflow(t *testing.T) {
 							"required buffer size %d (%#[2]x) "+
 							"(buffer size must be a power of two)",
 							capacity, wantSizeInPanicMsg)) {
-						t.Error("panic -", e)
+						t.Error("panic:", e)
 					}
 				}
 			}()
@@ -151,7 +151,7 @@ func TestQueue_Range_NilHandler(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -196,7 +196,7 @@ func TestQueue_IterItems(t *testing.T) {
 	}
 
 	if !slices.Equal(gotData, want) {
-		t.Errorf("rewind - got %v; want %v", gotData, want)
+		t.Errorf("rewind, got %v; want %v", gotData, want)
 	}
 }
 
@@ -334,7 +334,7 @@ func TestQueue_EnqueueNAndDequeueN(t *testing.T) {
 
 			q := queue.New[int](0)
 			if qn := q.Len(); qn != 0 {
-				t.Fatalf("initial - q.Len() %d; want 0", qn)
+				t.Fatalf("initial, q.Len() %d; want 0", qn)
 			}
 
 			testQueueEnqueueNAndDequeueNEnqueueStage(t, n, q)
@@ -372,16 +372,16 @@ func testQueueEnqueueNAndDequeueNEnqueueStage(
 		q.Enqueue(x)
 
 		if qn := q.Len(); qn != x {
-			t.Errorf("after q.Enqueue(%d) - got q.Len() %d; want %[1]d", x, qn)
+			t.Errorf("after q.Enqueue(%d), got q.Len() %d; want %[1]d", x, qn)
 		}
 
 		if c := q.Cap(); c != wantCap {
-			t.Errorf("after q.Enqueue(%d) - got q.Cap() %d; want %d",
+			t.Errorf("after q.Enqueue(%d), got q.Cap() %d; want %d",
 				x, c, wantCap)
 		}
 
 		if front := q.Peek(); front != 1 {
-			t.Errorf("after q.Enqueue(%d) - got q.Peek() %d; want 1", x, front)
+			t.Errorf("after q.Enqueue(%d), got q.Peek() %d; want 1", x, front)
 		}
 	}
 }
@@ -404,18 +404,18 @@ func testQueueEnqueueNAndDequeueNDequeueStage(
 		}
 
 		if qn := q.Len(); qn != n-x {
-			t.Errorf("after No.%d q.Dequeue() - got q.Len() %d; want %d",
+			t.Errorf("after No.%d q.Dequeue(), got q.Len() %d; want %d",
 				x, qn, n-x)
 		}
 
 		if c := q.Cap(); c != finalCap {
-			t.Errorf("after No.%d q.Dequeue() - got q.Cap() %d; want %d",
+			t.Errorf("after No.%d q.Dequeue(), got q.Cap() %d; want %d",
 				x, c, finalCap)
 		}
 
 		if x < n {
 			if front := q.Peek(); front != x+1 {
-				t.Errorf("after No.%d q.Dequeue() - got q.Peek() %d; want %d",
+				t.Errorf("after No.%d q.Dequeue(), got q.Peek() %d; want %d",
 					x, front, x+1)
 			}
 		}
@@ -427,7 +427,7 @@ func TestQueue_RandomEnqueueAndDequeue(t *testing.T) {
 
 	q := queue.New[int](0)
 	if qn := q.Len(); qn != 0 {
-		t.Fatalf("initial - q.Len() %d; want 0", qn)
+		t.Fatalf("initial, q.Len() %d; want 0", qn)
 	}
 
 	random := rand.New(rand.NewChaCha8( //gosec:disable G404 -- math/rand/v2 is reproducible
@@ -536,17 +536,17 @@ func testQueueRandomEnqueueAndDequeueEnqueueStage(
 		q.Enqueue(*pEnqueueCtr)
 
 		if qn := q.Len(); qn != len(*pQueueData) {
-			t.Errorf("after q.Enqueue(%d) - got q.Len() %d; want %d",
+			t.Errorf("after q.Enqueue(%d), got q.Len() %d; want %d",
 				*pEnqueueCtr, qn, len(*pQueueData))
 		}
 
 		if c := q.Cap(); c != wantCap {
-			t.Errorf("after q.Enqueue(%d) - got q.Cap() %d; want %d",
+			t.Errorf("after q.Enqueue(%d), got q.Cap() %d; want %d",
 				*pEnqueueCtr, c, wantCap)
 		}
 
 		if front := q.Peek(); front != (*pQueueData)[0] {
-			t.Errorf("after q.Enqueue(%d) - got q.Peek() %d; want %d",
+			t.Errorf("after q.Enqueue(%d), got q.Peek() %d; want %d",
 				*pEnqueueCtr, front, (*pQueueData)[0])
 		}
 	}
@@ -577,18 +577,18 @@ func testQueueRandomEnqueueAndDequeueDequeueStage(
 		}
 
 		if qn := q.Len(); qn != len(*pQueueData) {
-			t.Errorf("after No.%d q.Dequeue() - got q.Len() %d; want %d",
+			t.Errorf("after No.%d q.Dequeue(), got q.Len() %d; want %d",
 				*pDequeueCtr, qn, len(*pQueueData))
 		}
 
 		if c := q.Cap(); c != wantCap {
-			t.Errorf("after No.%d q.Dequeue() - got q.Cap() %d; want %d",
+			t.Errorf("after No.%d q.Dequeue(), got q.Cap() %d; want %d",
 				*pDequeueCtr, c, wantCap)
 		}
 
 		if len(*pQueueData) > 0 {
 			if front := q.Peek(); front != (*pQueueData)[0] {
-				t.Errorf("after No.%d q.Dequeue() - got q.Peek() %d; want %d",
+				t.Errorf("after No.%d q.Dequeue(), got q.Peek() %d; want %d",
 					*pDequeueCtr, front, (*pQueueData)[0])
 			}
 		}
@@ -606,32 +606,32 @@ func testQueueEnqueueAndDequeueTearDownStage(t *testing.T, q queue.Queue[int]) {
 	q.RemoveAll()
 
 	if qn := q.Len(); qn != 0 {
-		t.Errorf("after q.RemoveAll() - got q.Len() %d; want 0", qn)
+		t.Errorf("after q.RemoveAll(), got q.Len() %d; want 0", qn)
 	}
 
 	if c := q.Cap(); c != finalCap {
-		t.Errorf("after q.RemoveAll() - got q.Cap() %d; want %d", c, finalCap)
+		t.Errorf("after q.RemoveAll(), got q.Cap() %d; want %d", c, finalCap)
 	}
 
 	q.Clear()
 
 	if qn := q.Len(); qn != 0 {
-		t.Errorf("after q.Clear() - got q.Len() %d; want 0", qn)
+		t.Errorf("after q.Clear(), got q.Len() %d; want 0", qn)
 	}
 
 	if c := q.Cap(); c != 0 {
-		t.Errorf("after q.Clear() - got q.Cap() %d; want 0", c)
+		t.Errorf("after q.Clear(), got q.Cap() %d; want 0", c)
 	}
 
 	q.RemoveAll()
 
 	if qn := q.Len(); qn != 0 {
-		t.Errorf("after q.Clear() then q.RemoveAll() - got q.Len() %d; want 0",
+		t.Errorf("after q.Clear() then q.RemoveAll(), got q.Len() %d; want 0",
 			qn)
 	}
 
 	if c := q.Cap(); c != 0 {
-		t.Errorf("after q.Clear() then q.RemoveAll() - got q.Cap() %d; want 0",
+		t.Errorf("after q.Clear() then q.RemoveAll(), got q.Cap() %d; want 0",
 			c)
 	}
 }
@@ -648,31 +648,31 @@ func TestQueue_EnqueueAfterClear(t *testing.T) {
 	}
 
 	if n := q.Len(); n != N {
-		t.Errorf("before q.Clear() - got q.Len() %d; want %d", n, N)
+		t.Errorf("before q.Clear(), got q.Len() %d; want %d", n, N)
 	}
 
 	q.Clear()
 
 	if n := q.Len(); n != 0 {
-		t.Errorf("after q.Clear() - got q.Len() %d; want 0", n)
+		t.Errorf("after q.Clear(), got q.Len() %d; want 0", n)
 	}
 
 	if c := q.Cap(); c != 0 {
-		t.Errorf("after q.Clear() - got q.Cap() %d; want 0", c)
+		t.Errorf("after q.Clear(), got q.Cap() %d; want 0", c)
 	}
 
 	q.Enqueue(2)
 
 	if n := q.Len(); n != 1 {
-		t.Errorf("after q.Enqueue(2) - got q.Len() %d; want 1", n)
+		t.Errorf("after q.Enqueue(2), got q.Len() %d; want 1", n)
 	}
 
 	if c := q.Cap(); c != queue.DefaultCapacity {
-		t.Errorf("after q.Enqueue(2) - got q.Cap() %d; want %d",
+		t.Errorf("after q.Enqueue(2), got q.Cap() %d; want %d",
 			c, queue.DefaultCapacity)
 	}
 
 	if front := q.Peek(); front != 2 {
-		t.Errorf("after q.Enqueue(2) - got q.Peek() %d; want 2", front)
+		t.Errorf("after q.Enqueue(2), got q.Peek() %d; want 2", front)
 	}
 }

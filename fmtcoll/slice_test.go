@@ -189,7 +189,7 @@ func testFormatSequenceToString(
 
 			got, err := f(tc, dataList, commonFormatList)
 			if err != nil {
-				t.Error("err -", err)
+				t.Error("err:", err)
 			} else if got != tc.want {
 				t.Errorf("got %q; want %q", got, tc.want)
 			}
@@ -308,7 +308,7 @@ func testMustFormatToStringPanic(
 
 		err, ok := e.(error)
 		if !ok || !errors.Is(err, wantErr) {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 

@@ -248,7 +248,7 @@ func testMultiCloserOneCallClose(
 			}
 
 			errs := el.ToList()
-			// Compare the interface directly here, don't use errors.Is.
+			// Compare the interface directly here. Don't use errors.Is.
 			if len(errs) != 2 ||
 				errs[0] != failErr || errs[1] != failErr { //nolint:err113,errorlint // as stated above
 				t.Errorf("mc.Close returned %v; want (%v, %[2]v)",

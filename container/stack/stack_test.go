@@ -95,7 +95,7 @@ func TestStack_Range_NilHandler(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -140,7 +140,7 @@ func TestStack_IterItems(t *testing.T) {
 	}
 
 	if !slices.Equal(gotData, want) {
-		t.Errorf("rewind - got %v; want %v", gotData, want)
+		t.Errorf("rewind, got %v; want %v", gotData, want)
 	}
 }
 
@@ -272,7 +272,7 @@ func TestStack_PushNAndPopN(t *testing.T) {
 
 			s := stack.New[int](0)
 			if sn := s.Len(); sn != 0 {
-				t.Fatalf("initial - s.Len() %d; want 0", sn)
+				t.Fatalf("initial, s.Len() %d; want 0", sn)
 			}
 
 			testStackPushNAndPopNPushStage(t, n, s)
@@ -301,11 +301,11 @@ func testStackPushNAndPopNPushStage(t *testing.T, n int, s stack.Stack[int]) {
 		s.Push(x)
 
 		if sn := s.Len(); sn != x {
-			t.Errorf("after s.Push(%d) - got s.Len() %d; want %[1]d", x, sn)
+			t.Errorf("after s.Push(%d), got s.Len() %d; want %[1]d", x, sn)
 		}
 
 		if top := s.Peek(); top != x {
-			t.Errorf("after s.Push(%d) - got s.Peek() %d; want %[1]d", x, top)
+			t.Errorf("after s.Push(%d), got s.Peek() %d; want %[1]d", x, top)
 		}
 	}
 }
@@ -324,18 +324,18 @@ func testStackPushNAndPopNPopStage(t *testing.T, n int, s stack.Stack[int]) {
 		}
 
 		if sn := s.Len(); sn != x {
-			t.Errorf("after No.%d s.Pop() - got s.Len() %d; want %d",
+			t.Errorf("after No.%d s.Pop(), got s.Len() %d; want %d",
 				n-x, sn, x)
 		}
 
 		if c := s.Cap(); c != finalCap {
-			t.Errorf("after No.%d s.Pop() - got s.Cap() %d; want %d",
+			t.Errorf("after No.%d s.Pop(), got s.Cap() %d; want %d",
 				n-x, c, finalCap)
 		}
 
 		if x > 0 {
 			if top := s.Peek(); top != x {
-				t.Errorf("after No.%d s.Pop() - got s.Peek() %d; want %d",
+				t.Errorf("after No.%d s.Pop(), got s.Peek() %d; want %d",
 					n-x, top, x)
 			}
 		}
@@ -347,7 +347,7 @@ func TestStack_RandomPushAndPop(t *testing.T) {
 
 	s := stack.New[int](0)
 	if sn := s.Len(); sn != 0 {
-		t.Fatalf("initial - s.Len() %d; want 0", sn)
+		t.Fatalf("initial, s.Len() %d; want 0", sn)
 	}
 
 	random := rand.New(rand.NewChaCha8( //gosec:disable G404 -- math/rand/v2 is reproducible
@@ -432,12 +432,12 @@ func testStackRandomPushAndPopPushStage(
 		s.Push(*pPushCtr)
 
 		if sn := s.Len(); sn != len(*pStackData) {
-			t.Errorf("after s.Push(%d) - got s.Len() %d; want %d",
+			t.Errorf("after s.Push(%d), got s.Len() %d; want %d",
 				*pPushCtr, sn, len(*pStackData))
 		}
 
 		if top := s.Peek(); top != *pPushCtr {
-			t.Errorf("after s.Push(%d) - got s.Peek() %d; want %[1]d",
+			t.Errorf("after s.Push(%d), got s.Peek() %d; want %[1]d",
 				*pPushCtr, top)
 		}
 	}
@@ -467,18 +467,18 @@ func testStackRandomPushAndPopPopStage(
 		}
 
 		if sn := s.Len(); sn != len(*pStackData) {
-			t.Errorf("after No.%d s.Pop() - got s.Len() %d; want %d",
+			t.Errorf("after No.%d s.Pop(), got s.Len() %d; want %d",
 				*pPopCtr, sn, len(*pStackData))
 		}
 
 		if c := s.Cap(); c != wantCap {
-			t.Errorf("after No.%d s.Pop() - got s.Cap() %d; want %d",
+			t.Errorf("after No.%d s.Pop(), got s.Cap() %d; want %d",
 				*pPopCtr, c, wantCap)
 		}
 
 		if len(*pStackData) > 0 {
 			if top := s.Peek(); top != (*pStackData)[len(*pStackData)-1] {
-				t.Errorf("after No.%d s.Pop() - got s.Peek() %d; want %d",
+				t.Errorf("after No.%d s.Pop(), got s.Peek() %d; want %d",
 					*pPopCtr, top, (*pStackData)[len(*pStackData)-1])
 			}
 		}
@@ -496,32 +496,32 @@ func testStackPushAndPopTearDownStage(t *testing.T, s stack.Stack[int]) {
 	s.RemoveAll()
 
 	if sn := s.Len(); sn != 0 {
-		t.Errorf("after s.RemoveAll() - got s.Len() %d; want 0", sn)
+		t.Errorf("after s.RemoveAll(), got s.Len() %d; want 0", sn)
 	}
 
 	if c := s.Cap(); c != finalCap {
-		t.Errorf("after s.RemoveAll() - got s.Cap() %d; want %d", c, finalCap)
+		t.Errorf("after s.RemoveAll(), got s.Cap() %d; want %d", c, finalCap)
 	}
 
 	s.Clear()
 
 	if sn := s.Len(); sn != 0 {
-		t.Errorf("after s.Clear() - got s.Len() %d; want 0", sn)
+		t.Errorf("after s.Clear(), got s.Len() %d; want 0", sn)
 	}
 
 	if c := s.Cap(); c != 0 {
-		t.Errorf("after s.Clear() - got s.Cap() %d; want 0", c)
+		t.Errorf("after s.Clear(), got s.Cap() %d; want 0", c)
 	}
 
 	s.RemoveAll()
 
 	if sn := s.Len(); sn != 0 {
-		t.Errorf("after s.Clear() then s.RemoveAll() - got s.Len() %d; want 0",
+		t.Errorf("after s.Clear() then s.RemoveAll(), got s.Len() %d; want 0",
 			sn)
 	}
 
 	if c := s.Cap(); c != 0 {
-		t.Errorf("after s.Clear() then s.RemoveAll() - got s.Cap() %d; want 0",
+		t.Errorf("after s.Clear() then s.RemoveAll(), got s.Cap() %d; want 0",
 			c)
 	}
 }
@@ -538,26 +538,26 @@ func TestStack_PushAfterClear(t *testing.T) {
 	}
 
 	if n := s.Len(); n != N {
-		t.Errorf("before s.Clear() - got s.Len() %d; want %d", n, N)
+		t.Errorf("before s.Clear(), got s.Len() %d; want %d", n, N)
 	}
 
 	s.Clear()
 
 	if n := s.Len(); n != 0 {
-		t.Errorf("after s.Clear() - got s.Len() %d; want 0", n)
+		t.Errorf("after s.Clear(), got s.Len() %d; want 0", n)
 	}
 
 	if c := s.Cap(); c != 0 {
-		t.Errorf("after s.Clear() - got s.Cap() %d; want 0", c)
+		t.Errorf("after s.Clear(), got s.Cap() %d; want 0", c)
 	}
 
 	s.Push(2)
 
 	if n := s.Len(); n != 1 {
-		t.Errorf("after s.Push(2) - got s.Len() %d; want 1", n)
+		t.Errorf("after s.Push(2), got s.Len() %d; want 1", n)
 	}
 
 	if top := s.Peek(); top != 2 {
-		t.Errorf("after s.Push(2) - got s.Peek() %d; want 2", top)
+		t.Errorf("after s.Push(2), got s.Peek() %d; want 2", top)
 	}
 }

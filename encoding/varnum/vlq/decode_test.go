@@ -143,13 +143,8 @@ func TestDecodeFloat64(t *testing.T) {
 						f, math.Float64bits(f))
 				}
 			} else if f != want {
-				t.Fatalf(
-					"got %v (bits: %#016X); want %v (bits: %#016X)",
-					f,
-					math.Float64bits(f),
-					want,
-					math.Float64bits(want),
-				)
+				t.Fatalf("got %v (bits: %#016X); want %v (bits: %#016X)",
+					f, math.Float64bits(f), want, math.Float64bits(want))
 			}
 
 			if wantN := vlq.Float64EncodedLen(f); n != wantN {

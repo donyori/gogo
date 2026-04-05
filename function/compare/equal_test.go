@@ -122,7 +122,7 @@ func TestEqualFunc_Not_Nil(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -144,7 +144,7 @@ func TestEqualFunc_Reflexive_Nil(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -166,7 +166,7 @@ func TestEqualToNot_Nil(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -188,7 +188,7 @@ func TestEqualToReflexive_Nil(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 

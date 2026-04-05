@@ -92,7 +92,7 @@ func TestAs_PanicForErrorPointer(t *testing.T) {
 		s, ok := e.(string)
 		if !ok || !strings.HasSuffix(s,
 			"target is of type *error; As always returns true for that") {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -156,7 +156,7 @@ func TestAsType_PanicForTypeError(t *testing.T) {
 		s, ok := e.(string)
 		if !ok || !strings.HasSuffix(s,
 			"type E is exactly error; AsType[error] is senseless") {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 

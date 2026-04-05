@@ -274,7 +274,7 @@ func TestErrorList_ToError(t *testing.T) {
 
 				err := tc.el.ToError()
 
-				// Compare the interface directly here, don't use errors.Is.
+				// Compare the interface directly here. Don't use errors.Is.
 				if err != tc.err { //nolint:err113,errorlint // as stated above
 					t.Errorf("got %v; want %v", err, tc.err)
 				}
@@ -489,7 +489,7 @@ func TestErrorList_Range_NilHandler(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -532,7 +532,7 @@ func TestErrorList_RangeBackward_NilHandler(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -573,7 +573,7 @@ func TestErrorList_IterErrors(t *testing.T) {
 	}
 
 	if !slices.Equal(gotData, want) {
-		t.Errorf("rewind - got %v; want %v", gotData, want)
+		t.Errorf("rewind, got %v; want %v", gotData, want)
 	}
 }
 
@@ -626,7 +626,7 @@ func TestErrorList_IterErrorsBackward(t *testing.T) {
 	}
 
 	if !slices.Equal(gotData, want) {
-		t.Errorf("rewind - got %v; want %v", gotData, want)
+		t.Errorf("rewind, got %v; want %v", gotData, want)
 	}
 }
 
@@ -679,7 +679,7 @@ func TestErrorList_IterIndexErrors(t *testing.T) {
 	}
 
 	if !slices.Equal(gotData, want) {
-		t.Errorf("rewind - got %v; want %v", gotData, want)
+		t.Errorf("rewind, got %v; want %v", gotData, want)
 	}
 }
 
@@ -732,7 +732,7 @@ func TestErrorList_IterIndexErrorsBackward(t *testing.T) {
 	}
 
 	if !slices.Equal(gotData, want) {
-		t.Errorf("rewind - got %v; want %v", gotData, want)
+		t.Errorf("rewind, got %v; want %v", gotData, want)
 	}
 }
 
@@ -845,7 +845,7 @@ func TestCombine(t *testing.T) {
 				t.Errorf("got %v; want multiple errors in a list: %v",
 					err, tc.want)
 			case len(tc.want) == 1:
-				// Compare the interface directly here, don't use errors.Is.
+				// Compare the interface directly here. Don't use errors.Is.
 				if err != tc.want[0] { //nolint:err113,errorlint // as stated above
 					t.Errorf("got %v; want %v", err, tc.want[0])
 				}

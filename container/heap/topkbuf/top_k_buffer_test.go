@@ -180,7 +180,7 @@ func TestTopKBuffer_Range_NilHandler(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -256,9 +256,9 @@ func testTopKBufferIterItems(t *testing.T, data []int, k int, want []int) {
 
 	for x, ctr := range counterMapCopy {
 		if ctr > 0 {
-			t.Error("rewind - insufficient accesses to", x)
+			t.Error("rewind, insufficient accesses to", x)
 		} else if ctr < 0 {
-			t.Error("rewind - too many accesses to", x)
+			t.Error("rewind, too many accesses to", x)
 		}
 	}
 }

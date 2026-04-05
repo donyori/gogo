@@ -145,7 +145,7 @@ type PathVisitor interface {
 	) (cont, skipChildren bool)
 }
 
-// nodeDepth consists of node and depth.
+// nodeDepth consists of a node and its visit depth.
 type nodeDepth struct {
 	node  Node
 	depth int

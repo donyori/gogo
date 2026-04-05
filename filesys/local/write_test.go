@@ -55,19 +55,19 @@ func TestWriteTrunc(t *testing.T) {
 
 			w, err := local.WriteTrunc(name, 0600, true, nil)
 			if err != nil {
-				t.Errorf("i: %d, create - %v", i, err)
+				t.Errorf("i: %d, create: %v", i, err)
 				return
 			}
 			defer func(w filesys.Writer) {
 				err := w.Close()
 				if err != nil {
-					t.Errorf("i: %d, close - %v", i, err)
+					t.Errorf("i: %d, close: %v", i, err)
 				}
 			}(w)
 
 			n, err := w.Write(data)
 			if n != len(data) || err != nil {
-				t.Errorf("i: %d, write - got (%d, %v); want (%d, nil)",
+				t.Errorf("i: %d, write, got (%d, %v); want (%d, nil)",
 					i, n, err, len(data))
 			}
 		}(t, i)
@@ -79,7 +79,7 @@ func TestWriteTrunc(t *testing.T) {
 
 	got, err := os.ReadFile(name)
 	if err != nil {
-		t.Error("read output -", err)
+		t.Error("read output:", err)
 	} else if !bytes.Equal(got, data) {
 		t.Errorf("got %q; want %q", got, data)
 	}
@@ -219,7 +219,7 @@ Sugar is sweet.
 		},
 	)
 	if err != nil {
-		t.Fatal("make wantTarFiles by fs.WalkDir -", err)
+		t.Fatal("make wantTarFiles by fs.WalkDir:", err)
 	}
 
 	filenames := []string{"test.tar", "test.tar.gz", "test.tgz"}
@@ -340,7 +340,7 @@ Sugar is sweet.
 		},
 	)
 	if err != nil {
-		t.Fatal("make wantZipNameBodyMap by fs.WalkDir -", err)
+		t.Fatal("make wantZipNameBodyMap by fs.WalkDir:", err)
 	}
 
 	name := filepath.Join(t.TempDir(), "test.zip")
@@ -366,19 +366,19 @@ func TestWriteAppend(t *testing.T) {
 
 			w, err := local.WriteAppend(name, 0600, true, nil)
 			if err != nil {
-				t.Errorf("i: %d, create - %v", i, err)
+				t.Errorf("i: %d, create: %v", i, err)
 				return
 			}
 			defer func(w filesys.Writer) {
 				err := w.Close()
 				if err != nil {
-					t.Errorf("i: %d, close - %v", i, err)
+					t.Errorf("i: %d, close: %v", i, err)
 				}
 			}(w)
 
 			n, err := w.Write(data)
 			if n != len(data) || err != nil {
-				t.Errorf("i: %d, write - got (%d, %v); want (%d, nil)",
+				t.Errorf("i: %d, write: got (%d, %v); want (%d, nil)",
 					i, n, err, len(data))
 			}
 		}(t, i)
@@ -390,7 +390,7 @@ func TestWriteAppend(t *testing.T) {
 
 	got, err := os.ReadFile(name)
 	if err != nil {
-		t.Fatal("read output -", err)
+		t.Fatal("read output:", err)
 	}
 
 	want := bytes.Repeat(data, N)
@@ -417,19 +417,19 @@ func TestWriteExcl(t *testing.T) {
 
 		w, err := local.WriteExcl(name, 0600, true, nil)
 		if err != nil {
-			t.Error("create -", err)
+			t.Error("create:", err)
 			return
 		}
 		defer func(w filesys.Writer) {
 			err := w.Close()
 			if err != nil {
-				t.Error("close -", err)
+				t.Error("close:", err)
 			}
 		}(w)
 
 		n, err := w.Write(data)
 		if n != len(data) || err != nil {
-			t.Errorf("write - got (%d, %v); want (%d, nil)", n, err, len(data))
+			t.Errorf("write, got (%d, %v); want (%d, nil)", n, err, len(data))
 		}
 	}(t)
 
@@ -446,7 +446,7 @@ func TestWriteExcl(t *testing.T) {
 
 	got, err := os.ReadFile(name)
 	if err != nil {
-		t.Error("read output -", err)
+		t.Error("read output:", err)
 	} else if !bytes.Equal(got, data) {
 		t.Errorf("got %q; want %q", got, data)
 	}
@@ -500,7 +500,7 @@ func testWriteFuncMkDirsTrue(
 ) {
 	t.Helper()
 
-	data := []byte("test local.WriteTrunc - mkDirs\n")
+	data := []byte("test local.WriteTrunc, mkDirs\n")
 	name := filepath.Join(tmpRoot, "true", "test.txt")
 
 	func(t *testing.T) {
@@ -508,20 +508,19 @@ func testWriteFuncMkDirsTrue(
 
 		w, err := writeFn(name, 0600, true, nil)
 		if err != nil {
-			t.Error("create -", err)
+			t.Error("create:", err)
 			return
 		}
 		defer func(w filesys.Writer) {
 			err := w.Close()
 			if err != nil {
-				t.Error("close -", err)
+				t.Error("close:", err)
 			}
 		}(w)
 
 		n, err := w.Write(data)
 		if n != len(data) || err != nil {
-			t.Errorf("write - got (%d, %v); want (%d, nil)",
-				n, err, len(data))
+			t.Errorf("write, got (%d, %v); want (%d, nil)", n, err, len(data))
 		}
 	}(t)
 
@@ -531,7 +530,7 @@ func testWriteFuncMkDirsTrue(
 
 	got, err := os.ReadFile(name)
 	if err != nil {
-		t.Error("read output -", err)
+		t.Error("read output:", err)
 	} else if !bytes.Equal(got, data) {
 		t.Errorf("got %q; want %q", got, data)
 	}
@@ -557,7 +556,7 @@ func testWriteFuncMkDirsFalse(
 	if err == nil {
 		err := w.Close()
 		if err != nil {
-			t.Error("close -", err)
+			t.Error("close:", err)
 		}
 	}
 
@@ -578,13 +577,13 @@ func writeTarFiles(t *testing.T, name string, tarFiles []tarFileNameBody) {
 
 	w, err := local.WriteTrunc(name, 0600, true, nil)
 	if err != nil {
-		t.Error("create -", err)
+		t.Error("create:", err)
 		return
 	}
 	defer func(w filesys.Writer) {
 		err := w.Close()
 		if err != nil {
-			t.Error("close -", err)
+			t.Error("close:", err)
 		}
 	}(w)
 
@@ -598,7 +597,7 @@ func writeTarFiles(t *testing.T, name string, tarFiles []tarFileNameBody) {
 
 		err = w.TarWriteHeader(hdr)
 		if err != nil {
-			t.Errorf("write No.%d tar header - %v", i, err)
+			t.Errorf("write No.%d tar header: %v", i, err)
 			return
 		}
 
@@ -607,15 +606,14 @@ func writeTarFiles(t *testing.T, name string, tarFiles []tarFileNameBody) {
 		n, err = w.Write(tarFiles[i].body)
 		if TarHeaderIsDir(hdr) {
 			if n != 0 || !errors.Is(err, filesys.ErrIsDir) {
-				t.Errorf(
-					"write No.%d tar file body - got (%d, %v); want (0, %v)",
+				t.Errorf("write No.%d tar file body, "+
+					"got (%d, %v); want (0, %v)",
 					i, n, err, filesys.ErrIsDir)
 
 				return
 			}
 		} else if n != len(tarFiles[i].body) || err != nil {
-			t.Errorf(
-				"write No.%d tar file body - got (%d, %v); want (%d, nil)",
+			t.Errorf("write No.%d tar file body, got (%d, %v); want (%d, nil)",
 				i, n, err, len(tarFiles[i].body))
 
 			return
@@ -634,19 +632,19 @@ func writeTarFS(t *testing.T, name string, fsys fs.FS) {
 
 	w, err := local.WriteTrunc(name, 0600, true, nil)
 	if err != nil {
-		t.Error("create -", err)
+		t.Error("create:", err)
 		return
 	}
 	defer func(w filesys.Writer) {
 		err := w.Close()
 		if err != nil {
-			t.Error("close -", err)
+			t.Error("close:", err)
 		}
 	}(w)
 
 	err = w.TarAddFS(fsys)
 	if err != nil {
-		t.Error("add FS -", err)
+		t.Error("add FS:", err)
 	}
 }
 
@@ -659,13 +657,13 @@ func testTarTgzFile(t *testing.T, name string, wantTarFiles []tarFileNameBody) {
 
 	f, err := os.Open(name)
 	if err != nil {
-		t.Error("open -", err)
+		t.Error("open:", err)
 		return
 	}
 	defer func(f *os.File) {
 		err := f.Close()
 		if err != nil {
-			t.Error("close file -", err)
+			t.Error("close file:", err)
 		}
 	}(f)
 
@@ -675,13 +673,13 @@ func testTarTgzFile(t *testing.T, name string, wantTarFiles []tarFileNameBody) {
 	case filesys.GzipExtension, filesys.TarGzipSingleExtension:
 		gr, err := gzip.NewReader(r)
 		if err != nil {
-			t.Error("create gzip reader -", err)
+			t.Error("create gzip reader:", err)
 			return
 		}
 		defer func(gr *gzip.Reader) {
 			err := gr.Close()
 			if err != nil {
-				t.Error("close gzip reader -", err)
+				t.Error("close gzip reader:", err)
 			}
 		}(gr)
 
@@ -710,7 +708,7 @@ func testTar(t *testing.T, r *tar.Reader, wantTarFiles []tarFileNameBody) {
 				return // end of archive
 			}
 
-			t.Errorf("read No.%d tar header - %v", i, err)
+			t.Errorf("read No.%d tar header: %v", i, err)
 
 			return
 		case i >= len(wantTarFiles):
@@ -720,7 +718,7 @@ func testTar(t *testing.T, r *tar.Reader, wantTarFiles []tarFileNameBody) {
 			t.Errorf("No.%d got nil tar header", i)
 			continue
 		case hdr.Name != wantTarFiles[i].name:
-			t.Errorf("No.%d tar header name unequal - got %q; want %q",
+			t.Errorf("No.%d tar header name unequal, got %q; want %q",
 				i, hdr.Name, wantTarFiles[i].name)
 		}
 
@@ -730,17 +728,13 @@ func testTar(t *testing.T, r *tar.Reader, wantTarFiles []tarFileNameBody) {
 
 		body, err := io.ReadAll(r)
 		if err != nil {
-			t.Errorf("read No.%d tar file body - %v", i, err)
+			t.Errorf("read No.%d tar file body: %v", i, err)
 			return
 		} else if !bytes.Equal(body, wantTarFiles[i].body) {
-			t.Errorf(
-				"got No.%d tar file body (len: %d)\n%s\nwant (len: %d)\n%s",
-				i,
-				len(body),
-				body,
-				len(wantTarFiles[i].body),
-				wantTarFiles[i].body,
-			)
+			t.Errorf("got No.%d tar file body (len: %d)\n%s"+
+				"\nwant (len: %d)\n%s",
+				i, len(body), body,
+				len(wantTarFiles[i].body), wantTarFiles[i].body)
 		}
 	}
 }
@@ -761,20 +755,20 @@ func writeZipFiles(
 
 	w, err := local.WriteTrunc(name, 0600, true, nil)
 	if err != nil {
-		t.Error("create -", err)
+		t.Error("create:", err)
 		return
 	}
 	defer func(w filesys.Writer) {
 		err := w.Close()
 		if err != nil {
-			t.Error("close -", err)
+			t.Error("close:", err)
 		}
 	}(w)
 
 	for zipName, zipBody := range zipNameBodyMap {
 		err = w.ZipCreate(zipName)
 		if err != nil {
-			t.Errorf("create %q - %v", zipName, err)
+			t.Errorf("create %q: %v", zipName, err)
 			return
 		}
 
@@ -783,13 +777,13 @@ func writeZipFiles(
 		n, err = w.Write(zipBody)
 		if len(zipName) > 0 && zipName[len(zipName)-1] == '/' {
 			if n != 0 || !errors.Is(err, filesys.ErrIsDir) {
-				t.Errorf("write %q file body - got (%d, %v); want (0, %v)",
+				t.Errorf("write %q file body, got (%d, %v); want (0, %v)",
 					zipName, n, err, filesys.ErrIsDir)
 
 				return
 			}
 		} else if n != len(zipBody) || err != nil {
-			t.Errorf("write %q file body - got (%d, %v); want (%d, nil)",
+			t.Errorf("write %q file body, got (%d, %v); want (%d, nil)",
 				zipName, n, err, len(zipBody))
 
 			return
@@ -808,19 +802,19 @@ func writeZipFS(t *testing.T, name string, fsys fs.FS) {
 
 	w, err := local.WriteTrunc(name, 0600, true, nil)
 	if err != nil {
-		t.Error("create -", err)
+		t.Error("create:", err)
 		return
 	}
 	defer func(w filesys.Writer) {
 		err := w.Close()
 		if err != nil {
-			t.Error("close -", err)
+			t.Error("close:", err)
 		}
 	}(w)
 
 	err = w.ZipAddFS(fsys)
 	if err != nil {
-		t.Error("add FS -", err)
+		t.Error("add FS:", err)
 	}
 }
 
@@ -837,13 +831,13 @@ func testZipFile(
 
 	zrc, err := zip.OpenReader(name)
 	if err != nil {
-		t.Error("open zip reader -", err)
+		t.Error("open zip reader:", err)
 		return
 	}
 	defer func(rc *zip.ReadCloser) {
 		err := rc.Close()
 		if err != nil {
-			t.Error("close zip reader -", err)
+			t.Error("close zip reader:", err)
 		}
 	}(zrc)
 
@@ -871,7 +865,7 @@ func testZipFile(
 
 		rc, err := file.Open()
 		if err != nil {
-			t.Errorf("open %q - %v", file.Name, err)
+			t.Errorf("open %q: %v", file.Name, err)
 			return
 		}
 
@@ -879,17 +873,11 @@ func testZipFile(
 		_ = rc.Close() // ignore error
 
 		if err != nil {
-			t.Errorf("read %q - %v", file.Name, err)
+			t.Errorf("read %q: %v", file.Name, err)
 			return
 		} else if !bytes.Equal(data, body) {
-			t.Errorf(
-				"%q file contents - got (len: %d)\n%s\nwant (len: %d)\n%s",
-				file.Name,
-				len(data),
-				data,
-				len(body),
-				body,
-			)
+			t.Errorf("%q file contents, got (len: %d)\n%s\nwant (len: %d)\n%s",
+				file.Name, len(data), data, len(body), body)
 		}
 	}
 }

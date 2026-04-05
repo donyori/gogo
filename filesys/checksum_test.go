@@ -80,19 +80,19 @@ func testChecksum(
 
 	file, err := testFS.Open(filename)
 	if err != nil {
-		t.Error("open file -", err)
+		t.Error("open file:", err)
 		return
 	}
 	defer func(f fs.File) {
 		err := f.Close()
 		if err != nil {
-			t.Error("close file -", err)
+			t.Error("close file:", err)
 		}
 	}(file)
 
 	got, err := filesys.Checksum(file, false, upper, newHashes...)
 	if err != nil {
-		t.Error("checksum -", err)
+		t.Error("checksum:", err)
 	} else if !slices.Equal(got, want) {
 		t.Errorf("got %v\nwant %v", got, want)
 	}
@@ -134,7 +134,7 @@ func TestChecksumFromFS(t *testing.T) {
 						newHashes...,
 					)
 					if err != nil {
-						t.Error("checksum -", err)
+						t.Error("checksum:", err)
 					} else if !slices.Equal(got, want) {
 						t.Errorf("got %v\nwant %v", got, want)
 					}
@@ -245,7 +245,7 @@ func TestNewHashVerifier(t *testing.T) {
 							e, tc.panicMsg)
 					}
 				} else if e != nil {
-					t.Error("panic -", e)
+					t.Error("panic:", e)
 				}
 			}()
 
@@ -272,12 +272,12 @@ func TestVerifyChecksum(t *testing.T) {
 
 					file, err := testFS.Open(filename)
 					if err != nil {
-						t.Fatal("open file -", err)
+						t.Fatal("open file:", err)
 					}
 					defer func(f fs.File) {
 						err := f.Close()
 						if err != nil {
-							t.Error("close file -", err)
+							t.Error("close file:", err)
 						}
 					}(file)
 

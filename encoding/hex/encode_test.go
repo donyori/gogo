@@ -366,7 +366,7 @@ func TestEncoder_WriteByte(t *testing.T) {
 				for _, b := range tc.srcBytes {
 					err := encoder.WriteByte(b)
 					if err != nil {
-						t.Fatalf("WriteByte(%q) - %v", b, err)
+						t.Fatalf("WriteByte(%q): %v", b, err)
 					}
 
 					n++

@@ -76,7 +76,7 @@ func testWrapSliceFunctionsNilSlicePtr[Item any](
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -93,7 +93,7 @@ func TestWrapSlice_NilLessFn(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -131,7 +131,7 @@ func TestWrapSlice_NilCmpFn(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -180,7 +180,7 @@ func TestWrapSlice_NilLessFnAndCmpFn(t *testing.T) {
 
 		s, ok := e.(string)
 		if !ok || !strings.HasSuffix(s, "both lessFn and cmpFn are nil") {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 

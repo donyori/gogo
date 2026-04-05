@@ -85,13 +85,9 @@ func TestToFloat64ByteReversal(t *testing.T) {
 						got, math.Float64bits(got))
 				}
 			} else if got != pair.f {
-				t.Errorf(
-					"got %v (bits: %#016X); want %v (bits: %#016X)",
-					got,
-					math.Float64bits(got),
-					pair.f,
-					math.Float64bits(pair.f),
-				)
+				t.Errorf("got %v (bits: %#016X); want %v (bits: %#016X)",
+					got, math.Float64bits(got),
+					pair.f, math.Float64bits(pair.f))
 			}
 		})
 	}

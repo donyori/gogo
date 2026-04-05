@@ -267,9 +267,7 @@ func Read(
 		(size < opts.Offset || opts.Offset < 0 && size+opts.Offset < 0) {
 		return nil, errors.AutoWrap(fmt.Errorf(
 			"option Offset (%d) is out of range; file size: %d",
-			opts.Offset,
-			size,
-		))
+			opts.Offset, size))
 	}
 
 	el := errors.NewErrorList(true)

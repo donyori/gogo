@@ -232,7 +232,7 @@ func TestController_Input_BeforeLaunch_Concurrency(t *testing.T) {
 			}
 			gotInput := ctrl.Input(mjs...)
 			if gotInput != NumJobPerInput {
-				t.Errorf("job %d - got %d; want %d",
+				t.Errorf("job %d, got %d; want %d",
 					job, gotInput, NumJobPerInput)
 			}
 		}(job)
@@ -312,7 +312,7 @@ func TestController_Input_DuringLaunch_Concurrency(t *testing.T) {
 			}
 			gotInput := ctrl.Input(mjs...)
 			if gotInput != NumJobPerInput {
-				t.Errorf("job %d - got %d; want %d",
+				t.Errorf("job %d, got %d; want %d",
 					job, gotInput, NumJobPerInput)
 			}
 		}(job)
@@ -384,7 +384,7 @@ func TestController_Input_AfterLaunch_Concurrency(t *testing.T) {
 			}
 			gotInput := ctrl.Input(mjs...)
 			if gotInput != NumJobPerInput {
-				t.Errorf("job %d - got %d; want %d",
+				t.Errorf("job %d, got %d; want %d",
 					job, gotInput, NumJobPerInput)
 			}
 		}(job)

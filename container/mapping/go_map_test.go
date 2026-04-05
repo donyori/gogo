@@ -98,7 +98,7 @@ func TestGoMap_Range_NilHandler(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -133,7 +133,7 @@ func TestGoMap_IterItems(t *testing.T) {
 	}
 
 	if unequal.Map(gotData, want) {
-		t.Errorf("rewind - got %s; want %s",
+		t.Errorf("rewind, got %s; want %s",
 			mapToString(gotData), mapToString(want))
 	}
 }
@@ -304,7 +304,7 @@ func TestGoMap_IterKeys(t *testing.T) {
 	// Rewind the iterator and test it again.
 	gotData = slices.Sorted(seq)
 	if !slices.Equal(gotData, want) {
-		t.Errorf("rewind - got %q; want %q", gotData, want)
+		t.Errorf("rewind, got %q; want %q", gotData, want)
 	}
 }
 
@@ -347,7 +347,7 @@ func TestGoMap_IterValues(t *testing.T) {
 	// Rewind the iterator and test it again.
 	gotData = slices.Sorted(seq)
 	if !slices.Equal(gotData, want) {
-		t.Errorf("rewind - got %d; want %d", gotData, want)
+		t.Errorf("rewind, got %d; want %d", gotData, want)
 	}
 }
 
@@ -390,7 +390,7 @@ func TestGoMap_IterKeyValues(t *testing.T) {
 	// Rewind the iterator and test it again.
 	gotData = maps.Collect(seq2)
 	if unequal.Map(gotData, want) {
-		t.Errorf("rewind - got %s; want %s",
+		t.Errorf("rewind, got %s; want %s",
 			mapToString(gotData), mapToString(want))
 	}
 }
@@ -673,7 +673,7 @@ func TestGoMap_SetMap_Panic(t *testing.T) {
 							t.Error("want panic but not")
 						}
 					} else if e != nil {
-						t.Error("panic -", e)
+						t.Error("panic:", e)
 					}
 				}()
 
@@ -761,7 +761,7 @@ func TestGoMap_GetAndSetMap_Panic(t *testing.T) {
 
 				defer func() {
 					if e := recover(); !tc.wantPanic && e != nil {
-						t.Error("panic -", e)
+						t.Error("panic:", e)
 					}
 				}()
 

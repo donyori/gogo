@@ -99,7 +99,7 @@ func TestSliceDynamicArray_Range_NilHandler(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -139,7 +139,7 @@ func TestSliceDynamicArray_IterItems(t *testing.T) {
 	}
 
 	if unequal.Slice(gotData, want) {
-		t.Errorf("rewind - got %v; want %v", gotData, want)
+		t.Errorf("rewind, got %v; want %v", gotData, want)
 	}
 }
 
@@ -202,7 +202,7 @@ func TestSliceDynamicArray_RangeBackward_NilHandler(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -242,7 +242,7 @@ func TestSliceDynamicArray_IterItemsBackward(t *testing.T) {
 	}
 
 	if unequal.Slice(gotData, want) {
-		t.Errorf("rewind - got %v; want %v", gotData, want)
+		t.Errorf("rewind, got %v; want %v", gotData, want)
 	}
 }
 
@@ -458,7 +458,7 @@ func TestSliceDynamicArray_IterIndexItems(t *testing.T) {
 	}
 
 	if unequal.Slice(gotData, want) {
-		t.Errorf("rewind - got %v; want %v", gotData, want)
+		t.Errorf("rewind, got %v; want %v", gotData, want)
 	}
 }
 
@@ -515,7 +515,7 @@ func TestSliceDynamicArray_IterIndexItemsBackward(t *testing.T) {
 	}
 
 	if unequal.Slice(gotData, want) {
-		t.Errorf("rewind - got %v; want %v", gotData, want)
+		t.Errorf("rewind, got %v; want %v", gotData, want)
 	}
 }
 

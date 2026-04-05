@@ -204,13 +204,13 @@ func testEncodeInt64To(t *testing.T, x int64, upper bool, digits int) {
 
 	n1, err1 := hex.EncodeInt64To(&b1, x, upper, digits)
 	if err1 != nil {
-		t.Errorf("written %d - %v", n1, err1)
+		t.Errorf("written %d: %v", n1, err1)
 		return
 	}
 
 	n2, err2 := encodeInt64ToBaseline(&b2, x, upper, digits)
 	if err2 != nil {
-		t.Errorf("baseline, written %d - %v", n2, err2)
+		t.Errorf("baseline, written %d: %v", n2, err2)
 		return
 	}
 

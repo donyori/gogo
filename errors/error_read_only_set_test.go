@@ -254,7 +254,7 @@ func TestErrorReadOnlySetEqual_Range_NilHandler(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -298,9 +298,9 @@ func TestErrorReadOnlySetEqual_IterErrors(t *testing.T) {
 
 	for err, ctr := range counterMapCopy {
 		if ctr > 0 {
-			t.Error("rewind - insufficient accesses to", err)
+			t.Error("rewind, insufficient accesses to", err)
 		} else if ctr < 0 {
-			t.Error("rewind - too many accesses to", err)
+			t.Error("rewind, too many accesses to", err)
 		}
 	}
 }
@@ -511,7 +511,7 @@ func TestErrorReadOnlySetIs_Range_NilHandler(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -555,9 +555,9 @@ func TestErrorReadOnlySetIs_IterErrors(t *testing.T) {
 
 	for err, ctr := range counterMapCopy {
 		if ctr > 0 {
-			t.Error("rewind - insufficient accesses to", err)
+			t.Error("rewind, insufficient accesses to", err)
 		} else if ctr < 0 {
-			t.Error("rewind - too many accesses to", err)
+			t.Error("rewind, too many accesses to", err)
 		}
 	}
 }
@@ -754,7 +754,7 @@ func TestErrorReadOnlySetSameMessage_Range_NilHandler(t *testing.T) {
 
 	defer func() {
 		if e := recover(); e != nil {
-			t.Error("panic -", e)
+			t.Error("panic:", e)
 		}
 	}()
 
@@ -798,9 +798,9 @@ func TestErrorReadOnlySetSameMessage_IterErrors(t *testing.T) {
 
 	for err, ctr := range counterMapCopy {
 		if ctr > 0 {
-			t.Error("rewind - insufficient accesses to", err)
+			t.Error("rewind, insufficient accesses to", err)
 		} else if ctr < 0 {
-			t.Error("rewind - too many accesses to", err)
+			t.Error("rewind, too many accesses to", err)
 		}
 	}
 }
@@ -826,10 +826,10 @@ type unwrapError struct {
 
 func (ue *unwrapError) Error() string {
 	if ue.err == nil {
-		return "test error - <nil>"
+		return "test error: <nil>"
 	}
 
-	return "test error unwrap - " + ue.err.Error()
+	return "test error unwrap: " + ue.err.Error()
 }
 
 func (ue *unwrapError) Unwrap() error {
@@ -842,10 +842,10 @@ type isAlwaysTrueError struct {
 
 func (te *isAlwaysTrueError) Error() string {
 	if te.err == nil {
-		return "test error Is always true - <nil>"
+		return "test error Is always true: <nil>"
 	}
 
-	return "test error Is always true - " + te.err.Error()
+	return "test error Is always true: " + te.err.Error()
 }
 
 func (te *isAlwaysTrueError) Unwrap() error {
@@ -862,10 +862,10 @@ type isAlwaysFalseError struct {
 
 func (fe *isAlwaysFalseError) Error() string {
 	if fe.err == nil {
-		return "test error Is always false - <nil>"
+		return "test error Is always false: <nil>"
 	}
 
-	return "test error Is always false - " + fe.err.Error()
+	return "test error Is always false: " + fe.err.Error()
 }
 
 func (fe *isAlwaysFalseError) Unwrap() error {
