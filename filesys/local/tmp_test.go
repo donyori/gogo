@@ -20,119 +20,147 @@ package local_test
 
 import (
 	"os"
-	"sync"
 	"testing"
+	"testing/synctest"
 
 	"github.com/donyori/gogo/filesys/local"
 )
 
+// rankString consists of a rank (of type int) and a string.
+type rankString struct {
+	r int
+	s string
+}
+
 func TestTmp_Sync(t *testing.T) {
 	t.Parallel()
 
-	tmpRoot := t.TempDir()
+	synctest.Test(t, func(t *testing.T) {
+		tmpRoot := t.TempDir()
 
-	const N int = 10
+		const N int = 10
 
-	var (
-		mutex sync.Mutex
-		wg    sync.WaitGroup
-	)
+		// Create a dedicated channel to make the following goroutines call
+		// github.com/donyori/gogo/filesys/local.Tmp logically simultaneously.
+		startC := make(chan struct{})
+		outC := make(chan rankString, N)
 
-	files := make([]string, 0, N)
-	wg.Add(N)
+		for i := range N {
+			go func(
+				t *testing.T,
+				rank int,
+				startC <-chan struct{},
+				outC chan<- rankString,
+			) {
+				t.Helper()
 
-	for i := range N {
-		go func(no int) {
-			defer wg.Done()
+				rs := rankString{r: rank}
 
-			f, err := local.Tmp(tmpRoot, "f.", ".tmp", 0740)
+				defer func() {
+					outC <- rs
+				}()
 
-			mutex.Lock()
-			defer mutex.Unlock()
+				<-startC
 
-			if err != nil {
-				t.Error("Goroutine", no, "local.Tmp -", err)
-				return
-			}
-
-			defer func(f *os.File) {
-				err := f.Close()
+				f, err := local.Tmp(tmpRoot, "f.", ".tmp", 0740)
 				if err != nil {
-					t.Error("Goroutine", no, "close file -", err)
+					t.Errorf("goroutine %d, local.Tmp: %v", rank, err)
+					return
 				}
-			}(f)
+				defer func(f *os.File) {
+					err := f.Close()
+					if err != nil {
+						t.Errorf("goroutine %d, close file: %v", rank, err)
+					}
+				}(f)
 
-			files = append(files, f.Name())
-		}(i)
-	}
-
-	wg.Wait()
-
-	if t.Failed() {
-		return
-	} else if n := len(files); n != N {
-		t.Errorf("got %d files; want %d", n, N)
-	}
-
-	set := make(map[string]struct{})
-	for _, filename := range files {
-		if _, ok := set[filename]; ok {
-			t.Error("collided filename", filename)
-			continue
+				rs.s = f.Name()
+			}(t, i, startC, outC)
 		}
 
-		set[filename] = struct{}{}
-	}
+		synctest.Wait()
+		close(startC)
+		checkTmpSyncTmpDirSyncOutputs(t, N, outC)
+	})
 }
 
 func TestTmpDir_Sync(t *testing.T) {
 	t.Parallel()
 
-	tmpRoot := t.TempDir()
+	synctest.Test(t, func(t *testing.T) {
+		tmpRoot := t.TempDir()
 
-	const N int = 10
+		const N int = 10
 
-	var (
-		mutex sync.Mutex
-		wg    sync.WaitGroup
-	)
+		// Create a dedicated channel to make the following goroutines call
+		// github.com/donyori/gogo/filesys/local.TmpDir
+		// logically simultaneously.
+		startC := make(chan struct{})
+		outC := make(chan rankString, N)
 
-	dirs := make([]string, 0, N)
-	wg.Add(N)
+		for i := range N {
+			go func(
+				t *testing.T,
+				rank int,
+				startC <-chan struct{},
+				outC chan<- rankString,
+			) {
+				t.Helper()
 
-	for i := range N {
-		go func(no int) {
-			defer wg.Done()
+				rs := rankString{r: rank}
 
-			dir, err := local.TmpDir(tmpRoot, "tmp-", "", 0700)
+				defer func() {
+					outC <- rs
+				}()
 
-			mutex.Lock()
-			defer mutex.Unlock()
+				<-startC
 
-			if err != nil {
-				t.Error("Goroutine", no, "local.TmpDir -", err)
-				return
-			}
+				dir, err := local.TmpDir(tmpRoot, "tmp-", "", 0700)
+				if err != nil {
+					t.Errorf("goroutine %d, local.TmpDir: %v", rank, err)
+					return
+				}
 
-			dirs = append(dirs, dir)
-		}(i)
-	}
-
-	wg.Wait()
-
-	if t.Failed() {
-		return
-	} else if n := len(dirs); n != N {
-		t.Errorf("got %d dirs; want %d", n, N)
-	}
-
-	set := make(map[string]struct{})
-	for _, dir := range dirs {
-		if _, ok := set[dir]; ok {
-			t.Error("collided directory", dir)
-			continue
+				rs.s = dir
+			}(t, i, startC, outC)
 		}
 
-		set[dir] = struct{}{}
+		synctest.Wait()
+		close(startC)
+		checkTmpSyncTmpDirSyncOutputs(t, N, outC)
+	})
+}
+
+// checkTmpSyncTmpDirSyncOutputs is a common subprocess of
+// TestTmp_Sync and TestTmpDir_Sync that checks the outputs.
+func checkTmpSyncTmpDirSyncOutputs(t *testing.T, n int, c <-chan rankString) {
+	t.Helper()
+
+	stringRankMap := make(map[string]int, n)
+	for range n {
+		rs := <-c
+
+		if rs.s == "" {
+			if rank := stringRankMap[rs.s]; rank > rs.r {
+				stringRankMap[rs.s] = rs.r // keep the smallest rank in the map
+			}
+
+			t.Errorf("goroutine %d output an empty string", rs.r)
+		} else if rank, ok := stringRankMap[rs.s]; ok {
+			r1, r2 := rank, rs.r
+			if r1 > r2 {
+				r1, r2 = r2, r1
+				stringRankMap[rs.s] = r1 // keep the smallest rank in the map
+			}
+
+			t.Errorf("goroutine %d and %d output the same result %q",
+				r1, r2, rs.s)
+		} else {
+			stringRankMap[rs.s] = rs.r
+		}
+	}
+
+	if len(stringRankMap) != n {
+		t.Errorf("got %d nonempty outputs; want %d", len(stringRankMap), n)
 	}
 }

@@ -25,8 +25,8 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"sync"
 	"testing"
+	"testing/synctest"
 	"unsafe"
 
 	"github.com/donyori/gogo/filesys/local"
@@ -158,18 +158,18 @@ func testCaptureOutputFileToStringMain(
 		s, err, first := f()
 
 		if *filePtr != backup {
-			t.Errorf("call %d - file is not restored after calling f", i+1)
+			t.Errorf("call %d, file is not restored after calling f", i+1)
 		}
 
 		if err != nil {
-			t.Errorf("call %d - %v", i+1, err)
+			t.Errorf("call %d, %v", i+1, err)
 			return
 		} else if s != want {
-			t.Errorf("call %d - got s %q\nwant %q", i+1, s, want)
+			t.Errorf("call %d, got s %q\nwant %q", i+1, s, want)
 		}
 
 		if first != (i == 0) {
-			t.Errorf("call %d - got first %t; want %t", i+1, first, i == 0)
+			t.Errorf("call %d, got first %t; want %t", i+1, first, i == 0)
 		}
 	}
 }
@@ -256,83 +256,81 @@ func testCaptureOutputFileToStringConcurrent( //nolint:thelper // this is the ma
 
 	for _, length := range []int{0, 5, 300, OneKB, OneMB, OneGB} {
 		t.Run(fmt.Sprintf("len=%d", length), func(t *testing.T) {
-			testCaptureOutputFileToStringConcurrentMain(
+			t.Cleanup(func() {
+				// Restore the file regardless of
+				// whether f returned by fn has restored it.
+				*filePtr = backup
+			})
+
+			// fn may launch new goroutines and create new channels.
+			// Don't call it inside synctest.Test.
+			f, err := fn()
+			if err != nil {
+				t.Fatal(err)
+			} else if f == nil {
+				t.Fatal("got f <nil>")
+			}
+
+			var want string
+			if length > 0 {
+				want = bufStr[:length]
+
+				_, err := (*filePtr).Write(buf[:length])
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			testCaptureOutputFileToStringConcurrentSyncBubble(
 				t,
 				filePtr,
-				fn,
-				length,
 				backup,
-				bufStr,
-				buf,
+				f,
+				want,
 			)
 		})
 	}
 }
 
-// testCaptureOutputFileToStringConcurrentMain is the main process of
-// testCaptureOutputFileToStringConcurrent.
-func testCaptureOutputFileToStringConcurrentMain(
+// testCaptureOutputFileToStringConcurrentSyncBubble is a subprocess of
+// testCaptureOutputFileToStringConcurrent
+// that calls f and checks the result in an isolated "bubble" by synctest.Test.
+func testCaptureOutputFileToStringConcurrentSyncBubble(
 	t *testing.T,
 	filePtr **os.File,
-	fn func() (f local.CaptureToStringFunc, err error),
-	length int,
 	backup *os.File,
-	bufStr string,
-	buf []byte,
+	f local.CaptureToStringFunc,
+	want string,
 ) {
 	t.Helper()
 
-	t.Cleanup(func() {
-		*filePtr = backup
-	})
+	synctest.Test(t, func(t *testing.T) {
+		// Create a dedicated channel to make the following goroutines
+		// call f logically simultaneously.
+		startC := make(chan struct{})
+		for i := range max(runtime.NumCPU(), 4) {
+			go func(t *testing.T, rank int, startC <-chan struct{}) {
+				t.Helper()
 
-	f, err := fn()
-	if err != nil {
-		t.Error(err)
-		return
-	} else if f == nil {
-		t.Error("got f <nil>")
-		return
-	}
+				<-startC
 
-	var want string
-	if length > 0 {
-		want = bufStr[:length]
-
-		_, err = (*filePtr).Write(buf[:length])
-		if err != nil {
-			t.Error(err)
-			return
+				s, err, _ := f()
+				if err != nil {
+					t.Errorf("goroutine %d, local.CaptureToStringFunc: %v",
+						rank, err)
+				} else if s != want {
+					t.Errorf("goroutine %d, got s %q\nwant %q", rank, s, want)
+				}
+			}(t, i, startC)
 		}
-	}
 
-	n := max(runtime.NumCPU(), 4)
+		synctest.Wait()
+		close(startC)
 
-	var wg, barrier sync.WaitGroup
-	wg.Add(n)
-	barrier.Add(n)
+		synctest.Wait()
 
-	for i := range n {
-		go func(rank int) {
-			defer wg.Done()
-
-			barrier.Done()
-			barrier.Wait()
-
-			s, err, _ := f()
-
-			if *filePtr != backup {
-				t.Errorf("goroutine %d - file is not restored after calling f",
-					rank)
-			}
-
-			if err != nil {
-				t.Errorf("goroutine %d - %v", rank, err)
-			} else if s != want {
-				t.Errorf("goroutine %d - got s %q\nwant %q", rank, s, want)
-			}
-		}(i)
-	}
-
-	wg.Wait()
+		if *filePtr != backup {
+			t.Error("file is not restored")
+		}
+	})
 }
