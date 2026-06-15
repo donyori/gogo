@@ -16,10 +16,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package queue
+package jobsched
 
 import (
-	"github.com/donyori/gogo/concurrency/framework/jobsched"
 	"github.com/donyori/gogo/container/heap/pqueue"
 	"github.com/donyori/gogo/errors"
 	"github.com/donyori/gogo/function/compare"
@@ -44,16 +43,23 @@ type priorityFirstJobQueueMaker[Job, Properties any] struct{}
 // The jobs with the same priority are scheduled according to their
 // creation time (the field CreationTime in the meta information).
 // The earlier the creation time, the earlier dequeued.
-func NewPriorityFirstJobQueueMaker[Job, Properties any]() jobsched.JobQueueMaker[Job, Properties] {
+func NewPriorityFirstJobQueueMaker[
+	Job any,
+	Properties any,
+]() JobQueueMaker[Job, Properties] {
 	return priorityFirstJobQueueMaker[Job, Properties]{}
 }
 
-func (m priorityFirstJobQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
+func (m priorityFirstJobQueueMaker[Job, Properties]) New() JobQueue[
+	Job,
+	Properties,
+] {
 	return &priorityJobQueue[Job, Properties]{
-		pq: pqueue.New(func(a, b *jobsched.MetaJob[Job, Properties]) bool {
+		pq: pqueue.New(func(a, b *MetaJob[Job, Properties]) bool {
 			if a.Meta.Priority == b.Meta.Priority {
 				return a.Meta.CreationTime.Before(b.Meta.CreationTime)
 			}
+
 			return a.Meta.Priority > b.Meta.Priority
 		}, 0),
 	}
@@ -78,16 +84,23 @@ type creationTimeFirstJobQueueMaker[Job, Properties any] struct{}
 // The jobs with the same priority are scheduled according to their
 // creation time (the field CreationTime in the meta information).
 // The earlier the creation time, the earlier dequeued.
-func NewCreationTimeFirstJobQueueMaker[Job, Properties any]() jobsched.JobQueueMaker[Job, Properties] {
+func NewCreationTimeFirstJobQueueMaker[
+	Job any,
+	Properties any,
+]() JobQueueMaker[Job, Properties] {
 	return creationTimeFirstJobQueueMaker[Job, Properties]{}
 }
 
-func (m creationTimeFirstJobQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
+func (m creationTimeFirstJobQueueMaker[Job, Properties]) New() JobQueue[
+	Job,
+	Properties,
+] {
 	return &priorityJobQueue[Job, Properties]{
-		pq: pqueue.New(func(a, b *jobsched.MetaJob[Job, Properties]) bool {
+		pq: pqueue.New(func(a, b *MetaJob[Job, Properties]) bool {
 			if a.Meta.CreationTime.Equal(b.Meta.CreationTime) {
 				return a.Meta.Priority > b.Meta.Priority
 			}
+
 			return a.Meta.CreationTime.Before(b.Meta.CreationTime)
 		}, 0),
 	}
@@ -115,7 +128,7 @@ type jobPriorityQueueMaker[Job, Properties any] struct {
 	//
 	// The framework guarantees that arguments passed to lessFn are never nil
 	// and have a nonzero creation time in their meta information.
-	lessFn compare.LessFunc[*jobsched.MetaJob[Job, Properties]]
+	lessFn compare.LessFunc[*MetaJob[Job, Properties]]
 }
 
 // NewJobPriorityQueueMaker creates a job queue maker for creating job queues
@@ -138,28 +151,28 @@ type jobPriorityQueueMaker[Job, Properties any] struct {
 //
 // NewJobPriorityQueueMaker panics if lessFn is nil.
 func NewJobPriorityQueueMaker[Job, Properties any](
-	lessFn compare.LessFunc[*jobsched.MetaJob[Job, Properties]],
-) jobsched.JobQueueMaker[Job, Properties] {
+	lessFn compare.LessFunc[*MetaJob[Job, Properties]],
+) JobQueueMaker[Job, Properties] {
 	if lessFn == nil {
 		panic(errors.AutoMsg("lessFn is nil"))
 	}
+
 	return &jobPriorityQueueMaker[Job, Properties]{lessFn: lessFn}
 }
 
-func (m *jobPriorityQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
-	return &priorityJobQueue[Job, Properties]{
-		pq: pqueue.New(m.lessFn, 0),
-	}
+func (m *jobPriorityQueueMaker[Job, Properties]) New() JobQueue[
+	Job,
+	Properties,
+] {
+	return &priorityJobQueue[Job, Properties]{pq: pqueue.New(m.lessFn, 0)}
 }
 
 // priorityJobQueue wraps
-// github.com/donyori/gogo/container/heap/pqueue.PriorityQueue
-// to a github.com/donyori/gogo/concurrency/framework/jobsched.JobQueue.
+// github.com/donyori/gogo/container/heap/pqueue.PriorityQueue to a JobQueue.
 //
-// Its type parameters are consistent with that of
-// github.com/donyori/gogo/concurrency/framework/jobsched.JobQueue.
+// Its type parameters are consistent with that of JobQueue.
 type priorityJobQueue[Job, Properties any] struct {
-	pq pqueue.PriorityQueue[*jobsched.MetaJob[Job, Properties]]
+	pq pqueue.PriorityQueue[*MetaJob[Job, Properties]]
 }
 
 func (jq *priorityJobQueue[Job, Properties]) Len() int {
@@ -167,10 +180,12 @@ func (jq *priorityJobQueue[Job, Properties]) Len() int {
 }
 
 func (jq *priorityJobQueue[Job, Properties]) Enqueue(
-	metaJob ...*jobsched.MetaJob[Job, Properties]) {
+	metaJob ...*MetaJob[Job, Properties],
+) {
 	if len(metaJob) == 0 {
 		return
 	}
+
 	jq.pq.Enqueue(metaJob...)
 }
 
@@ -178,5 +193,6 @@ func (jq *priorityJobQueue[Job, Properties]) Dequeue() Job {
 	if jq.pq.Len() == 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))
 	}
+
 	return jq.pq.Dequeue().Job
 }

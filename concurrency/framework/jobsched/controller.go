@@ -191,22 +191,23 @@ func New[Job, Properties, Feedback any](
 	} else if opts == nil {
 		opts = new(Options[Job, Properties, Feedback])
 	}
+
 	n := opts.NumWorker
 	if n <= 0 {
-		n = runtime.NumCPU() - 2
-		if n < 1 {
-			n = 1
-		}
+		const NumJobAllocatorAndFeedbackHandlerGoroutine int = 2
+
+		n = max(1, runtime.NumCPU()-NumJobAllocatorAndFeedbackHandlerGoroutine)
 	}
-	var jq JobQueue[Job, Properties]
-	if opts.JobQueueMaker != nil {
-		jq = opts.JobQueueMaker.New()
-	} else {
-		jq = new(fcfsJobQueue[Job, Properties])
+
+	if opts.JobQueueMaker == nil {
+		opts.JobQueueMaker = NewFCFSJobQueueMaker[Job, Properties]()
 	}
+
+	jq := opts.JobQueueMaker.New()
 	if len(metaJob) > 0 {
 		jq.Enqueue(copyMetaJobs(metaJob)...)
 	}
+
 	ctrl := &controller[Job, Properties, Feedback]{
 		n:       n,
 		jh:      jobHandler,
@@ -222,14 +223,13 @@ func New[Job, Properties, Feedback any](
 		cleanup: opts.Cleanup,
 	}
 	ctrl.lo = concurrency.NewOnce(ctrl.launchProc)
+
 	if reflect.TypeFor[Feedback]() != noFeedbackType {
-		bufSize := opts.FeedbackChanBufSize
-		if bufSize < 0 {
-			bufSize = 0
-		}
+		bufSize := max(opts.FeedbackChanBufSize, 0)
 		ctrl.fc = make(chan Feedback, bufSize)
 		ctrl.fhdc = make(chan struct{})
 	}
+
 	return ctrl
 }
 
@@ -260,6 +260,7 @@ func Run[Job, Properties, Feedback any](
 ) []framework.PanicRecord {
 	ctrl := New(jobHandler, feedbackHandler, opts, metaJob...)
 	ctrl.Run()
+
 	return ctrl.PanicRecords()
 }
 
@@ -281,34 +282,70 @@ func RunWithoutFeedback[Job, Properties any](
 
 // controller is an implementation of interface Controller.
 type controller[Job, Properties, Feedback any] struct {
-	n  int                                   // The number of worker goroutines to process jobs.
-	jh JobHandler[Job, Properties, Feedback] // Job handler.
-	fh FeedbackHandler[Feedback]             // Feedback handler.
+	// The number of worker goroutines to process jobs.
+	n int
 
-	c  concurrency.Canceler      // Canceler.
-	jq JobQueue[Job, Properties] // Job queue.
+	// Job handler.
+	jh JobHandler[Job, Properties, Feedback]
 
-	ic   chan []*MetaJob[Job, Properties] // Input channel, to input jobs from the client.
-	eqc  chan []*MetaJob[Job, Properties] // Enqueue channel, to input jobs from workers.
-	dqc  chan Job                         // Dequeue channel, to dispatch jobs to workers.
-	fc   chan Feedback                    // Feedback channel, to collect feedback on jobs.
-	fhdc chan struct{}                    // Feedback handler done channel, to broadcast a signal when the feedback handler is finished.
+	// Feedback handler.
+	fh FeedbackHandler[Feedback]
 
-	pr  concurrency.Recorder[framework.PanicRecord] // Panic recorder.
-	wg  sync.WaitGroup                              // Wait group for the workers and the job allocator, not for the feedback handler.
-	lo  concurrency.Once                            // For launching the framework.
-	wso concurrency.Once                            // For indicating the start of the first effective call to the method Wait.
+	// Canceler for all jobs.
+	c concurrency.Canceler
+
+	// Job queue.
+	jq JobQueue[Job, Properties]
+
+	// Input channel, to input jobs from the client.
+	ic chan []*MetaJob[Job, Properties]
+
+	// Enqueue channel, to input jobs from workers.
+	eqc chan []*MetaJob[Job, Properties]
+
+	// Dequeue channel, to dispatch jobs to workers.
+	dqc chan Job
+
+	// Feedback channel, to collect feedback on jobs.
+	fc chan Feedback
+
+	// Feedback handler done channel,
+	// to broadcast a signal when the feedback handler is finished.
+	fhdc chan struct{}
+
+	// Panic recorder.
+	pr concurrency.Recorder[framework.PanicRecord]
+
+	// Wait group for the workers and the job allocator,
+	// not for the feedback handler.
+	wg sync.WaitGroup
+
+	// For launching the framework.
+	lo concurrency.Once
+
+	// For indicating the start of the first effective call to the method Wait.
+	wso concurrency.Once
+
 	// Lock to avoid the race condition on jq
 	// when calling Launch and Input at the same time
 	// or calling Input simultaneously.
-	m   sync.Mutex
-	lsi bool // An indicator to report whether the method Launch is started.
+	m sync.Mutex
 
-	setup   func(ctrl Controller[Job, Properties, Feedback], rank int) // Worker setup function.
-	cleanup func(ctrl Controller[Job, Properties, Feedback], rank int) // Worker cleanup function.
+	// An indicator to report whether the method Launch is started.
+	lsi bool
+
+	// Worker setup function.
+	setup func(ctrl Controller[Job, Properties, Feedback], rank int)
+
+	// Worker cleanup function.
+	cleanup func(ctrl Controller[Job, Properties, Feedback], rank int)
 }
 
-func (ctrl *controller[Job, Properties, Feedback]) Canceler() concurrency.Canceler {
+func (ctrl *controller[
+	Job,
+	Properties,
+	Feedback,
+]) Canceler() concurrency.Canceler {
 	return ctrl.c
 }
 
@@ -320,12 +357,17 @@ func (ctrl *controller[Job, Properties, Feedback]) Wait() int {
 	if !ctrl.lo.Done() {
 		return -1
 	}
-	defer ctrl.c.Cancel() // for cleanup possible daemon goroutines that wait for a cancellation signal to exit
+	// Broadcast a cancellation signal to notify
+	// daemon goroutines that are waiting for it to exit.
+	defer ctrl.c.Cancel()
+
 	ctrl.wso.Do()
 	ctrl.wg.Wait()
+
 	if ctrl.fhdc != nil {
 		<-ctrl.fhdc
 	}
+
 	return ctrl.pr.Len()
 }
 
@@ -338,19 +380,26 @@ func (ctrl *controller[Job, Properties, Feedback]) NumGoroutine() int {
 	return ctrl.n
 }
 
-func (ctrl *controller[Job, Properties, Feedback]) PanicRecords() []framework.PanicRecord {
+func (ctrl *controller[
+	Job,
+	Properties,
+	Feedback,
+]) PanicRecords() []framework.PanicRecord {
 	return ctrl.pr.All()
 }
 
 func (ctrl *controller[Job, Properties, Feedback]) Input(
-	metaJob ...*MetaJob[Job, Properties]) int {
+	metaJob ...*MetaJob[Job, Properties],
+) int {
 	if ctrl.wso.Done() {
 		return 0
 	}
+
 	mjs := copyMetaJobs(metaJob)
 	if !ctrl.lo.Done() && ctrl.inputBeforeLaunch(mjs) {
 		return len(mjs)
 	}
+
 	select {
 	case <-ctrl.c.C():
 		return 0
@@ -364,9 +413,10 @@ func (ctrl *controller[Job, Properties, Feedback]) Input(
 func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 	ctrl.m.Lock()
 	defer ctrl.m.Unlock()
-	ctrl.lsi = true
 
+	ctrl.lsi = true
 	ctrl.wg.Add(ctrl.n + 1) // n workers + 1 job allocator
+
 	if ctrl.fc != nil {
 		go func() { // goroutine for feedback handler
 			defer close(ctrl.fhdc)
@@ -379,6 +429,7 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 					})
 				}
 			}()
+
 			ctrl.feedbackHandlerProc()
 		}()
 		go func() { // goroutine for closing feedback channel
@@ -392,9 +443,11 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 					})
 				}
 			}()
+
 			ctrl.wg.Wait()
 		}()
 	}
+
 	for i := range ctrl.n {
 		go func(rank int) { // goroutine for worker
 			defer ctrl.wg.Done()
@@ -407,6 +460,7 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 					})
 				}
 			}()
+
 			ctrl.workerProc(rank)
 		}(i)
 	}
@@ -421,6 +475,7 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 				})
 			}
 		}()
+
 		ctrl.jobAllocatorProc()
 	}()
 }
@@ -440,6 +495,10 @@ func (ctrl *controller[Job, Properties, Feedback]) feedbackHandlerProc() {
 			ctrl.fh(ctrl.c, fb)
 		}
 	default:
+		// Drain ctrl.fc to ensure that
+		// no goroutines will wait to send feedback to ctrl.fc.
+		//
+		//revive:disable-next-line:empty-block This block drains ctrl.fc.
 		for range ctrl.fc {
 		}
 	}
@@ -451,13 +510,19 @@ func (ctrl *controller[Job, Properties, Feedback]) workerProc(rank int) {
 	if ctrl.setup != nil {
 		ctrl.setup(ctrl, rank)
 	}
+
 	if ctrl.cleanup != nil {
 		defer ctrl.cleanup(ctrl, rank)
 	}
+
 	cancelChan := ctrl.c.C()
+
 	for {
-		var mjs []*MetaJob[Job, Properties]
-		var fb Feedback
+		var (
+			mjs []*MetaJob[Job, Properties]
+			fb  Feedback
+		)
+
 		select {
 		case <-cancelChan:
 			return
@@ -465,9 +530,11 @@ func (ctrl *controller[Job, Properties, Feedback]) workerProc(rank int) {
 			if !ok {
 				return
 			}
+
 			mjs, fb = ctrl.jh(ctrl.c, rank, job)
 			mjs = copyMetaJobs(mjs)
 		}
+
 		if ctrl.fc != nil {
 			// The feedback type is not NoFeedback.
 			// Send feedback first.
@@ -477,6 +544,7 @@ func (ctrl *controller[Job, Properties, Feedback]) workerProc(rank int) {
 			case ctrl.fc <- fb:
 			}
 		}
+
 		// Always send new jobs to the job allocator,
 		// regardless of whether jobs are empty.
 		select {
@@ -491,14 +559,20 @@ func (ctrl *controller[Job, Properties, Feedback]) workerProc(rank int) {
 // without panic checking and ctrl.wg.Done().
 func (ctrl *controller[Job, Properties, Feedback]) jobAllocatorProc() {
 	defer close(ctrl.dqc)
-	var dqc chan<- Job // disable dqc at the beginning
-	var job Job
+
+	var (
+		dqc chan<- Job // disable dqc at the beginning
+		job Job
+	)
+
 	if ctrl.jq.Len() > 0 {
 		job = ctrl.jq.Dequeue()
 		dqc = ctrl.dqc // enable dqc
 	}
+
 	ctr := 1 // counter for available input sources. 1 at the beginning stands for the client
 	cancelChan, wsoC := ctrl.c.C(), ctrl.wso.C()
+
 	for ctr > 0 || len(ctrl.ic) > 0 || dqc != nil {
 		select {
 		case <-cancelChan:
@@ -512,11 +586,13 @@ func (ctrl *controller[Job, Properties, Feedback]) jobAllocatorProc() {
 			}
 		case mjs := <-ctrl.eqc:
 			ctr--
+
 			if len(mjs) > 0 {
 				ctrl.jq.Enqueue(mjs...)
 			}
 		case dqc <- job:
 			ctr++
+
 			if ctrl.jq.Len() > 0 {
 				job = ctrl.jq.Dequeue()
 				continue
@@ -524,6 +600,7 @@ func (ctrl *controller[Job, Properties, Feedback]) jobAllocatorProc() {
 				dqc = nil // disable dqc
 			}
 		}
+
 		if dqc == nil && ctrl.jq.Len() > 0 {
 			job = ctrl.jq.Dequeue()
 			dqc = ctrl.dqc // enable dqc
@@ -536,13 +613,17 @@ func (ctrl *controller[Job, Properties, Feedback]) jobAllocatorProc() {
 // It returns true if metaJobs are put into the job queue successfully.
 // When it returns false, the caller should then send metaJobs to ctrl.ic.
 func (ctrl *controller[Job, Properties, Feedback]) inputBeforeLaunch(
-	metaJobs []*MetaJob[Job, Properties]) bool {
+	metaJobs []*MetaJob[Job, Properties],
+) bool {
 	ctrl.m.Lock()
 	defer ctrl.m.Unlock()
+
 	if ctrl.lsi {
 		return false
 	}
+
 	ctrl.jq.Enqueue(metaJobs...)
+
 	return true
 }
 
@@ -552,24 +633,32 @@ func (ctrl *controller[Job, Properties, Feedback]) inputBeforeLaunch(
 // Meta.CreationTime to time.Now(), and Meta.Custom to its zero value),
 // and replaces the zero-value Meta.CreationTime field with time.Now().
 func copyMetaJobs[Job, Properties any](
-	metaJobs []*MetaJob[Job, Properties]) []*MetaJob[Job, Properties] {
+	metaJobs []*MetaJob[Job, Properties],
+) []*MetaJob[Job, Properties] {
 	if metaJobs == nil {
 		return nil
 	}
+
 	mjs := make([]*MetaJob[Job, Properties], 0, len(metaJobs))
+
 	var now time.Time // lazy init
+
 	for _, mj := range metaJobs {
-		newMj := new(MetaJob[Job, Properties])
+		newMJ := new(MetaJob[Job, Properties])
 		if mj != nil {
-			*newMj = *mj
+			*newMJ = *mj
 		}
-		if newMj.Meta.CreationTime.IsZero() {
+
+		if newMJ.Meta.CreationTime.IsZero() {
 			if now.IsZero() {
 				now = time.Now()
 			}
-			newMj.Meta.CreationTime = now
+
+			newMJ.Meta.CreationTime = now
 		}
-		mjs = append(mjs, newMj)
+
+		mjs = append(mjs, newMJ)
 	}
+
 	return mjs
 }

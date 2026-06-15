@@ -48,7 +48,7 @@ type Meta[Properties any] struct {
 	Custom Properties
 }
 
-// MetaJob combines the job and its meta information.
+// MetaJob combines a job and its meta information.
 type MetaJob[Job, Properties any] struct {
 	Meta Meta[Properties]
 	Job  Job

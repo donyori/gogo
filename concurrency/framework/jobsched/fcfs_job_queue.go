@@ -16,22 +16,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package queue
+package jobsched
 
 import (
-	"github.com/donyori/gogo/concurrency/framework/jobsched"
+	"github.com/donyori/gogo/container/queue"
 	"github.com/donyori/gogo/errors"
 )
-
-// fcfsJobQueue is copied to
-// "github.com/donyori/gogo/concurrency/framework/jobsched/job_queue.go"
-// to avoid cycle import.
-//
-// Remember to update the copy when updating fcfsJobQueue.
-
-// emptyQueuePanicMessage is the panic message
-// indicating that the job queue is empty.
-const emptyQueuePanicMessage = "job queue is empty"
 
 // fcfsJobQueueMaker is a maker for creating job queues with
 // FCFS (first come, first served) scheduling algorithm.
@@ -49,38 +39,44 @@ type fcfsJobQueueMaker[Job, Properties any] struct{}
 // queues jobs in the order that they arrive.
 // All the properties (such as the priority and creation time)
 // of jobs are ignored.
-func NewFCFSJobQueueMaker[Job, Properties any]() jobsched.JobQueueMaker[Job, Properties] {
+func NewFCFSJobQueueMaker[
+	Job any,
+	Properties any,
+]() JobQueueMaker[Job, Properties] {
 	return fcfsJobQueueMaker[Job, Properties]{}
 }
 
-func (m fcfsJobQueueMaker[Job, Properties]) New() jobsched.JobQueue[Job, Properties] {
-	return new(fcfsJobQueue[Job, Properties])
+func (m fcfsJobQueueMaker[Job, Properties]) New() JobQueue[Job, Properties] {
+	return &fcfsJobQueue[Job, Properties]{q: queue.New[Job](0)}
 }
 
 // fcfsJobQueue is an FCFS (first come, first served) job queue.
-type fcfsJobQueue[Job, Properties any] []Job
+type fcfsJobQueue[Job, Properties any] struct {
+	q queue.Queue[Job]
+}
 
 func (jq *fcfsJobQueue[Job, Properties]) Len() int {
-	return len(*jq)
+	return jq.q.Len()
 }
 
 func (jq *fcfsJobQueue[Job, Properties]) Enqueue(
-	metaJob ...*jobsched.MetaJob[Job, Properties]) {
+	metaJob ...*MetaJob[Job, Properties],
+) {
 	if len(metaJob) == 0 {
 		return
 	}
-	i := len(*jq)
-	*jq = append(*jq, make([]Job, len(metaJob))...)
+
+	jq.q.Reserve(jq.q.Len() + len(metaJob))
+
 	for _, mj := range metaJob {
-		(*jq)[i], i = mj.Job, i+1
+		jq.q.Enqueue(mj.Job)
 	}
 }
 
 func (jq *fcfsJobQueue[Job, Properties]) Dequeue() Job {
-	if len(*jq) == 0 {
+	if jq.q.Len() == 0 {
 		panic(errors.AutoMsg(emptyQueuePanicMessage))
 	}
-	var job Job
-	*jq, (*jq)[0], job = (*jq)[1:], job, (*jq)[0] // where (*jq)[0] = job is to avoid memory leak
-	return job
+
+	return jq.q.Dequeue()
 }

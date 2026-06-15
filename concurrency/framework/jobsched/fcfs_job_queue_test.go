@@ -16,20 +16,25 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package queue_test
+package jobsched_test
 
 import (
 	"testing"
 
 	"github.com/donyori/gogo/concurrency/framework/jobsched"
-	"github.com/donyori/gogo/concurrency/framework/jobsched/queue"
 )
 
 func TestFCFSJobQueue(t *testing.T) {
-	want := make([][]int, N)
+	t.Parallel()
+
+	want := make([][]int, numMetaJob)
 	for i := range want {
 		want[i] = []int{metaJobs[i].Job}
 	}
+
 	testJobQueueFunc(
-		t, queue.NewFCFSJobQueueMaker[int, jobsched.NoProperty](), want)
+		t,
+		jobsched.NewFCFSJobQueueMaker[int, jobsched.NoProperty](),
+		want,
+	)
 }

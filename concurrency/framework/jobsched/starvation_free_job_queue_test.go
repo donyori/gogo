@@ -16,55 +16,72 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package queue_test
+package jobsched_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/donyori/gogo/concurrency/framework/jobsched"
-	"github.com/donyori/gogo/concurrency/framework/jobsched/queue"
 )
 
 func TestExponentialJobQueue_Basic(t *testing.T) {
+	t.Parallel()
+
 	testJobQueueFunc(
 		t,
-		queue.NewExponentialJobQueueMaker[int, jobsched.NoProperty](0, 0.),
-		makeWant(func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) int {
-			switch {
-			case a.Meta.Priority > b.Meta.Priority:
+		jobsched.NewExponentialJobQueueMaker[int, jobsched.NoProperty](0, 0.),
+		makeWantForTestJobQueueFunc(
+			func(a, b *jobsched.MetaJob[int, jobsched.NoProperty]) int {
+				switch {
+				// Sort by priority in descending order:
+				case a.Meta.Priority != b.Meta.Priority:
+					if a.Meta.Priority < b.Meta.Priority {
+						return 1
+					}
+				// Sort by creation time in ascending order:
+				case !a.Meta.CreationTime.Equal(b.Meta.CreationTime):
+					if a.Meta.CreationTime.After(b.Meta.CreationTime) {
+						return 1
+					}
+				default:
+					return 0
+				}
+
 				return -1
-			case a.Meta.Priority < b.Meta.Priority:
-				return 1
-			case a.Meta.CreationTime.Before(b.Meta.CreationTime):
-				return -1
-			case a.Meta.CreationTime.After(b.Meta.CreationTime):
-				return 1
-			}
-			return 0
-		}),
+			},
+		),
 	)
 }
 
 func TestExponentialJobQueue_StarvationFree(t *testing.T) {
-	const N int = 2
+	t.Parallel()
+
+	const (
+		N          int  = 2
+		TargetJob  int  = 0
+		NumDequeue uint = 1500
+	)
+
 	baseTime := time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
 
-	var target int
-	jq := queue.NewExponentialJobQueueMaker[int, jobsched.NoProperty](N, 0.).New()
+	jq := jobsched.NewExponentialJobQueueMaker[
+		int,
+		jobsched.NoProperty,
+	](N, 0.).New()
 	jq.Enqueue(&jobsched.MetaJob[int, jobsched.NoProperty]{
 		Meta: jobsched.Meta[jobsched.NoProperty]{
 			Priority:     0,
 			CreationTime: baseTime,
 		},
-		Job: target,
+		Job: TargetJob,
 	})
+	nextJob := TargetJob + 1
 
-	const NumDequeue uint = 1500
-	nextJob := target + 1
-	for i := uint(0); i < NumDequeue; i++ {
+	for i := range NumDequeue {
 		p := 3 + i
 		ct := baseTime.Add(time.Duration(i) * time.Millisecond)
+
 		for range N {
 			jq.Enqueue(&jobsched.MetaJob[int, jobsched.NoProperty]{
 				Meta: jobsched.Meta[jobsched.NoProperty]{
@@ -75,10 +92,12 @@ func TestExponentialJobQueue_StarvationFree(t *testing.T) {
 			})
 			nextJob++
 		}
+
 		job := jq.Dequeue()
-		if job == 0 {
+		if job == TargetJob {
 			return
 		}
 	}
+
 	t.Errorf("target job cannot be dequeued in %d calls to Dequeue", NumDequeue)
 }
