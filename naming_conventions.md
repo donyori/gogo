@@ -56,6 +56,7 @@ keywords or other identifiers such as standard packages.
 | builder                                 | ^b                  |
 | container                               | ctnr                |
 | continue                                | \*cont              |
+| controller                              | ctrl                |
 | counter                                 | ctr                 |
 | decompressor                            | dcomp               |
 | default                                 | \*dflt              |
@@ -67,6 +68,7 @@ keywords or other identifiers such as standard packages.
 | number (indicating rank, serial number) | no                  |
 | option                                  | opt                 |
 | pointer                                 | p\-, ptr            |
+| schedule                                | sched               |
 | type                                    | typ                 |
 | value                                   | ^v, val             |
 

@@ -36,6 +36,8 @@ import (
 	"github.com/donyori/gogo/inout"
 )
 
+const testWriteZipFilename = "test-write.zip"
+
 func TestWrite_Raw(t *testing.T) {
 	t.Parallel()
 
@@ -169,7 +171,7 @@ func TestWrite_Zip(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			file := &WritableFileImpl{Name: "test-write.zip"}
+			file := &WritableFileImpl{Name: testWriteZipFilename}
 			writeZipFiles(t, file, tc.f)
 
 			if !t.Failed() {
@@ -212,7 +214,7 @@ func TestWrite_Zip_Raw(t *testing.T) {
 		t.Fatal("create zip reader:", err)
 	}
 
-	file := &WritableFileImpl{Name: "test-write.zip"}
+	file := &WritableFileImpl{Name: testWriteZipFilename}
 	writeZipFiles(t, file, func(w filesys.Writer, name string) error {
 		for _, f := range zr.File {
 			if f.Name == name {
@@ -231,7 +233,7 @@ func TestWrite_Zip_Raw(t *testing.T) {
 func TestWrite_ZipAddFS(t *testing.T) {
 	t.Parallel()
 
-	file := &WritableFileImpl{Name: "test-write.zip"}
+	file := &WritableFileImpl{Name: testWriteZipFilename}
 	writeZipFS(t, file)
 
 	if !t.Failed() {

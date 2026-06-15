@@ -918,17 +918,21 @@ func mapToString(m SIM) string {
 			value2 int,
 		) int {
 			switch {
-			case key1 < key2:
-				return -1
-			case key1 > key2:
-				return 1
-			case value1 < value2:
-				return -1
-			case value1 > value2:
-				return 1
+			// Sort by key in ascending order:
+			case key1 != key2:
+				if key1 > key2 {
+					return 1
+				}
+			// Sort by value in ascending order:
+			case value1 != value2:
+				if value1 > value2 {
+					return 1
+				}
+			default:
+				return 0
 			}
 
-			return 0
+			return -1
 		},
 	})
 }
@@ -948,17 +952,21 @@ func mapItfToString(m mapping.Map[string, int]) string {
 			value2 int,
 		) int {
 			switch {
-			case key1 < key2:
-				return -1
-			case key1 > key2:
-				return 1
-			case value1 < value2:
-				return -1
-			case value1 > value2:
-				return 1
+			// Sort by key in ascending order:
+			case key1 != key2:
+				if key1 > key2 {
+					return 1
+				}
+			// Sort by value in ascending order:
+			case value1 != value2:
+				if value1 > value2 {
+					return 1
+				}
+			default:
+				return 0
 			}
 
-			return 0
+			return -1
 		},
 	})
 }

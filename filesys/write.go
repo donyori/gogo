@@ -28,6 +28,7 @@ import (
 	"io/fs"
 	"maps"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/donyori/gogo/errors"
@@ -302,8 +303,8 @@ func Write(
 
 	defer func() {
 		if el.Erroneous() {
-			for i := len(closers) - 1; i >= 0; i-- {
-				el.Append(closers[i].Close())
+			for _, c := range slices.Backward(closers) {
+				el.Append(c.Close())
 			}
 		}
 	}()

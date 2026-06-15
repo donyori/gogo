@@ -61,16 +61,19 @@ func idValueEqual(a, b *idValue) bool {
 
 func idValueSortCmp(a, b *idValue) int {
 	switch {
+	// Nil *idValue is less than non-nil *idValue:
 	case a == nil:
 		if b == nil {
 			return 0
 		}
 	case b == nil:
 		return 1
+	// Sort by value in ascending order:
 	case a.value != b.value:
 		if a.value > b.value {
 			return 1
 		}
+	// Sort by ID in ascending order:
 	case a.id != b.id:
 		if a.id > b.id {
 			return 1

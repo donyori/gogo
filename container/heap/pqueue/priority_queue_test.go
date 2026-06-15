@@ -502,7 +502,7 @@ func checkPriorityQueueByDequeue[Item comparable](
 				prefix += "s"
 			}
 
-			if isDequeuePanicMessage(e) {
+			if isEmptyQueuePanicMessage(e) {
 				t.Error(prefix, "priority queue length <", len(want))
 			} else {
 				t.Error(prefix, e)
@@ -521,7 +521,7 @@ func checkPriorityQueueByDequeue[Item comparable](
 	}
 
 	defer func() {
-		if e := recover(); !isDequeuePanicMessage(e) {
+		if e := recover(); !isEmptyQueuePanicMessage(e) {
 			t.Error(e)
 		}
 	}()
@@ -530,12 +530,12 @@ func checkPriorityQueueByDequeue[Item comparable](
 	t.Errorf("dequeued more than %d items, got %v", i, x)
 }
 
-func isDequeuePanicMessage(err any) bool {
-	if err == nil {
+func isEmptyQueuePanicMessage(panicValue any) bool {
+	if panicValue == nil {
 		return false
 	}
 
-	msg, ok := err.(string)
+	msg, ok := panicValue.(string)
 
 	return ok && strings.HasSuffix(msg, pqueue.EmptyQueuePanicMessage)
 }

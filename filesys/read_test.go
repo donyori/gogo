@@ -585,7 +585,7 @@ func TestReadFromFS_Zip_Offset_Open(t *testing.T) {
 
 	r, err := filesys.ReadFromFS(
 		testFS,
-		testFSZipOffsetName,
+		testFSZipOffsetFilename,
 		&filesys.ReadOptions{Offset: testFSZipOffset},
 	)
 	if err != nil {
@@ -607,7 +607,7 @@ func TestReadFromFS_Zip_Offset_Files(t *testing.T) {
 
 	r, err := filesys.ReadFromFS(
 		testFS,
-		testFSZipOffsetName,
+		testFSZipOffsetFilename,
 		&filesys.ReadOptions{Offset: testFSZipOffset},
 	)
 	if err != nil {
@@ -629,7 +629,7 @@ func TestReadFromFS_Zip_Offset_Seq(t *testing.T) {
 
 	r, err := filesys.ReadFromFS(
 		testFS,
-		testFSZipOffsetName,
+		testFSZipOffsetFilename,
 		&filesys.ReadOptions{Offset: testFSZipOffset},
 	)
 	if err != nil {
@@ -650,7 +650,7 @@ func TestReadFromFS_Zip_Offset_Seq2(t *testing.T) {
 
 	r, err := filesys.ReadFromFS(
 		testFS,
-		testFSZipOffsetName,
+		testFSZipOffsetFilename,
 		&filesys.ReadOptions{Offset: testFSZipOffset},
 	)
 	if err != nil {
@@ -671,7 +671,7 @@ func TestReadFromFS_Zip_Offset_Comment(t *testing.T) {
 
 	r, err := filesys.ReadFromFS(
 		testFS,
-		testFSZipOffsetName,
+		testFSZipOffsetFilename,
 		&filesys.ReadOptions{Offset: testFSZipOffset},
 	)
 	if err != nil {

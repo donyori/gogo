@@ -144,6 +144,8 @@ func Ordered[T constraints.Ordered](a, b T) int {
 //
 // The client can instantiate it to get a Func.
 func Float[T constraints.Float](a, b T) int {
+	// "a < b" and "a > b" are always false if a or b is a NaN.
+	//
 	// "x != x" means that x is a NaN.
 	switch {
 	case a < b:

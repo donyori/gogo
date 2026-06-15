@@ -39,6 +39,21 @@ import (
 	"github.com/donyori/gogo/randbytes"
 )
 
+const (
+	testFileRosesAreRedFilename = "roses are red.txt"
+	testFileBigFilename         = "13KB.dat"
+
+	testFileTarDirectory     = "tardir"
+	testFileTarFile1Filename = testFileTarDirectory + "/tar file1.txt"
+	testFileTarFile2Filename = testFileTarDirectory + "/tar file2.txt"
+
+	testFileZipDirectory     = "zipdir"
+	testFileZipFile1Filename = testFileZipDirectory + "/zip file1.txt"
+	testFileZipFile2Filename = testFileZipDirectory + "/zip file2.txt"
+
+	testFileEmptyDirectory = "emptydir"
+)
+
 // ChaCha8Seed is the seed for ChaCha8 used for testing.
 var ChaCha8Seed = [32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))
 
@@ -97,23 +112,23 @@ func TestWriteTrunc_TarTgz(t *testing.T) {
 	big := randbytes.Make(rand.NewChaCha8(ChaCha8Seed), 13<<10)
 	tarFiles := []tarFileNameBody{
 		{
-			name: "tardir/",
+			name: testFileTarDirectory + "/",
 			body: nil,
 		},
 		{
-			name: "tardir/tar file1.txt",
+			name: testFileTarFile1Filename,
 			body: []byte("This is tar file 1."),
 		},
 		{
-			name: "tardir/tar file2.txt",
+			name: testFileTarFile2Filename,
 			body: []byte("Here is tar file 2!"),
 		},
 		{
-			name: "emptydir/",
+			name: testFileEmptyDirectory + "/",
 			body: nil,
 		},
 		{
-			name: "roses are red.txt",
+			name: testFileRosesAreRedFilename,
 			body: []byte(`Roses are red.
   Violets are blue.
 Sugar is sweet.
@@ -121,7 +136,7 @@ Sugar is sweet.
 `),
 		},
 		{
-			name: "13KB.dat",
+			name: testFileBigFilename,
 			body: big,
 		},
 	}
@@ -147,25 +162,25 @@ func TestWriteTrunc_TarAddFS(t *testing.T) {
 
 	big := randbytes.Make(rand.NewChaCha8(ChaCha8Seed), 13<<10)
 	fsys := fstest.MapFS{
-		"tardir": &fstest.MapFile{
+		testFileTarDirectory: &fstest.MapFile{
 			Mode:    0600 | fs.ModeDir,
 			ModTime: time.Now(),
 		},
-		"tardir/tar file1.txt": &fstest.MapFile{
+		testFileTarFile1Filename: &fstest.MapFile{
 			Data:    []byte("This is tar file 1."),
 			Mode:    0600,
 			ModTime: time.Now(),
 		},
-		"tardir/tar file2.txt": &fstest.MapFile{
+		testFileTarFile2Filename: &fstest.MapFile{
 			Data:    []byte("Here is tar file 2!"),
 			Mode:    0600,
 			ModTime: time.Now(),
 		},
-		"emptydir": &fstest.MapFile{
+		testFileEmptyDirectory: &fstest.MapFile{
 			Mode:    0600 | fs.ModeDir,
 			ModTime: time.Now(),
 		},
-		"roses are red.txt": &fstest.MapFile{
+		testFileRosesAreRedFilename: &fstest.MapFile{
 			Data: []byte(`Roses are red.
   Violets are blue.
 Sugar is sweet.
@@ -174,7 +189,7 @@ Sugar is sweet.
 			Mode:    0600,
 			ModTime: time.Now(),
 		},
-		"13KB.dat": &fstest.MapFile{
+		testFileBigFilename: &fstest.MapFile{
 			Data:    big,
 			Mode:    0600,
 			ModTime: time.Now(),
@@ -244,16 +259,16 @@ func TestWriteTrunc_Zip(t *testing.T) {
 
 	big := randbytes.Make(rand.NewChaCha8(ChaCha8Seed), 13<<10)
 	zipNameBodyMap := map[string][]byte{
-		"zipdir/":              nil,
-		"zipdir/zip file1.txt": []byte("This is ZIP file 1."),
-		"zipdir/zip file2.txt": []byte("Here is ZIP file 2!"),
-		"emptydir/":            nil,
-		"roses are red.txt": []byte(`Roses are red.
+		testFileZipDirectory + "/":   nil,
+		testFileZipFile1Filename:     []byte("This is ZIP file 1."),
+		testFileZipFile2Filename:     []byte("Here is ZIP file 2!"),
+		testFileEmptyDirectory + "/": nil,
+		testFileRosesAreRedFilename: []byte(`Roses are red.
   Violets are blue.
 Sugar is sweet.
   And so are you.
 `),
-		"13KB.dat": big,
+		testFileBigFilename: big,
 	}
 	name := filepath.Join(t.TempDir(), "test.zip")
 	writeZipFiles(t, name, zipNameBodyMap)
@@ -268,25 +283,25 @@ func TestWriteTrunc_ZipAddFS(t *testing.T) {
 
 	big := randbytes.Make(rand.NewChaCha8(ChaCha8Seed), 13<<10)
 	fsys := fstest.MapFS{
-		"zipdir": &fstest.MapFile{
+		testFileZipDirectory: &fstest.MapFile{
 			Mode:    0600 | fs.ModeDir,
 			ModTime: time.Now(),
 		},
-		"zipdir/zip file1.txt": &fstest.MapFile{
+		testFileZipFile1Filename: &fstest.MapFile{
 			Data:    []byte("This is ZIP file 1."),
 			Mode:    0600,
 			ModTime: time.Now(),
 		},
-		"zipdir/zip file2.txt": &fstest.MapFile{
+		testFileZipFile2Filename: &fstest.MapFile{
 			Data:    []byte("Here is ZIP file 2!"),
 			Mode:    0600,
 			ModTime: time.Now(),
 		},
-		"emptydir": &fstest.MapFile{
+		testFileEmptyDirectory: &fstest.MapFile{
 			Mode:    0600 | fs.ModeDir,
 			ModTime: time.Now(),
 		},
-		"roses are red.txt": &fstest.MapFile{
+		testFileRosesAreRedFilename: &fstest.MapFile{
 			Data: []byte(`Roses are red.
   Violets are blue.
 Sugar is sweet.
@@ -295,7 +310,7 @@ Sugar is sweet.
 			Mode:    0600,
 			ModTime: time.Now(),
 		},
-		"13KB.dat": &fstest.MapFile{
+		testFileBigFilename: &fstest.MapFile{
 			Data:    big,
 			Mode:    0600,
 			ModTime: time.Now(),

@@ -287,8 +287,8 @@ func Read(
 
 	defer func() {
 		if el.Erroneous() {
-			for i := len(closers) - 1; i >= 0; i-- {
-				el.Append(closers[i].Close())
+			for _, c := range slices.Backward(closers) {
+				el.Append(c.Close())
 			}
 		}
 	}()
@@ -426,7 +426,7 @@ func (fr *reader) initOffsetAndLimit(size int64) (n int64, err error) {
 
 // initRaw deals with the option Raw.
 //
-// size is obtained from initOffsetAndLimit, not the file size.
+// size is obtained by the method initOffsetAndLimit, not the file size.
 //
 // It may update closers.
 func (fr *reader) initRaw(

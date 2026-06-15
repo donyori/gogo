@@ -70,11 +70,14 @@ var (
 	}
 )
 
-const testFSZipOffsetName = "zip offset.zip"
+const (
+	testFSRosesAreRedFilename = "roses are red.txt"
+	testFSBigFilename         = "13KB.dat"
+	testFSZipOffsetFilename   = "zip offset.zip"
+	testFSTarNonLocalFilename = "/non-local file.txt"
+)
 
 const testFSZipComment = "The end-of-central-directory comment \u4F60\u597D"
-
-const testFSTarNonLocalFilename = "/non-local file.txt"
 
 // For testing methods TarAddFS and ZipAddFS of Writer.
 var (
@@ -102,7 +105,7 @@ func init() {
 			Mode:    0755,
 			ModTime: time.Now(),
 		},
-		"roses are red.txt": {
+		testFSRosesAreRedFilename: {
 			Data: []byte(`Roses are red.
   Violets are blue.
 Sugar is sweet.
@@ -116,7 +119,7 @@ Sugar is sweet.
 	randomSrc := rand.NewChaCha8(
 		[32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456")))
 	big := randbytes.Make(randomSrc, 13<<10)
-	testFS["13KB.dat"] = &fstest.MapFile{
+	testFS[testFSBigFilename] = &fstest.MapFile{
 		Data:    big,
 		Mode:    0755,
 		ModTime: time.Now(),
@@ -129,24 +132,24 @@ Sugar is sweet.
 		{"tardir/tar file2.txt", "Here is tar file 2!"},
 		{"emptydir/", ""},
 		{testFSTarNonLocalFilename, "This is non-local file."},
-		{"roses are red.txt", `Roses are red.
+		{testFSRosesAreRedFilename, `Roses are red.
   Violets are blue.
 Sugar is sweet.
   And so are you.
 `},
-		{"13KB.dat", bigStr},
+		{testFSBigFilename, bigStr},
 	}
 	testFSZipFileNameBodyMap = map[string]string{
 		"zipdir/":              "",
 		"zipdir/zip file1.txt": "This is ZIP file 1.",
 		"zipdir/zip file2.txt": "Here is ZIP file 2!",
 		"emptydir/":            "",
-		"roses are red.txt": `Roses are red.
+		testFSRosesAreRedFilename: `Roses are red.
   Violets are blue.
 Sugar is sweet.
   And so are you.
 `,
-		"13KB.dat": bigStr,
+		testFSBigFilename: bigStr,
 	}
 
 	err := initSetVarsForTarAddFS()
@@ -583,7 +586,7 @@ func initAddZipFileWithOffset(buf *bytes.Buffer, randomSrc rand.Source) error {
 		return errors.AutoWrap(err)
 	}
 
-	testFS[testFSZipOffsetName] = &fstest.MapFile{
+	testFS[testFSZipOffsetFilename] = &fstest.MapFile{
 		Data:    copyBuffer(buf),
 		Mode:    0755,
 		ModTime: time.Now(),

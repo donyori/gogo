@@ -32,6 +32,8 @@ import (
 	"github.com/donyori/gogo/function/compare"
 )
 
+const nilHashNameString = "<nil>"
+
 func TestChecksum(t *testing.T) {
 	t.Parallel()
 
@@ -147,6 +149,8 @@ func TestChecksumFromFS(t *testing.T) {
 func TestNewHashVerifier(t *testing.T) {
 	t.Parallel()
 
+	const NewSHA256HashName = "sha256.New"
+
 	const (
 		PanicPrefix  = "github.com/donyori/gogo/filesys.NewHashVerifier: "
 		ToBeFilledIn = "-"
@@ -159,7 +163,7 @@ func TestNewHashVerifier(t *testing.T) {
 		panicMsg    string
 	}{
 		{
-			"<nil>",
+			nilHashNameString,
 			nil,
 			"",
 			PanicPrefix + "newHash is nil",
@@ -171,49 +175,49 @@ func TestNewHashVerifier(t *testing.T) {
 			PanicPrefix + "newHash returns nil",
 		},
 		{
-			"sha256.New",
+			NewSHA256HashName,
 			sha256.New,
 			"",
 			"",
 		},
 		{
-			"sha256.New",
+			NewSHA256HashName,
 			sha256.New,
 			"0123456789ABCDEFabcdef",
 			"",
 		},
 		{
-			"sha256.New",
+			NewSHA256HashName,
 			sha256.New,
 			strings.Repeat("0", hex.EncodedLen(sha256.Size)),
 			"",
 		},
 		{
-			"sha256.New",
+			NewSHA256HashName,
 			sha256.New,
 			strings.Repeat("0", hex.EncodedLen(sha256.Size)+2),
 			"",
 		},
 		{
-			"sha256.New",
+			NewSHA256HashName,
 			sha256.New,
 			"12ab" + string('0'-1),
 			ToBeFilledIn,
 		},
 		{
-			"sha256.New",
+			NewSHA256HashName,
 			sha256.New,
 			string('A'-1) + "ABC",
 			ToBeFilledIn,
 		},
 		{
-			"sha256.New",
+			NewSHA256HashName,
 			sha256.New,
 			"0123456789ABCDEFGabcdef",
 			ToBeFilledIn,
 		},
 		{
-			"sha256.New",
+			NewSHA256HashName,
 			sha256.New,
 			"g",
 			ToBeFilledIn,
@@ -386,7 +390,7 @@ func TestNonNilDeduplicatedHashVerifiers(t *testing.T) {
 		equalUnderlying bool
 	}{
 		{
-			"<nil>",
+			nilHashNameString,
 			nil,
 			nil,
 			false,
@@ -566,7 +570,7 @@ func verifyChecksumTestCases(filename string) []struct {
 			want    bool
 		}{
 			{
-				"<nil>",
+				nilHashNameString,
 				nil,
 				false,
 			},
@@ -616,7 +620,7 @@ func verifyChecksumTestCases(filename string) []struct {
 		want    bool
 	}{
 		{
-			"<nil>",
+			nilHashNameString,
 			nil,
 			true,
 		},
