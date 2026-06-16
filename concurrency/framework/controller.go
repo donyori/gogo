@@ -60,5 +60,5 @@ type Controller interface {
 	NumGoroutine() int
 
 	// PanicRecords returns a list of the panic records.
-	PanicRecords() []PanicRecord
+	PanicRecords() []*GoroutinePanicError
 }

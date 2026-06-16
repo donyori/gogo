@@ -55,6 +55,7 @@ keywords or other identifiers such as standard packages.
 | buffer                                  | ^b, buf, ^p         |
 | builder                                 | ^b                  |
 | container                               | ctnr                |
+| context                                 | ctx                 |
 | continue                                | \*cont              |
 | controller                              | ctrl                |
 | counter                                 | ctr                 |

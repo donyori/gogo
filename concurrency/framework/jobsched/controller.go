@@ -19,6 +19,7 @@
 package jobsched
 
 import (
+	"context"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -186,51 +187,7 @@ func New[Job, Properties, Feedback any](
 	opts *Options[Job, Properties, Feedback],
 	metaJob ...*MetaJob[Job, Properties],
 ) Controller[Job, Properties, Feedback] {
-	if jobHandler == nil {
-		panic(errors.AutoMsg("job handler is nil"))
-	} else if opts == nil {
-		opts = new(Options[Job, Properties, Feedback])
-	}
-
-	n := opts.NumWorker
-	if n <= 0 {
-		const NumJobAllocatorAndFeedbackHandlerGoroutine int = 2
-
-		n = max(1, runtime.NumCPU()-NumJobAllocatorAndFeedbackHandlerGoroutine)
-	}
-
-	if opts.JobQueueMaker == nil {
-		opts.JobQueueMaker = NewFCFSJobQueueMaker[Job, Properties]()
-	}
-
-	jq := opts.JobQueueMaker.New()
-	if len(metaJob) > 0 {
-		jq.Enqueue(copyMetaJobs(metaJob)...)
-	}
-
-	ctrl := &controller[Job, Properties, Feedback]{
-		n:       n,
-		jh:      jobHandler,
-		fh:      feedbackHandler,
-		c:       concurrency.NewCanceler(),
-		jq:      jq,
-		ic:      make(chan []*MetaJob[Job, Properties], 1),
-		eqc:     make(chan []*MetaJob[Job, Properties], n),
-		dqc:     make(chan Job, 1),
-		pr:      concurrency.NewRecorder[framework.PanicRecord](0),
-		wso:     concurrency.NewOnce(nil),
-		setup:   opts.Setup,
-		cleanup: opts.Cleanup,
-	}
-	ctrl.lo = concurrency.NewOnce(ctrl.launchProc)
-
-	if reflect.TypeFor[Feedback]() != noFeedbackType {
-		bufSize := max(opts.FeedbackChanBufSize, 0)
-		ctrl.fc = make(chan Feedback, bufSize)
-		ctrl.fhdc = make(chan struct{})
-	}
-
-	return ctrl
+	return newController(nil, jobHandler, feedbackHandler, opts, metaJob...)
 }
 
 // NewWithoutFeedback is like New but sets the type of feedback to NoFeedback.
@@ -239,16 +196,69 @@ func New[Job, Properties, Feedback any](
 // except that NewWithoutFeedback does not require feedbackHandler.
 //
 // It is equivalent to
-// New[Job, Properties, NoFeedback](jobHandler, nil, opts, metaJob...).
+//
+//	New[Job, Properties, NoFeedback](jobHandler, nil, opts, metaJob...)
 func NewWithoutFeedback[Job, Properties any](
 	jobHandler JobHandler[Job, Properties, NoFeedback],
 	opts *Options[Job, Properties, NoFeedback],
 	metaJob ...*MetaJob[Job, Properties],
 ) Controller[Job, Properties, NoFeedback] {
-	return New(jobHandler, nil, opts, metaJob...)
+	return newController(nil, jobHandler, nil, opts, metaJob...)
 }
 
-// Run creates a Controller with specified arguments, and then runs it.
+// NewWithContext is like New but creates a canceler
+// based on the specified context,
+// which cancels all the jobs when the specified context is done
+// (canceled, deadline expired, or timeout elapsed).
+//
+// It panics if the specified context is nil.
+func NewWithContext[Job, Properties, Feedback any](
+	ctx context.Context,
+	jobHandler JobHandler[Job, Properties, Feedback],
+	feedbackHandler FeedbackHandler[Feedback],
+	opts *Options[Job, Properties, Feedback],
+	metaJob ...*MetaJob[Job, Properties],
+) Controller[Job, Properties, Feedback] {
+	if ctx == nil {
+		panic(errors.AutoMsg("the provided context is nil"))
+	}
+
+	derivedCtx, cancel := context.WithCancel(ctx)
+
+	return newController(
+		concurrency.NewCancelerFromContext(derivedCtx, cancel),
+		jobHandler,
+		feedbackHandler,
+		opts,
+		metaJob...,
+	)
+}
+
+// NewWithContextWithoutFeedback is like NewWithContext
+// but sets the type of feedback to NoFeedback.
+//
+// The parameters are similar to those of function NewWithContext,
+// except that NewWithContextWithoutFeedback does not require feedbackHandler.
+//
+// It is equivalent to
+//
+//	NewWithContext[Job, Properties, NoFeedback](
+//		ctx,
+//		jobHandler,
+//		nil,
+//		opts,
+//		metaJob...,
+//	)
+func NewWithContextWithoutFeedback[Job, Properties any](
+	ctx context.Context,
+	jobHandler JobHandler[Job, Properties, NoFeedback],
+	opts *Options[Job, Properties, NoFeedback],
+	metaJob ...*MetaJob[Job, Properties],
+) Controller[Job, Properties, NoFeedback] {
+	return NewWithContext(ctx, jobHandler, nil, opts, metaJob...)
+}
+
+// Run creates a Controller with the specified arguments, and then runs it.
 // It returns the panic records of the Controller.
 //
 // The parameters are the same as those of function New.
@@ -257,27 +267,74 @@ func Run[Job, Properties, Feedback any](
 	feedbackHandler FeedbackHandler[Feedback],
 	opts *Options[Job, Properties, Feedback],
 	metaJob ...*MetaJob[Job, Properties],
-) []framework.PanicRecord {
-	ctrl := New(jobHandler, feedbackHandler, opts, metaJob...)
+) []*framework.GoroutinePanicError {
+	ctrl := newController(nil, jobHandler, feedbackHandler, opts, metaJob...)
 	ctrl.Run()
 
 	return ctrl.PanicRecords()
 }
 
 // RunWithoutFeedback creates a Controller[Job, Properties, NoFeedback]
-// with specified arguments, and then runs it.
+// with the specified arguments, and then runs it.
 // It returns the panic records of the Controller.
 //
 // The parameters are the same as those of function NewWithoutFeedback.
 //
 // It is equivalent to
-// Run[Job, Properties, NoFeedback](jobHandler, nil, opts, metaJob...).
+//
+//	Run[Job, Properties, NoFeedback](jobHandler, nil, opts, metaJob...)
 func RunWithoutFeedback[Job, Properties any](
 	jobHandler JobHandler[Job, Properties, NoFeedback],
 	opts *Options[Job, Properties, NoFeedback],
 	metaJob ...*MetaJob[Job, Properties],
-) []framework.PanicRecord {
+) []*framework.GoroutinePanicError {
 	return Run(jobHandler, nil, opts, metaJob...)
+}
+
+// RunWithContext creates a Controller with the specified arguments,
+// whose canceler is based on the specified context,
+// and then runs the Controller.
+// It returns the panic records of the Controller.
+//
+// The parameters are the same as those of function NewWithContext.
+func RunWithContext[Job, Properties, Feedback any](
+	ctx context.Context,
+	jobHandler JobHandler[Job, Properties, Feedback],
+	feedbackHandler FeedbackHandler[Feedback],
+	opts *Options[Job, Properties, Feedback],
+	metaJob ...*MetaJob[Job, Properties],
+) []*framework.GoroutinePanicError {
+	ctrl := NewWithContext(ctx, jobHandler, feedbackHandler, opts, metaJob...)
+	ctrl.Run()
+
+	return ctrl.PanicRecords()
+}
+
+// RunWithContextWithoutFeedback creates
+// a Controller[Job, Properties, NoFeedback] with the specified arguments,
+// whose canceler is based on the specified context,
+// and then runs the Controller.
+// It returns the panic records of the Controller.
+//
+// The parameters are the same as
+// those of function NewWithContextWithoutFeedback.
+//
+// It is equivalent to
+//
+//	RunWithContext[Job, Properties, NoFeedback](
+//		ctx,
+//		jobHandler,
+//		nil,
+//		opts,
+//		metaJob...,
+//	)
+func RunWithContextWithoutFeedback[Job, Properties any](
+	ctx context.Context,
+	jobHandler JobHandler[Job, Properties, NoFeedback],
+	opts *Options[Job, Properties, NoFeedback],
+	metaJob ...*MetaJob[Job, Properties],
+) []*framework.GoroutinePanicError {
+	return RunWithContext(ctx, jobHandler, nil, opts, metaJob...)
 }
 
 // controller is an implementation of interface Controller.
@@ -314,7 +371,7 @@ type controller[Job, Properties, Feedback any] struct {
 	fhdc chan struct{}
 
 	// Panic recorder.
-	pr concurrency.Recorder[framework.PanicRecord]
+	pr concurrency.Recorder[*framework.GoroutinePanicError]
 
 	// Wait group for the workers and the job allocator,
 	// not for the feedback handler.
@@ -339,6 +396,92 @@ type controller[Job, Properties, Feedback any] struct {
 
 	// Worker cleanup function.
 	cleanup func(ctrl Controller[Job, Properties, Feedback], rank int)
+}
+
+// newController creates a new Controller with options opts and
+// uses the specified canceler for its jobs.
+//
+// The first type parameter Job is the type of jobs.
+// The second type parameter Properties is the type of custom properties
+// in the meta information of jobs.
+// The third type parameter Feedback is the type of feedback on the jobs,
+// which is collected and handled in a dedicated goroutine.
+//
+// If the specified canceler is nil, newController creates a new canceler by
+// github.com/donyori/gogo/concurrency.NewCanceler.
+//
+// jobHandler is the job handler.
+// newController panics if jobHandler is nil.
+//
+// feedbackHandler is the feedback handler.
+// If feedbackHandler is nil, all feedback is discarded silently.
+// If the type of feedback is NoFeedback,
+// the framework never calls feedbackHandler.
+//
+// If opts are nil, a zero-value Options is used.
+//
+// metaJob is initial jobs to process.
+// If an item in metaJob is nil, it is treated as a zero-value job
+// (with the field Job to its zero value, Meta.Priority to 0,
+// Meta.CreationTime to time.Now(), and Meta.Custom to its zero value).
+// If an item in metaJob has the field Meta.CreationTime with a zero value,
+// this field is set to time.Now() by the framework.
+func newController[Job, Properties, Feedback any](
+	canceler concurrency.Canceler,
+	jobHandler JobHandler[Job, Properties, Feedback],
+	feedbackHandler FeedbackHandler[Feedback],
+	opts *Options[Job, Properties, Feedback],
+	metaJob ...*MetaJob[Job, Properties],
+) Controller[Job, Properties, Feedback] {
+	if canceler == nil {
+		canceler = concurrency.NewCanceler()
+	}
+
+	if jobHandler == nil {
+		panic(errors.AutoMsg("job handler is nil"))
+	} else if opts == nil {
+		opts = new(Options[Job, Properties, Feedback])
+	}
+
+	n := opts.NumWorker
+	if n <= 0 {
+		const NumJobAllocatorAndFeedbackHandlerGoroutine int = 2
+
+		n = max(1, runtime.NumCPU()-NumJobAllocatorAndFeedbackHandlerGoroutine)
+	}
+
+	if opts.JobQueueMaker == nil {
+		opts.JobQueueMaker = NewFCFSJobQueueMaker[Job, Properties]()
+	}
+
+	jq := opts.JobQueueMaker.New()
+	if len(metaJob) > 0 {
+		jq.Enqueue(copyMetaJobs(metaJob)...)
+	}
+
+	ctrl := &controller[Job, Properties, Feedback]{
+		n:       n,
+		jh:      jobHandler,
+		fh:      feedbackHandler,
+		c:       canceler,
+		jq:      jq,
+		ic:      make(chan []*MetaJob[Job, Properties], 1),
+		eqc:     make(chan []*MetaJob[Job, Properties], n),
+		dqc:     make(chan Job, 1),
+		pr:      concurrency.NewRecorder[*framework.GoroutinePanicError](0),
+		wso:     concurrency.NewOnce(nil),
+		setup:   opts.Setup,
+		cleanup: opts.Cleanup,
+	}
+	ctrl.lo = concurrency.NewOnce(ctrl.launchProc)
+
+	if reflect.TypeFor[Feedback]() != noFeedbackType {
+		bufSize := max(opts.FeedbackChanBufSize, 0)
+		ctrl.fc = make(chan Feedback, bufSize)
+		ctrl.fhdc = make(chan struct{})
+	}
+
+	return ctrl
 }
 
 func (ctrl *controller[
@@ -384,7 +527,7 @@ func (ctrl *controller[
 	Job,
 	Properties,
 	Feedback,
-]) PanicRecords() []framework.PanicRecord {
+]) PanicRecords() []*framework.GoroutinePanicError {
 	return ctrl.pr.All()
 }
 
@@ -423,10 +566,10 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 			defer func() {
 				if e := recover(); e != nil {
 					ctrl.c.Cancel()
-					ctrl.pr.Record(framework.PanicRecord{
-						Name:    "feedback handler",
-						Content: e,
-					})
+					ctrl.pr.Record(framework.NewGoroutinePanicError(
+						"feedback handler",
+						e,
+					))
 				}
 			}()
 
@@ -437,10 +580,10 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 			defer func() {
 				if e := recover(); e != nil {
 					ctrl.c.Cancel()
-					ctrl.pr.Record(framework.PanicRecord{
-						Name:    "feedback channel closer",
-						Content: e,
-					})
+					ctrl.pr.Record(framework.NewGoroutinePanicError(
+						"feedback channel closer",
+						e,
+					))
 				}
 			}()
 
@@ -454,10 +597,10 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 			defer func() {
 				if e := recover(); e != nil {
 					ctrl.c.Cancel()
-					ctrl.pr.Record(framework.PanicRecord{
-						Name:    "worker " + strconv.Itoa(rank),
-						Content: e,
-					})
+					ctrl.pr.Record(framework.NewGoroutinePanicError(
+						"worker "+strconv.Itoa(rank),
+						e,
+					))
 				}
 			}()
 
@@ -469,10 +612,10 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 		defer func() {
 			if e := recover(); e != nil {
 				ctrl.c.Cancel()
-				ctrl.pr.Record(framework.PanicRecord{
-					Name:    "job allocator",
-					Content: e,
-				})
+				ctrl.pr.Record(framework.NewGoroutinePanicError(
+					"job allocator",
+					e,
+				))
 			}
 		}()
 
@@ -538,11 +681,10 @@ func (ctrl *controller[Job, Properties, Feedback]) workerProc(rank int) {
 		if ctrl.fc != nil {
 			// The feedback type is not NoFeedback.
 			// Send feedback first.
-			select {
-			case <-cancelChan:
-				return
-			case ctrl.fc <- fb:
-			}
+			//
+			// The feedback must be sent,
+			// even if there is a cancellation signal.
+			ctrl.fc <- fb
 		}
 
 		// Always send new jobs to the job allocator,

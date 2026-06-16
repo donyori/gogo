@@ -52,24 +52,22 @@ func TestController_Input_BeforeLaunch(t *testing.T) {
 	}
 
 	ctrl.Run()
-
-	if gotX := x.Load(); gotX != int32(NumJob) {
-		t.Errorf("got x %d; want %d", gotX, NumJob)
-	}
-
-	if feedbackSum != NumJob {
-		t.Errorf("got sum of feedback %d; want %d", feedbackSum, NumJob)
-	}
-
-	if prs := ctrl.PanicRecords(); len(prs) > 0 {
-		t.Errorf("panic %q", prs)
-	}
+	checkXFeedbackSumAndPanicRecords(
+		t,
+		&x,
+		feedbackSum,
+		ctrl.PanicRecords(),
+		int32(NumJob),
+		NumJob,
+	)
 }
 
 func TestController_Input_BeforeLaunch_Concurrency(t *testing.T) {
 	t.Parallel()
 
 	const (
+		NumWorker int = 4
+
 		MaxJob         int = 8
 		NumJobPerInput int = 10
 
@@ -87,7 +85,9 @@ func TestController_Input_BeforeLaunch_Concurrency(t *testing.T) {
 		ctrl := jobsched.New(
 			getJobHandlerAddJob(&x),
 			getSumFeedbackHandler(&feedbackSum),
-			&jobsched.Options[int, jobsched.NoProperty, int]{NumWorker: 4},
+			&jobsched.Options[int, jobsched.NoProperty, int]{
+				NumWorker: NumWorker,
+			},
 		)
 		startC := make(chan struct{})
 
@@ -120,19 +120,14 @@ func TestController_Input_BeforeLaunch_Concurrency(t *testing.T) {
 
 		synctest.Wait()
 		ctrl.Run()
-
-		if gotX := x.Load(); gotX != WantX {
-			t.Errorf("got x %d; want %d", gotX, WantX)
-		}
-
-		if feedbackSum != WantFeedbackSum {
-			t.Errorf("got sum of feedback %d; want %d",
-				feedbackSum, WantFeedbackSum)
-		}
-
-		if prs := ctrl.PanicRecords(); len(prs) > 0 {
-			t.Errorf("panic %q", prs)
-		}
+		checkXFeedbackSumAndPanicRecords(
+			t,
+			&x,
+			feedbackSum,
+			ctrl.PanicRecords(),
+			WantX,
+			WantFeedbackSum,
+		)
 	})
 }
 
@@ -170,18 +165,14 @@ func TestController_Input_DuringLaunch(t *testing.T) {
 
 		synctest.Wait()
 		ctrl.Wait()
-
-		if gotX := x.Load(); gotX != int32(NumJob) {
-			t.Errorf("got x %d; want %d", gotX, NumJob)
-		}
-
-		if feedbackSum != NumJob {
-			t.Errorf("got sum of feedback %d; want %d", feedbackSum, NumJob)
-		}
-
-		if prs := ctrl.PanicRecords(); len(prs) > 0 {
-			t.Errorf("panic %q", prs)
-		}
+		checkXFeedbackSumAndPanicRecords(
+			t,
+			&x,
+			feedbackSum,
+			ctrl.PanicRecords(),
+			int32(NumJob),
+			NumJob,
+		)
 	})
 }
 
@@ -189,6 +180,8 @@ func TestController_Input_DuringLaunch_Concurrency(t *testing.T) {
 	t.Parallel()
 
 	const (
+		NumWorker int = 4
+
 		MaxJob         int = 8
 		NumJobPerInput int = 10
 
@@ -206,7 +199,9 @@ func TestController_Input_DuringLaunch_Concurrency(t *testing.T) {
 		ctrl := jobsched.New(
 			getJobHandlerAddJob(&x),
 			getSumFeedbackHandler(&feedbackSum),
-			&jobsched.Options[int, jobsched.NoProperty, int]{NumWorker: 4},
+			&jobsched.Options[int, jobsched.NoProperty, int]{
+				NumWorker: NumWorker,
+			},
 		)
 		startC := make(chan struct{})
 
@@ -247,19 +242,14 @@ func TestController_Input_DuringLaunch_Concurrency(t *testing.T) {
 		time.Sleep(time.Millisecond * 3) // ensure that ctrl.Launch has been called first
 		synctest.Wait()
 		ctrl.Wait()
-
-		if gotX := x.Load(); gotX != WantX {
-			t.Errorf("got x %d; want %d", gotX, WantX)
-		}
-
-		if feedbackSum != WantFeedbackSum {
-			t.Errorf("got sum of feedback %d; want %d",
-				feedbackSum, WantFeedbackSum)
-		}
-
-		if prs := ctrl.PanicRecords(); len(prs) > 0 {
-			t.Errorf("panic %q", prs)
-		}
+		checkXFeedbackSumAndPanicRecords(
+			t,
+			&x,
+			feedbackSum,
+			ctrl.PanicRecords(),
+			WantX,
+			WantFeedbackSum,
+		)
 	})
 }
 
@@ -288,24 +278,22 @@ func TestController_Input_AfterLaunch(t *testing.T) {
 	}
 
 	ctrl.Wait()
-
-	if gotX := x.Load(); gotX != int32(NumJob) {
-		t.Errorf("got x %d; want %d", gotX, NumJob)
-	}
-
-	if feedbackSum != NumJob {
-		t.Errorf("got sum of feedback %d; want %d", feedbackSum, NumJob)
-	}
-
-	if prs := ctrl.PanicRecords(); len(prs) > 0 {
-		t.Errorf("panic %q", prs)
-	}
+	checkXFeedbackSumAndPanicRecords(
+		t,
+		&x,
+		feedbackSum,
+		ctrl.PanicRecords(),
+		int32(NumJob),
+		NumJob,
+	)
 }
 
 func TestController_Input_AfterLaunch_Concurrency(t *testing.T) {
 	t.Parallel()
 
 	const (
+		NumWorker int = 4
+
 		MaxJob         int = 8
 		NumJobPerInput int = 10
 
@@ -323,7 +311,9 @@ func TestController_Input_AfterLaunch_Concurrency(t *testing.T) {
 		ctrl := jobsched.New(
 			getJobHandlerAddJob(&x),
 			getSumFeedbackHandler(&feedbackSum),
-			&jobsched.Options[int, jobsched.NoProperty, int]{NumWorker: 4},
+			&jobsched.Options[int, jobsched.NoProperty, int]{
+				NumWorker: NumWorker,
+			},
 		)
 		startC := make(chan struct{})
 
@@ -358,19 +348,14 @@ func TestController_Input_AfterLaunch_Concurrency(t *testing.T) {
 
 		synctest.Wait()
 		ctrl.Wait()
-
-		if gotX := x.Load(); gotX != WantX {
-			t.Errorf("got x %d; want %d", gotX, WantX)
-		}
-
-		if feedbackSum != WantFeedbackSum {
-			t.Errorf("got sum of feedback %d; want %d",
-				feedbackSum, WantFeedbackSum)
-		}
-
-		if prs := ctrl.PanicRecords(); len(prs) > 0 {
-			t.Errorf("panic %q", prs)
-		}
+		checkXFeedbackSumAndPanicRecords(
+			t,
+			&x,
+			feedbackSum,
+			ctrl.PanicRecords(),
+			WantX,
+			WantFeedbackSum,
+		)
 	})
 }
 
@@ -485,18 +470,14 @@ func TestController_Input_AfterIneffectiveWait(t *testing.T) {
 	}
 
 	ctrl.Run()
-
-	if gotX := x.Load(); gotX != int32(NumJob) {
-		t.Errorf("got x %d; want %d", gotX, NumJob)
-	}
-
-	if feedbackSum != NumJob {
-		t.Errorf("got sum of feedback %d; want %d", feedbackSum, NumJob)
-	}
-
-	if prs := ctrl.PanicRecords(); len(prs) > 0 {
-		t.Errorf("panic %q", prs)
-	}
+	checkXFeedbackSumAndPanicRecords(
+		t,
+		&x,
+		feedbackSum,
+		ctrl.PanicRecords(),
+		int32(NumJob),
+		NumJob,
+	)
 }
 
 // getJobHandlerAddJob returns a

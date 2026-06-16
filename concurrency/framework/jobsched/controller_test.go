@@ -25,15 +25,21 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/donyori/gogo/concurrency"
+	"github.com/donyori/gogo/concurrency/framework"
 	"github.com/donyori/gogo/concurrency/framework/jobsched"
 )
 
 func TestNew_FeedbackChanBufSize(t *testing.T) {
 	t.Parallel()
 
-	const NumJob int = 16
+	const (
+		NumWorker int = 4
+		NumJob    int = 16
+	)
+
 	for bufSize := -2; bufSize <= NumJob+1; bufSize++ {
 		t.Run(fmt.Sprintf("bufSize=%d", bufSize), func(t *testing.T) {
 			t.Parallel()
@@ -47,24 +53,20 @@ func TestNew_FeedbackChanBufSize(t *testing.T) {
 				getJobHandlerAddOne(&x),
 				getSumFeedbackHandler(&feedbackSum),
 				&jobsched.Options[int, jobsched.NoProperty, int]{
-					NumWorker:           4,
+					NumWorker:           NumWorker,
 					FeedbackChanBufSize: bufSize,
 				},
 				make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumJob)...,
 			)
 			ctrl.Run()
-
-			if gotX := x.Load(); gotX != int32(NumJob) {
-				t.Errorf("got x %d; want %d", gotX, NumJob)
-			}
-
-			if feedbackSum != NumJob {
-				t.Errorf("got sum of feedback %d; want %d", feedbackSum, NumJob)
-			}
-
-			if prs := ctrl.PanicRecords(); len(prs) > 0 {
-				t.Errorf("panic %q", prs)
-			}
+			checkXFeedbackSumAndPanicRecords(
+				t,
+				&x,
+				feedbackSum,
+				ctrl.PanicRecords(),
+				int32(NumJob),
+				NumJob,
+			)
 		})
 	}
 }
@@ -85,13 +87,7 @@ func TestRun_NilFeedbackHandler(t *testing.T) {
 		&jobsched.Options[int, jobsched.NoProperty, int]{NumWorker: NumWorker},
 		make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumJob)...,
 	)
-	if gotX := x.Load(); gotX != int32(NumJob) {
-		t.Errorf("got x %d; want %d", gotX, NumJob)
-	}
-
-	if len(prs) > 0 {
-		t.Errorf("panic %q", prs)
-	}
+	checkXAndPanicRecords(t, &x, prs, int32(NumJob))
 }
 
 func TestRun_FeedbackHandlerPanic(t *testing.T) {
@@ -113,10 +109,10 @@ func TestRun_FeedbackHandlerPanic(t *testing.T) {
 	switch {
 	case len(prs) != 1:
 		t.Errorf("got len(prs) %d; want 1", len(prs))
-	case prs[0].Name != "feedback handler":
+	case prs[0].GoroutineName() != "feedback handler":
 		t.Error(prs[0])
 	default:
-		msg, ok := prs[0].Content.(string)
+		msg, ok := prs[0].PanicValue().(string)
 		if !ok || msg != PanicMsg {
 			t.Error(prs[0])
 		}
@@ -165,10 +161,10 @@ func TestRun_Panic(t *testing.T) {
 	}
 
 	for _, pr := range prs {
-		if !strings.HasPrefix(pr.Name, "worker ") {
+		if !strings.HasPrefix(pr.GoroutineName(), "worker ") {
 			t.Error(pr)
 		} else {
-			msg, ok := pr.Content.(string)
+			msg, ok := pr.PanicValue().(string)
 			if !ok || msg != PanicMsg {
 				t.Error(pr)
 			}
@@ -215,10 +211,10 @@ func TestRunWithoutFeedback_Panic(t *testing.T) {
 	}
 
 	for _, pr := range prs {
-		if !strings.HasPrefix(pr.Name, "worker ") {
+		if !strings.HasPrefix(pr.GoroutineName(), "worker ") {
 			t.Error(pr)
 		} else {
-			msg, ok := pr.Content.(string)
+			msg, ok := pr.PanicValue().(string)
 			if !ok || msg != PanicMsg {
 				t.Error(pr)
 			}
@@ -240,26 +236,23 @@ func TestController_Wait_BeforeLaunch(t *testing.T) {
 func TestController_NoFeedback(t *testing.T) {
 	t.Parallel()
 
-	const NumJob int = 6
+	// 2 workers and 6 jobs to test blocking.
+	const (
+		NumWorker int = 2
+		NumJob    int = 6
+	)
 
 	var x atomic.Int32
 
 	ctrl := jobsched.NewWithoutFeedback(
 		getJobHandlerNoFeedbackAddOne(&x),
 		&jobsched.Options[int, jobsched.NoProperty, jobsched.NoFeedback]{
-			NumWorker: 2,
+			NumWorker: NumWorker,
 		},
-		make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumJob)..., // 2 workers and 6 jobs to test blocking
+		make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumJob)...,
 	)
 	ctrl.Run()
-
-	if gotX := x.Load(); gotX != int32(NumJob) {
-		t.Errorf("got x %d; want %d", gotX, NumJob)
-	}
-
-	if prs := ctrl.PanicRecords(); len(prs) > 0 {
-		t.Errorf("panic %q", prs)
-	}
+	checkXAndPanicRecords(t, &x, ctrl.PanicRecords(), int32(NumJob))
 }
 
 func TestController_Setup(t *testing.T) {
@@ -347,10 +340,10 @@ func TestController_Setup_WorkerPanic(t *testing.T) {
 	}
 
 	for _, pr := range prs {
-		if !strings.HasPrefix(pr.Name, "worker ") {
+		if !strings.HasPrefix(pr.GoroutineName(), "worker ") {
 			t.Error(pr)
 		} else {
-			msg, ok := pr.Content.(string)
+			msg, ok := pr.PanicValue().(string)
 			if !ok || msg != PanicMsg {
 				t.Error(pr)
 			}
@@ -443,10 +436,10 @@ func TestController_Cleanup_WorkerPanic(t *testing.T) {
 	}
 
 	for _, pr := range prs {
-		if !strings.HasPrefix(pr.Name, "worker ") {
+		if !strings.HasPrefix(pr.GoroutineName(), "worker ") {
 			t.Error(pr)
 		} else {
-			msg, ok := pr.Content.(string)
+			msg, ok := pr.PanicValue().(string)
 			if !ok || msg != PanicMsg {
 				t.Error(pr)
 			}
@@ -509,10 +502,10 @@ func TestController_Cleanup_SetupPanic(t *testing.T) {
 	}
 
 	for _, pr := range prs {
-		if !strings.HasPrefix(pr.Name, "worker ") {
+		if !strings.HasPrefix(pr.GoroutineName(), "worker ") {
 			t.Error(pr)
 		} else {
-			msg, ok := pr.Content.(string)
+			msg, ok := pr.PanicValue().(string)
 			if !ok || msg != PanicMsg {
 				t.Error(pr)
 			}
@@ -623,6 +616,129 @@ func TestController_JobHandlerRankUnique(t *testing.T) {
 	}
 }
 
+func TestController_Cancel(t *testing.T) {
+	t.Parallel()
+
+	const NumWorker int = 4
+
+	var (
+		x           atomic.Int32
+		feedbackSum int
+	)
+
+	ctrl := jobsched.New(
+		getJobHandlerAddOneCopyJob(&x),
+		getSumFeedbackHandler(&feedbackSum),
+		&jobsched.Options[int, jobsched.NoProperty, int]{NumWorker: NumWorker},
+		make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumWorker<<1)...,
+	)
+	if ctrl == nil {
+		t.Fatal("got nil controller")
+	}
+
+	canceler := ctrl.Canceler()
+	if canceler == nil {
+		t.Fatal("got nil canceler")
+	}
+
+	ctrl.Launch()
+
+	doneC := make(chan struct{})
+	go func(
+		ctrl jobsched.Controller[int, jobsched.NoProperty, int],
+		doneC chan<- struct{},
+	) {
+		defer close(doneC)
+
+		ctrl.Wait()
+	}(ctrl, doneC)
+
+	timer := time.NewTimer(time.Second)
+
+	t.Cleanup(func() {
+		timer.Stop()
+	})
+
+	time.Sleep(time.Millisecond) // wait for workers to handle some jobs
+	canceler.Cancel()
+
+	xAfterCancellation := x.Load()
+	if xAfterCancellation == 0 {
+		t.Error("got x after cancellation 0; want greater than 0")
+	}
+
+	select {
+	case <-timer.C:
+		t.Error("timeout after canceling")
+	case <-doneC:
+		checkXFeedbackSumAndPanicRecords(
+			t,
+			&x,
+			feedbackSum,
+			ctrl.PanicRecords(),
+			xAfterCancellation,
+			int(xAfterCancellation),
+		)
+	}
+}
+
+func TestController_Cancel_NoFeedback(t *testing.T) {
+	t.Parallel()
+
+	const NumWorker int = 4
+
+	var x atomic.Int32
+
+	ctrl := jobsched.NewWithoutFeedback(
+		getJobHandlerNoFeedbackAddOneCopyJob(&x),
+		&jobsched.Options[int, jobsched.NoProperty, jobsched.NoFeedback]{
+			NumWorker: NumWorker,
+		},
+		make([]*jobsched.MetaJob[int, jobsched.NoProperty], NumWorker<<1)...,
+	)
+	if ctrl == nil {
+		t.Fatal("got nil controller")
+	}
+
+	canceler := ctrl.Canceler()
+	if canceler == nil {
+		t.Fatal("got nil canceler")
+	}
+
+	ctrl.Launch()
+
+	doneC := make(chan struct{})
+	go func(
+		ctrl jobsched.Controller[int, jobsched.NoProperty, jobsched.NoFeedback],
+		doneC chan<- struct{},
+	) {
+		defer close(doneC)
+
+		ctrl.Wait()
+	}(ctrl, doneC)
+
+	timer := time.NewTimer(time.Second)
+
+	t.Cleanup(func() {
+		timer.Stop()
+	})
+
+	time.Sleep(time.Millisecond) // wait for workers to handle some jobs
+	canceler.Cancel()
+
+	xAfterCancellation := x.Load()
+	if xAfterCancellation == 0 {
+		t.Error("got x after cancellation 0; want greater than 0")
+	}
+
+	select {
+	case <-timer.C:
+		t.Error("timeout after canceling")
+	case <-doneC:
+		checkXAndPanicRecords(t, &x, ctrl.PanicRecords(), xAfterCancellation)
+	}
+}
+
 // getJobHandlerNoOp returns a
 // github.com/donyori/gogo/concurrency/framework/jobsched.JobHandler[
 // int, jobsched.NoProperty, Feedback]
@@ -684,6 +800,72 @@ func getJobHandlerNoFeedbackAddOne(
 	}
 }
 
+// getJobHandlerAddOneCopyJob returns a
+// github.com/donyori/gogo/concurrency/framework/jobsched.JobHandler[
+// int, jobsched.NoProperty, int]
+// that adds one to p and returns a copy of the job and feedback as one.
+// If a cancellation signal is detected,
+// the job handler does nothing and returns zero values.
+//
+// Such a job handler makes the framework run
+// until a cancellation signal is detected.
+//
+// getJobHandlerAddOneCopyJob returns nil if p is nil.
+func getJobHandlerAddOneCopyJob(
+	p *atomic.Int32,
+) jobsched.JobHandler[int, jobsched.NoProperty, int] {
+	if p == nil {
+		return nil
+	}
+
+	return func(canceler concurrency.Canceler, _, job int) (
+		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty],
+		feedback int,
+	) {
+		if canceler.Canceled() {
+			return
+		}
+
+		p.Add(1)
+
+		return []*jobsched.MetaJob[int, jobsched.NoProperty]{{Job: job}}, 1
+	}
+}
+
+// getJobHandlerNoFeedbackAddOneCopyJob returns a
+// github.com/donyori/gogo/concurrency/framework/jobsched.JobHandler[
+// int, jobsched.NoProperty, jobsched.NoFeedback]
+// that adds one to p and returns a copy of the job and zero-value feedback.
+// If a cancellation signal is detected,
+// the job handler does nothing and returns zero values.
+//
+// Such a job handler makes the framework run
+// until a cancellation signal is detected.
+//
+// getJobHandlerNoFeedbackAddOneCopyJob returns nil if p is nil.
+func getJobHandlerNoFeedbackAddOneCopyJob(
+	p *atomic.Int32,
+) jobsched.JobHandler[int, jobsched.NoProperty, jobsched.NoFeedback] {
+	if p == nil {
+		return nil
+	}
+
+	return func(canceler concurrency.Canceler, _, job int) (
+		newJobs []*jobsched.MetaJob[int, jobsched.NoProperty],
+		feedback jobsched.NoFeedback,
+	) {
+		if canceler.Canceled() {
+			return
+		}
+
+		p.Add(1)
+
+		newJobs = []*jobsched.MetaJob[int, jobsched.NoProperty]{{Job: job}}
+
+		return
+	}
+}
+
 // getSumFeedbackHandler returns a
 // github.com/donyori/gogo/concurrency/framework/jobsched.FeedbackHandler[int]
 // that adds the feedback (of type int) to *ptr.
@@ -696,5 +878,56 @@ func getSumFeedbackHandler(ptr *int) jobsched.FeedbackHandler[int] {
 
 	return func(_ concurrency.Canceler, feedback int) {
 		*ptr += feedback
+	}
+}
+
+func checkXAndPanicRecords(
+	t *testing.T,
+	pX *atomic.Int32,
+	prs []*framework.GoroutinePanicError,
+	wantX int32,
+) {
+	t.Helper()
+
+	var x int32
+	if pX != nil {
+		x = pX.Load()
+	}
+
+	if x != wantX {
+		t.Errorf("got x %d; want %d", x, wantX)
+	}
+
+	if len(prs) > 0 {
+		t.Errorf("panic %q", prs)
+	}
+}
+
+func checkXFeedbackSumAndPanicRecords(
+	t *testing.T,
+	pX *atomic.Int32,
+	feedbackSum int,
+	prs []*framework.GoroutinePanicError,
+	wantX int32,
+	wantFeedbackSum int,
+) {
+	t.Helper()
+
+	var x int32
+	if pX != nil {
+		x = pX.Load()
+	}
+
+	if x != wantX {
+		t.Errorf("got x %d; want %d", x, wantX)
+	}
+
+	if feedbackSum != wantFeedbackSum {
+		t.Errorf("got sum of feedback %d; want %d",
+			feedbackSum, wantFeedbackSum)
+	}
+
+	if len(prs) > 0 {
+		t.Errorf("panic %q", prs)
 	}
 }
