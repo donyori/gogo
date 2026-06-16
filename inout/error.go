@@ -48,7 +48,7 @@ type ClosedError struct {
 }
 
 // NewClosedError creates a new ClosedError
-// with specified device name and parent error.
+// with the specified device name and parent error.
 //
 // parentErr must either be nil or satisfy that
 // errors.Is(parentErr, ErrClosed) is true.
@@ -59,7 +59,7 @@ type ClosedError struct {
 func NewClosedError(deviceName string, parentErr error) *ClosedError {
 	deviceName = strings.TrimSpace(deviceName)
 	if deviceName == "" {
-		deviceName = "closer"
+		deviceName = defaultCloserName
 	}
 
 	if parentErr == nil {
@@ -120,7 +120,7 @@ func (ce *ClosedError) Unwrap() error {
 //
 // The client should use errors.Is to test whether an error is ErrClosed.
 var ErrClosed = errors.AutoWrapCustom(
-	&ClosedError{device: "closer"},
+	&ClosedError{device: defaultCloserName},
 	errors.PrependFullPkgName,
 	0,
 	nil,
@@ -155,8 +155,8 @@ type WritePanicError struct {
 	err error
 }
 
-// NewWritePanicError creates a new WritePanicError with
-// specified error that caused the panic.
+// NewWritePanicError creates a new WritePanicError
+// with the specified error that caused the panic.
 func NewWritePanicError(causeErr error) *WritePanicError {
 	return &WritePanicError{err: causeErr}
 }

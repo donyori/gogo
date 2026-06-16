@@ -25,6 +25,9 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
+// defaultCloserName is the default device name for closers.
+const defaultCloserName = "closer"
+
 // Closer is an interface combining the basic Close method and a Closed method.
 //
 // Method Closed reports whether this closer is closed.
@@ -133,7 +136,7 @@ func WrapErrorCloser(
 
 	deviceName = strings.TrimSpace(deviceName)
 	if deviceName == "" {
-		deviceName = "closer"
+		deviceName = defaultCloserName
 	}
 
 	if parentErr == nil {

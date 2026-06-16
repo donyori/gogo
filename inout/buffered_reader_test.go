@@ -68,7 +68,12 @@ rufe ich dich
 func TestResettableBufferedReader_ConsumeByte(t *testing.T) {
 	t.Parallel()
 
-	const Target byte = 'a'
+	const (
+		Target byte = 'a'
+
+		StringLen3 = "aaa"
+		StringLen4 = "aaab"
+	)
 
 	testCases := []struct {
 		content         string
@@ -80,21 +85,21 @@ func TestResettableBufferedReader_ConsumeByte(t *testing.T) {
 		{"", 1, 0, io.EOF},
 		{"", 2, 0, io.EOF},
 
-		{"aaab", 0, 0, nil},
-		{"aaab", -1, 3, nil},
-		{"aaab", 1, 1, nil},
-		{"aaab", 2, 2, nil},
-		{"aaab", 3, 3, nil},
-		{"aaab", 4, 3, nil},
-		{"aaab", 5, 3, nil},
+		{StringLen3, 0, 0, nil},
+		{StringLen3, -1, 3, io.EOF},
+		{StringLen3, 1, 1, nil},
+		{StringLen3, 2, 2, nil},
+		{StringLen3, 3, 3, nil},
+		{StringLen3, 4, 3, io.EOF},
+		{StringLen3, 5, 3, io.EOF},
 
-		{"aaa", 0, 0, nil},
-		{"aaa", -1, 3, io.EOF},
-		{"aaa", 1, 1, nil},
-		{"aaa", 2, 2, nil},
-		{"aaa", 3, 3, nil},
-		{"aaa", 4, 3, io.EOF},
-		{"aaa", 5, 3, io.EOF},
+		{StringLen4, 0, 0, nil},
+		{StringLen4, -1, 3, nil},
+		{StringLen4, 1, 1, nil},
+		{StringLen4, 2, 2, nil},
+		{StringLen4, 3, 3, nil},
+		{StringLen4, 4, 3, nil},
+		{StringLen4, 5, 3, nil},
 	}
 
 	for _, tc := range testCases {
@@ -122,6 +127,11 @@ func TestResettableBufferedReader_ConsumeByte(t *testing.T) {
 func TestResettableBufferedReader_ConsumeByteFunc(t *testing.T) {
 	t.Parallel()
 
+	const (
+		StringLen3 = "abc"
+		StringLen4 = "abc1"
+	)
+
 	f := func(c byte) bool {
 		return c >= 'a' && c <= 'z'
 	}
@@ -135,21 +145,21 @@ func TestResettableBufferedReader_ConsumeByteFunc(t *testing.T) {
 		{"", 1, 0, io.EOF},
 		{"", 2, 0, io.EOF},
 
-		{"abc1", 0, 0, nil},
-		{"abc1", -1, 3, nil},
-		{"abc1", 1, 1, nil},
-		{"abc1", 2, 2, nil},
-		{"abc1", 3, 3, nil},
-		{"abc1", 4, 3, nil},
-		{"abc1", 5, 3, nil},
+		{StringLen3, 0, 0, nil},
+		{StringLen3, -1, 3, io.EOF},
+		{StringLen3, 1, 1, nil},
+		{StringLen3, 2, 2, nil},
+		{StringLen3, 3, 3, nil},
+		{StringLen3, 4, 3, io.EOF},
+		{StringLen3, 5, 3, io.EOF},
 
-		{"abc", 0, 0, nil},
-		{"abc", -1, 3, io.EOF},
-		{"abc", 1, 1, nil},
-		{"abc", 2, 2, nil},
-		{"abc", 3, 3, nil},
-		{"abc", 4, 3, io.EOF},
-		{"abc", 5, 3, io.EOF},
+		{StringLen4, 0, 0, nil},
+		{StringLen4, -1, 3, nil},
+		{StringLen4, 1, 1, nil},
+		{StringLen4, 2, 2, nil},
+		{StringLen4, 3, 3, nil},
+		{StringLen4, 4, 3, nil},
+		{StringLen4, 5, 3, nil},
 	}
 
 	for _, tc := range testCases {
@@ -177,7 +187,12 @@ func TestResettableBufferedReader_ConsumeByteFunc(t *testing.T) {
 func TestResettableBufferedReader_ConsumeRune(t *testing.T) {
 	t.Parallel()
 
-	const Target rune = '\u5BF9'
+	const (
+		Target rune = '\u5BF9'
+
+		String3Hans = "\u5BF9\u5BF9\u5BF9"
+		String4Hans = "\u5BF9\u5BF9\u5BF9\u554A"
+	)
 
 	testCases := []struct {
 		content         string
@@ -189,21 +204,21 @@ func TestResettableBufferedReader_ConsumeRune(t *testing.T) {
 		{"", 1, 0, io.EOF},
 		{"", 2, 0, io.EOF},
 
-		{"\u5BF9\u5BF9\u5BF9\u554A", 0, 0, nil},
-		{"\u5BF9\u5BF9\u5BF9\u554A", -1, 3, nil},
-		{"\u5BF9\u5BF9\u5BF9\u554A", 1, 1, nil},
-		{"\u5BF9\u5BF9\u5BF9\u554A", 2, 2, nil},
-		{"\u5BF9\u5BF9\u5BF9\u554A", 3, 3, nil},
-		{"\u5BF9\u5BF9\u5BF9\u554A", 4, 3, nil},
-		{"\u5BF9\u5BF9\u5BF9\u554A", 5, 3, nil},
+		{String3Hans, 0, 0, nil},
+		{String3Hans, -1, 3, io.EOF},
+		{String3Hans, 1, 1, nil},
+		{String3Hans, 2, 2, nil},
+		{String3Hans, 3, 3, nil},
+		{String3Hans, 4, 3, io.EOF},
+		{String3Hans, 5, 3, io.EOF},
 
-		{"\u5BF9\u5BF9\u5BF9", 0, 0, nil},
-		{"\u5BF9\u5BF9\u5BF9", -1, 3, io.EOF},
-		{"\u5BF9\u5BF9\u5BF9", 1, 1, nil},
-		{"\u5BF9\u5BF9\u5BF9", 2, 2, nil},
-		{"\u5BF9\u5BF9\u5BF9", 3, 3, nil},
-		{"\u5BF9\u5BF9\u5BF9", 4, 3, io.EOF},
-		{"\u5BF9\u5BF9\u5BF9", 5, 3, io.EOF},
+		{String4Hans, 0, 0, nil},
+		{String4Hans, -1, 3, nil},
+		{String4Hans, 1, 1, nil},
+		{String4Hans, 2, 2, nil},
+		{String4Hans, 3, 3, nil},
+		{String4Hans, 4, 3, nil},
+		{String4Hans, 5, 3, nil},
 	}
 
 	for _, tc := range testCases {
@@ -297,6 +312,11 @@ func TestResettableBufferedReader_ConsumeRune_InvalidRune(t *testing.T) {
 func TestResettableBufferedReader_ConsumeRuneFunc(t *testing.T) {
 	t.Parallel()
 
+	const (
+		String3Runes = "o\u590F\u5929"
+		String4Runes = "o\u590F\u5929!"
+	)
+
 	f := func(r rune, size int) bool {
 		return r >= 'a' && r <= 'z' || size > 1
 	}
@@ -310,21 +330,21 @@ func TestResettableBufferedReader_ConsumeRuneFunc(t *testing.T) {
 		{"", 1, 0, io.EOF},
 		{"", 2, 0, io.EOF},
 
-		{"o\u590F\u5929!", 0, 0, nil},
-		{"o\u590F\u5929!", -1, 3, nil},
-		{"o\u590F\u5929!", 1, 1, nil},
-		{"o\u590F\u5929!", 2, 2, nil},
-		{"o\u590F\u5929!", 3, 3, nil},
-		{"o\u590F\u5929!", 4, 3, nil},
-		{"o\u590F\u5929!", 5, 3, nil},
+		{String3Runes, 0, 0, nil},
+		{String3Runes, -1, 3, io.EOF},
+		{String3Runes, 1, 1, nil},
+		{String3Runes, 2, 2, nil},
+		{String3Runes, 3, 3, nil},
+		{String3Runes, 4, 3, io.EOF},
+		{String3Runes, 5, 3, io.EOF},
 
-		{"o\u590F\u5929", 0, 0, nil},
-		{"o\u590F\u5929", -1, 3, io.EOF},
-		{"o\u590F\u5929", 1, 1, nil},
-		{"o\u590F\u5929", 2, 2, nil},
-		{"o\u590F\u5929", 3, 3, nil},
-		{"o\u590F\u5929", 4, 3, io.EOF},
-		{"o\u590F\u5929", 5, 3, io.EOF},
+		{String4Runes, 0, 0, nil},
+		{String4Runes, -1, 3, nil},
+		{String4Runes, 1, 1, nil},
+		{String4Runes, 2, 2, nil},
+		{String4Runes, 3, 3, nil},
+		{String4Runes, 4, 3, nil},
+		{String4Runes, 5, 3, nil},
 	}
 
 	for _, tc := range testCases {

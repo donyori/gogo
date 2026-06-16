@@ -330,11 +330,13 @@ func testMultiCloserOneCallCloserClosedNotTryAll(
 ) {
 	t.Helper()
 
-	var idx int
-	for idx = len(closers) - 1; idx >= 0; idx-- {
+	idx := len(closers) - 1
+	for idx >= 0 {
 		if closers[idx].(*testCloser).err != nil {
 			break
 		}
+
+		idx--
 	}
 
 	for i, closer := range closers {
