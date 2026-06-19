@@ -508,6 +508,8 @@ func (ctrl *controller[Job, Properties, Feedback]) Wait() int {
 	ctrl.wg.Wait()
 
 	if ctrl.fhdc != nil {
+		// The feedback handler goroutine may exit after all workers,
+		// so wait for ctrl.fhdc at the end.
 		<-ctrl.fhdc
 	}
 
@@ -570,6 +572,12 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 						"feedback handler",
 						e,
 					))
+
+					// The feedback handler panicked,
+					// but some workers may still send feedback to ctrl.fc.
+					// Therefore, drain ctrl.fc to ensure that
+					// no goroutines will wait to send feedback to ctrl.fc.
+					ctrl.drainFeedbackChannel()
 				}
 			}()
 
@@ -640,10 +648,7 @@ func (ctrl *controller[Job, Properties, Feedback]) feedbackHandlerProc() {
 	default:
 		// Drain ctrl.fc to ensure that
 		// no goroutines will wait to send feedback to ctrl.fc.
-		//
-		//revive:disable-next-line:empty-block This block drains ctrl.fc.
-		for range ctrl.fc {
-		}
+		ctrl.drainFeedbackChannel()
 	}
 }
 
@@ -767,6 +772,14 @@ func (ctrl *controller[Job, Properties, Feedback]) inputBeforeLaunch(
 	ctrl.jq.Enqueue(metaJobs...)
 
 	return true
+}
+
+// drainFeedbackChannel drains the feedback channel and discards all feedback
+// to ensure that no goroutines will wait to send feedback to that channel.
+func (ctrl *controller[Job, Properties, Feedback]) drainFeedbackChannel() {
+	//revive:disable-next-line:empty-block This block drains ctrl.fc.
+	for range ctrl.fc {
+	}
 }
 
 // copyMetaJobs copies metaJobs,

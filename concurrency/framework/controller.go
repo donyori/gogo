@@ -25,7 +25,8 @@ import "github.com/donyori/gogo/concurrency"
 // The use of all the frameworks under this package starts with creating
 // a controller through their own New function.
 type Controller interface {
-	// Canceler returns a concurrency.Canceler for the job.
+	// Canceler returns a github.com/donyori/gogo/concurrency.Canceler
+	// for the job.
 	//
 	// Calls to Canceler always return the same non-nil value.
 	Canceler() concurrency.Canceler

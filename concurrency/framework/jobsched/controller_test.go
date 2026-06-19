@@ -653,12 +653,6 @@ func TestController_Cancel(t *testing.T) {
 		ctrl.Wait()
 	}(ctrl, doneC)
 
-	timer := time.NewTimer(time.Second)
-
-	t.Cleanup(func() {
-		timer.Stop()
-	})
-
 	time.Sleep(time.Millisecond) // wait for workers to handle some jobs
 	canceler.Cancel()
 
@@ -668,8 +662,6 @@ func TestController_Cancel(t *testing.T) {
 	}
 
 	select {
-	case <-timer.C:
-		t.Error("timeout after canceling")
 	case <-doneC:
 		checkXFeedbackSumAndPanicRecords(
 			t,
@@ -679,6 +671,8 @@ func TestController_Cancel(t *testing.T) {
 			xAfterCancellation,
 			int(xAfterCancellation),
 		)
+	case <-time.After(time.Second):
+		t.Error("timeout after canceling")
 	}
 }
 
@@ -717,12 +711,6 @@ func TestController_Cancel_NoFeedback(t *testing.T) {
 		ctrl.Wait()
 	}(ctrl, doneC)
 
-	timer := time.NewTimer(time.Second)
-
-	t.Cleanup(func() {
-		timer.Stop()
-	})
-
 	time.Sleep(time.Millisecond) // wait for workers to handle some jobs
 	canceler.Cancel()
 
@@ -732,10 +720,10 @@ func TestController_Cancel_NoFeedback(t *testing.T) {
 	}
 
 	select {
-	case <-timer.C:
-		t.Error("timeout after canceling")
 	case <-doneC:
 		checkXAndPanicRecords(t, &x, ctrl.PanicRecords(), xAfterCancellation)
+	case <-time.After(time.Second):
+		t.Error("timeout after canceling")
 	}
 }
 

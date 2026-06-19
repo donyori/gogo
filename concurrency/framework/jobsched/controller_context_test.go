@@ -204,10 +204,10 @@ func testControllerCancelContextFunc(
 		manuallyCancel(ctx, cancel)
 	} else {
 		select {
+		case <-ctx.Done():
 		case <-timer.C:
 			t.Error("timeout before the context is done")
 			return
-		case <-ctx.Done():
 		}
 	}
 
@@ -217,8 +217,6 @@ func testControllerCancelContextFunc(
 	}
 
 	select {
-	case <-timer.C:
-		t.Error("timeout after canceling")
 	case <-doneC:
 		checkXFeedbackSumAndPanicRecords(
 			t,
@@ -228,6 +226,8 @@ func testControllerCancelContextFunc(
 			xAfterCancellation,
 			int(xAfterCancellation),
 		)
+	case <-timer.C:
+		t.Error("timeout after canceling")
 	}
 }
 
@@ -292,10 +292,10 @@ func testControllerNoFeedbackCancelContextFunc(
 		manuallyCancel(ctx, cancel)
 	} else {
 		select {
+		case <-ctx.Done():
 		case <-timer.C:
 			t.Error("timeout before the context is done")
 			return
-		case <-ctx.Done():
 		}
 	}
 
@@ -305,9 +305,9 @@ func testControllerNoFeedbackCancelContextFunc(
 	}
 
 	select {
-	case <-timer.C:
-		t.Error("timeout after canceling")
 	case <-doneC:
 		checkXAndPanicRecords(t, &x, ctrl.PanicRecords(), xAfterCancellation)
+	case <-timer.C:
+		t.Error("timeout after canceling")
 	}
 }
