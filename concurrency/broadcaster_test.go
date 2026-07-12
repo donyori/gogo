@@ -19,192 +19,853 @@
 package concurrency_test
 
 import (
-	"fmt"
+	"context"
+	"errors"
 	"math/rand/v2"
-	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/donyori/gogo/concurrency"
+	"github.com/donyori/gogo/internal/unequal"
 )
 
-func TestBroadcaster_Broadcast(t *testing.T) {
-	const NumMessage int = 10
-	const NumGoroutine int = 32
-	var data [NumMessage]int
+func TestNewBroadcaster(t *testing.T) {
+	t.Parallel()
+
+	bcast := concurrency.NewBroadcaster[int](0)
+	if bcast == nil {
+		t.Fatal("got nil broadcaster")
+	}
+
+	bcast.Close()
+}
+
+func TestBroadcaster_CloseMethods(t *testing.T) {
+	t.Parallel()
+
+	bcast := concurrency.NewBroadcaster[int](0)
+	if bcast == nil {
+		t.Fatal("got nil broadcaster")
+	}
+
+	t.Cleanup(bcast.Close)
+
+	c := bcast.CloseC()
+	if c == nil {
+		t.Fatal("got nil close channel")
+	}
+
+	if concurrency.TestChannel(c) {
+		t.Error("<-bcast.CloseC() is selected before closing the broadcaster")
+	}
+
+	if bcast.Closed() {
+		t.Error("bcast.Closed() returned true before closing the broadcaster")
+	}
+
+	bcast.Close()
+
+	c2 := bcast.CloseC()
+	if c2 != c {
+		t.Error("got different close channels " +
+			"before and after closing the broadcaster")
+	}
+
+	if !concurrency.TestChannel(c) {
+		t.Error("<-bcast.CloseC() is not selected " +
+			"after closing the broadcaster")
+	}
+
+	if !bcast.Closed() {
+		t.Error("bcast.Closed() returned false after closing the broadcaster")
+	}
+}
+
+func TestBroadcaster_Broadcast_NoSubscriber(t *testing.T) {
+	t.Parallel()
+
+	bcast := concurrency.NewBroadcaster[int](0)
+	if bcast == nil {
+		t.Fatal("got nil broadcaster")
+	}
+
+	t.Cleanup(bcast.Close)
+
+	n, err := bcast.Broadcast(1)
+
+	if n != 0 {
+		t.Errorf("got n %d; want 0", n)
+	}
+
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestBroadcaster_Broadcast_AfterClose(t *testing.T) {
+	t.Parallel()
+
+	bcast := concurrency.NewBroadcaster[int](0)
+	if bcast == nil {
+		t.Fatal("got nil broadcaster")
+	}
+
+	t.Cleanup(bcast.Close)
+
+	c, err := bcast.Subscribe(-1)
+	if err != nil {
+		t.Fatal("bcast.Subscribe(-1):", err)
+	} else if c == nil {
+		t.Fatal("bcast.Subscribe(-1): got nil channel")
+	}
+
+	t.Cleanup(func() {
+		_ = bcast.Unsubscribe(c) // ignore error
+	})
+
+	bcast.Close()
+	n, err := bcast.Broadcast(1)
+
+	if n != 0 {
+		t.Errorf("bcast.Broadcast(1): got n %d; want 0", n)
+	}
+
+	if !errors.Is(err, concurrency.ErrBroadcasterClosed) {
+		t.Errorf("bcast.Broadcast(1): got error %v; "+
+			"want concurrency.ErrBroadcasterClosed (%v)",
+			err, concurrency.ErrBroadcasterClosed)
+	}
+}
+
+func TestBroadcaster_Subscribe(t *testing.T) {
+	t.Parallel()
+
+	const DefaultBufferSize int = 1
+
+	bcast := concurrency.NewBroadcaster[int](DefaultBufferSize)
+	if bcast == nil {
+		t.Fatal("got nil broadcaster")
+	}
+
+	t.Cleanup(bcast.Close)
+
+	var cs []<-chan int
+
+	t.Cleanup(func() {
+		for _, c := range cs {
+			_ = bcast.Unsubscribe(c) // ignore error
+		}
+	})
+
+	for bufSize := -2; bufSize <= 2; bufSize++ {
+		c, err := bcast.Subscribe(bufSize)
+		if c != nil {
+			cs = append(cs, c)
+		}
+
+		testBroadcasterSubscribeCheckResult(
+			t,
+			DefaultBufferSize,
+			bufSize,
+			c,
+			err,
+		)
+	}
+}
+
+func testBroadcasterSubscribeCheckResult(
+	t *testing.T,
+	dfltBufSize int,
+	bufSize int,
+	c <-chan int,
+	err error,
+) {
+	t.Helper()
+
+	if c == nil {
+		t.Errorf("bcast.Subscribe(%d): got nil channel", bufSize)
+	} else {
+		wantBufSize := bufSize
+		if wantBufSize < 0 {
+			wantBufSize = max(0, dfltBufSize)
+		}
+
+		capacity := cap(c)
+		if capacity != wantBufSize {
+			t.Errorf("bcast.Subscribe(%d): "+
+				"got channel buffer capacity %d; want %d",
+				bufSize, capacity, wantBufSize)
+		}
+	}
+
+	if err != nil {
+		t.Errorf("bcast.Subscribe(%d): %v", bufSize, err)
+	}
+}
+
+func TestBroadcaster_Subscribe_AfterClose(t *testing.T) {
+	t.Parallel()
+
+	bcast := concurrency.NewBroadcaster[int](1)
+	if bcast == nil {
+		t.Fatal("got nil broadcaster")
+	}
+
+	t.Cleanup(bcast.Close)
+	bcast.Close()
+
+	var cs []<-chan int
+
+	t.Cleanup(func() {
+		for _, c := range cs {
+			_ = bcast.Unsubscribe(c) // ignore error
+		}
+	})
+
+	for bufSize := -2; bufSize <= 2; bufSize++ {
+		c, err := bcast.Subscribe(bufSize)
+		if c != nil {
+			cs = append(cs, c)
+		}
+
+		testBroadcasterSubscribeAfterCloseCheckResult(t, bufSize, c, err)
+	}
+}
+
+func testBroadcasterSubscribeAfterCloseCheckResult(
+	t *testing.T,
+	bufSize int,
+	c <-chan int,
+	err error,
+) {
+	t.Helper()
+
+	if c == nil {
+		t.Errorf("bcast.Subscribe(%d): got nil channel", bufSize)
+	} else {
+		select {
+		case msg, ok := <-c:
+			if ok {
+				t.Errorf("bcast.Subscribe(%d): "+
+					"got unclosed channel and received message %d",
+					bufSize, msg)
+			}
+		default:
+			t.Errorf("bcast.Subscribe(%d): got unclosed channel", bufSize)
+		}
+
+		if capacity := cap(c); capacity != 0 {
+			t.Errorf("bcast.Subscribe(%d): "+
+				"got channel buffer capacity %d; want 0",
+				bufSize, capacity)
+		}
+	}
+
+	if !errors.Is(err, concurrency.ErrBroadcasterClosed) {
+		t.Errorf("bcast.Subscribe(%d): got error %v; "+
+			"want concurrency.ErrBroadcasterClosed (%v)",
+			bufSize, err, concurrency.ErrBroadcasterClosed)
+	}
+}
+
+func TestBroadcaster_Unsubscribe(t *testing.T) {
+	t.Parallel()
+
+	bcast := concurrency.NewBroadcaster[int](0)
+	if bcast == nil {
+		t.Fatal("got nil broadcaster")
+	}
+
+	t.Cleanup(bcast.Close)
+
+	c, err := bcast.Subscribe(-1)
+	if err != nil {
+		t.Fatal("bcast.Subscribe(-1):", err)
+	} else if c == nil {
+		t.Fatal("bcast.Subscribe(-1): got nil channel")
+	}
+
+	err = bcast.Unsubscribe(c)
+	if err != nil {
+		t.Error("1st bcast.Unsubscribe(c):", err)
+	}
+}
+
+func TestBroadcaster_Unsubscribe_Twice(t *testing.T) {
+	t.Parallel()
+
+	bcast := concurrency.NewBroadcaster[int](0)
+	if bcast == nil {
+		t.Fatal("got nil broadcaster")
+	}
+
+	t.Cleanup(bcast.Close)
+
+	c, err := bcast.Subscribe(-1)
+	if err != nil {
+		t.Fatal("bcast.Subscribe(-1):", err)
+	} else if c == nil {
+		t.Fatal("bcast.Subscribe(-1): got nil channel")
+	}
+
+	err = bcast.Unsubscribe(c)
+	if err != nil {
+		t.Error("1st bcast.Unsubscribe(c):", err)
+	}
+
+	err = bcast.Unsubscribe(c)
+	if !errors.Is(err, concurrency.ErrUnregisteredChannel) {
+		t.Errorf("2nd bcast.Unsubscribe(c): got error %v; "+
+			"want concurrency.ErrUnregisteredChannel (%v)",
+			err, concurrency.ErrUnregisteredChannel)
+	}
+}
+
+func TestBroadcaster_Unsubscribe_UnregisteredC(t *testing.T) {
+	t.Parallel()
+
+	bcast := concurrency.NewBroadcaster[int](0)
+	if bcast == nil {
+		t.Fatal("got nil broadcaster")
+	}
+
+	t.Cleanup(bcast.Close)
+
+	err := bcast.Unsubscribe(make(chan int))
+	if !errors.Is(err, concurrency.ErrUnregisteredChannel) {
+		t.Errorf("bcast.Unsubscribe(make(chan int)): got error %v; "+
+			"want concurrency.ErrUnregisteredChannel (%v)",
+			err, concurrency.ErrUnregisteredChannel)
+	}
+
+	err = bcast.Unsubscribe(nil)
+	if !errors.Is(err, concurrency.ErrUnregisteredChannel) {
+		t.Errorf("bcast.Unsubscribe(nil): got error %v; "+
+			"want concurrency.ErrUnregisteredChannel (%v)",
+			err, concurrency.ErrUnregisteredChannel)
+	}
+}
+
+func TestBroadcaster_Unsubscribe_AfterClose(t *testing.T) {
+	t.Parallel()
+
+	bcast := concurrency.NewBroadcaster[int](0)
+	if bcast == nil {
+		t.Fatal("got nil broadcaster")
+	}
+
+	t.Cleanup(bcast.Close)
+
+	c, err := bcast.Subscribe(-1)
+	if err != nil {
+		t.Fatal("bcast.Subscribe(-1):", err)
+	} else if c == nil {
+		t.Fatal("bcast.Subscribe(-1): got nil channel")
+	}
+
+	bcast.Close()
+
+	err = bcast.Unsubscribe(c)
+	if !errors.Is(err, concurrency.ErrUnregisteredChannel) {
+		t.Errorf("bcast.Unsubscribe(c): got error %v; "+
+			"want concurrency.ErrUnregisteredChannel (%v)",
+			err, concurrency.ErrUnregisteredChannel)
+	}
+
+	err = bcast.Unsubscribe(make(chan int))
+	if !errors.Is(err, concurrency.ErrUnregisteredChannel) {
+		t.Errorf("bcast.Unsubscribe(make(chan int)): got error %v; "+
+			"want concurrency.ErrUnregisteredChannel (%v)",
+			err, concurrency.ErrUnregisteredChannel)
+	}
+
+	err = bcast.Unsubscribe(nil)
+	if !errors.Is(err, concurrency.ErrUnregisteredChannel) {
+		t.Errorf("bcast.Unsubscribe(nil): got error %v; "+
+			"want concurrency.ErrUnregisteredChannel (%v)",
+			err, concurrency.ErrUnregisteredChannel)
+	}
+}
+
+func TestBroadcaster_BroadcastAndReceiveAll(t *testing.T) {
+	t.Parallel()
+
+	const (
+		NumMessage  int = 10
+		NumReceiver int = 32
+	)
+
+	data := make([]int, NumMessage)
 	for i := range data {
 		data[i] = i + 1
 	}
 
 	bcast := concurrency.NewBroadcaster[int](0)
+	if bcast == nil {
+		t.Fatal("got nil broadcaster")
+	}
 
-	// Barriers to synchronize goroutines.
-	// Calling barriers[i].Done() means this goroutine is ready to delay
+	t.Cleanup(bcast.Close)
+
+	// This barrier is for synchronizing goroutines.
+	// Calling barrier.Done(i) means this goroutine is ready to delay
 	// a random duration and then receive the i-th message.
-	var barriers [NumMessage + 1]sync.WaitGroup
-	for i := 0; i <= NumMessage; i++ {
-		barriers[i].Add(NumGoroutine)
-	}
-	var barriersWaitOnce [NumMessage]sync.Once
+	barrier := NewBarrier(NumMessage, NumReceiver)
 
-	random := rand.New(rand.NewChaCha8(
-		[32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))))
-	var delayDurations [NumGoroutine][NumMessage - 1]time.Duration
-	for i := range NumGoroutine {
-		for j := range NumMessage - 1 {
-			delayDurations[i][j] = time.Microsecond * time.Duration(
-				random.IntN(NumGoroutine))
-		}
-	}
+	// delayDurations is for making goroutines receive messages asynchronously,
+	// i.e., the goroutines receive the same message from the broadcaster
+	// at different times.
+	delayDurations := getRandomDurations2D(
+		NumReceiver,
+		NumMessage,
+		[32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456")),
+		time.Microsecond*10*time.Duration(NumReceiver),
+	)
+
+	// The context is used to early-stop receiver goroutines
+	// if any receiver goroutine fails or panics.
+	recvCtx, recvCancel := context.WithCancel(context.Background())
+	t.Cleanup(recvCancel)
 
 	var wg sync.WaitGroup
-	wg.Add(NumGoroutine)
-	for i := range NumGoroutine {
-		go func(rank int) {
-			defer wg.Done()
-			var recv [NumMessage]int
-			c, idx := bcast.Subscribe(-1), 0
-			barriers[idx].Done()
-			for msg := range c {
-				if idx >= NumMessage {
-					panic(fmt.Sprintf(
-						"goroutine %d, got messages more than %d",
-						rank, NumMessage))
-				}
-				recv[idx] = msg
-				idx++
-				barriers[idx].Done()
+	t.Cleanup(wg.Wait)
 
-				barriersWaitOnce[idx-1].Do(func() {
-					barriers[idx].Wait()
-				})
-
-				if idx < NumMessage-1 {
-					time.Sleep(delayDurations[rank][idx-1])
-				}
-			}
-			if recv != data {
-				t.Errorf("goroutine %d, recv %v; want %v", rank, recv, data)
-			}
-		}(i)
+	for rank := range NumReceiver {
+		wg.Go(func() {
+			goroutineTestBroadcasterNormalReceiver(
+				t,
+				recvCtx,
+				recvCancel,
+				data,
+				bcast,
+				barrier,
+				delayDurations,
+				rank,
+			)
+		})
 	}
-	barriers[0].Wait() // ensure that all subscribers have entered the for loop
+
+	// Ensure that all receivers have subscribed to the broadcaster.
+	barrier.Wait(0)
+
 	for _, msg := range data {
-		bcast.Broadcast(msg)
-	}
-	bcast.Close()
-	wg.Wait()
-
-	defer func() {
-		if e := recover(); e != nil {
-			msg, ok := e.(string)
-			if !ok || !strings.HasSuffix(msg, "broadcaster is closed") {
-				t.Error(e)
-			}
-		}
-	}()
-	bcast.Broadcast(0) // want panic here
-	t.Error("no panic when calling Broadcast after the broadcaster closed")
-}
-
-func TestBroadcaster_Unsubscribe(t *testing.T) {
-	const NumMessage int = 40
-	var data [NumMessage]int
-	for i := range data {
-		data[i] = i
-	}
-	bcast := concurrency.NewBroadcaster[int](0)
-	c := bcast.Subscribe(NumMessage >> 2)
-	var wg sync.WaitGroup
-	wg.Add(4) // 3 receivers + 1 sender
-	var ready sync.WaitGroup
-	ready.Add(3)
-	for i := range 3 {
-		// Receive all messages normally, to ensure that Unsubscribe doesn't
-		// affect other subscribers.
-		go func(rank int) {
-			defer wg.Done()
-			var recv [NumMessage]int
-			c, idx := bcast.Subscribe(-1), 0
-			ready.Done()
-			for msg := range c {
-				if idx >= NumMessage {
-					panic(fmt.Sprintf("goroutine %d, got messages more than %d",
-						rank, NumMessage))
-				}
-				recv[idx] = msg
-				idx++
-				time.Sleep(time.Microsecond * time.Duration(rank)) // let the next reception not start at the same time
-			}
-			if recv != data {
-				t.Errorf("goroutine %d, recv %v; want %v", rank, recv, data)
-			}
-		}(i)
-	}
-	go func() {
-		defer wg.Done()
-		defer bcast.Close()
-		ready.Wait()
-		for _, msg := range data {
-			bcast.Broadcast(msg)
-		}
-	}()
-	defer wg.Wait()
-	var recv [NumMessage]int
-	stop := NumMessage >> 1
-	for i := range stop {
-		msg, ok := <-c
-		if !ok {
-			t.Errorf("c closed early, received messages %v", recv[:i])
-			return
-		}
-		recv[i] = msg
-	}
-	unread := bcast.Unsubscribe(c)
-	if len(unread) > cap(c)+1 || len(unread) > NumMessage-stop {
-		t.Errorf("too many unread messages, len(unread) = %d, cap(c) = %d, NumMessage - stop = %d",
-			len(unread), cap(c), NumMessage-stop)
-	}
-	for i := range unread {
-		recv[i+stop] = unread[i]
-	}
-	for i, n := 0, stop+len(unread); i < n; i++ {
-		if recv[i] != data[i] {
-			t.Errorf("recv[:%d] = %v; want (data[:%[1]d]) %[3]v",
-				n, recv[:n], data[:n])
+		if concurrency.TestDone(recvCtx) {
 			break
 		}
+
+		n, err := bcast.Broadcast(msg)
+
+		if n != NumReceiver {
+			t.Errorf("bcast.Broadcast(%d): got n %d; want %d",
+				msg, n, NumReceiver)
+		}
+
+		if err != nil {
+			t.Errorf("bcast.Broadcast(%d): %v", msg, err)
+		}
+	}
+
+	bcast.Close()
+}
+
+func TestBroadcaster_BroadcastAndReceivePart(t *testing.T) {
+	t.Parallel()
+
+	const (
+		NumMessage int = 10
+
+		NumNormalReceiver      int = 16
+		NumUnsubscribeReceiver int = NumMessage + 1
+
+		NumReceiver int = NumNormalReceiver + NumUnsubscribeReceiver
+	)
+
+	data := make([]int, NumMessage)
+	for i := range data {
+		data[i] = i + 1
+	}
+
+	bcast := concurrency.NewBroadcaster[int](0)
+	if bcast == nil {
+		t.Fatal("got nil broadcaster")
+	}
+
+	t.Cleanup(bcast.Close)
+
+	// This barrier is for synchronizing goroutines.
+	// Calling barrier.Done(i) means this goroutine is ready to delay
+	// a random duration and then receive the i-th message.
+	barrier := NewBarrier(NumMessage, NumReceiver)
+
+	// delayDurations is for making goroutines receive messages asynchronously,
+	// i.e., the goroutines receive the same message from the broadcaster
+	// at different times.
+	delayDurations := getRandomDurations2D(
+		NumReceiver,
+		NumMessage,
+		[32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456")),
+		time.Microsecond*10*time.Duration(NumReceiver),
+	)
+
+	// The context is used to early-stop receiver goroutines
+	// if any receiver goroutine fails or panics.
+	recvCtx, recvCancel := context.WithCancel(context.Background())
+	t.Cleanup(recvCancel)
+
+	var normalWG, unsubscribeWG sync.WaitGroup
+	t.Cleanup(normalWG.Wait)
+	t.Cleanup(unsubscribeWG.Wait)
+
+	for rank := range NumNormalReceiver {
+		normalWG.Go(func() {
+			goroutineTestBroadcasterNormalReceiver(
+				t,
+				recvCtx,
+				recvCancel,
+				data,
+				bcast,
+				barrier,
+				delayDurations,
+				rank,
+			)
+		})
+	}
+
+	for i := range NumUnsubscribeReceiver {
+		unsubscribeWG.Go(func() {
+			// Rank starts with NumNormalReceiver
+			// to fit barrier and delayDurations.
+			goroutineTestBroadcasterUnsubscribeReceiver(
+				t,
+				recvCtx,
+				recvCancel,
+				len(data),
+				data[:i],
+				bcast,
+				barrier,
+				delayDurations,
+				NumNormalReceiver+i,
+			)
+		})
+	}
+
+	// Ensure that all receivers have subscribed to the broadcaster.
+	barrier.Wait(0)
+
+	for i, msg := range data {
+		if concurrency.TestDone(recvCtx) {
+			break
+		}
+
+		n, err := bcast.Broadcast(msg)
+
+		if n != NumReceiver-1-i {
+			t.Errorf("bcast.Broadcast(%d): got n %d; want %d",
+				msg, n, NumReceiver-1-i)
+		}
+
+		if err != nil {
+			t.Errorf("bcast.Broadcast(%d): %v", msg, err)
+		}
+	}
+
+	// Wait for unsubscribe receivers before closing the broadcaster to avoid
+	// unexpected errors when receivers unsubscribe from the broadcaster.
+	unsubscribeWG.Wait()
+	bcast.Close()
+}
+
+// Barrier is a simple device to synchronize goroutines multiple times.
+// It consists of multiple wait groups, called layers.
+type Barrier struct {
+	wgs []*sync.WaitGroup
+}
+
+// NewBarrier creates a new Barrier with the specified number of layers
+// for the specified number of goroutines.
+func NewBarrier(numLayer, numGoroutine int) *Barrier {
+	wgs := make([]*sync.WaitGroup, numLayer)
+	for i := range wgs {
+		wgs[i] = new(sync.WaitGroup)
+		wgs[i].Add(numGoroutine)
+	}
+
+	return &Barrier{wgs: wgs}
+}
+
+// Done decreases the task counter of the specified layer by one.
+func (b *Barrier) Done(layer int) {
+	b.wgs[layer].Done()
+}
+
+// Wait blocks until the task counter of the specified layer is zero.
+func (b *Barrier) Wait(layer int) {
+	b.wgs[layer].Wait()
+}
+
+// getRandomDurations2D returns random durations as a 2-D array
+// (similar to [m][n]time.Duration).
+//
+// The random values are generated by ChaCha8 seeded with the specified seed,
+// from 0 (inclusive) to the specified max duration (exclusive).
+// The specified max duration must be nonnegative.
+func getRandomDurations2D(
+	m int,
+	n int,
+	chaCha8Seed [32]byte,
+	maxDuration time.Duration,
+) [][]time.Duration {
+	random := rand.New(rand.NewChaCha8(chaCha8Seed)) //gosec:disable G404 -- math/rand/v2 is reproducible
+
+	durations := make([][]time.Duration, m)
+	for i := range durations {
+		ds := make([]time.Duration, n)
+		for j := range ds {
+			ds[j] = time.Duration(random.Int64N(int64(maxDuration)))
+		}
+
+		durations[i] = ds
+	}
+
+	return durations
+}
+
+//revive:disable:context-as-argument
+// t (of type *testing.T) takes priority over ctx (of type context.Context)
+// for the following test functions.
+
+// goroutineTestBroadcasterNormalReceiver is the main process of
+// a goroutine for a normal receiver that subscribes to the broadcaster
+// and receives messages from it.
+// Each message is received after a specified delay.
+func goroutineTestBroadcasterNormalReceiver( //nolint:thelper // this is the main body, not a helper
+	t *testing.T,
+	ctx context.Context,
+	cancel context.CancelFunc,
+	wantMsgs []int,
+	bcast concurrency.Broadcaster[int],
+	barrier *Barrier,
+	delayDurations [][]time.Duration,
+	rank int,
+) {
+	defer func() {
+		if e := recover(); e != nil {
+			t.Errorf("normal receiver goroutine %d, panic: %v", rank, e)
+			cancel()
+		}
+	}()
+
+	lastLayer := -1
+	defer func(barrier *Barrier) {
+		for lastLayer+1 < len(wantMsgs) {
+			lastLayer++
+			barrier.Done(lastLayer) // avoid blocking other goroutines
+		}
+	}(barrier)
+
+	c, err := bcast.Subscribe(-1)
+	if err != nil {
+		t.Errorf("normal receiver goroutine %d, bcast.Subscribe(-1): %v",
+			rank, err)
+		cancel()
+
+		return
+	} else if c == nil {
+		t.Errorf("normal receiver goroutine %d, "+
+			"bcast.Subscribe(-1): got nil channel",
+			rank)
+		cancel()
+
+		return
+	}
+	defer func(c <-chan int) {
+		_ = bcast.Unsubscribe(c) // ignore error
+	}(c)
+
+	n := testBroadcasterReceiverMainLoopAndCheckMessages(
+		t,
+		ctx,
+		cancel,
+		wantMsgs,
+		barrier,
+		delayDurations,
+		&lastLayer,
+		c,
+		rank,
+		"normal receiver",
+	)
+
+	doneC := ctx.Done()
+	if concurrency.TestChannel(doneC) {
+		return
+	}
+
+	select {
+	case <-doneC:
+	case msg, ok := <-c:
+		if ok {
+			t.Errorf("normal receiver goroutine %d, "+
+				"received No.%d message %d, which is more than %d",
+				rank, n+1, msg, len(wantMsgs))
+			cancel()
+		}
 	}
 }
 
-func TestBroadcaster_Unsubscribe_IllegalC(t *testing.T) {
-	bcast := concurrency.NewBroadcaster[int](0)
-	bcast.Subscribe(-1)
+// goroutineTestBroadcasterUnsubscribeReceiver is the main process of
+// a goroutine for an unsubscribe receiver that subscribes to the broadcaster,
+// receives (part of) messages from it, and then unsubscribes.
+// Each message is received after a specified delay.
+func goroutineTestBroadcasterUnsubscribeReceiver( //nolint:thelper // this is the main body, not a helper
+	t *testing.T,
+	ctx context.Context,
+	cancel context.CancelFunc,
+	numAllMessage int,
+	wantMsgs []int,
+	bcast concurrency.Broadcaster[int],
+	barrier *Barrier,
+	delayDurations [][]time.Duration,
+	rank int,
+) {
 	defer func() {
 		if e := recover(); e != nil {
-			msg, ok := e.(string)
-			if !ok || !strings.HasSuffix(
-				msg,
-				"c is not gotten from this broadcaster or has already unsubscribed",
-			) {
-				t.Error(e)
-			}
+			t.Errorf("unsubscribe receiver goroutine %d, panic: %v", rank, e)
+			cancel()
 		}
 	}()
-	bcast.Unsubscribe(make(chan int)) // want panic here
-	t.Error("no panic when calling Unsubscribe with a channel not assigned by the broadcaster")
+
+	lastLayer := -1
+	decreaseRemainingBarrierLayers := func(barrier *Barrier) {
+		for lastLayer+1 < numAllMessage {
+			lastLayer++
+			barrier.Done(lastLayer) // avoid blocking other goroutines
+		}
+	}
+
+	defer decreaseRemainingBarrierLayers(barrier)
+
+	c, err := bcast.Subscribe(-1)
+	if err != nil {
+		t.Errorf("unsubscribe receiver goroutine %d, bcast.Subscribe(-1): %v",
+			rank, err)
+		cancel()
+
+		return
+	} else if c == nil {
+		t.Errorf("unsubscribe receiver goroutine %d, "+
+			"bcast.Subscribe(-1): got nil channel",
+			rank)
+		cancel()
+
+		return
+	}
+	defer func(c <-chan int) {
+		_ = bcast.Unsubscribe(c) // ignore error
+	}(c)
+
+	n := testBroadcasterReceiverMainLoopAndCheckMessages(
+		t,
+		ctx,
+		cancel,
+		wantMsgs,
+		barrier,
+		delayDurations,
+		&lastLayer,
+		c,
+		rank,
+		"unsubscribe receiver",
+	)
+
+	doneC := ctx.Done()
+	if concurrency.TestChannel(doneC) {
+		return
+	}
+
+	err = bcast.Unsubscribe(c)
+	if err != nil {
+		t.Errorf("unsubscribe receiver goroutine %d, bcast.Unsubscribe(c): %v",
+			rank, err)
+		cancel()
+
+		return
+	}
+
+	decreaseRemainingBarrierLayers(barrier)
+
+	select {
+	case <-doneC:
+	case msg, ok := <-c:
+		if ok {
+			t.Errorf("unsubscribe receiver goroutine %d, "+
+				"received No.%d message %d, which is more than %d",
+				rank, n+1, msg, len(wantMsgs))
+			cancel()
+		}
+	}
 }
 
-func TestBroadcaster_Unsubscribe_AfterClose(t *testing.T) {
-	bcast := concurrency.NewBroadcaster[int](0)
-	c := bcast.Subscribe(-1)
-	bcast.Close()
-	defer func() {
-		if e := recover(); e != nil {
-			t.Error("panic when calling Unsubscribe after the broadcaster closed,", e)
+// testBroadcasterReceiverMainLoopAndCheckMessages is the common subprocess of
+// goroutineTestBroadcasterNormalReceiver and
+// goroutineTestBroadcasterUnsubscribeReceiver.
+// It receives at most len(wantMsgs) messages from c and
+// compares them with the wanted messages.
+//
+// receiverLogPrefix should be "normal receiver"
+// for goroutineTestBroadcasterNormalReceiver and
+// "unsubscribe receiver" for goroutineTestBroadcasterUnsubscribeReceiver.
+//
+// testBroadcasterReceiverMainLoopAndCheckMessages returns
+// the number of messages received.
+func testBroadcasterReceiverMainLoopAndCheckMessages(
+	t *testing.T,
+	ctx context.Context,
+	cancel context.CancelFunc,
+	wantMsgs []int,
+	barrier *Barrier,
+	delayDurations [][]time.Duration,
+	lastLayerPtr *int,
+	c <-chan int,
+	rank int,
+	receiverLogPrefix string,
+) int {
+	t.Helper()
+
+	if wantMsgs == nil {
+		wantMsgs = []int{}
+	}
+
+	recvMsgs := make([]int, 0, len(wantMsgs))
+	for len(recvMsgs) < len(wantMsgs) {
+		*lastLayerPtr++
+		barrier.Done(*lastLayerPtr)
+		barrier.Wait(*lastLayerPtr)
+		time.Sleep(delayDurations[rank][len(recvMsgs)])
+
+		select {
+		case <-ctx.Done():
+			return len(recvMsgs)
+		case msg, ok := <-c:
+			if !ok {
+				t.Errorf("%s goroutine %d, channel closed "+
+					"after receiving %d message(s); want %d messages",
+					receiverLogPrefix, rank, len(recvMsgs), len(wantMsgs))
+				cancel()
+
+				return len(recvMsgs)
+			}
+
+			recvMsgs = append(recvMsgs, msg)
 		}
-	}()
-	bcast.Unsubscribe(c)
-	bcast.Unsubscribe(make(chan int))
+	}
+
+	if unequal.Slice(recvMsgs, wantMsgs) {
+		t.Errorf("%s goroutine %d, received %d; want %d",
+			receiverLogPrefix, rank, recvMsgs, wantMsgs)
+		cancel()
+	}
+
+	return len(recvMsgs)
 }
+
+//revive:enable:context-as-argument

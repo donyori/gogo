@@ -48,6 +48,8 @@ type Mutex interface {
 	// is equivalent to
 	//
 	//	m.Lock()
+	//
+	// Successive calls to C return the same value.
 	C() <-chan struct{}
 
 	// Locked reports whether the mutex is locked.
@@ -58,6 +60,7 @@ type Mutex interface {
 func NewMutex() Mutex {
 	m := &mutex{make(chan struct{}, 1)}
 	m.c <- struct{}{}
+
 	return m
 }
 

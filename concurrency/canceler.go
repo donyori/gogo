@@ -33,7 +33,9 @@ type Canceler interface {
 	Cancel()
 
 	// C returns a channel for the cancellation signal.
-	// The channel will be closed after the first call to the method Cancel.
+	// The channel is closed when the cancellation signal appears.
+	//
+	// Successive calls to C return the same value.
 	C() <-chan struct{}
 
 	// Canceled reports whether the Canceler has broadcast
@@ -43,8 +45,10 @@ type Canceler interface {
 
 // ErrCanceled is an error indicating that
 // the Canceler has broadcast a cancellation signal.
+//
+// The client should use errors.Is to test whether an error is ErrCanceled.
 var ErrCanceled = errors.AutoNewCustom(
-	"canceler broadcast a cancellation signal",
+	"canceler has broadcast a cancellation signal",
 	errors.PrependFullPkgName,
 	0,
 )
@@ -92,10 +96,10 @@ func NewCancelerFromContext(
 ) Canceler {
 	if ctx == nil {
 		panic(errors.AutoMsg("the provided context is nil"))
-	}
-	if cancel == nil {
+	} else if cancel == nil {
 		panic(errors.AutoMsg("the provided cancel function is nil"))
 	}
+
 	return &contextCanceler{
 		ctx:    ctx,
 		cancel: cancel,
@@ -118,15 +122,10 @@ func (c *contextCanceler) C() <-chan struct{} {
 }
 
 func (c *contextCanceler) Canceled() bool {
-	select {
-	case <-c.ctx.Done():
-		return true
-	default:
-		return false
-	}
+	return TestChannel(c.ctx.Done())
 }
 
-// NewCancelerFromContextCause wraps the specified context and
+// NewCancelerFromCauseContext wraps the specified context and
 // cancel function as a Canceler.
 //
 // The method Cancel of the returned Canceler
@@ -140,43 +139,38 @@ func (c *contextCanceler) Canceled() bool {
 // The client is responsible for guaranteeing that
 // the specified cancel function is for the specified context.
 //
-// NewCancelerFromContextCause panics if ctx or cancel is nil.
-func NewCancelerFromContextCause(
+// NewCancelerFromCauseContext panics if ctx or cancel is nil.
+func NewCancelerFromCauseContext(
 	ctx context.Context,
 	cancel context.CancelCauseFunc,
 ) Canceler {
 	if ctx == nil {
 		panic(errors.AutoMsg("the provided context is nil"))
-	}
-	if cancel == nil {
+	} else if cancel == nil {
 		panic(errors.AutoMsg("the provided cancel function is nil"))
 	}
-	return &contextCauseCanceler{
+
+	return &causeContextCanceler{
 		ctx:    ctx,
 		cancel: cancel,
 	}
 }
 
-// contextCauseCanceler is an implementation of interface Canceler
+// causeContextCanceler is an implementation of interface Canceler
 // based on context.Context and context.CancelCauseFunc.
-type contextCauseCanceler struct {
+type causeContextCanceler struct {
 	ctx    context.Context
 	cancel context.CancelCauseFunc
 }
 
-func (c *contextCauseCanceler) Cancel() {
+func (c *causeContextCanceler) Cancel() {
 	c.cancel(ErrCanceled)
 }
 
-func (c *contextCauseCanceler) C() <-chan struct{} {
+func (c *causeContextCanceler) C() <-chan struct{} {
 	return c.ctx.Done()
 }
 
-func (c *contextCauseCanceler) Canceled() bool {
-	select {
-	case <-c.ctx.Done():
-		return true
-	default:
-		return false
-	}
+func (c *causeContextCanceler) Canceled() bool {
+	return TestChannel(c.ctx.Done())
 }

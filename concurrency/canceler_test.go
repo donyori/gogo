@@ -29,14 +29,16 @@ import (
 )
 
 func TestOnceCanceler(t *testing.T) {
+	t.Parallel()
+
 	const N int = 10
+
 	canceler := concurrency.NewCanceler()
 	testCancelerCAndCanceled(t, "before calling Cancel, ", canceler, false)
+
 	var wg sync.WaitGroup
-	wg.Add(N)
-	for i := range N {
-		go func(rank int) {
-			defer wg.Done()
+	for rank := range N {
+		wg.Go(func() {
 			canceler.Cancel()
 			testCancelerCAndCanceled(
 				t,
@@ -44,20 +46,27 @@ func TestOnceCanceler(t *testing.T) {
 				canceler,
 				true,
 			)
-		}(i)
+		})
 	}
+
 	wg.Wait()
 }
 
 func TestContextCanceler_CancelByCanceler(t *testing.T) {
+	t.Parallel()
+
 	testContextCancelerFunc(t, 0)
 }
 
 func TestContextCanceler_CancelByCancelFunc(t *testing.T) {
+	t.Parallel()
+
 	testContextCancelerFunc(t, 1)
 }
 
 func TestContextCanceler_CancelByBothCancelerAndCancelFunc(t *testing.T) {
+	t.Parallel()
+
 	testContextCancelerFunc(t, 2)
 }
 
@@ -68,21 +77,26 @@ func TestContextCanceler_CancelByBothCancelerAndCancelFunc(t *testing.T) {
 //   - 1: by context.CancelFunc
 //   - 2: half by Canceler.Cancel, half by context.CancelFunc
 func testContextCancelerFunc(t *testing.T, cancelManner int) {
+	t.Helper()
+
 	if cancelManner < 0 || cancelManner > 2 {
-		t.Fatalf("unknown cancelManner %d; want 0, 1, or 2", cancelManner)
+		t.Errorf("unknown cancelManner %d; want 0, 1, or 2", cancelManner)
+		return
 	}
+
 	const N int = 10
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	canceler := concurrency.NewCancelerFromContext(ctx, cancel)
 	logPrefix := "before calling Cancel, "
 	testCancelerCAndCanceled(t, logPrefix, canceler, false)
-	testContextDoneErrAndCause(t, logPrefix, ctx, false, nil)
+	testContextDoneErrAndCause(t, ctx, logPrefix, false, nil)
+
 	var wg sync.WaitGroup
-	wg.Add(N)
-	for i := range N {
-		go func(rank int) {
-			defer wg.Done()
+	for rank := range N {
+		wg.Go(func() {
 			switch cancelManner {
 			case 0:
 				canceler.Cancel()
@@ -95,51 +109,71 @@ func testContextCancelerFunc(t *testing.T, cancelManner int) {
 					cancel()
 				}
 			}
-			logPrefix := fmt.Sprintf("goroutine %d, after calling Cancel, ",
-				rank)
+
+			logPrefix := fmt.Sprintf(
+				"goroutine %d, after calling Cancel, ",
+				rank,
+			)
 			testCancelerCAndCanceled(t, logPrefix, canceler, true)
 			testContextDoneErrAndCause(
-				t, logPrefix, ctx, true, context.Canceled)
-		}(i)
+				t,
+				ctx,
+				logPrefix,
+				true,
+				context.Canceled,
+			)
+		})
 	}
+
 	wg.Wait()
 }
 
-func TestContextCauseCanceler_CancelByCanceler(t *testing.T) {
-	testContextCauseCancelerFunc(t, 0)
+func TestCauseContextCanceler_CancelByCanceler(t *testing.T) {
+	t.Parallel()
+
+	testCauseContextCancelerFunc(t, 0)
 }
 
-func TestContextCauseCanceler_CancelByCancelFunc(t *testing.T) {
-	testContextCauseCancelerFunc(t, 1)
+func TestCauseContextCanceler_CancelByCancelFunc(t *testing.T) {
+	t.Parallel()
+
+	testCauseContextCancelerFunc(t, 1)
 }
 
-func TestContextCauseCanceler_CancelByBothCancelerAndCancelFunc(t *testing.T) {
-	testContextCauseCancelerFunc(t, 2)
+func TestCauseContextCanceler_CancelByBothCancelerAndCancelFunc(t *testing.T) {
+	t.Parallel()
+
+	testCauseContextCancelerFunc(t, 2)
 }
 
-// testContextCauseCancelerFunc is the common code
-// for testing contextCauseCanceler.
+// testCauseContextCancelerFunc is the common code
+// for testing causeContextCanceler.
 //
 // cancelManner indicates how to cancel the contextCanceler, as follows:
 //   - 0: by Canceler.Cancel
 //   - 1: by context.CancelFunc
 //   - 2: half by Canceler.Cancel, half by context.CancelFunc
-func testContextCauseCancelerFunc(t *testing.T, cancelManner int) {
+func testCauseContextCancelerFunc(t *testing.T, cancelManner int) {
+	t.Helper()
+
 	if cancelManner < 0 || cancelManner > 2 {
-		t.Fatalf("unknown cancelManner %d; want 0, 1, or 2", cancelManner)
+		t.Errorf("unknown cancelManner %d; want 0, 1, or 2", cancelManner)
+		return
 	}
+
 	const N int = 10
+
 	ctx, cancel := context.WithCancelCause(context.Background())
 	defer cancel(concurrency.ErrCanceled)
-	canceler := concurrency.NewCancelerFromContextCause(ctx, cancel)
+
+	canceler := concurrency.NewCancelerFromCauseContext(ctx, cancel)
 	logPrefix := "before calling Cancel, "
 	testCancelerCAndCanceled(t, logPrefix, canceler, false)
-	testContextDoneErrAndCause(t, logPrefix, ctx, false, nil)
+	testContextDoneErrAndCause(t, ctx, logPrefix, false, nil)
+
 	var wg sync.WaitGroup
-	wg.Add(N)
-	for i := range N {
-		go func(rank int) {
-			defer wg.Done()
+	for rank := range N {
+		wg.Go(func() {
 			switch cancelManner {
 			case 0:
 				canceler.Cancel()
@@ -152,13 +186,22 @@ func testContextCauseCancelerFunc(t *testing.T, cancelManner int) {
 					cancel(concurrency.ErrCanceled)
 				}
 			}
-			logPrefix := fmt.Sprintf("goroutine %d, after calling Cancel, ",
-				rank)
+
+			logPrefix := fmt.Sprintf(
+				"goroutine %d, after calling Cancel, ",
+				rank,
+			)
 			testCancelerCAndCanceled(t, logPrefix, canceler, true)
 			testContextDoneErrAndCause(
-				t, logPrefix, ctx, true, concurrency.ErrCanceled)
-		}(i)
+				t,
+				ctx,
+				logPrefix,
+				true,
+				concurrency.ErrCanceled,
+			)
+		})
 	}
+
 	wg.Wait()
 }
 
@@ -169,54 +212,63 @@ func testCancelerCAndCanceled(
 	canceler concurrency.Canceler,
 	wantCanceled bool,
 ) {
+	t.Helper()
+
 	c := canceler.C()
-	if c != nil {
-		select {
-		case <-c:
-			if !wantCanceled {
-				t.Errorf("%sCanceler.C is closed", logPrefix)
-			}
-		default:
-			if wantCanceled {
-				t.Errorf("%sCanceler.C is not closed", logPrefix)
-			}
-		}
-	} else {
+	switch {
+	case c == nil:
 		t.Errorf("%sCanceler.C returned nil", logPrefix)
+	case concurrency.TestChannel(c):
+		if !wantCanceled {
+			t.Errorf("%sCanceler.C is closed", logPrefix)
+		}
+	case wantCanceled:
+		t.Errorf("%sCanceler.C is not closed", logPrefix)
 	}
+
 	if gotCanceled := canceler.Canceled(); gotCanceled != wantCanceled {
 		t.Errorf("%sgot Canceler.Canceled %t; want %t",
 			logPrefix, gotCanceled, wantCanceled)
 	}
 }
 
+//revive:disable:context-as-argument
+// t (of type *testing.T) takes priority over ctx (of type context.Context)
+// for the following test function.
+
 // testContextDoneErrAndCause checks ctx.Done(), ctx.Err(),
 // and context.Cause(ctx).
 func testContextDoneErrAndCause(
 	t *testing.T,
-	logPrefix string,
 	ctx context.Context,
+	logPrefix string,
 	wantDone bool,
 	wantCause error,
 ) {
-	select {
-	case <-ctx.Done():
+	t.Helper()
+
+	if concurrency.TestDone(ctx) {
 		if !wantDone {
 			t.Errorf("%sContext.Done is closed", logPrefix)
 		}
-	default:
-		if wantDone {
-			t.Errorf("%sContext.Done is not closed", logPrefix)
-		}
+	} else if wantDone {
+		t.Errorf("%sContext.Done is not closed", logPrefix)
 	}
+
 	var wantErr error
 	if wantCause != nil {
 		wantErr = context.Canceled
 	}
-	if err := ctx.Err(); !errors.Is(err, wantErr) {
+
+	err := ctx.Err()
+	if !errors.Is(err, wantErr) {
 		t.Errorf("%sgot Context.Err %v; want %v", logPrefix, err, wantErr)
 	}
-	if cause := context.Cause(ctx); !errors.Is(cause, wantCause) {
-		t.Errorf("%sgot cause %v; want %v", logPrefix, cause, wantCause)
+
+	err = context.Cause(ctx)
+	if !errors.Is(err, wantCause) {
+		t.Errorf("%sgot cause %v; want %v", logPrefix, err, wantCause)
 	}
 }
+
+//revive:enable:context-as-argument

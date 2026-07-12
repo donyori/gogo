@@ -52,6 +52,7 @@ keywords or other identifiers such as standard packages.
 
 | Word or Phrase                          | Abbreviations       |
 | --------------------------------------- | ------------------- |
+| broadcast(er)                           | bcast               |
 | buffer                                  | ^b, buf, ^p         |
 | builder                                 | ^b                  |
 | container                               | ctnr                |
@@ -69,6 +70,7 @@ keywords or other identifiers such as standard packages.
 | number (indicating rank, serial number) | no                  |
 | option                                  | opt                 |
 | pointer                                 | p\-, ptr            |
+| receive(r)                              | recv                |
 | schedule                                | sched               |
 | type                                    | typ                 |
 | value                                   | ^v, val             |

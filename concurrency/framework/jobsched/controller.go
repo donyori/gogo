@@ -398,7 +398,7 @@ type controller[Job, Properties, Feedback any] struct {
 	cleanup func(ctrl Controller[Job, Properties, Feedback], rank int)
 }
 
-// newController creates a new Controller with options opts and
+// newController creates a new controller with options opts and
 // uses the specified canceler for its jobs.
 //
 // The first type parameter Job is the type of jobs.
@@ -432,7 +432,7 @@ func newController[Job, Properties, Feedback any](
 	feedbackHandler FeedbackHandler[Feedback],
 	opts *Options[Job, Properties, Feedback],
 	metaJob ...*MetaJob[Job, Properties],
-) Controller[Job, Properties, Feedback] {
+) *controller[Job, Properties, Feedback] {
 	if canceler == nil {
 		canceler = concurrency.NewCanceler()
 	}
@@ -560,8 +560,6 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 	defer ctrl.m.Unlock()
 
 	ctrl.lsi = true
-	ctrl.wg.Add(ctrl.n + 1) // n workers + 1 job allocator
-
 	if ctrl.fc != nil {
 		go func() { // goroutine for feedback handler
 			defer close(ctrl.fhdc)
@@ -599,9 +597,8 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 		}()
 	}
 
-	for i := range ctrl.n {
-		go func(rank int) { // goroutine for worker
-			defer ctrl.wg.Done()
+	for rank := range ctrl.n {
+		ctrl.wg.Go(func() { // goroutine for worker
 			defer func() {
 				if e := recover(); e != nil {
 					ctrl.c.Cancel()
@@ -613,10 +610,10 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 			}()
 
 			ctrl.workerProc(rank)
-		}(i)
+		})
 	}
-	go func() { // goroutine for job allocator
-		defer ctrl.wg.Done()
+
+	ctrl.wg.Go(func() { // goroutine for job allocator
 		defer func() {
 			if e := recover(); e != nil {
 				ctrl.c.Cancel()
@@ -628,7 +625,7 @@ func (ctrl *controller[Job, Properties, Feedback]) launchProc() {
 		}()
 
 		ctrl.jobAllocatorProc()
-	}()
+	})
 }
 
 // feedbackHandlerProc is the feedback handler main process,

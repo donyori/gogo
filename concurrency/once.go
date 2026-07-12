@@ -60,8 +60,10 @@ type Once interface {
 	// to interrupt their goroutines.
 	DoRecover() (called bool, panicValue any)
 
-	// C returns a channel that will be closed after
+	// C returns a channel that is closed when
 	// the first call to the specified function returns.
+	//
+	// Successive calls to C return the same value.
 	C() <-chan struct{}
 
 	// Done reports whether the first call to
@@ -92,7 +94,9 @@ type Once interface {
 func NewOnce(f func()) Once {
 	firstC := make(chan struct{}, 1)
 	firstC <- struct{}{}
+
 	close(firstC)
+
 	return &once{
 		doneC:       make(chan struct{}),
 		firstC:      firstC,
@@ -137,28 +141,32 @@ type once struct {
 
 func (o *once) Do() {
 	_, ok := <-o.firstC
-	if ok {
-		defer close(o.doneC)
-		defer func() {
-			o.panicValue = recover()
-			if o.panicValue != nil {
-				// Re-panic immediately so on the first call
-				// the client gets a complete stack trace into o.f.
-				panic(o.panicValue)
-			}
-		}()
-		if o.f != nil {
-			o.f()
-		}
-		o.interrupted = false
-	} else {
+	if !ok {
 		<-o.doneC // wait for the first call to finish
+
 		if o.panicValue != nil {
 			panic(o.panicValue)
 		} else if o.interrupted {
 			runtime.Goexit()
 		}
+
+		return
 	}
+	defer close(o.doneC)
+	defer func() {
+		o.panicValue = recover()
+		if o.panicValue != nil {
+			// Re-panic immediately so on the first call
+			// the client gets a complete stack trace into o.f.
+			panic(o.panicValue)
+		}
+	}()
+
+	if o.f != nil {
+		o.f()
+	}
+
+	o.interrupted = false
 }
 
 func (o *once) DoRecover() (called bool, panicValue any) {
@@ -169,17 +177,21 @@ func (o *once) DoRecover() (called bool, panicValue any) {
 			o.panicValue = recover()
 			panicValue = o.panicValue
 		}()
+
 		if o.f != nil {
 			o.f()
 		}
+
 		o.interrupted = false
 	} else {
 		<-o.doneC // wait for the first call to finish
 		panicValue = o.panicValue
+
 		if o.panicValue == nil && o.interrupted {
 			runtime.Goexit()
 		}
 	}
+
 	return
 }
 
@@ -188,19 +200,13 @@ func (o *once) C() <-chan struct{} {
 }
 
 func (o *once) Done() bool {
-	select {
-	case <-o.doneC:
-		return true
-	default:
-		return false
-	}
+	return TestChannel(o.doneC)
 }
 
 func (o *once) PanicValue() (interrupted bool, panicValue any) {
-	select {
-	case <-o.doneC:
+	if TestChannel(o.doneC) {
 		interrupted, panicValue = o.interrupted, o.panicValue
-	default:
 	}
+
 	return
 }

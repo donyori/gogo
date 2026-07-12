@@ -28,10 +28,13 @@ import (
 )
 
 func TestRecorder(t *testing.T) {
+	t.Parallel()
+
 	rec := concurrency.NewRecorder[int](0)
 	if rec == nil {
 		t.Fatal("got nil Recorder")
 	}
+
 	r := rec.Reader()
 	if _, ok := any(r).(concurrency.Recorder[int]); ok {
 		t.Error("the RecordReader can be converted to a Recorder")
@@ -47,8 +50,12 @@ func TestRecorder(t *testing.T) {
 		{9},
 		nil,
 	}
-	const NumReader int = 3
-	const NumRecorder int = 4
+
+	const (
+		NumReader   int = 3
+		NumRecorder int = 4
+	)
+
 	// readyCsList: to broadcast signals signifying that the reader is ready
 	// (sender: reader, receiver: recorder).
 	var readyCsList [NumReader][]chan struct{}
@@ -58,6 +65,7 @@ func TestRecorder(t *testing.T) {
 			readyCsList[i][j] = make(chan struct{})
 		}
 	}
+
 	// recordedCsList: to broadcast signals signifying that the message has been
 	// written to the Recorder (sender: recorder, receiver: reader).
 	var recordedCsList [NumRecorder][]chan struct{}
@@ -67,104 +75,120 @@ func TestRecorder(t *testing.T) {
 			recordedCsList[i][j] = make(chan struct{})
 		}
 	}
-	var wg sync.WaitGroup
-	wg.Add(NumReader + NumRecorder)
 
-	for i := range NumReader {
-		go goroutineTestRecorderReader(
-			&wg,
-			i,
-			t,
-			r,
-			NumRecorder,
-			data,
-			readyCsList[:],
-			recordedCsList[:],
-		)
+	var wg sync.WaitGroup
+
+	for rank := range NumReader {
+		wg.Go(func() {
+			goroutineTestRecorderReader(
+				t,
+				r,
+				NumRecorder,
+				data,
+				readyCsList[:],
+				recordedCsList[:],
+				rank,
+			)
+		})
 	}
 
-	for i := range NumRecorder {
-		go func(rank int) {
-			defer wg.Done()
+	for rank := range NumRecorder {
+		wg.Go(func() {
 			for round, x := range data {
 				for i := range NumReader {
 					<-readyCsList[i][round]
 				}
+
 				rec.Record(x...)
 				close(recordedCsList[rank][round])
 			}
-		}(i)
+		})
 	}
 
 	wg.Wait()
 }
 
-// goroutineTestRecorderReader is the process of the goroutine
+// goroutineTestRecorderReader is the main process of the goroutine
 // launched by TestRecorder to test concurrency.RecordReader.
-func goroutineTestRecorderReader(
-	wg *sync.WaitGroup,
-	rank int,
+func goroutineTestRecorderReader( //nolint:thelper // this is the main body, not a helper
 	t *testing.T,
 	r concurrency.RecordReader[int],
 	numRecorder int,
 	data [][]int,
 	readyCsList [][]chan struct{},
 	recordedCsList [][]chan struct{},
+	rank int,
 ) {
-	defer wg.Done()
-
-	check := func(round, wantLastX int, wantLastOK bool, wantAll []int) {
-		s := "initially"
-		if round >= 0 {
-			s = "round " + strconv.Itoa(round)
-		}
-		if got := r.Len(); got != len(wantAll) {
-			t.Errorf("reader %d, %s, got Len %d; want %d",
-				rank, s, got, len(wantAll))
-		}
-		if gotX, gotOK := r.Last(); gotX != wantLastX || gotOK != wantLastOK {
-			t.Errorf("reader %d, %s, got Last (%d, %t); want (%d, %t)",
-				rank, s, gotX, gotOK, wantLastX, wantLastOK)
-		}
-		if got := r.All(); (got == nil) != (wantAll == nil) ||
-			!slices.Equal(got, wantAll) {
-			switch {
-			case got == nil:
-				// wantAll is not nil.
-				t.Errorf("reader %d, %s, got All <nil>; want %v",
-					rank, s, wantAll)
-			case wantAll == nil:
-				// got is not nil.
-				t.Errorf("reader %d, %s, got All %v; want <nil>",
-					rank, s, got)
-			default:
-				// Both got and wantAll are not nil.
-				t.Errorf("reader %d, %s, got All %v; want %v",
-					rank, s, got, wantAll)
-			}
-		}
-	}
-
-	check(-1, 0, false, nil)
+	testRecordReader(t, r, -1, 0, false, nil, rank)
 
 	var wantAll []int
+
 	for round, x := range data {
 		if len(x) > 0 {
 			for range numRecorder {
 				wantAll = append(wantAll, x...)
 			}
 		}
-		var wantLastX int
-		var wantLastOK bool
+
+		var (
+			wantLastX  int
+			wantLastOK bool
+		)
 		if len(wantAll) > 0 {
 			wantLastX, wantLastOK = wantAll[len(wantAll)-1], true
 		}
 
 		close(readyCsList[rank][round])
+
 		for i := range numRecorder {
 			<-recordedCsList[i][round]
 		}
 
-		check(round, wantLastX, wantLastOK, wantAll)
+		testRecordReader(t, r, round, wantLastX, wantLastOK, wantAll, rank)
+	}
+}
+
+// testRecordReader checks the record reader
+// in function goroutineTestRecorderReader.
+func testRecordReader(
+	t *testing.T,
+	r concurrency.RecordReader[int],
+	round int,
+	wantLastX int,
+	wantLastOK bool,
+	wantAll []int,
+	rank int,
+) {
+	t.Helper()
+
+	s := "initially"
+	if round >= 0 {
+		s = "round " + strconv.Itoa(round)
+	}
+
+	if got := r.Len(); got != len(wantAll) {
+		t.Errorf("reader %d, %s, got Len %d; want %d",
+			rank, s, got, len(wantAll))
+	}
+
+	if gotX, gotOK := r.Last(); gotX != wantLastX || gotOK != wantLastOK {
+		t.Errorf("reader %d, %s, got Last (%d, %t); want (%d, %t)",
+			rank, s, gotX, gotOK, wantLastX, wantLastOK)
+	}
+
+	if got := r.All(); (got == nil) != (wantAll == nil) ||
+		!slices.Equal(got, wantAll) {
+		switch {
+		case got == nil:
+			// wantAll is not nil.
+			t.Errorf("reader %d, %s, got All <nil>; want %v", rank, s, wantAll)
+		case wantAll == nil:
+			// got is not nil.
+			t.Errorf("reader %d, %s, got All %v; want <nil>", rank, s, got)
+		default:
+			// Both got and wantAll are not nil.
+			t.Errorf("reader %d, %s, got All %v; want %v",
+				rank, s, got, wantAll)
+		}
 	}
 }

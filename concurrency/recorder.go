@@ -63,6 +63,7 @@ func NewRecorder[Message any](capacity int) Recorder[Message] {
 	if capacity > 0 {
 		rec.msgList = make([]Message, 0, capacity)
 	}
+
 	return rec
 }
 
@@ -75,26 +76,31 @@ type recorder[Message any] struct {
 func (rec *recorder[Message]) Len() int {
 	rec.lock.RLock()
 	defer rec.lock.RUnlock()
+
 	return len(rec.msgList)
 }
 
 func (rec *recorder[Message]) Last() (x Message, ok bool) {
 	rec.lock.RLock()
 	defer rec.lock.RUnlock()
+
 	if len(rec.msgList) > 0 {
 		x, ok = rec.msgList[len(rec.msgList)-1], true
 	}
+
 	return
 }
 
 func (rec *recorder[Message]) All() []Message {
 	rec.lock.RLock()
 	defer rec.lock.RUnlock()
+
 	var ms []Message
 	if len(rec.msgList) > 0 {
 		ms = make([]Message, len(rec.msgList))
 		copy(ms, rec.msgList)
 	}
+
 	return ms
 }
 
@@ -106,8 +112,10 @@ func (rec *recorder[Message]) Record(x ...Message) {
 	if len(x) == 0 {
 		return
 	}
+
 	rec.lock.Lock()
 	defer rec.lock.Unlock()
+
 	rec.msgList = append(rec.msgList, x...)
 }
 
