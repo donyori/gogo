@@ -308,7 +308,7 @@ func testCaptureOutputFileToStringConcurrentSyncBubble(
 		// Create a dedicated channel to make the following goroutines
 		// call f logically simultaneously.
 		startC := make(chan struct{})
-		for i := range max(runtime.NumCPU(), 4) {
+		for rank := range max(runtime.NumCPU(), 4) {
 			go func(t *testing.T, rank int, startC <-chan struct{}) {
 				t.Helper()
 
@@ -321,7 +321,7 @@ func testCaptureOutputFileToStringConcurrentSyncBubble(
 				} else if s != want {
 					t.Errorf("goroutine %d, got s %q\nwant %q", rank, s, want)
 				}
-			}(t, i, startC)
+			}(t, rank, startC)
 		}
 
 		synctest.Wait()

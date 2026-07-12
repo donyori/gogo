@@ -20,6 +20,7 @@ package errors
 
 import (
 	"iter"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -174,7 +175,7 @@ func (el *errorList) Error() string {
 	return builder.String()
 }
 
-// Unwrap is like ToList, but drops nil-value errors.
+// Unwrap is like ToList but drops nil-value errors.
 func (el *errorList) Unwrap() []error {
 	if el.ignoreNil {
 		return el.ToList()
@@ -255,8 +256,8 @@ func (el *errorList) Range(handler func(i int, err error) (cont bool)) {
 
 func (el *errorList) RangeBackward(handler func(i int, err error) (cont bool)) {
 	if handler != nil {
-		for i := len(el.list) - 1; i >= 0; i-- {
-			if !handler(i, el.list[i]) {
+		for i, err := range slices.Backward(el.list) {
+			if !handler(i, err) {
 				return
 			}
 		}
@@ -278,8 +279,8 @@ func (el *errorList) IterErrors() iter.Seq[error] {
 func (el *errorList) IterErrorsBackward() iter.Seq[error] {
 	return func(yield func(error) bool) {
 		if yield != nil {
-			for i := len(el.list) - 1; i >= 0; i-- {
-				if !yield(el.list[i]) {
+			for _, err := range slices.Backward(el.list) {
+				if !yield(err) {
 					return
 				}
 			}

@@ -197,38 +197,44 @@ func checkCopyrightNotice(
 func TestResponseShowWC(t *testing.T) {
 	t.Parallel()
 
+	const (
+		ShowLower = "show"
+		ShowTitle = "Show"
+		ShowUpper = "SHOW"
+	)
+
 	testCases := []struct {
 		args       []string
 		wantOutput string
 	}{
 		{[]string{}, ""},
-		{[]string{"show a"}, ""},
-		{[]string{"show", "a"}, ""},
-		{[]string{"show w"}, DisclaimerOfWarranty},
-		{[]string{"show", "w"}, DisclaimerOfWarranty},
-		{[]string{"show\tw"}, DisclaimerOfWarranty},
-		{[]string{"  show   w\t", "", "   "}, DisclaimerOfWarranty},
-		{[]string{"show c"}, TermsAndConditions},
-		{[]string{"show", "c"}, TermsAndConditions},
-		{[]string{"show\tc"}, TermsAndConditions},
-		{[]string{"  show   c\t", "", "   "}, TermsAndConditions},
-		{[]string{"show w c"}, ""},
-		{[]string{"show", "w", "c"}, ""},
+		{[]string{ShowLower + " a"}, ""},
+		{[]string{ShowLower, "a"}, ""},
+		{[]string{ShowLower + " w"}, DisclaimerOfWarranty},
+		{[]string{ShowLower, "w"}, DisclaimerOfWarranty},
+		{[]string{ShowLower + "\tw"}, DisclaimerOfWarranty},
+		{[]string{"  " + ShowLower + "   w\t", "", "   "}, DisclaimerOfWarranty},
+		{[]string{ShowLower + " c"}, TermsAndConditions},
+		{[]string{ShowLower, "c"}, TermsAndConditions},
+		{[]string{ShowLower + "\tc"}, TermsAndConditions},
+		{[]string{"  " + ShowLower + "   c\t", "", "   "}, TermsAndConditions},
+		{[]string{ShowLower + " w c"}, ""},
+		{[]string{ShowLower, "w", "c"}, ""},
 		{[]string{"w"}, ""},
 		{[]string{"c"}, ""},
 		{[]string{"w c"}, ""},
 		{[]string{"shows w"}, ""},
 		{[]string{"shows c"}, ""},
 		{[]string{"shows w c"}, ""},
-		{[]string{"showw"}, ""},
-		{[]string{"showc"}, ""},
-		{[]string{"showwc"}, ""},
-		{[]string{"Show W"}, DisclaimerOfWarranty},
-		{[]string{"Show C"}, TermsAndConditions},
-		{[]string{"Show W C"}, ""},
-		{[]string{"SHOW W"}, DisclaimerOfWarranty},
-		{[]string{"SHOW C"}, TermsAndConditions},
-		{[]string{"SHOW W C"}, ""},
+		{[]string{ShowLower + "w"}, ""},
+		{[]string{ShowLower + "c"}, ""},
+		{[]string{ShowLower + "wc"}, ""},
+		{[]string{ShowTitle + " W"}, DisclaimerOfWarranty},
+		{[]string{ShowTitle + " C"}, TermsAndConditions},
+		{[]string{ShowTitle + " W C"}, ""},
+		{[]string{ShowUpper + " W"}, DisclaimerOfWarranty},
+		{[]string{ShowUpper + " C"}, TermsAndConditions},
+		{[]string{ShowUpper + " W C"}, ""},
 	}
 
 	for _, tc := range testCases {

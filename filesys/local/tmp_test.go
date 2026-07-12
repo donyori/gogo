@@ -45,15 +45,13 @@ func TestTmp_Sync(t *testing.T) {
 		startC := make(chan struct{})
 		outC := make(chan rankString, N)
 
-		for i := range N {
-			go func(
+		for rank := range N {
+			go func( //nolint:thelper // this is the main body, not a helper
 				t *testing.T,
 				rank int,
 				startC <-chan struct{},
 				outC chan<- rankString,
 			) {
-				t.Helper()
-
 				rs := rankString{r: rank}
 
 				defer func() {
@@ -75,7 +73,7 @@ func TestTmp_Sync(t *testing.T) {
 				}(f)
 
 				rs.s = f.Name()
-			}(t, i, startC, outC)
+			}(t, rank, startC, outC)
 		}
 
 		synctest.Wait()
@@ -98,15 +96,13 @@ func TestTmpDir_Sync(t *testing.T) {
 		startC := make(chan struct{})
 		outC := make(chan rankString, N)
 
-		for i := range N {
-			go func(
+		for rank := range N {
+			go func( //nolint:thelper // this is the main body, not a helper
 				t *testing.T,
 				rank int,
 				startC <-chan struct{},
 				outC chan<- rankString,
 			) {
-				t.Helper()
-
 				rs := rankString{r: rank}
 
 				defer func() {
@@ -122,7 +118,7 @@ func TestTmpDir_Sync(t *testing.T) {
 				}
 
 				rs.s = dir
-			}(t, i, startC, outC)
+			}(t, rank, startC, outC)
 		}
 
 		synctest.Wait()

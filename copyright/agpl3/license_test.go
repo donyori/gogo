@@ -27,44 +27,49 @@ import (
 func TestLicenseParts(t *testing.T) {
 	t.Parallel()
 
-	t.Run("disclaimer of warranty", func(t *testing.T) {
-		t.Parallel()
+	testCases := []struct {
+		name       string
+		globalVar  string
+		sliceBegin int
+		sliceEnd   int
+		want       string
+	}{
+		{
+			"DisclaimerOfWarranty",
+			agpl3.DisclaimerOfWarranty,
+			agpl3.DisclaimerOfWarrantyBegin,
+			agpl3.DisclaimerOfWarrantyEnd,
+			DisclaimerOfWarranty,
+		},
+		{
+			"LimitationOfLiability",
+			agpl3.LimitationOfLiability,
+			agpl3.LimitationOfLiabilityBegin,
+			agpl3.LimitationOfLiabilityEnd,
+			LimitationOfLiability,
+		},
+		{
+			"TermsAndConditions",
+			agpl3.TermsAndConditions,
+			agpl3.TermsAndConditionsBegin,
+			agpl3.TermsAndConditionsEnd,
+			TermsAndConditions,
+		},
+	}
 
-		if agpl3.DisclaimerOfWarranty != DisclaimerOfWarranty {
-			t.Error("wrong string")
-		}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-		dow := agpl3.License[agpl3.DisclaimerOfWarrantyBegin:agpl3.DisclaimerOfWarrantyEnd]
-		if dow != DisclaimerOfWarranty {
-			t.Error("wrong indices")
-		}
-	})
+			if tc.globalVar != tc.want {
+				t.Error("wrong global variable string")
+			}
 
-	t.Run("limitation of liability", func(t *testing.T) {
-		t.Parallel()
-
-		if agpl3.LimitationOfLiability != LimitationOfLiability {
-			t.Error("wrong string")
-		}
-
-		lol := agpl3.License[agpl3.LimitationOfLiabilityBegin:agpl3.LimitationOfLiabilityEnd]
-		if lol != LimitationOfLiability {
-			t.Error("wrong indices")
-		}
-	})
-
-	t.Run("terms and conditions", func(t *testing.T) {
-		t.Parallel()
-
-		if agpl3.TermsAndConditions != TermsAndConditions {
-			t.Error("wrong string")
-		}
-
-		toc := agpl3.License[agpl3.TermsAndConditionsBegin:agpl3.TermsAndConditionsEnd]
-		if toc != TermsAndConditions {
-			t.Error("wrong indices")
-		}
-	})
+			if agpl3.License[tc.sliceBegin:tc.sliceEnd] != tc.want {
+				t.Error("wrong slice indices")
+			}
+		})
+	}
 }
 
 // DisclaimerOfWarranty is the disclaimer of warranty in AGPL v3.
