@@ -44,10 +44,11 @@ func AutoMsg(msg string) string {
 // the information of that caller's caller is used.
 //
 // If msg is empty, it uses "<no error message>" instead.
+//
 // If ms is invalid, it uses PrependFullFuncName instead.
 func AutoMsgCustom(msg string, ms ErrorMessageStrategy, skip int) string {
 	if msg == "" {
-		msg = "<no error message>"
+		msg = noErrorMessage
 	}
 
 	if !ms.Valid() {
@@ -101,3 +102,6 @@ func AutoMsgCustom(msg string, ms ErrorMessageStrategy, skip int) string {
 
 	return prefix + ": " + msg
 }
+
+// noErrorMessage is the substitute string used when the error message is empty.
+const noErrorMessage = "<no error message>"

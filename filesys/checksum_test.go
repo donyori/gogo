@@ -32,8 +32,6 @@ import (
 	"github.com/donyori/gogo/function/compare"
 )
 
-const nilHashNameString = "<nil>"
-
 func TestChecksum(t *testing.T) {
 	t.Parallel()
 
@@ -163,7 +161,7 @@ func TestNewHashVerifier(t *testing.T) {
 		panicMsg    string
 	}{
 		{
-			nilHashNameString,
+			nilString,
 			nil,
 			"",
 			PanicPrefix + "newHash is nil",
@@ -390,7 +388,7 @@ func TestNonNilDeduplicatedHashVerifiers(t *testing.T) {
 		equalUnderlying bool
 	}{
 		{
-			nilHashNameString,
+			nilString,
 			nil,
 			nil,
 			false,
@@ -570,7 +568,7 @@ func verifyChecksumTestCases(filename string) []struct {
 			want    bool
 		}{
 			{
-				nilHashNameString,
+				nilString,
 				nil,
 				false,
 			},
@@ -620,7 +618,7 @@ func verifyChecksumTestCases(filename string) []struct {
 		want    bool
 	}{
 		{
-			nilHashNameString,
+			nilString,
 			nil,
 			true,
 		},
@@ -723,3 +721,6 @@ func underlyingArrayEqual(a, b []filesys.HashVerifier) bool {
 	//
 	//	(*reflect.SliceHeader)(unsafe.Pointer(&a)).Data == (*reflect.SliceHeader)(unsafe.Pointer(&b)).Data
 }
+
+// nilString is the string that represents a nil value.
+const nilString = "<nil>"

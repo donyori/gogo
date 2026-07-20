@@ -22,6 +22,8 @@ import "github.com/donyori/gogo/runtime"
 
 // Export for testing only.
 
+const NoErrorMessage = noErrorMessage
+
 // NewAutoWrappedError wraps err and returns the result
 // of type AutoWrappedError.
 //

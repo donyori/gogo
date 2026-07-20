@@ -24,9 +24,6 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// nilErrorString is the string that represents a nil error.
-const nilErrorString = "<nil>"
-
 // ClosedError is an error indicating that a closable device is already closed.
 //
 // It records the device name and possible parent error.
@@ -173,7 +170,7 @@ func (wp *WritePanicError) Error() string {
 		}
 	}
 
-	return "<no error message>"
+	return noErrorMessage
 }
 
 // Unwrap returns the error that caused this panic.
@@ -186,3 +183,12 @@ func (wp *WritePanicError) Unwrap() error {
 
 	return wp.err
 }
+
+const (
+	// nilErrorString is the string that represents a nil error.
+	nilErrorString = "<nil>"
+
+	// noErrorMessage is the substitute string
+	// used when the error message is empty.
+	noErrorMessage = "<no error message>"
+)

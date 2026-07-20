@@ -41,6 +41,7 @@ func AutoNew(msg string) error {
 // the information of that caller's caller is used.
 //
 // If msg is empty, it uses "<no error message>" instead.
+//
 // If ms is invalid, it uses PrependFullFuncName instead.
 func AutoNewCustom(msg string, ms ErrorMessageStrategy, skip int) error {
 	return AutoWrapCustom(stderrors.New(msg), ms, skip+1, nil)

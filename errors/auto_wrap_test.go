@@ -29,9 +29,6 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// nilErrorString is the string that represents a nil error.
-const nilErrorString = "<nil>"
-
 type testError struct {
 	err error
 }
@@ -63,7 +60,7 @@ func TestAutoWrap(t *testing.T) {
 	wantMsgErr3To5 := FullFuncPrefix + err3.Error()
 
 	err6 := stderrors.New("")
-	wantMsgErr6 := FullFuncPrefix + "<no error message>"
+	wantMsgErr6 := FullFuncPrefix + errors.NoErrorMessage
 
 	testCases := []struct {
 		err     error
@@ -123,8 +120,8 @@ func TestAutoWrapSkip(t *testing.T) {
 	wantMsgErr3To5Skip1 := FullFuncSkip1Prefix + err3.Error()
 
 	err6 := stderrors.New("")
-	wantMsgErr6Skip0 := FullFuncSkip0Prefix + "<no error message>"
-	wantMsgErr6Skip1 := FullFuncSkip1Prefix + "<no error message>"
+	wantMsgErr6Skip0 := FullFuncSkip0Prefix + errors.NoErrorMessage
+	wantMsgErr6Skip1 := FullFuncSkip1Prefix + errors.NoErrorMessage
 
 	testCases := []struct {
 		err     error
@@ -326,7 +323,7 @@ func getWantMessageForAutoWrapCustom(
 	}
 
 	if errMsg == "" {
-		errMsg = "<no error message>"
+		errMsg = errors.NoErrorMessage
 	}
 
 	return wantPrefix + errMsg
@@ -643,3 +640,6 @@ func TestListFunctionNamesInAutoWrappedErrors(t *testing.T) {
 		})
 	}
 }
+
+// nilErrorString is the string that represents a nil error.
+const nilErrorString = "<nil>"

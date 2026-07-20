@@ -83,7 +83,7 @@ var _ AutoWrappedError = (*autoWrappedError)(nil)
 func (awe *autoWrappedError) Error() string {
 	msg := awe.Root().Error()
 	if msg == "" {
-		msg = "<no error message>"
+		msg = noErrorMessage
 	}
 
 	if awe.ms == OriginalMsg {
@@ -226,8 +226,8 @@ func AutoWrapSkip(err error, skip int) error {
 // exclusions are a set of errors.
 // If err is nil or in exclusions, AutoWrapCustom returns err itself.
 //
-// If the target error message is empty,
-// it uses "<no error message>" instead.
+// If the target error message is empty, it uses "<no error message>" instead.
+//
 // If ms is invalid, it uses PrependFullFuncName instead.
 func AutoWrapCustom(
 	err error,
