@@ -102,9 +102,6 @@ type ErrorList interface {
 	Deduplicate()
 }
 
-// nilErrorString is the string that represents a nil error.
-const nilErrorString = "<nil>"
-
 // errorList is an implementation of interface ErrorList.
 type errorList struct { //nolint:errname // it is an implementation of interface ErrorList
 	list      []error
@@ -245,44 +242,40 @@ func (el *errorList) ToError() error {
 }
 
 func (el *errorList) Range(handler func(i int, err error) (cont bool)) {
-	if handler != nil {
-		for i, err := range el.list {
-			if !handler(i, err) {
-				return
-			}
-		}
+	if handler == nil {
+		return
 	}
+
+	slices.All(el.list)(handler)
 }
 
 func (el *errorList) RangeBackward(handler func(i int, err error) (cont bool)) {
-	if handler != nil {
-		for i, err := range slices.Backward(el.list) {
-			if !handler(i, err) {
-				return
-			}
-		}
+	if handler == nil {
+		return
 	}
+
+	slices.Backward(el.list)(handler)
 }
 
 func (el *errorList) IterErrors() iter.Seq[error] {
 	return func(yield func(error) bool) {
-		if yield != nil {
-			for _, err := range el.list {
-				if !yield(err) {
-					return
-				}
-			}
+		if yield == nil {
+			return
 		}
+
+		slices.Values(el.list)(yield)
 	}
 }
 
 func (el *errorList) IterErrorsBackward() iter.Seq[error] {
 	return func(yield func(error) bool) {
-		if yield != nil {
-			for _, err := range slices.Backward(el.list) {
-				if !yield(err) {
-					return
-				}
+		if yield == nil {
+			return
+		}
+
+		for _, err := range slices.Backward(el.list) {
+			if !yield(err) {
+				return
 			}
 		}
 	}
@@ -345,3 +338,6 @@ func Combine(err ...error) error {
 
 	return NewErrorList(true, err...).ToError()
 }
+
+// nilErrorString is the string that represents a nil error.
+const nilErrorString = "<nil>"

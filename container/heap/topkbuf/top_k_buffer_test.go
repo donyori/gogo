@@ -24,6 +24,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/donyori/gogo/constraints"
 	"github.com/donyori/gogo/container/heap/topkbuf"
 	"github.com/donyori/gogo/fmtcoll"
 	"github.com/donyori/gogo/function/compare"
@@ -275,7 +276,7 @@ func TestTopKBuffer_Clear(t *testing.T) {
 
 					tkb := newTopKBuffer(k, data)
 					tkb.Clear()
-					checkTopKBufferByDrain(t, tkb, nil)
+					checkTopKBufferByDrain[[]int](t, tkb, nil)
 				},
 			)
 		}
@@ -294,7 +295,7 @@ func TestTopKBuffer_RemoveAll(t *testing.T) {
 
 					tkb := newTopKBuffer(k, data)
 					tkb.RemoveAll()
-					checkTopKBufferByDrain(t, tkb, nil)
+					checkTopKBufferByDrain[[]int](t, tkb, nil)
 				},
 			)
 		}
@@ -410,7 +411,7 @@ func newTopKBuffer(k int, data []int) topkbuf.TopKBuffer[int] {
 	return tkb
 }
 
-func sliceToName[T any](s []T) string {
+func sliceToName[S constraints.Slice[T], T any](s S) string {
 	return fmtcoll.MustFormatSliceToString(s, &fmtcoll.SequenceFormat[T]{
 		CommonFormat: fmtcoll.CommonFormat{
 			Separator:   ",",
@@ -433,7 +434,7 @@ func copyAndSort(data []int) []int {
 }
 
 // !!the last k items in s will be modified.
-func kSuffixAndReverse[Item any](s []Item, k int) []Item {
+func kSuffixAndReverse[S constraints.Slice[Item], Item any](s S, k int) S {
 	if s == nil {
 		return nil
 	} else if len(s) > k {
@@ -448,10 +449,10 @@ func kSuffixAndReverse[Item any](s []Item, k int) []Item {
 }
 
 // !!tkb may be modified in this function.
-func checkTopKBufferByDrain[Item comparable](
+func checkTopKBufferByDrain[S constraints.Slice[Item], Item comparable](
 	t *testing.T,
 	tkb topkbuf.TopKBuffer[Item],
-	want []Item,
+	want S,
 ) {
 	t.Helper()
 

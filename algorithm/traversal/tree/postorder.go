@@ -288,15 +288,17 @@ func stackBasedReversePostorderPathMain(
 // The returned iterator is never nil.
 func IterPostorder(root Node, opts *Options) iter.Seq[Node] {
 	return func(yield func(Node) bool) {
-		if yield != nil && root != nil {
-			Postorder(&iteratorNodeVisitor{
-				yield: yield,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		Postorder(&iteratorNodeVisitor{
+			yield: yield,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -313,15 +315,17 @@ func IterPostorder(root Node, opts *Options) iter.Seq[Node] {
 // The returned iterator is never nil.
 func IterPostorderDepth(root Node, opts *Options) iter.Seq2[Node, int] {
 	return func(yield func(Node, int) bool) {
-		if yield != nil && root != nil {
-			Postorder(&iteratorNodeDepthVisitor{
-				yield: yield,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		Postorder(&iteratorNodeDepthVisitor{
+			yield: yield,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -338,15 +342,17 @@ func IterPostorderDepth(root Node, opts *Options) iter.Seq2[Node, int] {
 // The returned iterator is never nil.
 func IterPostorderStep(root Node, opts *Options) iter.Seq2[int64, Node] {
 	return func(yield func(int64, Node) bool) {
-		if yield != nil && root != nil {
-			Postorder(&iteratorStepNodeVisitor{
-				yield: yield,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		Postorder(&iteratorStepNodeVisitor{
+			yield: yield,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -366,15 +372,17 @@ func IterPostorderPath(
 	opts *Options,
 ) iter.Seq[vseq.VertexSequence[Node]] {
 	return func(yield func(vseq.VertexSequence[Node]) bool) {
-		if yield != nil && root != nil {
-			PostorderPath(&iteratorPathVisitor{
-				yield: yield,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		PostorderPath(&iteratorPathVisitor{
+			yield: yield,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -394,15 +402,17 @@ func IterPostorderPathStep(
 	opts *Options,
 ) iter.Seq2[int64, vseq.VertexSequence[Node]] {
 	return func(yield func(int64, vseq.VertexSequence[Node]) bool) {
-		if yield != nil && root != nil {
-			PostorderPath(&iteratorStepPathVisitor{
-				yield: yield,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		PostorderPath(&iteratorStepPathVisitor{
+			yield: yield,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -419,15 +429,17 @@ func IterPostorderPathStep(
 // The returned iterator is never nil.
 func IterReversePostorder(root Node, opts *Options) iter.Seq[Node] {
 	return func(yield func(Node) bool) {
-		if yield != nil && root != nil {
-			ReversePostorder(&iteratorNodeVisitor{
-				yield: yield,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		ReversePostorder(&iteratorNodeVisitor{
+			yield: yield,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -444,15 +456,17 @@ func IterReversePostorder(root Node, opts *Options) iter.Seq[Node] {
 // The returned iterator is never nil.
 func IterReversePostorderDepth(root Node, opts *Options) iter.Seq2[Node, int] {
 	return func(yield func(Node, int) bool) {
-		if yield != nil && root != nil {
-			ReversePostorder(&iteratorNodeDepthVisitor{
-				yield: yield,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		ReversePostorder(&iteratorNodeDepthVisitor{
+			yield: yield,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -469,15 +483,17 @@ func IterReversePostorderDepth(root Node, opts *Options) iter.Seq2[Node, int] {
 // The returned iterator is never nil.
 func IterReversePostorderStep(root Node, opts *Options) iter.Seq2[int64, Node] {
 	return func(yield func(int64, Node) bool) {
-		if yield != nil && root != nil {
-			ReversePostorder(&iteratorStepNodeVisitor{
-				yield: yield,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		ReversePostorder(&iteratorStepNodeVisitor{
+			yield: yield,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -497,15 +513,17 @@ func IterReversePostorderPath(
 	opts *Options,
 ) iter.Seq[vseq.VertexSequence[Node]] {
 	return func(yield func(vseq.VertexSequence[Node]) bool) {
-		if yield != nil && root != nil {
-			ReversePostorderPath(&iteratorPathVisitor{
-				yield: yield,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		ReversePostorderPath(&iteratorPathVisitor{
+			yield: yield,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -525,14 +543,16 @@ func IterReversePostorderPathStep(
 	opts *Options,
 ) iter.Seq2[int64, vseq.VertexSequence[Node]] {
 	return func(yield func(int64, vseq.VertexSequence[Node]) bool) {
-		if yield != nil && root != nil {
-			ReversePostorderPath(&iteratorStepPathVisitor{
-				yield: yield,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		ReversePostorderPath(&iteratorStepPathVisitor{
+			yield: yield,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }

@@ -246,13 +246,13 @@ func testStackReserve(
 	}
 
 	rangeData := make([]int, 0, s.Len())
-	s.Range(func(x int) (cont bool) {
+	for x := range s.IterItems() {
 		rangeData = append(rangeData, x)
-		return true
-	})
+	}
 
 	if !slices.Equal(rangeData, wantRangeData) {
-		t.Errorf("got data by s.Range %v; want %v", rangeData, wantRangeData)
+		t.Errorf("got data by iterator over s %v; want %v",
+			rangeData, wantRangeData)
 	}
 }
 

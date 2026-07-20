@@ -31,12 +31,12 @@ import (
 // *SliceDynamicArray implements the interface DynamicArray.
 //
 // The client can convert a Go slice to SliceDynamicArray by type conversion,
-// e.g.:
+// for example:
 //
 //	SliceDynamicArray[int]([]int{1, 2, 3})
 //
 // Or allocate a new SliceDynamicArray by the slice literal or
-// the built-in function make, e.g.:
+// the built-in function make, for example:
 //
 //	SliceDynamicArray[int]{1, 2, 3}
 //	make(SliceDynamicArray[int], 2, 10)
@@ -62,13 +62,11 @@ func (sda *SliceDynamicArray[Item]) Len() int {
 // Its parameter handler is a function to deal with the item x in the
 // slice and report whether to continue to access the next item.
 func (sda *SliceDynamicArray[Item]) Range(handler func(x Item) (cont bool)) {
-	if handler != nil && sda != nil {
-		for _, x := range *sda {
-			if !handler(x) {
-				return
-			}
-		}
+	if handler == nil || sda == nil {
+		return
 	}
+
+	slices.Values(*sda)(handler)
 }
 
 // IterItems returns an iterator over all items in the slice,
@@ -84,11 +82,13 @@ func (sda *SliceDynamicArray[Item]) IterItems() iter.Seq[Item] {
 func (sda *SliceDynamicArray[Item]) RangeBackward(
 	handler func(x Item) (cont bool),
 ) {
-	if handler != nil && sda != nil {
-		for i := len(*sda) - 1; i >= 0; i-- {
-			if !handler((*sda)[i]) {
-				return
-			}
+	if handler == nil || sda == nil {
+		return
+	}
+
+	for _, x := range slices.Backward(*sda) {
+		if !handler(x) {
+			return
 		}
 	}
 }
@@ -146,13 +146,11 @@ func (sda *SliceDynamicArray[Item]) Reverse() {
 // The returned iterator is never nil.
 func (sda *SliceDynamicArray[Item]) IterIndexItems() iter.Seq2[int, Item] {
 	return func(yield func(int, Item) bool) {
-		if yield != nil && sda != nil {
-			for i, x := range *sda {
-				if !yield(i, x) {
-					return
-				}
-			}
+		if yield == nil || sda == nil {
+			return
 		}
+
+		slices.All(*sda)(yield)
 	}
 }
 
@@ -161,15 +159,16 @@ func (sda *SliceDynamicArray[Item]) IterIndexItems() iter.Seq2[int, Item] {
 // traversing it from last to first with descending indices.
 //
 // The returned iterator is never nil.
-func (sda *SliceDynamicArray[Item]) IterIndexItemsBackward() iter.Seq2[int, Item] {
+func (sda *SliceDynamicArray[Item]) IterIndexItemsBackward() iter.Seq2[
+	int,
+	Item,
+] {
 	return func(yield func(int, Item) bool) {
-		if yield != nil && sda != nil {
-			for i := len(*sda) - 1; i >= 0; i-- {
-				if !yield(i, (*sda)[i]) {
-					return
-				}
-			}
+		if yield == nil || sda == nil {
+			return
 		}
+
+		slices.Backward(*sda)(yield)
 	}
 }
 
@@ -315,12 +314,11 @@ func (sda *SliceDynamicArray[Item]) Append(s sequence.Sequence[Item]) {
 	}
 
 	i := len(*sda)
-	*sda = append(*sda, make([]Item, n)...)
 
-	s.Range(func(x Item) (cont bool) {
+	*sda = append(*sda, make([]Item, n)...)
+	for x := range s.IterItems() {
 		(*sda)[i], i = x, i+1
-		return true
-	})
+	}
 }
 
 // Truncate removes the item at index i and all subsequent items.
@@ -393,7 +391,9 @@ func (sda *SliceDynamicArray[Item]) RemoveWithoutOrder(i int) Item {
 // s shouldn't be modified during calling this method,
 // otherwise, unknown error may occur.
 func (sda *SliceDynamicArray[Item]) InsertSequence(
-	i int, s sequence.Sequence[Item]) {
+	i int,
+	s sequence.Sequence[Item],
+) {
 	if sda == nil {
 		panic(errors.AutoMsg(nilSliceDynamicArrayPointerPanicMessage))
 	} else if i == len(*sda) {
@@ -417,12 +417,11 @@ func (sda *SliceDynamicArray[Item]) InsertSequence(
 
 	*sda = append(*sda, make([]Item, n)...)
 	copy((*sda)[i+n:], (*sda)[i:])
-	j := i
 
-	s.Range(func(x Item) (cont bool) {
+	j := i
+	for x := range s.IterItems() {
 		(*sda)[j], j = x, j+1
-		return true
-	})
+	}
 }
 
 // Cut removes items from argument begin (inclusive) to

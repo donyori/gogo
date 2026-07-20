@@ -20,6 +20,7 @@ package stack
 
 import (
 	"iter"
+	"slices"
 
 	"github.com/donyori/gogo/container"
 	"github.com/donyori/gogo/errors"
@@ -81,11 +82,13 @@ func (s *stackSlice[Item]) Len() int {
 }
 
 func (s *stackSlice[Item]) Range(handler func(x Item) (cont bool)) {
-	if handler != nil {
-		for i := len(s.buf) - 1; i >= 0; i-- {
-			if !handler(s.buf[i]) {
-				return
-			}
+	if handler == nil {
+		return
+	}
+
+	for _, x := range slices.Backward(s.buf) {
+		if !handler(x) {
+			return
 		}
 	}
 }

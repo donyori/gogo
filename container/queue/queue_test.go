@@ -308,13 +308,13 @@ func testQueueReserve(
 	}
 
 	rangeData := make([]int, 0, q.Len())
-	q.Range(func(x int) (cont bool) {
+	for x := range q.IterItems() {
 		rangeData = append(rangeData, x)
-		return true
-	})
+	}
 
 	if !slices.Equal(rangeData, wantRangeData) {
-		t.Errorf("got data by q.Range %v; want %v", rangeData, wantRangeData)
+		t.Errorf("got data by iterator over q %v; want %v",
+			rangeData, wantRangeData)
 	}
 }
 

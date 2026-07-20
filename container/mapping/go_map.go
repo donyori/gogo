@@ -20,6 +20,7 @@ package mapping
 
 import (
 	"iter"
+	"maps"
 
 	"github.com/donyori/gogo/errors"
 )
@@ -27,12 +28,12 @@ import (
 // GoMap is a map wrapped on Go map.
 // *GoMap implements the interface Map.
 //
-// The client can convert a Go map to GoMap by type conversion, e.g.:
+// The client can convert a Go map to GoMap by type conversion, for example:
 //
 //	GoMap[string, int](map[string]int{"A": 1})
 //
 // Or allocate a new GoMap by the map literal or
-// the built-in function make, e.g.:
+// the built-in function make, for example:
 //
 //	GoMap[string, int]{"A": 1}
 //	make(GoMap[string, int])
@@ -44,12 +45,11 @@ var _ Map[string, any] = (*GoMap[string, any])(nil)
 //
 // It returns 0 if the map is nil.
 func (gm *GoMap[Key, Value]) Len() int {
-	var n int
-	if gm != nil {
-		n = len(*gm)
+	if gm == nil {
+		return 0
 	}
 
-	return n
+	return len(*gm)
 }
 
 // Range accesses the key-value pairs in the map.
@@ -61,11 +61,13 @@ func (gm *GoMap[Key, Value]) Len() int {
 func (gm *GoMap[Key, Value]) Range(
 	handler func(x Entry[Key, Value]) (cont bool),
 ) {
-	if handler != nil && gm != nil {
-		for k, v := range *gm {
-			if !handler(Entry[Key, Value]{Key: k, Value: v}) {
-				return
-			}
+	if handler == nil || gm == nil {
+		return
+	}
+
+	for k, v := range *gm {
+		if !handler(Entry[Key, Value]{Key: k, Value: v}) {
+			return
 		}
 	}
 }
@@ -102,14 +104,16 @@ func (gm *GoMap[Key, Value]) RemoveAll() {
 func (gm *GoMap[Key, Value]) Filter(
 	filter func(x Entry[Key, Value]) (keep bool),
 ) {
-	if gm != nil {
-		for k, v := range *gm {
-			if !filter(Entry[Key, Value]{Key: k, Value: v}) {
-				var zero Value
+	if gm == nil {
+		return
+	}
 
-				(*gm)[k] = zero // avoid memory leak
-				delete(*gm, k)
-			}
+	for k, v := range *gm {
+		if !filter(Entry[Key, Value]{Key: k, Value: v}) {
+			var zero Value
+
+			(*gm)[k] = zero // avoid memory leak
+			delete(*gm, k)
 		}
 	}
 }
@@ -120,13 +124,11 @@ func (gm *GoMap[Key, Value]) Filter(
 // The returned iterator is never nil.
 func (gm *GoMap[Key, Value]) IterKeys() iter.Seq[Key] {
 	return func(yield func(Key) bool) {
-		if yield != nil && gm != nil {
-			for k := range *gm {
-				if !yield(k) {
-					return
-				}
-			}
+		if yield == nil || gm == nil {
+			return
 		}
+
+		maps.Keys(*gm)(yield)
 	}
 }
 
@@ -136,13 +138,11 @@ func (gm *GoMap[Key, Value]) IterKeys() iter.Seq[Key] {
 // The returned iterator is never nil.
 func (gm *GoMap[Key, Value]) IterValues() iter.Seq[Value] {
 	return func(yield func(Value) bool) {
-		if yield != nil && gm != nil {
-			for _, v := range *gm {
-				if !yield(v) {
-					return
-				}
-			}
+		if yield == nil || gm == nil {
+			return
 		}
+
+		maps.Values(*gm)(yield)
 	}
 }
 
@@ -152,13 +152,11 @@ func (gm *GoMap[Key, Value]) IterValues() iter.Seq[Value] {
 // The returned iterator is never nil.
 func (gm *GoMap[Key, Value]) IterKeyValues() iter.Seq2[Key, Value] {
 	return func(yield func(Key, Value) bool) {
-		if yield != nil && gm != nil {
-			for k, v := range *gm {
-				if !yield(k, v) {
-					return
-				}
-			}
+		if yield == nil || gm == nil {
+			return
 		}
+
+		maps.All(*gm)(yield)
 	}
 }
 
@@ -235,10 +233,7 @@ func (gm *GoMap[Key, Value]) SetMap(m Map[Key, Value]) {
 		*gm = make(GoMap[Key, Value], n)
 	}
 
-	m.Range(func(entry Entry[Key, Value]) (cont bool) {
-		(*gm)[entry.Key] = entry.Value
-		return true
-	})
+	maps.Insert(*gm, m.IterKeyValues())
 }
 
 // GetAndSetMap adds the key-value pairs in m to this map.
@@ -265,31 +260,25 @@ func (gm *GoMap[Key, Value]) GetAndSetMap(
 		panic(errors.AutoMsg(nilGoMapPointerPanicMessage))
 	case *gm == nil:
 		*gm = make(GoMap[Key, Value], n)
-
-		m.Range(func(entry Entry[Key, Value]) (cont bool) {
-			(*gm)[entry.Key] = entry.Value
-			return true
-		})
+		maps.Insert(*gm, m.IterKeyValues())
 
 		return
 	}
 
 	prev := new(GoMap[Key, Value])
 
-	m.Range(func(entry Entry[Key, Value]) (cont bool) {
-		v, ok := (*gm)[entry.Key]
+	for k, v := range m.IterKeyValues() {
+		prevV, ok := (*gm)[k]
 		if ok {
 			if *prev == nil {
 				*prev = make(GoMap[Key, Value])
 			}
 
-			(*prev)[entry.Key] = v
+			(*prev)[k] = prevV
 		}
 
-		(*gm)[entry.Key] = entry.Value
-
-		return true
-	})
+		(*gm)[k] = v
+	}
 
 	if len(*prev) > 0 {
 		previous = prev
@@ -303,14 +292,16 @@ func (gm *GoMap[Key, Value]) GetAndSetMap(
 //
 // It does nothing for the keys that are not present in the map.
 func (gm *GoMap[Key, Value]) Remove(key ...Key) {
-	if gm != nil && len(*gm) > 0 {
-		for _, k := range key {
-			if _, ok := (*gm)[k]; ok {
-				var zero Value
+	if gm == nil || len(*gm) == 0 {
+		return
+	}
 
-				(*gm)[k] = zero // avoid memory leak
-				delete(*gm, k)
-			}
+	for _, k := range key {
+		if _, ok := (*gm)[k]; ok {
+			var zero Value
+
+			(*gm)[k] = zero // avoid memory leak
+			delete(*gm, k)
 		}
 	}
 }

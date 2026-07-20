@@ -520,16 +520,18 @@ func IterInorder(
 	skipChildrenFn NodeSkipChildrenFunc,
 ) iter.Seq[Node] {
 	return func(yield func(Node) bool) {
-		if yield != nil && root != nil {
-			Inorder(&iteratorNodeVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		Inorder(&iteratorNodeVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -559,16 +561,18 @@ func IterInorderDepth(
 	skipChildrenFn NodeSkipChildrenFunc,
 ) iter.Seq2[Node, int] {
 	return func(yield func(Node, int) bool) {
-		if yield != nil && root != nil {
-			Inorder(&iteratorNodeDepthVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		Inorder(&iteratorNodeDepthVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -598,16 +602,18 @@ func IterInorderStep(
 	skipChildrenFn NodeSkipChildrenFunc,
 ) iter.Seq2[int64, Node] {
 	return func(yield func(int64, Node) bool) {
-		if yield != nil && root != nil {
-			Inorder(&iteratorStepNodeVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		Inorder(&iteratorStepNodeVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -637,16 +643,18 @@ func IterInorderPath(
 	skipChildrenFn PathSkipChildrenFunc,
 ) iter.Seq[vseq.VertexSequence[Node]] {
 	return func(yield func(vseq.VertexSequence[Node]) bool) {
-		if yield != nil && root != nil {
-			InorderPath(&iteratorPathVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		InorderPath(&iteratorPathVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -676,16 +684,18 @@ func IterInorderPathStep(
 	skipChildrenFn PathSkipChildrenFunc,
 ) iter.Seq2[int64, vseq.VertexSequence[Node]] {
 	return func(yield func(int64, vseq.VertexSequence[Node]) bool) {
-		if yield != nil && root != nil {
-			InorderPath(&iteratorStepPathVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		InorderPath(&iteratorStepPathVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -715,16 +725,18 @@ func IterReverseInorder(
 	skipChildrenFn NodeSkipChildrenFunc,
 ) iter.Seq[Node] {
 	return func(yield func(Node) bool) {
-		if yield != nil && root != nil {
-			ReverseInorder(&iteratorNodeVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		ReverseInorder(&iteratorNodeVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -754,16 +766,18 @@ func IterReverseInorderDepth(
 	skipChildrenFn NodeSkipChildrenFunc,
 ) iter.Seq2[Node, int] {
 	return func(yield func(Node, int) bool) {
-		if yield != nil && root != nil {
-			ReverseInorder(&iteratorNodeDepthVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		ReverseInorder(&iteratorNodeDepthVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -793,16 +807,18 @@ func IterReverseInorderStep(
 	skipChildrenFn NodeSkipChildrenFunc,
 ) iter.Seq2[int64, Node] {
 	return func(yield func(int64, Node) bool) {
-		if yield != nil && root != nil {
-			ReverseInorder(&iteratorStepNodeVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		ReverseInorder(&iteratorStepNodeVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -832,16 +848,18 @@ func IterReverseInorderPath(
 	skipChildrenFn PathSkipChildrenFunc,
 ) iter.Seq[vseq.VertexSequence[Node]] {
 	return func(yield func(vseq.VertexSequence[Node]) bool) {
-		if yield != nil && root != nil {
-			ReverseInorderPath(&iteratorPathVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		ReverseInorderPath(&iteratorPathVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -871,15 +889,17 @@ func IterReverseInorderPathStep(
 	skipChildrenFn PathSkipChildrenFunc,
 ) iter.Seq2[int64, vseq.VertexSequence[Node]] {
 	return func(yield func(int64, vseq.VertexSequence[Node]) bool) {
-		if yield != nil && root != nil {
-			ReverseInorderPath(&iteratorStepPathVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		ReverseInorderPath(&iteratorStepPathVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }

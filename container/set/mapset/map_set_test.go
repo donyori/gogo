@@ -23,6 +23,7 @@ import (
 	"maps"
 	"testing"
 
+	"github.com/donyori/gogo/constraints"
 	"github.com/donyori/gogo/container/sequence/array"
 	"github.com/donyori/gogo/container/set"
 	"github.com/donyori/gogo/container/set/mapset"
@@ -375,14 +376,12 @@ func TestMapSet_ContainsSet(t *testing.T) {
 			want := true
 
 			if s != nil {
-				s.Range(func(x int) (cont bool) {
+				for x := range s.IterItems() {
 					if _, ok := dataSetList[i][x]; !ok {
 						want = false
-						return false
+						break
 					}
-
-					return true
-				})
+				}
 			}
 
 			testCases[idx].want = want
@@ -600,10 +599,9 @@ func TestMapSet_Union(t *testing.T) {
 			want := maps.Clone(dataSetList[i])
 
 			if s != nil {
-				s.Range(func(x int) (cont bool) {
+				for x := range s.IterItems() {
 					want[x] = struct{}{}
-					return true
-				})
+				}
 			}
 
 			testCases[idx].want = want
@@ -750,10 +748,9 @@ func TestMapSet_Subtract(t *testing.T) {
 			want := maps.Clone(dataSetList[i])
 
 			if s != nil {
-				s.Range(func(x int) (cont bool) {
+				for x := range s.IterItems() {
 					delete(want, x)
-					return true
-				})
+				}
 			}
 
 			testCases[idx].want = want
@@ -858,13 +855,11 @@ func getMapSetDisjunctiveUnionTestCaseWant(
 		}
 	}
 
-	s.Range(func(x int) (cont bool) {
+	for x := range s.IterItems() {
 		if _, ok := dataSetList[dataIdx][x]; !ok {
 			want[x] = struct{}{}
 		}
-
-		return true
-	})
+	}
 
 	return want
 }
@@ -894,7 +889,7 @@ func newMapSet(data []int) set.Set[int] {
 	return ms
 }
 
-func sliceToName[T any](s []T) string {
+func sliceToName[S constraints.Slice[T], T any](s S) string {
 	return fmtcoll.MustFormatSliceToString(s, &fmtcoll.SequenceFormat[T]{
 		CommonFormat: fmtcoll.CommonFormat{
 			Separator:   ",",
@@ -910,10 +905,9 @@ func setToString(s set.Set[int]) string {
 	}
 
 	m := make(map[int]struct{}, s.Len())
-	s.Range(func(x int) (cont bool) {
+	for x := range s.IterItems() {
 		m[x] = struct{}{}
-		return true
-	})
+	}
 
 	return mapKeyToString(m)
 }
@@ -948,10 +942,9 @@ func setWrong(s set.Set[int], want map[int]struct{}) bool {
 		counterMap[x] = 1
 	}
 
-	s.Range(func(x int) (cont bool) {
+	for x := range s.IterItems() {
 		counterMap[x]--
-		return true
-	})
+	}
 
 	for _, ctr := range counterMap {
 		if ctr != 0 {

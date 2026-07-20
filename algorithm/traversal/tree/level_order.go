@@ -422,16 +422,18 @@ func IterLevelOrder(
 	skipChildrenFn NodeSkipChildrenFunc,
 ) iter.Seq[Node] {
 	return func(yield func(Node) bool) {
-		if yield != nil && root != nil {
-			LevelOrder(&iteratorNodeVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		LevelOrder(&iteratorNodeVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -457,16 +459,18 @@ func IterLevelOrderDepth(
 	skipChildrenFn NodeSkipChildrenFunc,
 ) iter.Seq2[Node, int] {
 	return func(yield func(Node, int) bool) {
-		if yield != nil && root != nil {
-			LevelOrder(&iteratorNodeDepthVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		LevelOrder(&iteratorNodeDepthVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -492,16 +496,18 @@ func IterLevelOrderStep(
 	skipChildrenFn NodeSkipChildrenFunc,
 ) iter.Seq2[int64, Node] {
 	return func(yield func(int64, Node) bool) {
-		if yield != nil && root != nil {
-			LevelOrder(&iteratorStepNodeVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		LevelOrder(&iteratorStepNodeVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -527,16 +533,18 @@ func IterLevelOrderPath(
 	skipChildrenFn PathSkipChildrenFunc,
 ) iter.Seq[vseq.VertexSequence[Node]] {
 	return func(yield func(vseq.VertexSequence[Node]) bool) {
-		if yield != nil && root != nil {
-			LevelOrderPath(&iteratorPathVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		LevelOrderPath(&iteratorPathVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -562,16 +570,18 @@ func IterLevelOrderPathStep(
 	skipChildrenFn PathSkipChildrenFunc,
 ) iter.Seq2[int64, vseq.VertexSequence[Node]] {
 	return func(yield func(int64, vseq.VertexSequence[Node]) bool) {
-		if yield != nil && root != nil {
-			LevelOrderPath(&iteratorStepPathVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		LevelOrderPath(&iteratorStepPathVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -597,16 +607,18 @@ func IterLevelOrderQueueBased(
 	skipChildrenFn NodeSkipChildrenFunc,
 ) iter.Seq[Node] {
 	return func(yield func(Node) bool) {
-		if yield != nil && root != nil {
-			LevelOrderQueueBased(&iteratorNodeVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		LevelOrderQueueBased(&iteratorNodeVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -632,16 +644,18 @@ func IterLevelOrderDepthQueueBased(
 	skipChildrenFn NodeSkipChildrenFunc,
 ) iter.Seq2[Node, int] {
 	return func(yield func(Node, int) bool) {
-		if yield != nil && root != nil {
-			LevelOrderQueueBased(&iteratorNodeDepthVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		LevelOrderQueueBased(&iteratorNodeDepthVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -667,16 +681,18 @@ func IterLevelOrderStepQueueBased(
 	skipChildrenFn NodeSkipChildrenFunc,
 ) iter.Seq2[int64, Node] {
 	return func(yield func(int64, Node) bool) {
-		if yield != nil && root != nil {
-			LevelOrderQueueBased(&iteratorStepNodeVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		LevelOrderQueueBased(&iteratorStepNodeVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -702,16 +718,18 @@ func IterLevelOrderPathQueueBased(
 	skipChildrenFn PathSkipChildrenFunc,
 ) iter.Seq[vseq.VertexSequence[Node]] {
 	return func(yield func(vseq.VertexSequence[Node]) bool) {
-		if yield != nil && root != nil {
-			LevelOrderPathQueueBased(&iteratorPathVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		LevelOrderPathQueueBased(&iteratorPathVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }
 
@@ -738,15 +756,17 @@ func IterLevelOrderPathStepQueueBased(
 	skipChildrenFn PathSkipChildrenFunc,
 ) iter.Seq2[int64, vseq.VertexSequence[Node]] {
 	return func(yield func(int64, vseq.VertexSequence[Node]) bool) {
-		if yield != nil && root != nil {
-			LevelOrderPathQueueBased(&iteratorStepPathVisitor{
-				yield:          yield,
-				skipChildrenFn: skipChildrenFn,
-				visitorCommon: visitorCommon{
-					root: root,
-					opts: opts,
-				},
-			})
+		if yield == nil || root == nil {
+			return
 		}
+
+		LevelOrderPathQueueBased(&iteratorStepPathVisitor{
+			yield:          yield,
+			skipChildrenFn: skipChildrenFn,
+			visitorCommon: visitorCommon{
+				root: root,
+				opts: opts,
+			},
+		})
 	}
 }

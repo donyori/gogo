@@ -20,6 +20,7 @@ package vseq
 
 import (
 	"iter"
+	"slices"
 
 	"github.com/donyori/gogo/container"
 	"github.com/donyori/gogo/errors"
@@ -174,14 +175,11 @@ func (vs *vertexSequence[Vertex]) Len() int {
 }
 
 func (vs *vertexSequence[Vertex]) Range(handler func(v Vertex) (cont bool)) {
-	if handler != nil && vs != nil {
-		list := vs.ToList()
-		for _, v := range list {
-			if !handler(v) {
-				return
-			}
-		}
+	if handler == nil || vs == nil {
+		return
 	}
+
+	slices.Values(vs.ToList())(handler)
 }
 
 func (vs *vertexSequence[Vertex]) IterItems() iter.Seq[Vertex] {
@@ -191,11 +189,13 @@ func (vs *vertexSequence[Vertex]) IterItems() iter.Seq[Vertex] {
 func (vs *vertexSequence[Vertex]) RangeBackward(
 	handler func(v Vertex) (cont bool),
 ) {
-	if handler != nil && vs != nil {
-		for t := vs; t != nil; t = t.p {
-			if !handler(t.v) {
-				return
-			}
+	if handler == nil || vs == nil {
+		return
+	}
+
+	for t := vs; t != nil; t = t.p {
+		if !handler(t.v) {
+			return
 		}
 	}
 }
@@ -206,14 +206,11 @@ func (vs *vertexSequence[Vertex]) IterItemsBackward() iter.Seq[Vertex] {
 
 func (vs *vertexSequence[Vertex]) IterIndexItems() iter.Seq2[int, Vertex] {
 	return func(yield func(int, Vertex) bool) {
-		if yield != nil && vs != nil {
-			list := vs.ToList()
-			for i, v := range list {
-				if !yield(i, v) {
-					return
-				}
-			}
+		if yield == nil || vs == nil {
+			return
 		}
+
+		slices.All(vs.ToList())(yield)
 	}
 }
 
@@ -222,11 +219,13 @@ func (vs *vertexSequence[Vertex]) IterIndexItemsBackward() iter.Seq2[
 	Vertex,
 ] {
 	return func(yield func(int, Vertex) bool) {
-		if yield != nil && vs != nil {
-			for t := vs; t != nil; t = t.p {
-				if !yield(t.i, t.v) {
-					return
-				}
+		if yield == nil || vs == nil {
+			return
+		}
+
+		for t := vs; t != nil; t = t.p {
+			if !yield(t.i, t.v) {
+				return
 			}
 		}
 	}

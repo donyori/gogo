@@ -25,6 +25,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/donyori/gogo/constraints"
 	"github.com/donyori/gogo/container/heap/pqueue"
 	"github.com/donyori/gogo/fmtcoll"
 	"github.com/donyori/gogo/function/compare"
@@ -217,7 +218,7 @@ func TestPriorityQueue_Clear(t *testing.T) {
 
 			pq := newPriorityQueue(data)
 			pq.Clear()
-			checkPriorityQueueByDequeue(t, pq, nil)
+			checkPriorityQueueByDequeue[[]int](t, pq, nil)
 		})
 	}
 }
@@ -231,7 +232,7 @@ func TestPriorityQueue_RemoveAll(t *testing.T) {
 
 			pq := newPriorityQueue(data)
 			pq.RemoveAll()
-			checkPriorityQueueByDequeue(t, pq, nil)
+			checkPriorityQueueByDequeue[[]int](t, pq, nil)
 		})
 	}
 }
@@ -461,7 +462,7 @@ func newPriorityQueue(data []int) pqueue.PriorityQueue[int] {
 	return pq
 }
 
-func sliceToName[T any](s []T) string {
+func sliceToName[S constraints.Slice[T], T any](s S) string {
 	return fmtcoll.MustFormatSliceToString(s, &fmtcoll.SequenceFormat[T]{
 		CommonFormat: fmtcoll.CommonFormat{
 			Separator:   ",",
@@ -486,10 +487,10 @@ func copyAndSort(data []int) []int {
 // !!pq may be modified in this function.
 //
 // want must be sorted.
-func checkPriorityQueueByDequeue[Item comparable](
+func checkPriorityQueueByDequeue[S constraints.Slice[Item], Item comparable](
 	t *testing.T,
 	pq pqueue.PriorityQueue[Item],
-	want []Item,
+	want S,
 ) {
 	t.Helper()
 

@@ -21,12 +21,14 @@ package array_test
 import (
 	"cmp"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/donyori/gogo/constraints"
 	"github.com/donyori/gogo/container/sequence/array"
+	"github.com/donyori/gogo/fmtcoll"
 	"github.com/donyori/gogo/function/compare"
 	"github.com/donyori/gogo/internal/floats"
 )
@@ -191,7 +193,7 @@ func TestWrapSlice_NilLessFnAndCmpFn(t *testing.T) {
 func TestAffectProvidedSlice_WrapSlice_IntOrderedLessOrdered(t *testing.T) {
 	t.Parallel()
 
-	testAffectProvidedSlice(
+	testAffectProvidedRealSlice(
 		t,
 		func(slicePtr *[]int) array.OrderedDynamicArray[int] {
 			return array.WrapSlice(
@@ -206,7 +208,7 @@ func TestAffectProvidedSlice_WrapSlice_IntOrderedLessOrdered(t *testing.T) {
 func TestAffectProvidedSlice_WrapStrictWeakOrderedSlice_Int(t *testing.T) {
 	t.Parallel()
 
-	testAffectProvidedSlice(
+	testAffectProvidedRealSlice(
 		t,
 		func(slicePtr *[]int) array.OrderedDynamicArray[int] {
 			return array.WrapStrictWeakOrderedSlice(slicePtr)
@@ -217,7 +219,7 @@ func TestAffectProvidedSlice_WrapStrictWeakOrderedSlice_Int(t *testing.T) {
 func TestAffectProvidedSlice_WrapFloatSlice_Float64(t *testing.T) {
 	t.Parallel()
 
-	testAffectProvidedSlice(
+	testAffectProvidedRealSlice(
 		t,
 		func(slicePtr *[]float64) array.OrderedDynamicArray[float64] {
 			return array.WrapFloatSlice(slicePtr)
@@ -225,18 +227,16 @@ func TestAffectProvidedSlice_WrapFloatSlice_Float64(t *testing.T) {
 	)
 }
 
-func testAffectProvidedSlice[Item constraints.Real](
+func testAffectProvidedRealSlice[S constraints.Slice[R], R constraints.Real](
 	t *testing.T,
-	getOrderedDynamicArray func(
-		slicePtr *[]Item,
-	) array.OrderedDynamicArray[Item],
+	getOrderedDynamicArray func(slicePtr *S) array.OrderedDynamicArray[R],
 ) {
 	t.Helper()
 
-	slice := []Item{1, 2, 3, 4}
-	afterCut := []Item{1, 4}
-	afterSetFront := []Item{5, 4}
-	afterPush := []Item{1, 2, 3}
+	slice := S{1, 2, 3, 4}
+	afterCut := S{1, 4}
+	afterSetFront := S{5, 4}
+	afterPush := S{1, 2, 3}
 	oda := getOrderedDynamicArray(&slice)
 
 	// Operations on oda should affect slice.
@@ -259,7 +259,7 @@ func testAffectProvidedSlice[Item constraints.Real](
 	}
 
 	// Operations on slice should also affect oda.
-	slice = []Item{1, 2}
+	slice = S{1, 2}
 
 	oda.Push(3)
 
@@ -269,61 +269,28 @@ func testAffectProvidedSlice[Item constraints.Real](
 	}
 }
 
-type sliceOrderedDynamicArrayTestCase[Item, Want any] struct {
-	sliceName string
-	slice     []Item
-	want      Want
+type sliceOrderedDynamicArrayTestCase[
+	S constraints.Slice[Item],
+	Item any,
+	Want any,
+] struct {
+	slice S
+	want  Want
 }
 
 func TestOrderedDynamicArray_Min_WrapSlice_IntPair(t *testing.T) {
 	t.Parallel()
 
-	testCases := []sliceOrderedDynamicArrayTestCase[[2]int, [2]int]{
-		{
-			"[{1,0}]",
-			[][2]int{{1, 0}},
-			[2]int{1, 0},
-		},
-		{
-			"[{1,0},{1,1}]",
-			[][2]int{{1, 0}, {1, 1}},
-			[2]int{1, 0},
-		},
-		{
-			"[{1,0},{2,1}]",
-			[][2]int{{1, 0}, {2, 1}},
-			[2]int{1, 0},
-		},
-		{
-			"[{2,0},{1,1}]",
-			[][2]int{{2, 0}, {1, 1}},
-			[2]int{1, 1},
-		},
-		{
-			"[{2,0},{1,1},{1,2}]",
-			[][2]int{{2, 0}, {1, 1}, {1, 2}},
-			[2]int{1, 1},
-		},
-		{
-			"[{2,0},{1,1},{2,2}]",
-			[][2]int{{2, 0}, {1, 1}, {2, 2}},
-			[2]int{1, 1},
-		},
-		{
-			"[{2,0},{2,1},{1,2}]",
-			[][2]int{{2, 0}, {2, 1}, {1, 2}},
-			[2]int{1, 2},
-		},
-		{
-			"[{3,0},{1,1},{2,2}]",
-			[][2]int{{3, 0}, {1, 1}, {2, 2}},
-			[2]int{1, 1},
-		},
-		{
-			"[{3,0},{2,1},{1,2}]",
-			[][2]int{{3, 0}, {2, 1}, {1, 2}},
-			[2]int{1, 2},
-		},
+	testCases := []sliceOrderedDynamicArrayTestCase[[][2]int, [2]int, [2]int]{
+		{[][2]int{{1, 0}}, [2]int{1, 0}},
+		{[][2]int{{1, 0}, {1, 1}}, [2]int{1, 0}},
+		{[][2]int{{1, 0}, {2, 1}}, [2]int{1, 0}},
+		{[][2]int{{2, 0}, {1, 1}}, [2]int{1, 1}},
+		{[][2]int{{2, 0}, {1, 1}, {1, 2}}, [2]int{1, 1}},
+		{[][2]int{{2, 0}, {1, 1}, {2, 2}}, [2]int{1, 1}},
+		{[][2]int{{2, 0}, {2, 1}, {1, 2}}, [2]int{1, 2}},
+		{[][2]int{{3, 0}, {1, 1}, {2, 2}}, [2]int{1, 1}},
+		{[][2]int{{3, 0}, {2, 1}, {1, 2}}, [2]int{1, 2}},
 	}
 	testOrderedDynamicArrayMinMax(
 		t,
@@ -348,22 +315,23 @@ func TestOrderedDynamicArray_Min_WrapSlice_IntPair(t *testing.T) {
 			return oda.Min()
 		},
 		testCases,
+		realPairSliceToName,
 	)
 }
 
 func TestOrderedDynamicArray_Min_WrapStrictWeakOrderedSlice_Int(t *testing.T) {
 	t.Parallel()
 
-	testCases := []sliceOrderedDynamicArrayTestCase[int, int]{
-		{"[1]", []int{1}, 1},
-		{"[1,1]", []int{1, 1}, 1},
-		{"[1,2]", []int{1, 2}, 1},
-		{"[2,1]", []int{2, 1}, 1},
-		{"[2,1,1]", []int{2, 1, 1}, 1},
-		{"[2,1,2]", []int{2, 1, 2}, 1},
-		{"[2,2,1]", []int{2, 2, 1}, 1},
-		{"[3,1,2]", []int{3, 1, 2}, 1},
-		{"[3,2,1]", []int{3, 2, 1}, 1},
+	testCases := []sliceOrderedDynamicArrayTestCase[[]int, int, int]{
+		{[]int{1}, 1},
+		{[]int{1, 1}, 1},
+		{[]int{1, 2}, 1},
+		{[]int{2, 1}, 1},
+		{[]int{2, 1, 1}, 1},
+		{[]int{2, 1, 2}, 1},
+		{[]int{2, 2, 1}, 1},
+		{[]int{3, 1, 2}, 1},
+		{[]int{3, 2, 1}, 1},
 	}
 	testOrderedDynamicArrayMinMax(
 		t,
@@ -374,93 +342,34 @@ func TestOrderedDynamicArray_Min_WrapStrictWeakOrderedSlice_Int(t *testing.T) {
 			return oda.Min()
 		},
 		testCases,
+		realSliceToName,
 	)
 }
 
 func TestOrderedDynamicArray_Min_WrapFloatSlice_Float64(t *testing.T) {
 	t.Parallel()
 
-	testCases := []sliceOrderedDynamicArrayTestCase[float64, float64]{
-		{
-			"[1]",
-			[]float64{1.},
-			1.,
-		},
-		{
-			"[1,1]",
-			[]float64{1., 1.},
-			1.,
-		},
-		{
-			"[1,2]",
-			[]float64{1., 2.},
-			1.,
-		},
-		{
-			"[2,1]",
-			[]float64{2., 1.},
-			1.,
-		},
-		{
-			"[2,1,1]",
-			[]float64{2., 1., 1.},
-			1.,
-		},
-		{
-			"[2,1,2]",
-			[]float64{2., 1., 2.},
-			1.,
-		},
-		{
-			"[2,1,1]",
-			[]float64{2., 2., 1.},
-			1.,
-		},
-		{
-			"[3,1,2]",
-			[]float64{3., 1., 2.},
-			1.,
-		},
-		{
-			"[3,2,1]",
-			[]float64{3., 2., 1.},
-			1.,
-		},
-		{
-			"[NaN]",
-			[]float64{floats.NaN64A},
-			floats.NaN64A,
-		},
-		{
-			"[NaN,NaN]",
-			[]float64{floats.NaN64A, floats.NaN64A},
-			floats.NaN64A,
-		},
-		{
-			"[NaN,1]",
-			[]float64{floats.NaN64A, 1.},
-			floats.NaN64A,
-		},
-		{
-			"[1,NaN]",
-			[]float64{1., floats.NaN64A},
-			floats.NaN64A,
-		},
-		{
-			"[1,NaN,NaN]",
-			[]float64{1., floats.NaN64A, floats.NaN64A},
-			floats.NaN64A,
-		},
-		{
-			"[2,NaN,1]",
-			[]float64{2., floats.NaN64A, 1.},
-			floats.NaN64A,
-		},
-		{
-			"[2,1,NaN]",
-			[]float64{2., 1., floats.NaN64A},
-			floats.NaN64A,
-		},
+	testCases := []sliceOrderedDynamicArrayTestCase[
+		[]float64,
+		float64,
+		float64,
+	]{
+		{[]float64{1.}, 1.},
+		{[]float64{1., 1.}, 1.},
+		{[]float64{1., 2.}, 1.},
+		{[]float64{2., 1.}, 1.},
+		{[]float64{2., 1., 1.}, 1.},
+		{[]float64{2., 1., 2.}, 1.},
+		{[]float64{2., 2., 1.}, 1.},
+		{[]float64{3., 1., 2.}, 1.},
+		{[]float64{3., 2., 1.}, 1.},
+		{[]float64{floats.NaN64A}, floats.NaN64A},
+		{[]float64{floats.NaN64A, floats.NaN64A}, floats.NaN64A},
+		{[]float64{floats.NaN64A, 1.}, floats.NaN64A},
+		{[]float64{1., floats.NaN64A}, floats.NaN64A},
+		{[]float64{1., floats.NaN64A, floats.NaN64A}, floats.NaN64A},
+		{[]float64{2., floats.NaN64A, 1.}, floats.NaN64A},
+		{[]float64{2., 1., floats.NaN64A}, floats.NaN64A},
 	}
 	testOrderedDynamicArrayMinMax(
 		t,
@@ -471,58 +380,23 @@ func TestOrderedDynamicArray_Min_WrapFloatSlice_Float64(t *testing.T) {
 			return oda.Min()
 		},
 		testCases,
+		realSliceToName,
 	)
 }
 
 func TestOrderedDynamicArray_Max_WrapSlice_IntPair(t *testing.T) {
 	t.Parallel()
 
-	testCases := []sliceOrderedDynamicArrayTestCase[[2]int, [2]int]{
-		{
-			"[{1,0}]",
-			[][2]int{{1, 0}},
-			[2]int{1, 0},
-		},
-		{
-			"[{1,0},{1,1}]",
-			[][2]int{{1, 0}, {1, 1}},
-			[2]int{1, 0},
-		},
-		{
-			"[{1,0},{2,1}]",
-			[][2]int{{1, 0}, {2, 1}},
-			[2]int{2, 1},
-		},
-		{
-			"[{2,0},{1,1}]",
-			[][2]int{{2, 0}, {1, 1}},
-			[2]int{2, 0},
-		},
-		{
-			"[{1,0},{1,1},{2,2}]",
-			[][2]int{{1, 0}, {1, 1}, {2, 2}},
-			[2]int{2, 2},
-		},
-		{
-			"[{1,0},{2,1},{1,2}]",
-			[][2]int{{1, 0}, {2, 1}, {1, 2}},
-			[2]int{2, 1},
-		},
-		{
-			"[{1,0},{2,1},{2,2}]",
-			[][2]int{{1, 0}, {2, 1}, {2, 2}},
-			[2]int{2, 1},
-		},
-		{
-			"[{1,0},{2,1},{3,2}]",
-			[][2]int{{1, 0}, {2, 1}, {3, 2}},
-			[2]int{3, 2},
-		},
-		{
-			"[{1,0},{3,1},{2,2}]",
-			[][2]int{{1, 0}, {3, 1}, {2, 2}},
-			[2]int{3, 1},
-		},
+	testCases := []sliceOrderedDynamicArrayTestCase[[][2]int, [2]int, [2]int]{
+		{[][2]int{{1, 0}}, [2]int{1, 0}},
+		{[][2]int{{1, 0}, {1, 1}}, [2]int{1, 0}},
+		{[][2]int{{1, 0}, {2, 1}}, [2]int{2, 1}},
+		{[][2]int{{2, 0}, {1, 1}}, [2]int{2, 0}},
+		{[][2]int{{1, 0}, {1, 1}, {2, 2}}, [2]int{2, 2}},
+		{[][2]int{{1, 0}, {2, 1}, {1, 2}}, [2]int{2, 1}},
+		{[][2]int{{1, 0}, {2, 1}, {2, 2}}, [2]int{2, 1}},
+		{[][2]int{{1, 0}, {2, 1}, {3, 2}}, [2]int{3, 2}},
+		{[][2]int{{1, 0}, {3, 1}, {2, 2}}, [2]int{3, 1}},
 	}
 	testOrderedDynamicArrayMinMax(
 		t,
@@ -547,22 +421,23 @@ func TestOrderedDynamicArray_Max_WrapSlice_IntPair(t *testing.T) {
 			return oda.Max()
 		},
 		testCases,
+		realPairSliceToName,
 	)
 }
 
 func TestOrderedDynamicArray_Max_WrapStrictWeakOrderedSlice_Int(t *testing.T) {
 	t.Parallel()
 
-	testCases := []sliceOrderedDynamicArrayTestCase[int, int]{
-		{"[1]", []int{1}, 1},
-		{"[1,1]", []int{1, 1}, 1},
-		{"[1,2]", []int{1, 2}, 2},
-		{"[2,1]", []int{2, 1}, 2},
-		{"[1,1,2]", []int{1, 1, 2}, 2},
-		{"[1,2,1]", []int{1, 2, 1}, 2},
-		{"[1,2,2]", []int{1, 2, 2}, 2},
-		{"[1,2,3]", []int{1, 2, 3}, 3},
-		{"[1,3,2]", []int{1, 3, 2}, 3},
+	testCases := []sliceOrderedDynamicArrayTestCase[[]int, int, int]{
+		{[]int{1}, 1},
+		{[]int{1, 1}, 1},
+		{[]int{1, 2}, 2},
+		{[]int{2, 1}, 2},
+		{[]int{1, 1, 2}, 2},
+		{[]int{1, 2, 1}, 2},
+		{[]int{1, 2, 2}, 2},
+		{[]int{1, 2, 3}, 3},
+		{[]int{1, 3, 2}, 3},
 	}
 	testOrderedDynamicArrayMinMax(
 		t,
@@ -573,93 +448,34 @@ func TestOrderedDynamicArray_Max_WrapStrictWeakOrderedSlice_Int(t *testing.T) {
 			return oda.Max()
 		},
 		testCases,
+		realSliceToName,
 	)
 }
 
 func TestOrderedDynamicArray_Max_WrapFloatSlice_Float64(t *testing.T) {
 	t.Parallel()
 
-	testCases := []sliceOrderedDynamicArrayTestCase[float64, float64]{
-		{
-			"[1]",
-			[]float64{1.},
-			1.,
-		},
-		{
-			"[1,1]",
-			[]float64{1., 1.},
-			1.,
-		},
-		{
-			"[1,2]",
-			[]float64{1., 2.},
-			2.,
-		},
-		{
-			"[2,1]",
-			[]float64{2., 1.},
-			2.,
-		},
-		{
-			"[1,1,2]",
-			[]float64{1., 1., 2.},
-			2.,
-		},
-		{
-			"[1,2,1]",
-			[]float64{1., 2., 1.},
-			2.,
-		},
-		{
-			"[1,2,2]",
-			[]float64{1., 2., 2.},
-			2.,
-		},
-		{
-			"[1,2,3]",
-			[]float64{1., 2., 3.},
-			3.,
-		},
-		{
-			"[1,3,2]",
-			[]float64{1., 3., 2.},
-			3.,
-		},
-		{
-			"[NaN]",
-			[]float64{floats.NaN64A},
-			floats.NaN64A,
-		},
-		{
-			"[NaN,NaN]",
-			[]float64{floats.NaN64A, floats.NaN64A},
-			floats.NaN64A,
-		},
-		{
-			"[NaN,1]",
-			[]float64{floats.NaN64A, 1.},
-			1.,
-		},
-		{
-			"[1,NaN]",
-			[]float64{1., floats.NaN64A},
-			1.,
-		},
-		{
-			"[1,NaN,NaN]",
-			[]float64{1., floats.NaN64A, floats.NaN64A},
-			1.,
-		},
-		{
-			"[1,NaN,2]",
-			[]float64{1., floats.NaN64A, 2.},
-			2.,
-		},
-		{
-			"[1,2,NaN]",
-			[]float64{1., 2., floats.NaN64A},
-			2.,
-		},
+	testCases := []sliceOrderedDynamicArrayTestCase[
+		[]float64,
+		float64,
+		float64,
+	]{
+		{[]float64{1.}, 1.},
+		{[]float64{1., 1.}, 1.},
+		{[]float64{1., 2.}, 2.},
+		{[]float64{2., 1.}, 2.},
+		{[]float64{1., 1., 2.}, 2.},
+		{[]float64{1., 2., 1.}, 2.},
+		{[]float64{1., 2., 2.}, 2.},
+		{[]float64{1., 2., 3.}, 3.},
+		{[]float64{1., 3., 2.}, 3.},
+		{[]float64{floats.NaN64A}, floats.NaN64A},
+		{[]float64{floats.NaN64A, floats.NaN64A}, floats.NaN64A},
+		{[]float64{floats.NaN64A, 1.}, 1.},
+		{[]float64{1., floats.NaN64A}, 1.},
+		{[]float64{1., floats.NaN64A, floats.NaN64A}, 1.},
+		{[]float64{1., floats.NaN64A, 2.}, 2.},
+		{[]float64{1., 2., floats.NaN64A}, 2.},
 	}
 	testOrderedDynamicArrayMinMax(
 		t,
@@ -670,19 +486,22 @@ func TestOrderedDynamicArray_Max_WrapFloatSlice_Float64(t *testing.T) {
 			return oda.Max()
 		},
 		testCases,
+		sliceToName,
 	)
 }
 
-func testOrderedDynamicArrayMinMax[Item comparable]( //nolint:thelper // this is the main body, not a helper
+func testOrderedDynamicArrayMinMax[ //nolint:thelper // this is the main body, not a helper
+	S constraints.Slice[Item],
+	Item comparable,
+](
 	t *testing.T,
-	getOrderedDynamicArray func(
-		slicePtr *[]Item,
-	) array.OrderedDynamicArray[Item],
+	getOrderedDynamicArray func(slicePtr *S) array.OrderedDynamicArray[Item],
 	minOrMaxMethod func(oda array.OrderedDynamicArray[Item]) Item,
-	testCases []sliceOrderedDynamicArrayTestCase[Item, Item],
+	testCases []sliceOrderedDynamicArrayTestCase[S, Item, Item],
+	sliceToNameFn func(S) string,
 ) {
 	for _, tc := range testCases {
-		t.Run("s="+tc.sliceName, func(t *testing.T) {
+		t.Run("s="+sliceToNameFn(tc.slice), func(t *testing.T) {
 			t.Parallel()
 
 			s := slices.Clone(tc.slice)
@@ -698,102 +517,26 @@ func testOrderedDynamicArrayMinMax[Item comparable]( //nolint:thelper // this is
 func TestOrderedDynamicArray_IsSorted_WrapSlice_IntPair(t *testing.T) {
 	t.Parallel()
 
-	testCases := []sliceOrderedDynamicArrayTestCase[[2]int, bool]{
-		{
-			"<nil>",
-			nil,
-			true,
-		},
-		{
-			"[]",
-			[][2]int{},
-			true,
-		},
-		{
-			"[{1,0}]",
-			[][2]int{{1, 0}},
-			true,
-		},
-		{
-			"[{1,0},{1,1}]",
-			[][2]int{{1, 0}, {1, 1}},
-			true,
-		},
-		{
-			"[{1,0},{2,1}]",
-			[][2]int{{1, 0}, {2, 1}},
-			true,
-		},
-		{
-			"[{2,0},{1,1}]",
-			[][2]int{{2, 0}, {1, 1}},
-			false,
-		},
-		{
-			"[{1,0},{1,1},{1,2}]",
-			[][2]int{{1, 0}, {1, 1}, {1, 2}},
-			true,
-		},
-		{
-			"[{1,0},{1,1},{2,2}]",
-			[][2]int{{1, 0}, {1, 1}, {2, 2}},
-			true,
-		},
-		{
-			"[{1,0},{2,1},{1,2}]",
-			[][2]int{{1, 0}, {2, 1}, {1, 2}},
-			false,
-		},
-		{
-			"[{1,0},{2,1},{2,2}]",
-			[][2]int{{1, 0}, {2, 1}, {2, 2}},
-			true,
-		},
-		{
-			"[{1,0},{2,1},{3,2}]",
-			[][2]int{{1, 0}, {2, 1}, {3, 2}},
-			true,
-		},
-		{
-			"[{1,0},{3,1},{2,2}]",
-			[][2]int{{1, 0}, {3, 1}, {2, 2}},
-			false,
-		},
-		{
-			"[{2,0},{1,1},{1,2}]",
-			[][2]int{{2, 0}, {1, 1}, {1, 2}},
-			false,
-		},
-		{
-			"[{2,0},{1,1},{2,2}]",
-			[][2]int{{2, 0}, {1, 1}, {2, 2}},
-			false,
-		},
-		{
-			"[{2,0},{1,1},{3,2}]",
-			[][2]int{{2, 0}, {1, 1}, {3, 2}},
-			false,
-		},
-		{
-			"[{2,0},{2,1},{1,2}]",
-			[][2]int{{2, 0}, {2, 1}, {1, 2}},
-			false,
-		},
-		{
-			"[{2,0},{3,1},{1,2}]",
-			[][2]int{{2, 0}, {3, 1}, {1, 2}},
-			false,
-		},
-		{
-			"[{3,0},{1,1},{2,2}]",
-			[][2]int{{3, 0}, {1, 1}, {2, 2}},
-			false,
-		},
-		{
-			"[{3,0},{2,1},{1,2}]",
-			[][2]int{{3, 0}, {2, 1}, {1, 2}},
-			false,
-		},
+	testCases := []sliceOrderedDynamicArrayTestCase[[][2]int, [2]int, bool]{
+		{nil, true},
+		{[][2]int{}, true},
+		{[][2]int{{1, 0}}, true},
+		{[][2]int{{1, 0}, {1, 1}}, true},
+		{[][2]int{{1, 0}, {2, 1}}, true},
+		{[][2]int{{2, 0}, {1, 1}}, false},
+		{[][2]int{{1, 0}, {1, 1}, {1, 2}}, true},
+		{[][2]int{{1, 0}, {1, 1}, {2, 2}}, true},
+		{[][2]int{{1, 0}, {2, 1}, {1, 2}}, false},
+		{[][2]int{{1, 0}, {2, 1}, {2, 2}}, true},
+		{[][2]int{{1, 0}, {2, 1}, {3, 2}}, true},
+		{[][2]int{{1, 0}, {3, 1}, {2, 2}}, false},
+		{[][2]int{{2, 0}, {1, 1}, {1, 2}}, false},
+		{[][2]int{{2, 0}, {1, 1}, {2, 2}}, false},
+		{[][2]int{{2, 0}, {1, 1}, {3, 2}}, false},
+		{[][2]int{{2, 0}, {2, 1}, {1, 2}}, false},
+		{[][2]int{{2, 0}, {3, 1}, {1, 2}}, false},
+		{[][2]int{{3, 0}, {1, 1}, {2, 2}}, false},
+		{[][2]int{{3, 0}, {2, 1}, {1, 2}}, false},
 	}
 	testOrderedDynamicArrayIsSorted(
 		t,
@@ -815,6 +558,7 @@ func TestOrderedDynamicArray_IsSorted_WrapSlice_IntPair(t *testing.T) {
 			)
 		},
 		testCases,
+		realPairSliceToName,
 	)
 }
 
@@ -823,26 +567,26 @@ func TestOrderedDynamicArray_IsSorted_WrapStrictWeakOrderedSlice_Int(
 ) {
 	t.Parallel()
 
-	testCases := []sliceOrderedDynamicArrayTestCase[int, bool]{
-		{"<nil>", nil, true},
-		{"[]", []int{}, true},
-		{"[1]", []int{1}, true},
-		{"[1,1]", []int{1, 1}, true},
-		{"[1,2]", []int{1, 2}, true},
-		{"[2,1]", []int{2, 1}, false},
-		{"[1,1,1]", []int{1, 1, 1}, true},
-		{"[1,1,2]", []int{1, 1, 2}, true},
-		{"[1,2,1]", []int{1, 2, 1}, false},
-		{"[1,2,2]", []int{1, 2, 2}, true},
-		{"[1,2,3]", []int{1, 2, 3}, true},
-		{"[1,3,2]", []int{1, 3, 2}, false},
-		{"[2,1,1]", []int{2, 1, 1}, false},
-		{"[2,1,2]", []int{2, 1, 2}, false},
-		{"[2,1,3]", []int{2, 1, 3}, false},
-		{"[2,2,1]", []int{2, 2, 1}, false},
-		{"[2,3,1]", []int{2, 3, 1}, false},
-		{"[3,1,2]", []int{3, 1, 2}, false},
-		{"[3,2,1]", []int{3, 2, 1}, false},
+	testCases := []sliceOrderedDynamicArrayTestCase[[]int, int, bool]{
+		{nil, true},
+		{[]int{}, true},
+		{[]int{1}, true},
+		{[]int{1, 1}, true},
+		{[]int{1, 2}, true},
+		{[]int{2, 1}, false},
+		{[]int{1, 1, 1}, true},
+		{[]int{1, 1, 2}, true},
+		{[]int{1, 2, 1}, false},
+		{[]int{1, 2, 2}, true},
+		{[]int{1, 2, 3}, true},
+		{[]int{1, 3, 2}, false},
+		{[]int{2, 1, 1}, false},
+		{[]int{2, 1, 2}, false},
+		{[]int{2, 1, 3}, false},
+		{[]int{2, 2, 1}, false},
+		{[]int{2, 3, 1}, false},
+		{[]int{3, 1, 2}, false},
+		{[]int{3, 2, 1}, false},
 	}
 	testOrderedDynamicArrayIsSorted(
 		t,
@@ -850,131 +594,38 @@ func TestOrderedDynamicArray_IsSorted_WrapStrictWeakOrderedSlice_Int(
 			return array.WrapStrictWeakOrderedSlice(slicePtr)
 		},
 		testCases,
+		realSliceToName,
 	)
 }
 
 func TestOrderedDynamicArray_IsSorted_WrapFloatSlice_Float64(t *testing.T) {
 	t.Parallel()
 
-	testCases := []sliceOrderedDynamicArrayTestCase[float64, bool]{
+	testCases := []sliceOrderedDynamicArrayTestCase[[]float64, float64, bool]{
+		{nil, true},
+		{[]float64{}, true},
+		{[]float64{1.}, true},
+		{[]float64{1., 1.}, true},
+		{[]float64{1., 2.}, true},
+		{[]float64{2., 1.}, false},
+		{[]float64{1., 1., 1.}, true},
+		{[]float64{1., 1., 2.}, true},
+		{[]float64{1., 2., 1.}, false},
+		{[]float64{1., 2., 2.}, true},
+		{[]float64{1., 2., 3.}, true},
+		{[]float64{1., 3., 2.}, false},
+		{[]float64{2., 1., 1.}, false},
+		{[]float64{2., 1., 2.}, false},
+		{[]float64{2., 1., 3.}, false},
+		{[]float64{2., 2., 1.}, false},
+		{[]float64{2., 3., 1.}, false},
+		{[]float64{3., 1., 2.}, false},
+		{[]float64{3., 2., 1.}, false},
+		{[]float64{floats.NaN64A}, true},
+		{[]float64{floats.NaN64A, floats.NaN64B}, true},
+		{[]float64{floats.NaN64A, 1.}, true},
+		{[]float64{1., floats.NaN64A}, false},
 		{
-			"<nil>",
-			nil,
-			true,
-		},
-		{
-			"[]",
-			[]float64{},
-			true,
-		},
-		{
-			"[1]",
-			[]float64{1.},
-			true,
-		},
-		{
-			"[1,1]",
-			[]float64{1., 1.},
-			true,
-		},
-		{
-			"[1,2]",
-			[]float64{1., 2.},
-			true,
-		},
-		{
-			"[2,1]",
-			[]float64{2., 1.},
-			false,
-		},
-		{
-			"[1,1,1]",
-			[]float64{1., 1., 1.},
-			true,
-		},
-		{
-			"[1,1,2]",
-			[]float64{1., 1., 2.},
-			true,
-		},
-		{
-			"[1,2,1]",
-			[]float64{1., 2., 1.},
-			false,
-		},
-		{
-			"[1,2,2]",
-			[]float64{1., 2., 2.},
-			true,
-		},
-		{
-			"[1,2,3]",
-			[]float64{1., 2., 3.},
-			true,
-		},
-		{
-			"[1,3,2]",
-			[]float64{1., 3., 2.},
-			false,
-		},
-		{
-			"[2,1,1]",
-			[]float64{2., 1., 1.},
-			false,
-		},
-		{
-			"[2,1,2]",
-			[]float64{2., 1., 2.},
-			false,
-		},
-		{
-			"[2,1,3]",
-			[]float64{2., 1., 3.},
-			false,
-		},
-		{
-			"[2,2,1]",
-			[]float64{2., 2., 1.},
-			false,
-		},
-		{
-			"[2,3,1]",
-			[]float64{2., 3., 1.},
-			false,
-		},
-		{
-			"[3,1,2]",
-			[]float64{3., 1., 2.},
-			false,
-		},
-		{
-			"[3,2,1]",
-			[]float64{3., 2., 1.},
-			false,
-		},
-		{
-			"[NaN]",
-			[]float64{floats.NaN64A},
-			true,
-		},
-		{
-			"[NaN,NaN]",
-			[]float64{floats.NaN64A, floats.NaN64B},
-			true,
-		},
-		{
-			"[NaN,1]",
-			[]float64{floats.NaN64A, 1.},
-			true,
-		},
-		{
-			"[1,NaN]",
-			[]float64{1., floats.NaN64A},
-			false,
-		},
-		{
-			"[NaN,-Inf,-MaxFloat64,-3.14,-1,-0.1,-SmallestNonzeroFloat64," +
-				"-0,0,SmallestNonzeroFloat64,0.1,1,3.14,MaxFloat64,+Inf]",
 			[]float64{
 				floats.NaN64A, floats.NegInf64, -floats.MaxFloat64,
 				-3.14, -1., -.1, -floats.SmallestNonzeroFloat64,
@@ -984,8 +635,6 @@ func TestOrderedDynamicArray_IsSorted_WrapFloatSlice_Float64(t *testing.T) {
 			true,
 		},
 		{
-			"[-Inf,-MaxFloat64,-3.14,-1,-0.1,-SmallestNonzeroFloat64,-0," +
-				"0,SmallestNonzeroFloat64,0.1,1,3.14,MaxFloat64,+Inf,NaN]",
 			[]float64{
 				floats.NegInf64, -floats.MaxFloat64, -3.14, -1., -.1,
 				-floats.SmallestNonzeroFloat64, floats.NegZero64,
@@ -1001,18 +650,21 @@ func TestOrderedDynamicArray_IsSorted_WrapFloatSlice_Float64(t *testing.T) {
 			return array.WrapFloatSlice(slicePtr)
 		},
 		testCases,
+		realSliceToName,
 	)
 }
 
-func testOrderedDynamicArrayIsSorted[Item any]( //nolint:thelper // this is the main body, not a helper
+func testOrderedDynamicArrayIsSorted[ //nolint:thelper // this is the main body, not a helper
+	S constraints.Slice[Item],
+	Item any,
+](
 	t *testing.T,
-	getOrderedDynamicArray func(
-		slicePtr *[]Item,
-	) array.OrderedDynamicArray[Item],
-	testCases []sliceOrderedDynamicArrayTestCase[Item, bool],
+	getOrderedDynamicArray func(slicePtr *S) array.OrderedDynamicArray[Item],
+	testCases []sliceOrderedDynamicArrayTestCase[S, Item, bool],
+	sliceToNameFn func(S) string,
 ) {
 	for _, tc := range testCases {
-		t.Run("s="+tc.sliceName, func(t *testing.T) {
+		t.Run("s="+sliceToNameFn(tc.slice), func(t *testing.T) {
 			t.Parallel()
 
 			s := slices.Clone(tc.slice)
@@ -1028,24 +680,24 @@ func testOrderedDynamicArrayIsSorted[Item any]( //nolint:thelper // this is the 
 func TestOrderedDynamicArray_Sort_WrapSlice_IntPair(t *testing.T) {
 	t.Parallel()
 
-	testCases := []sliceOrderedDynamicArrayTestCase[[2]int, [][][2]int]{
+	testCases := []sliceOrderedDynamicArrayTestCase[
+		[][2]int,
+		[2]int,
+		[][][2]int,
+	]{
 		{
-			"<nil>",
 			nil,
 			[][][2]int{nil},
 		},
 		{
-			"[]",
 			[][2]int{},
 			[][][2]int{{}},
 		},
 		{
-			"[{1,0}]",
 			[][2]int{{1, 0}},
 			[][][2]int{{{1, 0}}},
 		},
 		{
-			"[{1,0},{1,1}]",
 			[][2]int{{1, 0}, {1, 1}},
 			[][][2]int{
 				{{1, 0}, {1, 1}},
@@ -1053,17 +705,14 @@ func TestOrderedDynamicArray_Sort_WrapSlice_IntPair(t *testing.T) {
 			},
 		},
 		{
-			"[{1,0},{2,1}]",
 			[][2]int{{1, 0}, {2, 1}},
 			[][][2]int{{{1, 0}, {2, 1}}},
 		},
 		{
-			"[{2,0},{1,1}]",
 			[][2]int{{2, 0}, {1, 1}},
 			[][][2]int{{{1, 1}, {2, 0}}},
 		},
 		{
-			"[{1,0},{1,1},{1,2}]",
 			[][2]int{{1, 0}, {1, 1}, {1, 2}},
 			[][][2]int{
 				{{1, 0}, {1, 1}, {1, 2}},
@@ -1075,7 +724,6 @@ func TestOrderedDynamicArray_Sort_WrapSlice_IntPair(t *testing.T) {
 			},
 		},
 		{
-			"[{1,0},{1,1},{2,2}]",
 			[][2]int{{1, 0}, {1, 1}, {2, 2}},
 			[][][2]int{
 				{{1, 0}, {1, 1}, {2, 2}},
@@ -1083,7 +731,6 @@ func TestOrderedDynamicArray_Sort_WrapSlice_IntPair(t *testing.T) {
 			},
 		},
 		{
-			"[{1,0},{2,1},{1,2}]",
 			[][2]int{{1, 0}, {2, 1}, {1, 2}},
 			[][][2]int{
 				{{1, 0}, {1, 2}, {2, 1}},
@@ -1091,7 +738,6 @@ func TestOrderedDynamicArray_Sort_WrapSlice_IntPair(t *testing.T) {
 			},
 		},
 		{
-			"[{1,0},{2,1},{2,2}]",
 			[][2]int{{1, 0}, {2, 1}, {2, 2}},
 			[][][2]int{
 				{{1, 0}, {2, 1}, {2, 2}},
@@ -1099,17 +745,14 @@ func TestOrderedDynamicArray_Sort_WrapSlice_IntPair(t *testing.T) {
 			},
 		},
 		{
-			"[{1,0},{2,1},{3,2}]",
 			[][2]int{{1, 0}, {2, 1}, {3, 2}},
 			[][][2]int{{{1, 0}, {2, 1}, {3, 2}}},
 		},
 		{
-			"[{1,0},{3,1},{2,2}]",
 			[][2]int{{1, 0}, {3, 1}, {2, 2}},
 			[][][2]int{{{1, 0}, {2, 2}, {3, 1}}},
 		},
 		{
-			"[{2,0},{1,1},{1,2}]",
 			[][2]int{{2, 0}, {1, 1}, {1, 2}},
 			[][][2]int{
 				{{1, 1}, {1, 2}, {2, 0}},
@@ -1117,7 +760,6 @@ func TestOrderedDynamicArray_Sort_WrapSlice_IntPair(t *testing.T) {
 			},
 		},
 		{
-			"[{2,0},{1,1},{2,2}]",
 			[][2]int{{2, 0}, {1, 1}, {2, 2}},
 			[][][2]int{
 				{{1, 1}, {2, 0}, {2, 2}},
@@ -1125,12 +767,10 @@ func TestOrderedDynamicArray_Sort_WrapSlice_IntPair(t *testing.T) {
 			},
 		},
 		{
-			"[{2,0},{1,1},{3,2}]",
 			[][2]int{{2, 0}, {1, 1}, {3, 2}},
 			[][][2]int{{{1, 1}, {2, 0}, {3, 2}}},
 		},
 		{
-			"[{2,0},{2,1},{1,2}]",
 			[][2]int{{2, 0}, {2, 1}, {1, 2}},
 			[][][2]int{
 				{{1, 2}, {2, 0}, {2, 1}},
@@ -1138,17 +778,14 @@ func TestOrderedDynamicArray_Sort_WrapSlice_IntPair(t *testing.T) {
 			},
 		},
 		{
-			"[{2,0},{3,1},{1,2}]",
 			[][2]int{{2, 0}, {3, 1}, {1, 2}},
 			[][][2]int{{{1, 2}, {2, 0}, {3, 1}}},
 		},
 		{
-			"[{3,0},{1,1},{2,2}]",
 			[][2]int{{3, 0}, {1, 1}, {2, 2}},
 			[][][2]int{{{1, 1}, {2, 2}, {3, 0}}},
 		},
 		{
-			"[{3,0},{2,1},{1,2}]",
 			[][2]int{{3, 0}, {2, 1}, {1, 2}},
 			[][][2]int{{{1, 2}, {2, 1}, {3, 0}}},
 		},
@@ -1173,32 +810,33 @@ func TestOrderedDynamicArray_Sort_WrapSlice_IntPair(t *testing.T) {
 			)
 		},
 		testCases,
+		realPairSliceToName,
 	)
 }
 
 func TestOrderedDynamicArray_Sort_WrapStrictWeakOrderedSlice_Int(t *testing.T) {
 	t.Parallel()
 
-	testCases := []sliceOrderedDynamicArrayTestCase[int, [][]int]{
-		{"<nil>", nil, [][]int{nil}},
-		{"[]", []int{}, [][]int{{}}},
-		{"[1]", []int{1}, [][]int{{1}}},
-		{"[1,1]", []int{1, 1}, [][]int{{1, 1}}},
-		{"[1,2]", []int{1, 2}, [][]int{{1, 2}}},
-		{"[2,1]", []int{2, 1}, [][]int{{1, 2}}},
-		{"[1,1,1]", []int{1, 1, 1}, [][]int{{1, 1, 1}}},
-		{"[1,1,2]", []int{1, 1, 2}, [][]int{{1, 1, 2}}},
-		{"[1,2,1]", []int{1, 2, 1}, [][]int{{1, 1, 2}}},
-		{"[1,2,2]", []int{1, 2, 2}, [][]int{{1, 2, 2}}},
-		{"[1,2,3]", []int{1, 2, 3}, [][]int{{1, 2, 3}}},
-		{"[1,3,2]", []int{1, 3, 2}, [][]int{{1, 2, 3}}},
-		{"[2,1,1]", []int{2, 1, 1}, [][]int{{1, 1, 2}}},
-		{"[2,1,2]", []int{2, 1, 2}, [][]int{{1, 2, 2}}},
-		{"[2,1,3]", []int{2, 1, 3}, [][]int{{1, 2, 3}}},
-		{"[2,2,1]", []int{2, 2, 1}, [][]int{{1, 2, 2}}},
-		{"[2,3,1]", []int{2, 3, 1}, [][]int{{1, 2, 3}}},
-		{"[3,1,2]", []int{3, 1, 2}, [][]int{{1, 2, 3}}},
-		{"[3,2,1]", []int{3, 2, 1}, [][]int{{1, 2, 3}}},
+	testCases := []sliceOrderedDynamicArrayTestCase[[]int, int, [][]int]{
+		{nil, [][]int{nil}},
+		{[]int{}, [][]int{{}}},
+		{[]int{1}, [][]int{{1}}},
+		{[]int{1, 1}, [][]int{{1, 1}}},
+		{[]int{1, 2}, [][]int{{1, 2}}},
+		{[]int{2, 1}, [][]int{{1, 2}}},
+		{[]int{1, 1, 1}, [][]int{{1, 1, 1}}},
+		{[]int{1, 1, 2}, [][]int{{1, 1, 2}}},
+		{[]int{1, 2, 1}, [][]int{{1, 1, 2}}},
+		{[]int{1, 2, 2}, [][]int{{1, 2, 2}}},
+		{[]int{1, 2, 3}, [][]int{{1, 2, 3}}},
+		{[]int{1, 3, 2}, [][]int{{1, 2, 3}}},
+		{[]int{2, 1, 1}, [][]int{{1, 1, 2}}},
+		{[]int{2, 1, 2}, [][]int{{1, 2, 2}}},
+		{[]int{2, 1, 3}, [][]int{{1, 2, 3}}},
+		{[]int{2, 2, 1}, [][]int{{1, 2, 2}}},
+		{[]int{2, 3, 1}, [][]int{{1, 2, 3}}},
+		{[]int{3, 1, 2}, [][]int{{1, 2, 3}}},
+		{[]int{3, 2, 1}, [][]int{{1, 2, 3}}},
 	}
 	testOrderedDynamicArraySort(
 		t,
@@ -1206,134 +844,48 @@ func TestOrderedDynamicArray_Sort_WrapStrictWeakOrderedSlice_Int(t *testing.T) {
 			return array.WrapStrictWeakOrderedSlice(slicePtr)
 		},
 		testCases,
+		realSliceToName,
 	)
 }
 
 func TestOrderedDynamicArray_Sort_WrapFloatSlice_Float64(t *testing.T) {
 	t.Parallel()
 
-	testCases := []sliceOrderedDynamicArrayTestCase[float64, [][]float64]{
+	testCases := []sliceOrderedDynamicArrayTestCase[
+		[]float64,
+		float64,
+		[][]float64,
+	]{
+		{nil, [][]float64{nil}},
+		{[]float64{}, [][]float64{{}}},
+		{[]float64{1.}, [][]float64{{1.}}},
+		{[]float64{1., 1.}, [][]float64{{1., 1.}}},
+		{[]float64{1., 2.}, [][]float64{{1., 2.}}},
+		{[]float64{2., 1.}, [][]float64{{1., 2.}}},
+		{[]float64{1., 1., 1.}, [][]float64{{1., 1., 1.}}},
+		{[]float64{1., 1., 2.}, [][]float64{{1., 1., 2.}}},
+		{[]float64{1., 2., 1.}, [][]float64{{1., 1., 2.}}},
+		{[]float64{1., 2., 2.}, [][]float64{{1., 2., 2.}}},
+		{[]float64{1., 2., 3.}, [][]float64{{1., 2., 3.}}},
+		{[]float64{1., 3., 2.}, [][]float64{{1., 2., 3.}}},
+		{[]float64{2., 1., 1.}, [][]float64{{1., 1., 2.}}},
+		{[]float64{2., 1., 2.}, [][]float64{{1., 2., 2.}}},
+		{[]float64{2., 1., 3.}, [][]float64{{1., 2., 3.}}},
+		{[]float64{2., 2., 1.}, [][]float64{{1., 2., 2.}}},
+		{[]float64{2., 3., 1.}, [][]float64{{1., 2., 3.}}},
+		{[]float64{3., 1., 2.}, [][]float64{{1., 2., 3.}}},
+		{[]float64{3., 2., 1.}, [][]float64{{1., 2., 3.}}},
+		{[]float64{floats.NaN64A}, [][]float64{{floats.NaN64A}}},
 		{
-			"<nil>",
-			nil,
-			[][]float64{nil},
-		},
-		{
-			"[]",
-			[]float64{},
-			[][]float64{{}},
-		},
-		{
-			"[1]",
-			[]float64{1.},
-			[][]float64{{1.}},
-		},
-		{
-			"[1,1]",
-			[]float64{1., 1.},
-			[][]float64{{1., 1.}},
-		},
-		{
-			"[1,2]",
-			[]float64{1., 2.},
-			[][]float64{{1., 2.}},
-		},
-		{
-			"[2,1]",
-			[]float64{2., 1.},
-			[][]float64{{1., 2.}},
-		},
-		{
-			"[1,1,1]",
-			[]float64{1., 1., 1.},
-			[][]float64{{1., 1., 1.}},
-		},
-		{
-			"[1,1,2]",
-			[]float64{1., 1., 2.},
-			[][]float64{{1., 1., 2.}},
-		},
-		{
-			"[1,2,1]",
-			[]float64{1., 2., 1.},
-			[][]float64{{1., 1., 2.}},
-		},
-		{
-			"[1,2,2]",
-			[]float64{1., 2., 2.},
-			[][]float64{{1., 2., 2.}},
-		},
-		{
-			"[1,2,3]",
-			[]float64{1., 2., 3.},
-			[][]float64{{1., 2., 3.}},
-		},
-		{
-			"[1,3,2]",
-			[]float64{1., 3., 2.},
-			[][]float64{{1., 2., 3.}},
-		},
-		{
-			"[2,1,1]",
-			[]float64{2., 1., 1.},
-			[][]float64{{1., 1., 2.}},
-		},
-		{
-			"[2,1,2]",
-			[]float64{2., 1., 2.},
-			[][]float64{{1., 2., 2.}},
-		},
-		{
-			"[2,1,3]",
-			[]float64{2., 1., 3.},
-			[][]float64{{1., 2., 3.}},
-		},
-		{
-			"[2,2,1]",
-			[]float64{2., 2., 1.},
-			[][]float64{{1., 2., 2.}},
-		},
-		{
-			"[2,3,1]",
-			[]float64{2., 3., 1.},
-			[][]float64{{1., 2., 3.}},
-		},
-		{
-			"[3,1,2]",
-			[]float64{3., 1., 2.},
-			[][]float64{{1., 2., 3.}},
-		},
-		{
-			"[3,2,1]",
-			[]float64{3., 2., 1.},
-			[][]float64{{1., 2., 3.}},
-		},
-		{
-			"[NaN]",
-			[]float64{floats.NaN64A},
-			[][]float64{{floats.NaN64A}},
-		},
-		{
-			"[NaN,NaN]",
 			[]float64{floats.NaN64A, floats.NaN64B},
 			[][]float64{
 				{floats.NaN64A, floats.NaN64B},
 				{floats.NaN64B, floats.NaN64A},
 			},
 		},
+		{[]float64{floats.NaN64A, 1.}, [][]float64{{floats.NaN64A, 1.}}},
+		{[]float64{1., floats.NaN64A}, [][]float64{{floats.NaN64A, 1.}}},
 		{
-			"[NaN,1]",
-			[]float64{floats.NaN64A, 1.},
-			[][]float64{{floats.NaN64A, 1.}},
-		},
-		{
-			"[1,NaN]",
-			[]float64{1., floats.NaN64A},
-			[][]float64{{floats.NaN64A, 1.}},
-		},
-		{
-			"[NaN,-Inf,-MaxFloat64,-3.14,-1,-0.1,-SmallestNonzeroFloat64," +
-				"-0,0,SmallestNonzeroFloat64,0.1,1,3.14,MaxFloat64,+Inf]",
 			[]float64{
 				floats.NaN64A, floats.NegInf64, -floats.MaxFloat64,
 				-3.14, -1., -.1, -floats.SmallestNonzeroFloat64,
@@ -1356,8 +908,6 @@ func TestOrderedDynamicArray_Sort_WrapFloatSlice_Float64(t *testing.T) {
 			},
 		},
 		{
-			"[-Inf,-MaxFloat64,-3.14,-1,-0.1,-SmallestNonzeroFloat64,-0," +
-				"0,SmallestNonzeroFloat64,0.1,1,3.14,MaxFloat64,+Inf,NaN]",
 			[]float64{
 				floats.NegInf64, -floats.MaxFloat64, -3.14, -1., -.1,
 				-floats.SmallestNonzeroFloat64, floats.NegZero64,
@@ -1386,20 +936,23 @@ func TestOrderedDynamicArray_Sort_WrapFloatSlice_Float64(t *testing.T) {
 			return array.WrapFloatSlice(slicePtr)
 		},
 		testCases,
+		realSliceToName,
 	)
 }
 
-func testOrderedDynamicArraySort[Item comparable]( //nolint:thelper // this is the main body, not a helper
+func testOrderedDynamicArraySort[ //nolint:thelper // this is the main body, not a helper
+	S constraints.Slice[Item],
+	Item comparable,
+](
 	t *testing.T,
-	getOrderedDynamicArray func(
-		slicePtr *[]Item,
-	) array.OrderedDynamicArray[Item],
-	testCases []sliceOrderedDynamicArrayTestCase[Item, [][]Item],
+	getOrderedDynamicArray func(slicePtr *S) array.OrderedDynamicArray[Item],
+	testCases []sliceOrderedDynamicArrayTestCase[S, Item, []S],
+	sliceToNameFn func(S) string,
 ) {
-	eq := compare.EqualToSliceEqual[[]Item](compare.ReflexiveEqual, false)
+	eq := compare.EqualToSliceEqual[S](compare.ReflexiveEqual, false)
 
 	for _, tc := range testCases {
-		t.Run("s="+tc.sliceName, func(t *testing.T) {
+		t.Run("s="+sliceToNameFn(tc.slice), func(t *testing.T) {
 			t.Parallel()
 
 			s := slices.Clone(tc.slice)
@@ -1424,102 +977,26 @@ func testOrderedDynamicArraySort[Item comparable]( //nolint:thelper // this is t
 func TestOrderedDynamicArray_SortStable_WrapSlice_IntPair(t *testing.T) {
 	t.Parallel()
 
-	testCases := []sliceOrderedDynamicArrayTestCase[[2]int, [][2]int]{
-		{
-			"<nil>",
-			nil,
-			nil,
-		},
-		{
-			"[]",
-			[][2]int{},
-			[][2]int{},
-		},
-		{
-			"[{1,0}]",
-			[][2]int{{1, 0}},
-			[][2]int{{1, 0}},
-		},
-		{
-			"[{1,0},{1,1}]",
-			[][2]int{{1, 0}, {1, 1}},
-			[][2]int{{1, 0}, {1, 1}},
-		},
-		{
-			"[{1,0},{2,1}]",
-			[][2]int{{1, 0}, {2, 1}},
-			[][2]int{{1, 0}, {2, 1}},
-		},
-		{
-			"[{2,0},{1,1}]",
-			[][2]int{{2, 0}, {1, 1}},
-			[][2]int{{1, 1}, {2, 0}},
-		},
-		{
-			"[{1,0},{1,1},{1,2}]",
-			[][2]int{{1, 0}, {1, 1}, {1, 2}},
-			[][2]int{{1, 0}, {1, 1}, {1, 2}},
-		},
-		{
-			"[{1,0},{1,1},{2,2}]",
-			[][2]int{{1, 0}, {1, 1}, {2, 2}},
-			[][2]int{{1, 0}, {1, 1}, {2, 2}},
-		},
-		{
-			"[{1,0},{2,1},{1,2}]",
-			[][2]int{{1, 0}, {2, 1}, {1, 2}},
-			[][2]int{{1, 0}, {1, 2}, {2, 1}},
-		},
-		{
-			"[{1,0},{2,1},{2,2}]",
-			[][2]int{{1, 0}, {2, 1}, {2, 2}},
-			[][2]int{{1, 0}, {2, 1}, {2, 2}},
-		},
-		{
-			"[{1,0},{2,1},{3,2}]",
-			[][2]int{{1, 0}, {2, 1}, {3, 2}},
-			[][2]int{{1, 0}, {2, 1}, {3, 2}},
-		},
-		{
-			"[{1,0},{3,1},{2,2}]",
-			[][2]int{{1, 0}, {3, 1}, {2, 2}},
-			[][2]int{{1, 0}, {2, 2}, {3, 1}},
-		},
-		{
-			"[{2,0},{1,1},{1,2}]",
-			[][2]int{{2, 0}, {1, 1}, {1, 2}},
-			[][2]int{{1, 1}, {1, 2}, {2, 0}},
-		},
-		{
-			"[{2,0},{1,1},{2,2}]",
-			[][2]int{{2, 0}, {1, 1}, {2, 2}},
-			[][2]int{{1, 1}, {2, 0}, {2, 2}},
-		},
-		{
-			"[{2,0},{1,1},{3,2}]",
-			[][2]int{{2, 0}, {1, 1}, {3, 2}},
-			[][2]int{{1, 1}, {2, 0}, {3, 2}},
-		},
-		{
-			"[{2,0},{2,1},{1,2}]",
-			[][2]int{{2, 0}, {2, 1}, {1, 2}},
-			[][2]int{{1, 2}, {2, 0}, {2, 1}},
-		},
-		{
-			"[{2,0},{3,1},{1,2}]",
-			[][2]int{{2, 0}, {3, 1}, {1, 2}},
-			[][2]int{{1, 2}, {2, 0}, {3, 1}},
-		},
-		{
-			"[{3,0},{1,1},{2,2}]",
-			[][2]int{{3, 0}, {1, 1}, {2, 2}},
-			[][2]int{{1, 1}, {2, 2}, {3, 0}},
-		},
-		{
-			"[{3,0},{2,1},{1,2}]",
-			[][2]int{{3, 0}, {2, 1}, {1, 2}},
-			[][2]int{{1, 2}, {2, 1}, {3, 0}},
-		},
+	testCases := []sliceOrderedDynamicArrayTestCase[[][2]int, [2]int, [][2]int]{
+		{nil, nil},
+		{[][2]int{}, [][2]int{}},
+		{[][2]int{{1, 0}}, [][2]int{{1, 0}}},
+		{[][2]int{{1, 0}, {1, 1}}, [][2]int{{1, 0}, {1, 1}}},
+		{[][2]int{{1, 0}, {2, 1}}, [][2]int{{1, 0}, {2, 1}}},
+		{[][2]int{{2, 0}, {1, 1}}, [][2]int{{1, 1}, {2, 0}}},
+		{[][2]int{{1, 0}, {1, 1}, {1, 2}}, [][2]int{{1, 0}, {1, 1}, {1, 2}}},
+		{[][2]int{{1, 0}, {1, 1}, {2, 2}}, [][2]int{{1, 0}, {1, 1}, {2, 2}}},
+		{[][2]int{{1, 0}, {2, 1}, {1, 2}}, [][2]int{{1, 0}, {1, 2}, {2, 1}}},
+		{[][2]int{{1, 0}, {2, 1}, {2, 2}}, [][2]int{{1, 0}, {2, 1}, {2, 2}}},
+		{[][2]int{{1, 0}, {2, 1}, {3, 2}}, [][2]int{{1, 0}, {2, 1}, {3, 2}}},
+		{[][2]int{{1, 0}, {3, 1}, {2, 2}}, [][2]int{{1, 0}, {2, 2}, {3, 1}}},
+		{[][2]int{{2, 0}, {1, 1}, {1, 2}}, [][2]int{{1, 1}, {1, 2}, {2, 0}}},
+		{[][2]int{{2, 0}, {1, 1}, {2, 2}}, [][2]int{{1, 1}, {2, 0}, {2, 2}}},
+		{[][2]int{{2, 0}, {1, 1}, {3, 2}}, [][2]int{{1, 1}, {2, 0}, {3, 2}}},
+		{[][2]int{{2, 0}, {2, 1}, {1, 2}}, [][2]int{{1, 2}, {2, 0}, {2, 1}}},
+		{[][2]int{{2, 0}, {3, 1}, {1, 2}}, [][2]int{{1, 2}, {2, 0}, {3, 1}}},
+		{[][2]int{{3, 0}, {1, 1}, {2, 2}}, [][2]int{{1, 1}, {2, 2}, {3, 0}}},
+		{[][2]int{{3, 0}, {2, 1}, {1, 2}}, [][2]int{{1, 2}, {2, 1}, {3, 0}}},
 	}
 	testOrderedDynamicArraySortStable(
 		t,
@@ -1541,6 +1018,7 @@ func TestOrderedDynamicArray_SortStable_WrapSlice_IntPair(t *testing.T) {
 			)
 		},
 		testCases,
+		realPairSliceToName,
 	)
 }
 
@@ -1549,26 +1027,26 @@ func TestOrderedDynamicArray_SortStable_WrapStrictWeakOrderedSlice_Int(
 ) {
 	t.Parallel()
 
-	testCases := []sliceOrderedDynamicArrayTestCase[int, []int]{
-		{"<nil>", nil, nil},
-		{"[]", []int{}, []int{}},
-		{"[1]", []int{1}, []int{1}},
-		{"[1,1]", []int{1, 1}, []int{1, 1}},
-		{"[1,2]", []int{1, 2}, []int{1, 2}},
-		{"[2,1]", []int{2, 1}, []int{1, 2}},
-		{"[1,1,1]", []int{1, 1, 1}, []int{1, 1, 1}},
-		{"[1,1,2]", []int{1, 1, 2}, []int{1, 1, 2}},
-		{"[1,2,1]", []int{1, 2, 1}, []int{1, 1, 2}},
-		{"[1,2,2]", []int{1, 2, 2}, []int{1, 2, 2}},
-		{"[1,2,3]", []int{1, 2, 3}, []int{1, 2, 3}},
-		{"[1,3,2]", []int{1, 3, 2}, []int{1, 2, 3}},
-		{"[2,1,1]", []int{2, 1, 1}, []int{1, 1, 2}},
-		{"[2,1,2]", []int{2, 1, 2}, []int{1, 2, 2}},
-		{"[2,1,3]", []int{2, 1, 3}, []int{1, 2, 3}},
-		{"[2,2,1]", []int{2, 2, 1}, []int{1, 2, 2}},
-		{"[2,3,1]", []int{2, 3, 1}, []int{1, 2, 3}},
-		{"[3,1,2]", []int{3, 1, 2}, []int{1, 2, 3}},
-		{"[3,2,1]", []int{3, 2, 1}, []int{1, 2, 3}},
+	testCases := []sliceOrderedDynamicArrayTestCase[[]int, int, []int]{
+		{nil, nil},
+		{[]int{}, []int{}},
+		{[]int{1}, []int{1}},
+		{[]int{1, 1}, []int{1, 1}},
+		{[]int{1, 2}, []int{1, 2}},
+		{[]int{2, 1}, []int{1, 2}},
+		{[]int{1, 1, 1}, []int{1, 1, 1}},
+		{[]int{1, 1, 2}, []int{1, 1, 2}},
+		{[]int{1, 2, 1}, []int{1, 1, 2}},
+		{[]int{1, 2, 2}, []int{1, 2, 2}},
+		{[]int{1, 2, 3}, []int{1, 2, 3}},
+		{[]int{1, 3, 2}, []int{1, 2, 3}},
+		{[]int{2, 1, 1}, []int{1, 1, 2}},
+		{[]int{2, 1, 2}, []int{1, 2, 2}},
+		{[]int{2, 1, 3}, []int{1, 2, 3}},
+		{[]int{2, 2, 1}, []int{1, 2, 2}},
+		{[]int{2, 3, 1}, []int{1, 2, 3}},
+		{[]int{3, 1, 2}, []int{1, 2, 3}},
+		{[]int{3, 2, 1}, []int{1, 2, 3}},
 	}
 	testOrderedDynamicArraySortStable(
 		t,
@@ -1576,43 +1054,45 @@ func TestOrderedDynamicArray_SortStable_WrapStrictWeakOrderedSlice_Int(
 			return array.WrapStrictWeakOrderedSlice(slicePtr)
 		},
 		testCases,
+		realSliceToName,
 	)
 }
 
 func TestOrderedDynamicArray_SortStable_WrapFloatSlice_Float64(t *testing.T) {
 	t.Parallel()
 
-	testCases := []sliceOrderedDynamicArrayTestCase[float64, []float64]{
-		{"<nil>", nil, nil},
-		{"[]", []float64{}, []float64{}},
-		{"[1]", []float64{1.}, []float64{1.}},
-		{"[1,1]", []float64{1., 1.}, []float64{1., 1.}},
-		{"[1,2]", []float64{1., 2.}, []float64{1., 2.}},
-		{"[2,1]", []float64{2., 1.}, []float64{1., 2.}},
-		{"[1,1,1]", []float64{1., 1., 1.}, []float64{1., 1., 1.}},
-		{"[1,1,2]", []float64{1., 1., 2.}, []float64{1., 1., 2.}},
-		{"[1,2,1]", []float64{1., 2., 1.}, []float64{1., 1., 2.}},
-		{"[1,2,2]", []float64{1., 2., 2.}, []float64{1., 2., 2.}},
-		{"[1,2,3]", []float64{1., 2., 3.}, []float64{1., 2., 3.}},
-		{"[1,3,2]", []float64{1., 3., 2.}, []float64{1., 2., 3.}},
-		{"[2,1,1]", []float64{2., 1., 1.}, []float64{1., 1., 2.}},
-		{"[2,1,2]", []float64{2., 1., 2.}, []float64{1., 2., 2.}},
-		{"[2,1,3]", []float64{2., 1., 3.}, []float64{1., 2., 3.}},
-		{"[2,2,1]", []float64{2., 2., 1.}, []float64{1., 2., 2.}},
-		{"[2,3,1]", []float64{2., 3., 1.}, []float64{1., 2., 3.}},
-		{"[3,1,2]", []float64{3., 1., 2.}, []float64{1., 2., 3.}},
-		{"[3,2,1]", []float64{3., 2., 1.}, []float64{1., 2., 3.}},
-		{"[NaN]", []float64{floats.NaN64A}, []float64{floats.NaN64A}},
+	testCases := []sliceOrderedDynamicArrayTestCase[
+		[]float64,
+		float64,
+		[]float64,
+	]{
+		{nil, nil},
+		{[]float64{}, []float64{}},
+		{[]float64{1.}, []float64{1.}},
+		{[]float64{1., 1.}, []float64{1., 1.}},
+		{[]float64{1., 2.}, []float64{1., 2.}},
+		{[]float64{2., 1.}, []float64{1., 2.}},
+		{[]float64{1., 1., 1.}, []float64{1., 1., 1.}},
+		{[]float64{1., 1., 2.}, []float64{1., 1., 2.}},
+		{[]float64{1., 2., 1.}, []float64{1., 1., 2.}},
+		{[]float64{1., 2., 2.}, []float64{1., 2., 2.}},
+		{[]float64{1., 2., 3.}, []float64{1., 2., 3.}},
+		{[]float64{1., 3., 2.}, []float64{1., 2., 3.}},
+		{[]float64{2., 1., 1.}, []float64{1., 1., 2.}},
+		{[]float64{2., 1., 2.}, []float64{1., 2., 2.}},
+		{[]float64{2., 1., 3.}, []float64{1., 2., 3.}},
+		{[]float64{2., 2., 1.}, []float64{1., 2., 2.}},
+		{[]float64{2., 3., 1.}, []float64{1., 2., 3.}},
+		{[]float64{3., 1., 2.}, []float64{1., 2., 3.}},
+		{[]float64{3., 2., 1.}, []float64{1., 2., 3.}},
+		{[]float64{floats.NaN64A}, []float64{floats.NaN64A}},
 		{
-			"[NaN,NaN]",
 			[]float64{floats.NaN64A, floats.NaN64B},
 			[]float64{floats.NaN64A, floats.NaN64B},
 		},
-		{"[NaN,1]", []float64{floats.NaN64A, 1.}, []float64{floats.NaN64A, 1.}},
-		{"[1,NaN]", []float64{1., floats.NaN64A}, []float64{floats.NaN64A, 1.}},
+		{[]float64{floats.NaN64A, 1.}, []float64{floats.NaN64A, 1.}},
+		{[]float64{1., floats.NaN64A}, []float64{floats.NaN64A, 1.}},
 		{
-			"[NaN,-Inf,-MaxFloat64,-3.14,-1,-0.1,-SmallestNonzeroFloat64," +
-				"-0,0,SmallestNonzeroFloat64,0.1,1,3.14,MaxFloat64,+Inf]",
 			[]float64{
 				floats.NaN64A, floats.NegInf64, -floats.MaxFloat64,
 				-3.14, -1., -.1, -floats.SmallestNonzeroFloat64,
@@ -1627,8 +1107,6 @@ func TestOrderedDynamicArray_SortStable_WrapFloatSlice_Float64(t *testing.T) {
 			},
 		},
 		{
-			"[-Inf,-MaxFloat64,-3.14,-1,-0.1,-SmallestNonzeroFloat64,-0," +
-				"0,SmallestNonzeroFloat64,0.1,1,3.14,MaxFloat64,+Inf,NaN]",
 			[]float64{
 				floats.NegInf64, -floats.MaxFloat64, -3.14, -1., -.1,
 				-floats.SmallestNonzeroFloat64, floats.NegZero64,
@@ -1649,20 +1127,23 @@ func TestOrderedDynamicArray_SortStable_WrapFloatSlice_Float64(t *testing.T) {
 			return array.WrapFloatSlice(slicePtr)
 		},
 		testCases,
+		realSliceToName,
 	)
 }
 
-func testOrderedDynamicArraySortStable[Item comparable]( //nolint:thelper // this is the main body, not a helper
+func testOrderedDynamicArraySortStable[ //nolint:thelper // this is the main body, not a helper
+	S constraints.Slice[Item],
+	Item comparable,
+](
 	t *testing.T,
-	getOrderedDynamicArray func(
-		slicePtr *[]Item,
-	) array.OrderedDynamicArray[Item],
-	testCases []sliceOrderedDynamicArrayTestCase[Item, []Item],
+	getOrderedDynamicArray func(slicePtr *S) array.OrderedDynamicArray[Item],
+	testCases []sliceOrderedDynamicArrayTestCase[S, Item, S],
+	sliceToNameFn func(S) string,
 ) {
-	eq := compare.EqualToSliceEqual[[]Item](compare.ReflexiveEqual, false)
+	eq := compare.EqualToSliceEqual[S](compare.ReflexiveEqual, false)
 
 	for _, tc := range testCases {
-		t.Run("s="+tc.sliceName, func(t *testing.T) {
+		t.Run("s="+sliceToNameFn(tc.slice), func(t *testing.T) {
 			t.Parallel()
 
 			s := slices.Clone(tc.slice)
@@ -1824,20 +1305,19 @@ func TestOrderedDynamicArray_Compare_WrapFloatSlice_Float64(t *testing.T) {
 }
 
 func testOrderedDynamicArrayLessCompare[ //nolint:thelper // this is the main body, not a helper
+	S constraints.Slice[Item],
 	Item any,
 	Result comparable,
 ](
 	t *testing.T,
-	getOrderedDynamicArray func(
-		slicePtr *[]Item,
-	) array.OrderedDynamicArray[Item],
+	getOrderedDynamicArray func(slicePtr *S) array.OrderedDynamicArray[Item],
 	lessOrCompareMethod func(
 		oda array.OrderedDynamicArray[Item],
 		i int,
 		j int,
 	) Result,
 	lessOrCompareWantFn func(a, b Item) Result,
-	data []Item,
+	data S,
 ) {
 	s := slices.Clone(data)
 	oda := getOrderedDynamicArray(&s)
@@ -1856,4 +1336,27 @@ func testOrderedDynamicArrayLessCompare[ //nolint:thelper // this is the main bo
 			})
 		}
 	}
+}
+
+func realSliceToName[S constraints.Slice[R], R constraints.Real](
+	s S,
+) string {
+	return fmtcoll.MustFormatSliceToString(
+		s,
+		fmtcoll.NewDefaultSequenceFormat[R](),
+	)
+}
+
+func realPairSliceToName[S constraints.Slice[[2]R], R constraints.Real](
+	s S,
+) string {
+	return fmtcoll.MustFormatSliceToString(s, &fmtcoll.SequenceFormat[[2]R]{
+		CommonFormat: fmtcoll.CommonFormat{
+			Separator: ",",
+		},
+		FormatItemFn: func(w io.Writer, x [2]R) error {
+			_, err := fmt.Fprintf(w, "{%v,%v}", x[0], x[1])
+			return err
+		},
+	})
 }

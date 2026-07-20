@@ -438,14 +438,14 @@ func TestEqual(t *testing.T) {
 	)
 }
 
-func subtestEqual[T comparable]( //nolint:thelper // this is the main body, not a helper
+func subtestEqual[S constraints.Slice[T], T comparable]( //nolint:thelper // this is the main body, not a helper
 	t *testing.T,
 	name string,
-	data []T,
+	data S,
 ) {
-	eqGroups := make([][]T, len(data))
+	eqGroups := make([]S, len(data))
 	for i := range eqGroups {
-		eqGroups[i] = []T{data[i]}
+		eqGroups[i] = S{data[i]}
 	}
 
 	eqPairs, neqPairs := mkEqNeqPairs(eqGroups, 0, 0)
@@ -491,10 +491,13 @@ func TestReflexiveEqual(t *testing.T) {
 	)
 }
 
-func subtestReflexiveEqual[T comparable]( //nolint:thelper // this is the main body, not a helper
+func subtestReflexiveEqual[ //nolint:thelper // this is the main body, not a helper
+	S constraints.Slice[T],
+	T comparable,
+](
 	t *testing.T,
 	name string,
-	eqGroups [][]T,
+	eqGroups []S,
 ) {
 	eqPairs, neqPairs := mkEqNeqPairs(eqGroups, 0, 0)
 	subtestPairs(t, name, compare.ReflexiveEqual, eqPairs, neqPairs)
@@ -537,10 +540,13 @@ func TestFloatEqual(t *testing.T) {
 	)
 }
 
-func subtestFloatEqual[T constraints.Float]( //nolint:thelper // this is the main body, not a helper
+func subtestFloatEqual[ //nolint:thelper // this is the main body, not a helper
+	S constraints.Slice[T],
+	T constraints.Float,
+](
 	t *testing.T,
 	name string,
-	eqGroups [][]T,
+	eqGroups []S,
 ) {
 	eqPairs, neqPairs := mkEqNeqPairs(eqGroups, 0, 0)
 	subtestPairs(t, name, compare.FloatEqual, eqPairs, neqPairs)
@@ -723,11 +729,11 @@ func TestSliceEqual(t *testing.T) {
 	)
 }
 
-func subtestSliceEqual[T comparable]( //nolint:thelper // this is the main body, not a helper
+func subtestSliceEqual[S constraints.Slice[T], T comparable]( //nolint:thelper // this is the main body, not a helper
 	t *testing.T,
 	name string,
-	eqPairs [][2][]T,
-	neqPairs [][2][]T,
+	eqPairs [][2]S,
+	neqPairs [][2]S,
 ) {
 	subtestPairs(t, name, compare.SliceEqual, eqPairs, neqPairs)
 }
@@ -778,11 +784,14 @@ func TestFloatSliceEqual(t *testing.T) {
 	)
 }
 
-func subtestFloatSliceEqual[T constraints.Float]( //nolint:thelper // this is the main body, not a helper
+func subtestFloatSliceEqual[ //nolint:thelper // this is the main body, not a helper
+	S constraints.Slice[T],
+	T constraints.Float,
+](
 	t *testing.T,
 	name string,
-	eqPairs [][2][]T,
-	neqPairs [][2][]T,
+	eqPairs [][2]S,
+	neqPairs [][2]S,
 ) {
 	subtestPairs(t, name, compare.FloatSliceEqual, eqPairs, neqPairs)
 }
@@ -796,11 +805,11 @@ func TestAnySliceEqual(t *testing.T) {
 	subtestAnySliceEqual(t, "type=[]any", anySliceEqPairs, anySliceNeqPairs)
 }
 
-func subtestAnySliceEqual[T any]( //nolint:thelper // this is the main body, not a helper
+func subtestAnySliceEqual[S constraints.Slice[T], T any]( //nolint:thelper // this is the main body, not a helper
 	t *testing.T,
 	name string,
-	eqPairs [][2][]T,
-	neqPairs [][2][]T,
+	eqPairs [][2]S,
+	neqPairs [][2]S,
 ) {
 	subtestPairs(t, name, compare.AnySliceEqual, eqPairs, neqPairs)
 }
@@ -949,11 +958,14 @@ func TestSliceEqualWithoutOrder(t *testing.T) {
 	)
 }
 
-func subtestSliceEqualWithoutOrder[T comparable]( //nolint:thelper // this is the main body, not a helper
+func subtestSliceEqualWithoutOrder[ //nolint:thelper // this is the main body, not a helper
+	S constraints.Slice[T],
+	T comparable,
+](
 	t *testing.T,
 	name string,
-	eqPairs [][2][]T,
-	neqPairs [][2][]T,
+	eqPairs [][2]S,
+	neqPairs [][2]S,
 ) {
 	subtestPairs(t, name, compare.SliceEqualWithoutOrder, eqPairs, neqPairs)
 }
@@ -1037,11 +1049,14 @@ func TestFloatSliceEqualWithoutOrder(t *testing.T) {
 	)
 }
 
-func subtestFloatSliceEqualWithoutOrder[T constraints.Float]( //nolint:thelper // this is the main body, not a helper
+func subtestFloatSliceEqualWithoutOrder[ //nolint:thelper // this is the main body, not a helper
+	S constraints.Slice[T],
+	T constraints.Float,
+](
 	t *testing.T,
 	name string,
-	eqPairs [][2][]T,
-	neqPairs [][2][]T,
+	eqPairs [][2]S,
+	neqPairs [][2]S,
 ) {
 	subtestPairs(
 		t,
@@ -1518,8 +1533,8 @@ func reflectValueIsNil(v reflect.Value) bool {
 // neqExCap is the additional capacity of neqPairs.
 // These two parameters are useful to avoid unnecessary memory allocation
 // when the caller wants to append custom data to eqPairs and neqPairs.
-func mkEqNeqPairs[T any](
-	eqGroups [][]T,
+func mkEqNeqPairs[S constraints.Slice[T], T any](
+	eqGroups []S,
 	eqExCap int,
 	neqExCap int,
 ) (eqPairs, neqPairs [][2]T) {

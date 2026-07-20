@@ -942,13 +942,7 @@ func (fr *reader) IterZipFiles() (seq iter.Seq[*zip.File], err error) {
 		return noOpSeq, errors.AutoWrap(err)
 	}
 
-	return func(yield func(*zip.File) bool) {
-		for _, file := range files {
-			if !yield(file) {
-				return
-			}
-		}
-	}, nil
+	return slices.Values(files), nil
 }
 
 func (fr *reader) IterIndexZipFiles() (
@@ -960,13 +954,7 @@ func (fr *reader) IterIndexZipFiles() (
 		return noOpSeq2, errors.AutoWrap(err)
 	}
 
-	return func(yield func(int, *zip.File) bool) {
-		for i, file := range files {
-			if !yield(i, file) {
-				return
-			}
-		}
-	}, nil
+	return slices.All(files), nil
 }
 
 func (fr *reader) ZipComment() (comment string, err error) {

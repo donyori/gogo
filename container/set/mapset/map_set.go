@@ -20,6 +20,7 @@ package mapset
 
 import (
 	"iter"
+	"maps"
 
 	"github.com/donyori/gogo/container"
 	"github.com/donyori/gogo/container/set"
@@ -60,13 +61,11 @@ func (ms *mapSet[Item]) Len() int {
 // Its parameter handler is a function to deal with the item x in the
 // set and report whether to continue to access the next item.
 func (ms *mapSet[Item]) Range(handler func(x Item) (cont bool)) {
-	if handler != nil {
-		for x := range ms.m {
-			if !handler(x) {
-				return
-			}
-		}
+	if handler == nil {
+		return
 	}
+
+	maps.Keys(ms.m)(handler)
 }
 
 func (ms *mapSet[Item]) IterItems() iter.Seq[Item] {
@@ -106,14 +105,13 @@ func (ms *mapSet[Item]) ContainsSet(s set.Set[Item]) bool {
 		return false
 	}
 
-	var ok bool
+	for x := range s.IterItems() {
+		if _, ok := ms.m[x]; !ok {
+			return false
+		}
+	}
 
-	s.Range(func(x Item) (cont bool) {
-		_, ok = ms.m[x]
-		return ok
-	})
-
-	return ok
+	return true
 }
 
 func (ms *mapSet[Item]) ContainsAny(c container.Container[Item]) bool {
@@ -121,14 +119,13 @@ func (ms *mapSet[Item]) ContainsAny(c container.Container[Item]) bool {
 		return false
 	}
 
-	var ok bool
+	for x := range c.IterItems() {
+		if _, ok := ms.m[x]; ok {
+			return true
+		}
+	}
 
-	c.Range(func(x Item) (cont bool) {
-		_, ok = ms.m[x]
-		return !ok
-	})
-
-	return ok
+	return false
 }
 
 func (ms *mapSet[Item]) Add(x ...Item) {
@@ -148,10 +145,9 @@ func (ms *mapSet[Item]) Union(s set.Set[Item]) {
 		return
 	}
 
-	s.Range(func(x Item) (cont bool) {
+	for x := range s.IterItems() {
 		ms.m[x] = struct{}{}
-		return true
-	})
+	}
 }
 
 func (ms *mapSet[Item]) Intersect(s set.Set[Item]) {
@@ -172,10 +168,9 @@ func (ms *mapSet[Item]) Subtract(s set.Set[Item]) {
 		return
 	}
 
-	s.Range(func(x Item) (cont bool) {
+	for x := range s.IterItems() {
 		delete(ms.m, x)
-		return true
-	})
+	}
 }
 
 func (ms *mapSet[Item]) DisjunctiveUnion(s set.Set[Item]) {
@@ -183,13 +178,11 @@ func (ms *mapSet[Item]) DisjunctiveUnion(s set.Set[Item]) {
 		return
 	}
 
-	s.Range(func(x Item) (cont bool) {
+	for x := range s.IterItems() {
 		if _, ok := ms.m[x]; ok {
 			delete(ms.m, x)
 		} else {
 			ms.m[x] = struct{}{}
 		}
-
-		return true
-	})
+	}
 }

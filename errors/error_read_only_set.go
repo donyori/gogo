@@ -21,6 +21,8 @@ package errors
 import (
 	stderrors "errors"
 	"iter"
+	"maps"
+	"slices"
 )
 
 // ErrorReadOnlySet is a read-only set of errors.
@@ -64,41 +66,39 @@ type errorReadOnlySetEqual struct {
 // The returned set treats that an error "belongs to" it
 // if the error is equal to any item in this set.
 func NewErrorReadOnlySetEqual(err ...error) ErrorReadOnlySet {
-	erose := &errorReadOnlySetEqual{errSet: make(map[error]struct{}, len(err))}
+	eros := &errorReadOnlySetEqual{errSet: make(map[error]struct{}, len(err))}
 	for _, e := range err {
-		erose.errSet[e] = setMapV
+		eros.errSet[e] = setMapV
 	}
 
-	return erose
+	return eros
 }
 
-func (erose *errorReadOnlySetEqual) Len() int {
-	return len(erose.errSet)
+func (eros *errorReadOnlySetEqual) Len() int {
+	return len(eros.errSet)
 }
 
 // Contains reports whether err belongs to this error set.
 //
 // err is treated as "belonging to" this set
 // if it is equal to any item in this set.
-func (erose *errorReadOnlySetEqual) Contains(err error) bool {
-	_, ok := erose.errSet[err]
+func (eros *errorReadOnlySetEqual) Contains(err error) bool {
+	_, ok := eros.errSet[err]
 	return ok
 }
 
-func (erose *errorReadOnlySetEqual) Range(
+func (eros *errorReadOnlySetEqual) Range(
 	handler func(err error) (cont bool),
 ) {
-	if handler != nil {
-		for err := range erose.errSet {
-			if !handler(err) {
-				return
-			}
-		}
+	if handler == nil {
+		return
 	}
+
+	maps.Keys(eros.errSet)(handler)
 }
 
-func (erose *errorReadOnlySetEqual) IterErrors() iter.Seq[error] {
-	return erose.Range
+func (eros *errorReadOnlySetEqual) IterErrors() iter.Seq[error] {
+	return eros.Range
 }
 
 // errorReadOnlySetEqual is an implementation of interface ErrorReadOnlySet.
@@ -119,24 +119,24 @@ func NewErrorReadOnlySetIs(err ...error) ErrorReadOnlySet {
 		errSet[e] = setMapV
 	}
 
-	erosi := &errorReadOnlySetIs{errs: make([]error, 0, len(errSet))}
+	eros := &errorReadOnlySetIs{errs: make([]error, 0, len(errSet))}
 	for e := range errSet {
-		erosi.errs = append(erosi.errs, e)
+		eros.errs = append(eros.errs, e)
 	}
 
-	return erosi
+	return eros
 }
 
-func (erosi *errorReadOnlySetIs) Len() int {
-	return len(erosi.errs)
+func (eros *errorReadOnlySetIs) Len() int {
+	return len(eros.errs)
 }
 
 // Contains reports whether err belongs to this error set.
 //
 // err is treated as "belonging to" this set if there is an item x
 // in this set such that errors.Is(err, x) returns true.
-func (erosi *errorReadOnlySetIs) Contains(err error) bool {
-	for _, target := range erosi.errs {
+func (eros *errorReadOnlySetIs) Contains(err error) bool {
+	for _, target := range eros.errs {
 		if stderrors.Is(err, target) {
 			return true
 		}
@@ -145,18 +145,16 @@ func (erosi *errorReadOnlySetIs) Contains(err error) bool {
 	return false
 }
 
-func (erosi *errorReadOnlySetIs) Range(handler func(err error) (cont bool)) {
-	if handler != nil {
-		for _, err := range erosi.errs {
-			if !handler(err) {
-				return
-			}
-		}
+func (eros *errorReadOnlySetIs) Range(handler func(err error) (cont bool)) {
+	if handler == nil {
+		return
 	}
+
+	slices.Values(eros.errs)(handler)
 }
 
-func (erosi *errorReadOnlySetIs) IterErrors() iter.Seq[error] {
-	return erosi.Range
+func (eros *errorReadOnlySetIs) IterErrors() iter.Seq[error] {
+	return eros.Range
 }
 
 // errorReadOnlySetSameMessage is an implementation of
@@ -193,7 +191,7 @@ func NewErrorReadOnlySetSameMessage(err ...error) ErrorReadOnlySet {
 		}
 	}
 
-	erossm := &errorReadOnlySetSameMessage{
+	eros := &errorReadOnlySetSameMessage{
 		errsSet: make(map[string][]error, len(errSetMap)),
 	}
 	for k, set := range errSetMap {
@@ -202,15 +200,15 @@ func NewErrorReadOnlySetSameMessage(err ...error) ErrorReadOnlySet {
 			errs = append(errs, e)
 		}
 
-		erossm.errsSet[k] = errs
+		eros.errsSet[k] = errs
 	}
 
-	return erossm
+	return eros
 }
 
-func (erossm *errorReadOnlySetSameMessage) Len() int {
+func (eros *errorReadOnlySetSameMessage) Len() int {
 	var n int
-	for _, errs := range erossm.errsSet {
+	for _, errs := range eros.errsSet {
 		n += len(errs)
 	}
 
@@ -223,30 +221,28 @@ func (erossm *errorReadOnlySetSameMessage) Len() int {
 // if it has the same message as any item in this set.
 //
 // In particular, the message of nil error is treated as "<nil>".
-func (erossm *errorReadOnlySetSameMessage) Contains(err error) bool {
+func (eros *errorReadOnlySetSameMessage) Contains(err error) bool {
 	if err == nil {
-		return erossm.errsSet["<nil>"] != nil
+		return eros.errsSet[nilErrorString] != nil
 	}
 
-	return erossm.errsSet[err.Error()] != nil
+	return eros.errsSet[err.Error()] != nil
 }
 
-func (erossm *errorReadOnlySetSameMessage) Range(
+func (eros *errorReadOnlySetSameMessage) Range(
 	handler func(err error) (cont bool),
 ) {
-	if handler != nil {
-		for _, errs := range erossm.errsSet {
-			for _, err := range errs {
-				if !handler(err) {
-					return
-				}
-			}
-		}
+	if handler == nil {
+		return
+	}
+
+	for _, errs := range eros.errsSet {
+		slices.Values(errs)(handler)
 	}
 }
 
-func (erossm *errorReadOnlySetSameMessage) IterErrors() iter.Seq[error] {
-	return erossm.Range
+func (eros *errorReadOnlySetSameMessage) IterErrors() iter.Seq[error] {
+	return eros.Range
 }
 
 // setMapV is the value for map[Type]struct{}.

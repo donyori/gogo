@@ -25,6 +25,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/donyori/gogo/constraints"
 	"github.com/donyori/gogo/container/sequence"
 	"github.com/donyori/gogo/container/sequence/array"
 	"github.com/donyori/gogo/errors"
@@ -665,11 +666,9 @@ func TestSliceDynamicArray_Slice(t *testing.T) {
 				s := make([]int, slice.Len())
 
 				var i int
-
-				slice.Range(func(x int) (cont bool) {
+				for x := range slice.IterItems() {
 					s[i], i = x, i+1
-					return true
-				})
+				}
 
 				if unequal.Slice(s, tc.want) {
 					t.Errorf("got %v; want %v", s, tc.want)
@@ -1038,12 +1037,11 @@ func TestSliceDynamicArray_Append(t *testing.T) {
 			seqLen := sequenceLen(seq)
 			if seqLen > 0 {
 				want := make([]int, len(data)+seqLen)
-				i := copy(want, data)
 
-				seq.Range(func(x int) (cont bool) {
+				i := copy(want, data)
+				for x := range seq.IterItems() {
 					want[i], i = x, i+1
-					return true
-				})
+				}
 
 				testCases[idx].want = want
 			} else {
@@ -1259,22 +1257,11 @@ func TestSliceDynamicArray_InsertSequence(t *testing.T) {
 				testCases[idx].data = data
 				testCases[idx].i = i
 				testCases[idx].seq = seq
-
-				seqLen := sequenceLen(seq)
-				if seqLen > 0 {
-					want := make([]int, len(data)+seqLen)
-					j := copy(want, data[:i])
-
-					seq.Range(func(x int) (cont bool) {
-						want[j], j = x, j+1
-						return true
-					})
-					copy(want[j:], data[i:])
-					testCases[idx].want = want
-				} else {
-					testCases[idx].want = data
-				}
-
+				testCases[idx].want = getWantDataForSDAInsertSequence(
+					data,
+					i,
+					seq,
+				)
 				idx++
 			}
 		}
@@ -1300,6 +1287,30 @@ func TestSliceDynamicArray_InsertSequence(t *testing.T) {
 			},
 		)
 	}
+}
+
+// getWantDataForSDAInsertSequence returns the expected data
+// for TestSliceDynamicArray_InsertSequence.
+func getWantDataForSDAInsertSequence(
+	data []int,
+	i int,
+	seq sequence.Sequence[int],
+) []int {
+	seqLen := sequenceLen(seq)
+	if seqLen == 0 {
+		return data
+	}
+
+	want := make([]int, len(data)+seqLen)
+
+	j := copy(want, data[:i])
+	for x := range seq.IterItems() {
+		want[j], j = x, j+1
+	}
+
+	copy(want[j:], data[i:])
+
+	return want
 }
 
 func TestSliceDynamicArray_Cut(t *testing.T) {
@@ -1544,7 +1555,7 @@ func TestSliceDynamicArray_Shrink(t *testing.T) {
 	}
 }
 
-func sliceToName[T any](s []T) string {
+func sliceToName[S constraints.Slice[T], T any](s S) string {
 	return fmtcoll.MustFormatSliceToString(s, &fmtcoll.SequenceFormat[T]{
 		CommonFormat: fmtcoll.CommonFormat{
 			Separator:   ",",
@@ -1574,8 +1585,7 @@ func sequenceToName[Item any](s sequence.Sequence[Item]) string {
 	b.WriteByte('[')
 
 	var notFirst bool
-
-	s.Range(func(x Item) (cont bool) {
+	for x := range s.IterItems() {
 		if notFirst {
 			b.WriteByte(',')
 		} else {
@@ -1583,9 +1593,8 @@ func sequenceToName[Item any](s sequence.Sequence[Item]) string {
 		}
 
 		_, _ = fmt.Fprintf(&b, "%v", x) // ignore error as error is always nil
+	}
 
-		return true
-	})
 	b.WriteByte(']')
 
 	return b.String()
@@ -1610,7 +1619,10 @@ func copySda[Item any](data []Item) array.SliceDynamicArray[Item] {
 	return sda
 }
 
-func sliceUnequalWithoutOrder[T comparable](a, b []T) bool {
+func sliceUnequalWithoutOrder[S constraints.Slice[T], T comparable](
+	a S,
+	b S,
+) bool {
 	return !compare.SliceEqualWithoutOrder(a, b)
 }
 
@@ -1621,7 +1633,9 @@ type sequenceImpl[Item any] struct {
 	useFrontAndNext bool
 }
 
-func newSequence[Item any](data []Item) *sequenceImpl[Item] {
+func newSequence[S constraints.Slice[Item], Item any](
+	data S,
+) *sequenceImpl[Item] {
 	seq := &sequenceImpl[Item]{useFrontAndNext: true}
 	for _, x := range data {
 		seq.linkedList.PushBack(x)

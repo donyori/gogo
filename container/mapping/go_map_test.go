@@ -986,18 +986,12 @@ func mapItfWrong(m mapping.Map[string, int], want SIM) bool {
 		return true
 	}
 
-	ok := true
-
-	m.Range(func(x mapping.Entry[string, int]) (cont bool) {
-		var v int
-
-		v, ok = want[x.Key]
-		if ok {
-			ok = x.Value == v
+	for k, v := range m.IterKeyValues() {
+		wantV, ok := want[k]
+		if !ok || v != wantV {
+			return true
 		}
+	}
 
-		return ok
-	})
-
-	return !ok
+	return false
 }
