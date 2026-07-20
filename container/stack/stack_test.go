@@ -31,7 +31,7 @@ import (
 func TestNew(t *testing.T) {
 	t.Parallel()
 
-	for capacity := -1; capacity <= 33; capacity++ {
+	for capacity := -1; capacity <= stack.DefaultCapacity<<1; capacity++ {
 		wantInitCap := capacity
 		if wantInitCap <= 0 {
 			wantInitCap = stack.DefaultCapacity

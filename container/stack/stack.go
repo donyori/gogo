@@ -49,13 +49,6 @@ type Stack[Item any] interface {
 	Peek() Item
 }
 
-// defaultCapacity is the default capacity of the stack.
-const defaultCapacity int = 16
-
-// emptyStackPanicMessage is the panic message
-// indicating that the stack is empty.
-const emptyStackPanicMessage = "Stack[...] is empty"
-
 // stackSlice is an implementation of interface Stack,
 // based on Go slice.
 type stackSlice[Item any] struct {
@@ -147,3 +140,10 @@ func (s *stackSlice[Item]) Peek() Item {
 
 	return s.buf[len(s.buf)-1]
 }
+
+// defaultCapacity is the default capacity of the stack.
+const defaultCapacity int = 16
+
+// emptyStackPanicMessage is the panic message
+// indicating that the stack is empty.
+const emptyStackPanicMessage = "Stack[...] is empty"

@@ -34,6 +34,72 @@ type (
 	SIGM = mapping.GoMap[string, int]
 )
 
+func TestNewComparableKeyMap(t *testing.T) {
+	t.Parallel()
+
+	dataList := []SIM{
+		nil,
+		{},
+		{"A": 1},
+		{"A": 1, "B": 2},
+		{"A": 1, "B": 2, "C": 3, "a": -1, "b": -2, "c": -3},
+	}
+
+	var n int
+	for _, data := range dataList {
+		n += len(data) + 3
+	}
+
+	testCases := make([]struct {
+		data     SIM
+		capacity int
+		want     SIM
+	}, n)
+
+	var idx int
+
+	for _, data := range dataList {
+		for c := -1; c <= len(data)+1; c++ {
+			testCases[idx].data = data
+			testCases[idx].capacity = c
+
+			if len(data) > 0 {
+				testCases[idx].want = data
+			} else {
+				testCases[idx].want = SIM{}
+			}
+
+			idx++
+		}
+	}
+
+	for _, tc := range testCases {
+		t.Run(
+			fmt.Sprintf("cap=%d&data=%s", tc.capacity, mapToName(tc.data)),
+			func(t *testing.T) {
+				t.Parallel()
+
+				m := mapping.NewComparableKeyMap[string, int](tc.capacity)
+				if m == nil {
+					t.Fatal("got nil map")
+				}
+
+				var gm *SIGM
+				if tc.data != nil {
+					gm = (*SIGM)(new(maps.Clone(tc.data)))
+				}
+
+				m.SetMap(gm)
+
+				if mapItfWrong(m, tc.want) {
+					t.Errorf("got %s; want %s",
+						mapItfToString(m), mapToString(tc.want))
+				}
+			},
+		)
+	}
+}
+
 func TestGoMap_Len(t *testing.T) {
 	t.Parallel()
 
@@ -169,8 +235,7 @@ func TestGoMap_Clear(t *testing.T) {
 		{"A": 1, "B": 2, "C": 3},
 	}
 	for _, data := range dataList {
-		m := maps.Clone(data)
-		gm := (*SIGM)(&m)
+		gm := (*SIGM)(new(maps.Clone(data)))
 		t.Run("gm="+gmPtrToName(gm), func(t *testing.T) {
 			t.Parallel()
 
@@ -449,10 +514,8 @@ func TestGoMap_Get(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
-
 		if tc.data != nil {
-			m := maps.Clone(tc.data)
-			gm = (*SIGM)(&m)
+			gm = (*SIGM)(new(maps.Clone(tc.data)))
 		}
 
 		t.Run(
@@ -493,10 +556,8 @@ func TestGoMap_Set(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
-
 		if tc.data != nil {
-			m := maps.Clone(tc.data)
-			gm = (*SIGM)(&m)
+			gm = (*SIGM)(new(maps.Clone(tc.data)))
 		} else {
 			gm = new(SIGM)
 		}
@@ -554,10 +615,8 @@ func TestGoMap_GetAndSet(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
-
 		if tc.data != nil {
-			m := maps.Clone(tc.data)
-			gm = (*SIGM)(&m)
+			gm = (*SIGM)(new(maps.Clone(tc.data)))
 		} else {
 			gm = new(SIGM)
 		}
@@ -621,10 +680,8 @@ func TestGoMap_SetMap(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
-
 		if tc.data != nil {
-			m := maps.Clone(tc.data)
-			gm = (*SIGM)(&m)
+			gm = (*SIGM)(new(maps.Clone(tc.data)))
 		} else {
 			gm = new(SIGM)
 		}
@@ -709,10 +766,8 @@ func TestGoMap_GetAndSetMap(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
-
 		if tc.data != nil {
-			m := maps.Clone(tc.data)
-			gm = (*SIGM)(&m)
+			gm = (*SIGM)(new(maps.Clone(tc.data)))
 		} else {
 			gm = new(SIGM)
 		}
@@ -814,10 +869,8 @@ func TestGoMap_Remove(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
-
 		if tc.data != nil {
-			m := maps.Clone(tc.data)
-			gm = (*SIGM)(&m)
+			gm = (*SIGM)(new(maps.Clone(tc.data)))
 		}
 
 		t.Run(
@@ -862,10 +915,8 @@ func TestGoMap_GetAndRemove(t *testing.T) {
 
 	for _, tc := range testCases {
 		var gm *SIGM
-
 		if tc.data != nil {
-			m := maps.Clone(tc.data)
-			gm = (*SIGM)(&m)
+			gm = (*SIGM)(new(maps.Clone(tc.data)))
 		}
 
 		t.Run(
@@ -894,6 +945,10 @@ func keysToName(keys []string) string {
 		keys,
 		fmtcoll.NewSequenceFormatQuoted[string](true),
 	)
+}
+
+func mapToName(m SIM) string {
+	return mapToString(m)
 }
 
 func gmPtrToName(p *SIGM) string {

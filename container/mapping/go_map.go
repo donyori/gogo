@@ -25,6 +25,27 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
+// NewComparableKeyMap creates a new map whose keys are comparable.
+//
+// The method Range and iterators of the map access items in random order.
+// The access order in two calls to Range may be different.
+//
+// capacity asks to allocate enough space to hold the specified number of items.
+// If capacity is nonpositive,
+// NewComparableKeyMap creates a map with a small starting capacity.
+func NewComparableKeyMap[Key comparable, Value any](
+	capacity int,
+) Map[Key, Value] {
+	var m GoMap[Key, Value]
+	if capacity > 0 {
+		m = make(GoMap[Key, Value], capacity)
+	} else {
+		m = make(GoMap[Key, Value])
+	}
+
+	return new(m)
+}
+
 // GoMap is a map wrapped on Go map.
 // *GoMap implements the interface Map.
 //
@@ -38,8 +59,6 @@ import (
 //	GoMap[string, int]{"A": 1}
 //	make(GoMap[string, int])
 type GoMap[Key comparable, Value any] map[Key]Value
-
-var _ Map[string, any] = (*GoMap[string, any])(nil)
 
 // Len returns the number of key-value pairs in the map.
 //

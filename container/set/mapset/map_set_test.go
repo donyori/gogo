@@ -86,6 +86,10 @@ func TestNew(t *testing.T) {
 				t.Parallel()
 
 				ms := mapset.New[int](tc.capacity)
+				if ms == nil {
+					t.Fatal("got nil set")
+				}
+
 				ms.Add(tc.data...)
 
 				if setWrong(ms, tc.want) {

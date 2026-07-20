@@ -87,7 +87,7 @@ func TestGetBufferSize_Overflow(t *testing.T) {
 func TestNew(t *testing.T) {
 	t.Parallel()
 
-	for capacity := -1; capacity <= 33; capacity++ {
+	for capacity := -1; capacity <= queue.DefaultCapacity<<1; capacity++ {
 		wantInitCap := queue.DefaultCapacity
 		if capacity > 0 {
 			wantInitCap = queue.GetBufferSize(capacity)

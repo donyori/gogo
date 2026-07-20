@@ -26,6 +26,76 @@ import (
 	"github.com/donyori/gogo/function/compare"
 )
 
+// NewOrderedDynamicArray creates a new ordered dynamic array.
+//
+// capacity asks to allocate enough space to hold the specified number of items.
+// If capacity is nonpositive,
+// NewOrderedDynamicArray creates a ordered dynamic array
+// with a small starting capacity.
+//
+// The specified lessFn and cmpFn must be consistent,
+// and describe a strict weak ordering.
+// See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
+// for details.
+//
+// Note that floating-point comparison
+// (the < operator on float32 or float64 values)
+// is not a strict weak ordering when not-a-number (NaN) values are involved.
+//
+// If one of the lessFn and cmpFn is nil,
+// NewOrderedDynamicArray generates it from the other
+// (via lessFn.ToCompare and cmpFn.ToLess).
+// If both of them are nil, NewOrderedDynamicArray panics.
+func NewOrderedDynamicArray[Item any](
+	capacity int,
+	lessFn compare.LessFunc[Item],
+	cmpFn compare.Func[Item],
+) OrderedDynamicArray[Item] {
+	if capacity <= 0 {
+		capacity = defaultCapacity
+	}
+
+	return WrapSlice(new(make([]Item, 0, capacity)), lessFn, cmpFn)
+}
+
+// NewStrictWeakOrderedDynamicArray creates a new ordered dynamic array
+// whose items are strict weak ordered.
+// See github.com/donyori/gogo/constraints.StrictWeakOrdered for details.
+//
+// capacity asks to allocate enough space to hold the specified number of items.
+// If capacity is nonpositive,
+// NewStrictWeakOrderedDynamicArray creates a ordered dynamic array
+// with a small starting capacity.
+func NewStrictWeakOrderedDynamicArray[Item constraints.StrictWeakOrdered](
+	capacity int,
+) OrderedDynamicArray[Item] {
+	if capacity <= 0 {
+		capacity = defaultCapacity
+	}
+
+	return WrapStrictWeakOrderedSlice(new(make([]Item, 0, capacity)))
+}
+
+// NewFloatDynamicArray creates a new ordered dynamic array
+// whose items are floating-point numbers.
+// See github.com/donyori/gogo/constraints.Float for details.
+//
+// The returned OrderedDynamicArray treats NaN values as less than any others.
+//
+// capacity asks to allocate enough space to hold the specified number of items.
+// If capacity is nonpositive,
+// NewFloatDynamicArray creates a ordered dynamic array
+// with a small starting capacity.
+func NewFloatDynamicArray[Item constraints.Float](
+	capacity int,
+) OrderedDynamicArray[Item] {
+	if capacity <= 0 {
+		capacity = defaultCapacity
+	}
+
+	return WrapFloatSlice(new(make([]Item, 0, capacity)))
+}
+
 // sliceOrderedDynamicArray combines SliceDynamicArray,
 // github.com/donyori/gogo/function/compare.LessFunc,
 // and github.com/donyori/gogo/function/compare.Func.
@@ -37,14 +107,12 @@ type sliceOrderedDynamicArray[Item any] struct {
 	cmpFn  compare.Func[Item]
 }
 
-var _ OrderedDynamicArray[any] = (*sliceOrderedDynamicArray[any])(nil)
-
 // WrapSlice wraps a pointer to a Go slice with
 // github.com/donyori/gogo/function/compare.LessFunc and
 // github.com/donyori/gogo/function/compare.Func
 // to an OrderedDynamicArray.
 //
-// The specified LessFunc and Func must be consistent,
+// The specified lessFn and cmpFn must be consistent,
 // and describe a strict weak ordering.
 // See <https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings>
 // for details.
@@ -61,9 +129,9 @@ var _ OrderedDynamicArray[any] = (*sliceOrderedDynamicArray[any])(nil)
 // If the slice pointer is nil,
 // WrapSlice creates an empty slice and uses the pointer to it.
 //
-// If one of the LessFunc and Func is nil,
+// If one of the lessFn and cmpFn is nil,
 // WrapSlice generates it from the other
-// (via LessFunc.ToCompare and Func.ToLess).
+// (via lessFn.ToCompare and cmpFn.ToLess).
 // If both of them are nil, WrapSlice panics.
 func WrapSlice[Item any](
 	slicePtr *[]Item,
@@ -72,7 +140,7 @@ func WrapSlice[Item any](
 ) OrderedDynamicArray[Item] {
 	if lessFn == nil {
 		if cmpFn == nil {
-			panic(errors.AutoMsg("both lessFn and cmpFn are nil"))
+			panic(errors.AutoMsg(bothLessFnAndCmpFnAreNilPanicMessage))
 		}
 
 		lessFn = cmpFn.ToLess()
@@ -201,3 +269,8 @@ func (soda *sliceOrderedDynamicArray[Item]) checkNonempty() {
 		panic(errors.AutoMsgCustom("OrderedDynamicArray[...] is empty", -1, 1))
 	}
 }
+
+// bothLessFnAndCmpFnAreNilPanicMessage is the panic message
+// indicating that both the specified
+// less function and compare function are nil.
+const bothLessFnAndCmpFnAreNilPanicMessage = "both lessFn and cmpFn are nil"

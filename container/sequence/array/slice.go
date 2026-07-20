@@ -27,6 +27,19 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
+// NewDynamicArray creates a new dynamic array.
+//
+// capacity asks to allocate enough space to hold the specified number of items.
+// If capacity is nonpositive,
+// NewDynamicArray creates a dynamic array with a small starting capacity.
+func NewDynamicArray[Item any](capacity int) DynamicArray[Item] {
+	if capacity <= 0 {
+		capacity = defaultCapacity
+	}
+
+	return new(make(SliceDynamicArray[Item], 0, capacity))
+}
+
 // SliceDynamicArray is a dynamic array wrapped on Go slice.
 // *SliceDynamicArray implements the interface DynamicArray.
 //
@@ -41,8 +54,6 @@ import (
 //	SliceDynamicArray[int]{1, 2, 3}
 //	make(SliceDynamicArray[int], 2, 10)
 type SliceDynamicArray[Item any] []Item
-
-var _ DynamicArray[any] = (*SliceDynamicArray[any])(nil)
 
 // Len returns the number of items in the slice.
 //
@@ -248,7 +259,7 @@ func (sda *SliceDynamicArray[Item]) Reserve(capacity int) {
 	if sda == nil {
 		panic(errors.AutoMsg(nilSliceDynamicArrayPointerPanicMessage))
 	} else if capacity <= 0 {
-		capacity = defaultReserveCapacity
+		capacity = defaultCapacity
 	}
 
 	if capacity <= cap(*sda) {
@@ -554,5 +565,6 @@ const (
 	emptySliceDynamicArrayPanicMessage = "SliceDynamicArray[...] is empty"
 )
 
-// defaultReserveCapacity is the default capacity of the method Reserve.
-const defaultReserveCapacity int = 16
+// defaultCapacity is the default capacity of
+// the new functions and the method Reserve.
+const defaultCapacity int = 16

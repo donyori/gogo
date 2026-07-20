@@ -34,6 +34,28 @@ import (
 	"github.com/donyori/gogo/internal/unequal"
 )
 
+func TestNewDynamicArray(t *testing.T) {
+	t.Parallel()
+
+	for capacity := -1; capacity <= array.DefaultCapacity<<1; capacity++ {
+		wantInitCap := capacity
+		if wantInitCap <= 0 {
+			wantInitCap = array.DefaultCapacity
+		}
+
+		t.Run(fmt.Sprintf("cap=%d", capacity), func(t *testing.T) {
+			t.Parallel()
+
+			da := array.NewDynamicArray[int](capacity)
+			if da == nil {
+				t.Error("got nil dynamic array")
+			} else if c := da.Cap(); c != wantInitCap {
+				t.Errorf("got initial capacity %d; want %d", c, wantInitCap)
+			}
+		})
+	}
+}
+
 type IntSDA = array.SliceDynamicArray[int]
 
 func TestSliceDynamicArray_Len(t *testing.T) {
@@ -807,7 +829,7 @@ func TestSliceDynamicArray_Reserve(t *testing.T) {
 
 			testCases[idx].wantCap = capacity
 			if testCases[idx].wantCap <= 0 {
-				testCases[idx].wantCap = array.DefaultReserveCapacity
+				testCases[idx].wantCap = array.DefaultCapacity
 			}
 
 			if testCases[idx].wantCap < cap(data) {

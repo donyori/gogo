@@ -20,4 +20,8 @@ package array
 
 // Export for testing only.
 
-const DefaultReserveCapacity = defaultReserveCapacity
+const (
+	DefaultCapacity = defaultCapacity
+
+	BothLessFnAndCmpFnAreNilPanicMessage = bothLessFnAndCmpFnAreNilPanicMessage
+)

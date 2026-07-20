@@ -51,13 +51,6 @@ type Queue[Item any] interface {
 	Peek() Item
 }
 
-// defaultCapacity is the default capacity of the queue.
-const defaultCapacity int = 16
-
-// emptyQueuePanicMessage is the panic message
-// indicating that the queue is empty.
-const emptyQueuePanicMessage = "Queue[...] is empty"
-
 // queueSliceRing is an implementation of interface Queue,
 // based on Go slice and the ring (circular buffer) structure.
 type queueSliceRing[Item any] struct {
@@ -269,3 +262,10 @@ func getBufferSize(capacity int) int {
 
 	return size
 }
+
+// defaultCapacity is the default capacity of the queue.
+const defaultCapacity int = 16
+
+// emptyQueuePanicMessage is the panic message
+// indicating that the queue is empty.
+const emptyQueuePanicMessage = "Queue[...] is empty"

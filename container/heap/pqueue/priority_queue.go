@@ -66,13 +66,6 @@ type PriorityQueue[Item any] interface {
 	ReplaceTop(newX Item) Item
 }
 
-// defaultCapacity is the default capacity of the priority queue.
-const defaultCapacity int = 16
-
-// emptyQueuePanicMessage is the panic message
-// indicating that the priority queue is empty.
-const emptyQueuePanicMessage = "priority queue is empty"
-
 // priorityQueue is an implementation of interface PriorityQueue,
 // based on container/heap.
 type priorityQueue[Item any] struct {
@@ -229,3 +222,10 @@ func (oha odaHeapAdapter[Item]) Push(x any) {
 func (oha odaHeapAdapter[Item]) Pop() any {
 	return oha.ODA.Pop()
 }
+
+// defaultCapacity is the default capacity of the priority queue.
+const defaultCapacity int = 16
+
+// emptyQueuePanicMessage is the panic message
+// indicating that the priority queue is empty.
+const emptyQueuePanicMessage = "priority queue is empty"

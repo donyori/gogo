@@ -33,6 +33,168 @@ import (
 	"github.com/donyori/gogo/internal/floats"
 )
 
+func TestNewOrderedDynamicArray(t *testing.T) {
+	t.Parallel()
+
+	for capacity := -1; capacity <= array.DefaultCapacity<<1; capacity++ {
+		wantInitCap := capacity
+		if wantInitCap <= 0 {
+			wantInitCap = array.DefaultCapacity
+		}
+
+		t.Run(fmt.Sprintf("cap=%d", capacity), func(t *testing.T) {
+			t.Parallel()
+
+			oda := array.NewOrderedDynamicArray[int](
+				capacity,
+				compare.OrderedLess,
+				compare.Ordered,
+			)
+			if oda == nil {
+				t.Error("got nil ordered dynamic array")
+			} else if c := oda.Cap(); c != wantInitCap {
+				t.Errorf("got initial capacity %d; want %d", c, wantInitCap)
+			}
+		})
+	}
+}
+
+func TestNewOrderedDynamicArray_NilLessFn(t *testing.T) {
+	t.Parallel()
+
+	for capacity := -1; capacity <= array.DefaultCapacity<<1; capacity++ {
+		wantInitCap := capacity
+		if wantInitCap <= 0 {
+			wantInitCap = array.DefaultCapacity
+		}
+
+		t.Run(fmt.Sprintf("cap=%d", capacity), func(t *testing.T) {
+			t.Parallel()
+
+			defer func() {
+				if e := recover(); e != nil {
+					t.Error("panic:", e)
+				}
+			}()
+
+			oda := array.NewOrderedDynamicArray[int](
+				capacity,
+				nil,
+				compare.Ordered,
+			)
+			if oda == nil {
+				t.Error("got nil ordered dynamic array")
+			} else if c := oda.Cap(); c != wantInitCap {
+				t.Errorf("got initial capacity %d; want %d", c, wantInitCap)
+			}
+		})
+	}
+}
+
+func TestNewOrderedDynamicArray_NilCmpFn(t *testing.T) {
+	t.Parallel()
+
+	for capacity := -1; capacity <= array.DefaultCapacity<<1; capacity++ {
+		wantInitCap := capacity
+		if wantInitCap <= 0 {
+			wantInitCap = array.DefaultCapacity
+		}
+
+		t.Run(fmt.Sprintf("cap=%d", capacity), func(t *testing.T) {
+			t.Parallel()
+
+			defer func() {
+				if e := recover(); e != nil {
+					t.Error("panic:", e)
+				}
+			}()
+
+			oda := array.NewOrderedDynamicArray[int](
+				capacity,
+				compare.OrderedLess,
+				nil,
+			)
+			if oda == nil {
+				t.Error("got nil ordered dynamic array")
+			} else if c := oda.Cap(); c != wantInitCap {
+				t.Errorf("got initial capacity %d; want %d", c, wantInitCap)
+			}
+		})
+	}
+}
+
+func TestNewOrderedDynamicArray_NilLessFnAndCmpFn(t *testing.T) {
+	t.Parallel()
+
+	for capacity := -1; capacity <= array.DefaultCapacity<<1; capacity++ {
+		t.Run(fmt.Sprintf("cap=%d", capacity), func(t *testing.T) {
+			t.Parallel()
+
+			defer func() {
+				e := recover()
+				if e == nil {
+					t.Error("want panic but not")
+					return
+				}
+
+				s, ok := e.(string)
+				if !ok || !strings.HasSuffix(
+					s,
+					array.BothLessFnAndCmpFnAreNilPanicMessage,
+				) {
+					t.Error("panic:", e)
+				}
+			}()
+
+			array.NewOrderedDynamicArray[int](capacity, nil, nil) // want panic here
+		})
+	}
+}
+
+func TestNewStrictWeakOrderedDynamicArray(t *testing.T) {
+	t.Parallel()
+
+	for capacity := -1; capacity <= array.DefaultCapacity<<1; capacity++ {
+		wantInitCap := capacity
+		if wantInitCap <= 0 {
+			wantInitCap = array.DefaultCapacity
+		}
+
+		t.Run(fmt.Sprintf("cap=%d", capacity), func(t *testing.T) {
+			t.Parallel()
+
+			oda := array.NewStrictWeakOrderedDynamicArray[int](capacity)
+			if oda == nil {
+				t.Error("got nil ordered dynamic array")
+			} else if c := oda.Cap(); c != wantInitCap {
+				t.Errorf("got initial capacity %d; want %d", c, wantInitCap)
+			}
+		})
+	}
+}
+
+func TestNewFloatDynamicArray(t *testing.T) {
+	t.Parallel()
+
+	for capacity := -1; capacity <= array.DefaultCapacity<<1; capacity++ {
+		wantInitCap := capacity
+		if wantInitCap <= 0 {
+			wantInitCap = array.DefaultCapacity
+		}
+
+		t.Run(fmt.Sprintf("cap=%d", capacity), func(t *testing.T) {
+			t.Parallel()
+
+			oda := array.NewFloatDynamicArray[float64](capacity)
+			if oda == nil {
+				t.Error("got nil ordered dynamic array")
+			} else if c := oda.Cap(); c != wantInitCap {
+				t.Errorf("got initial capacity %d; want %d", c, wantInitCap)
+			}
+		})
+	}
+}
+
 func TestWrapSlice_NilSlicePtr_IntOrderedLessOrdered(t *testing.T) {
 	t.Parallel()
 
@@ -181,7 +343,10 @@ func TestWrapSlice_NilLessFnAndCmpFn(t *testing.T) {
 		}
 
 		s, ok := e.(string)
-		if !ok || !strings.HasSuffix(s, "both lessFn and cmpFn are nil") {
+		if !ok || !strings.HasSuffix(
+			s,
+			array.BothLessFnAndCmpFnAreNilPanicMessage,
+		) {
 			t.Error("panic:", e)
 		}
 	}()
