@@ -44,9 +44,6 @@ const (
 	NanoTimestampPattern = "^[+-]?[0-9]+$"
 )
 
-// jsonNull is the string that represents a nil value in JSON.
-const jsonNull = "null"
-
 // Timestamp is a timestamp wrapped on time.Time.
 //
 // It automatically detects the time unit (seconds, milliseconds, microseconds,
@@ -417,28 +414,6 @@ func (nt *NanoTimestamp) UnmarshalJSON(b []byte) error {
 // microTimestamp, and nanoTimestamp.
 type timestampType int8
 
-// Types of timestamp.
-const (
-	// autoTimestamp is a timestamp that automatically detects the time unit
-	// when parsed from strings.
-	// It is treated as a UNIX timestamp (in seconds) when formatted to strings.
-	//
-	// It determines the time unit by the integer part digits, as follows:
-	//   - less than 12-digits - second,
-	//   - 12-digits to 14-digits - millisecond,
-	//   - 15-digits or 16-digits - microsecond,
-	//   - more than 16-digits - nanosecond.
-	autoTimestamp timestampType = iota
-	// unixTimestamp is a UNIX timestamp (in seconds).
-	unixTimestamp
-	// milliTimestamp is a millisecond timestamp.
-	milliTimestamp
-	// microTimestamp is a microsecond timestamp.
-	microTimestamp
-	// nanoTimestamp is a nanosecond timestamp.
-	nanoTimestamp
-)
-
 // Regular expressions compiled from the patterns.
 var (
 	// unixTimestampRegExpr is a regular expression for UNIX timestamp.
@@ -639,3 +614,28 @@ func detectTimestampType(
 
 	return
 }
+
+// Types of timestamp.
+const (
+	// autoTimestamp is a timestamp that automatically detects the time unit
+	// when parsed from strings.
+	// It is treated as a UNIX timestamp (in seconds) when formatted to strings.
+	//
+	// It determines the time unit by the integer part digits, as follows:
+	//   - less than 12-digits - second,
+	//   - 12-digits to 14-digits - millisecond,
+	//   - 15-digits or 16-digits - microsecond,
+	//   - more than 16-digits - nanosecond.
+	autoTimestamp timestampType = iota
+	// unixTimestamp is a UNIX timestamp (in seconds).
+	unixTimestamp
+	// milliTimestamp is a millisecond timestamp.
+	milliTimestamp
+	// microTimestamp is a microsecond timestamp.
+	microTimestamp
+	// nanoTimestamp is a nanosecond timestamp.
+	nanoTimestamp
+)
+
+// jsonNull is the string that represents a nil value in JSON.
+const jsonNull = "null"

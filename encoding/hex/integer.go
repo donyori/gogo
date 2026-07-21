@@ -27,9 +27,6 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// minInt64Hex is the hexadecimal representation of math.MinInt64, as a string.
-const minInt64Hex = "-8000000000000000"
-
 // EncodeInt64DstLen returns a safe length of dst used in EncodeInt64
 // to ensure that dst has enough space to keep the encoding result.
 //
@@ -441,3 +438,6 @@ func writeSignAndLeadingZerosTo(
 
 	return // err must be nil, so don't need errors.AutoWrap(err)
 }
+
+// minInt64Hex is the hexadecimal representation of math.MinInt64, as a string.
+const minInt64Hex = "-8000000000000000"

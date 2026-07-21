@@ -39,12 +39,6 @@ var ErrContainsPathSeparator = errors.AutoNewCustom(
 	0,
 )
 
-// Constants from Numerical Recipes, for a linear congruential generator.
-const (
-	lcgMultiplier uint32 = 1664525
-	lcgAddend     uint32 = 1013904223
-)
-
 // Tmp creates and opens a new temporary file in the directory dir,
 // with specified permission perm (before umask),
 // for reading and writing (the associated file descriptor has mode os.O_RDWR).
@@ -170,3 +164,9 @@ func checkTmpPrefixAndSuffix(prefix, suffix string) error {
 
 	return nil
 }
+
+// Constants from Numerical Recipes, for a linear congruential generator.
+const (
+	lcgMultiplier uint32 = 1664525
+	lcgAddend     uint32 = 1013904223
+)

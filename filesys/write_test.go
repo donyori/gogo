@@ -36,8 +36,6 @@ import (
 	"github.com/donyori/gogo/inout"
 )
 
-const testWriteZipFilename = "test-write.zip"
-
 func TestWrite_Raw(t *testing.T) {
 	t.Parallel()
 
@@ -240,12 +238,6 @@ func TestWrite_ZipAddFS(t *testing.T) {
 		testZipFile(t, file, testZipFSNameBodyMap)
 	}
 }
-
-const (
-	writeAfterCloseRegFile = "test-write-after-close.txt"
-	writeAfterCloseTarFile = "test-write-after-close.tar"
-	writeAfterCloseZipFile = "test-write-after-close.zip"
-)
 
 var writeAfterCloseTestCases = []struct {
 	methodName string
@@ -1080,3 +1072,11 @@ func testZipFile(
 		}
 	}
 }
+
+const testWriteZipFilename = "test-write.zip"
+
+const (
+	writeAfterCloseRegFile = "test-write-after-close.txt"
+	writeAfterCloseTarFile = "test-write-after-close.tar"
+	writeAfterCloseZipFile = "test-write-after-close.zip"
+)

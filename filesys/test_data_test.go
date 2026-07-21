@@ -70,15 +70,6 @@ var (
 	}
 )
 
-const (
-	testFSRosesAreRedFilename = "roses are red.txt"
-	testFSBigFilename         = "13KB.dat"
-	testFSZipOffsetFilename   = "zip offset.zip"
-	testFSTarNonLocalFilename = "/non-local file.txt"
-)
-
-const testFSZipComment = "The end-of-central-directory comment \u4F60\u597D"
-
 // For testing methods TarAddFS and ZipAddFS of Writer.
 var (
 	testTarFS          fstest.MapFS
@@ -709,3 +700,12 @@ func copyBuffer(buf *bytes.Buffer) []byte {
 
 	return data
 }
+
+const (
+	testFSRosesAreRedFilename = "roses are red.txt"
+	testFSBigFilename         = "13KB.dat"
+	testFSZipOffsetFilename   = "zip offset.zip"
+	testFSTarNonLocalFilename = "/non-local file.txt"
+)
+
+const testFSZipComment = "The end-of-central-directory comment \u4F60\u597D"

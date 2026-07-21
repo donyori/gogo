@@ -551,6 +551,10 @@ func (sda *SliceDynamicArray[Item]) checkNonempty() {
 	}
 }
 
+// defaultCapacity is the default capacity of
+// the new functions and the method Reserve.
+const defaultCapacity int = 16
+
 const (
 	// nilSliceDynamicArrayPointerPanicMessage is the panic message
 	// indicating that the SliceDynamicArray pointer is nil.
@@ -564,7 +568,3 @@ const (
 	// indicating that the SliceDynamicArray is empty.
 	emptySliceDynamicArrayPanicMessage = "SliceDynamicArray[...] is empty"
 )
-
-// defaultCapacity is the default capacity of
-// the new functions and the method Reserve.
-const defaultCapacity int = 16

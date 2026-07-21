@@ -20,31 +20,15 @@ package hex
 
 import "sync"
 
-// uppercaseHexTable is an uppercase character table for hexadecimal encoding.
-const uppercaseHexTable = "0123456789ABCDEF"
+const (
+	// uppercaseHexTable is an uppercase character table
+	// for hexadecimal encoding.
+	uppercaseHexTable = "0123456789ABCDEF"
 
-// lowercaseHexTable is a lowercase character table for hexadecimal encoding.
-const lowercaseHexTable = "0123456789abcdef"
-
-// sourceBufferLen is the length of a chunk of source data.
-const sourceBufferLen int = 512
-
-// letterCaseDiff is the result of 'A' xor 'a'.
-// It indicates the different bit of the uppercase and lowercase letters.
-//
-// A letter byte ('A'-'Z','a'-'z', binary representation:
-// 0b0100_0001-0b0101_1010,0b0110_0001-0b0111_1010) bitwise or letterCaseDiff
-// gets the corresponding lowercase letter ('a'-'z').
-// A number byte ('0'-'9', binary representation: 0b0011_0000-0b0011_1001)
-// bitwise or letterCaseDiff gets the number itself.
-// But the bytes 0b0001_0000-0b0001_1001 bitwise or letterCaseDiff
-// gets the number byte ('0'-'9').
-// Therefore, a necessary and sufficient condition to test whether
-// a specified byte c equals a byte x of the lowercase character table
-// (lowercaseHexTable) case-insensitively, is:
-//
-//	c >= '0' && c|letterCaseDiff == x
-const letterCaseDiff byte = 'A' ^ 'a'
+	// lowercaseHexTable is a lowercase character table
+	// for hexadecimal encoding.
+	lowercaseHexTable = "0123456789abcdef"
+)
 
 // sourceBufferPool is a set of temporary buffers to load source data
 // from readers.
@@ -66,14 +50,6 @@ var encodeBufferPool = sync.Pool{
 	},
 }
 
-// int64SafeNumDigit is the safe length to hold the digits of
-// a hexadecimal representation of a signed 64-bit integer.
-const int64SafeNumDigit int = 16
-
-// int64BufferLen is the length of a buffer that holds
-// a hexadecimal representation of a signed 64-bit integer.
-const int64BufferLen = int64SafeNumDigit + 1
-
 // int64BufferPool is a set of temporary buffers to hold
 // the hexadecimal representation of a signed 64-bit integer.
 //
@@ -83,3 +59,31 @@ var int64BufferPool = sync.Pool{
 		return new([int64BufferLen]byte)
 	},
 }
+
+// sourceBufferLen is the length of a chunk of source data.
+const sourceBufferLen int = 512
+
+// letterCaseDiff is the result of 'A' xor 'a'.
+// It indicates the different bit of the uppercase and lowercase letters.
+//
+// A letter byte ('A'-'Z','a'-'z', binary representation:
+// 0b0100_0001-0b0101_1010,0b0110_0001-0b0111_1010) bitwise or letterCaseDiff
+// gets the corresponding lowercase letter ('a'-'z').
+// A number byte ('0'-'9', binary representation: 0b0011_0000-0b0011_1001)
+// bitwise or letterCaseDiff gets the number itself.
+// But the bytes 0b0001_0000-0b0001_1001 bitwise or letterCaseDiff
+// gets the number byte ('0'-'9').
+// Therefore, a necessary and sufficient condition to test whether
+// a specified byte c equals a byte x of the lowercase character table
+// (lowercaseHexTable) case-insensitively, is:
+//
+//	c >= '0' && c|letterCaseDiff == x
+const letterCaseDiff byte = 'A' ^ 'a'
+
+// int64SafeNumDigit is the safe length to hold the digits of
+// a hexadecimal representation of a signed 64-bit integer.
+const int64SafeNumDigit int = 16
+
+// int64BufferLen is the length of a buffer that holds
+// a hexadecimal representation of a signed 64-bit integer.
+const int64BufferLen = int64SafeNumDigit + 1

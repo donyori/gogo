@@ -39,21 +39,6 @@ import (
 	"github.com/donyori/gogo/randbytes"
 )
 
-const (
-	testFileRosesAreRedFilename = "roses are red.txt"
-	testFileBigFilename         = "13KB.dat"
-
-	testFileTarDirectory     = "tardir"
-	testFileTarFile1Filename = testFileTarDirectory + "/tar file1.txt"
-	testFileTarFile2Filename = testFileTarDirectory + "/tar file2.txt"
-
-	testFileZipDirectory     = "zipdir"
-	testFileZipFile1Filename = testFileZipDirectory + "/zip file1.txt"
-	testFileZipFile2Filename = testFileZipDirectory + "/zip file2.txt"
-
-	testFileEmptyDirectory = "emptydir"
-)
-
 // ChaCha8Seed is the seed for ChaCha8 used for testing.
 var ChaCha8Seed = [32]byte([]byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"))
 
@@ -896,3 +881,18 @@ func testZipFile(
 		}
 	}
 }
+
+const (
+	testFileRosesAreRedFilename = "roses are red.txt"
+	testFileBigFilename         = "13KB.dat"
+
+	testFileTarDirectory     = "tardir"
+	testFileTarFile1Filename = testFileTarDirectory + "/tar file1.txt"
+	testFileTarFile2Filename = testFileTarDirectory + "/tar file2.txt"
+
+	testFileZipDirectory     = "zipdir"
+	testFileZipFile1Filename = testFileZipDirectory + "/zip file1.txt"
+	testFileZipFile2Filename = testFileZipDirectory + "/zip file2.txt"
+
+	testFileEmptyDirectory = "emptydir"
+)

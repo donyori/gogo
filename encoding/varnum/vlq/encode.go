@@ -160,9 +160,6 @@ func AppendEncodeFloat64(dst []byte, f float64) []byte {
 	return AppendEncodeUint64(dst, uintconv.FromFloat64ByteReversal(f))
 }
 
-// bufferLen is the length of the buffer in bufferPool.
-const bufferLen int = 10
-
 // bufferPool is a set of temporary buffers used during encoding.
 //
 // The type of the buffers is [*[bufferLen]byte].
@@ -212,3 +209,6 @@ func encodeUint64(dst []byte, u uint64) int {
 
 	return n
 }
+
+// bufferLen is the length of the buffer in bufferPool.
+const bufferLen int = 10

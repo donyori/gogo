@@ -25,9 +25,6 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// defaultCloserName is the default device name for closers.
-const defaultCloserName = "closer"
-
 // Closer is an interface combining the basic Close method and a Closed method.
 //
 // Method Closed reports whether this closer is closed.
@@ -203,12 +200,6 @@ type MultiCloser interface {
 	CloserClosed(closer io.Closer) (closed, ok bool)
 }
 
-// Masks for the field flag of struct multiCloser.
-const (
-	multiCloserTryAllMask  byte = 0x01
-	multiCloserNoErrorMask byte = 0x02
-)
-
 // multiCloser is an implementation of interface MultiCloser.
 type multiCloser struct {
 	cm   map[io.Closer]bool // Closed map, to record whether the closer is closed successfully.
@@ -315,3 +306,12 @@ func (mc *multiCloser) CloserClosed(closer io.Closer) (closed, ok bool) {
 	closed, ok = mc.cm[closer]
 	return
 }
+
+// defaultCloserName is the default device name for closers.
+const defaultCloserName = "closer"
+
+// Masks for the field flag of struct multiCloser.
+const (
+	multiCloserTryAllMask  byte = 0x01
+	multiCloserNoErrorMask byte = 0x02
+)

@@ -39,10 +39,6 @@ func FprintfToFormatFunc[T any](format string) FormatFunc[T] {
 	}
 }
 
-// asciiOnlyQuotedFormat is the format specifier used by FprintfToFormatFunc
-// that makes fmt.Fprintf format x to an ASCII-only quoted representation.
-const asciiOnlyQuotedFormat = "%+q"
-
 // CommonFormat contains the format options common to sequences and maps.
 type CommonFormat struct {
 	// Separator is the string inserted between every two items.
@@ -409,3 +405,7 @@ func NewMapFormatKeyValueQuoted[Key, Value any](
 		FormatValueFn: FprintfToFormatFunc[Value](format),
 	}
 }
+
+// asciiOnlyQuotedFormat is the format specifier used by FprintfToFormatFunc
+// that makes fmt.Fprintf format x to an ASCII-only quoted representation.
+const asciiOnlyQuotedFormat = "%+q"

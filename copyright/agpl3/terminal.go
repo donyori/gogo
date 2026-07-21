@@ -30,23 +30,6 @@ import (
 	"github.com/donyori/gogo/errors"
 )
 
-// terminalNoticeLayout is a layout for formatting a terminal copyright notice.
-//
-// It takes 3 arguments, <program>, <year>, and <name of author>.
-const terminalNoticeLayout = "" +
-	"    %s  Copyright (C) %s  %s\n" +
-	"    This program comes with ABSOLUTELY NO WARRANTY; " +
-	"for details use `%[1]s show w'.\n" +
-	"    This is free software, and you are welcome to redistribute it\n" +
-	"    under certain conditions; use `%[1]s show c' for details.\n"
-
-// terminalNoticeWithSourceLayout is a layout for formatting
-// a terminal copyright notice with additional program source information.
-//
-// It takes 4 arguments, <program>, <year>, <name of author>, and <source>.
-const terminalNoticeWithSourceLayout = terminalNoticeLayout +
-	"    Program source: <%[4]s>.\n"
-
 // ErrAuthorMissing is an error for that the author is missing.
 //
 // The client should use errors.Is to test whether an error is ErrAuthorMissing.
@@ -169,3 +152,20 @@ func ResponseShowWC(w io.Writer, arg ...string) (n int, err error) {
 
 	return n, errors.AutoWrap(err)
 }
+
+// terminalNoticeLayout is a layout for formatting a terminal copyright notice.
+//
+// It takes 3 arguments, <program>, <year>, and <name of author>.
+const terminalNoticeLayout = "" +
+	"    %s  Copyright (C) %s  %s\n" +
+	"    This program comes with ABSOLUTELY NO WARRANTY; " +
+	"for details use `%[1]s show w'.\n" +
+	"    This is free software, and you are welcome to redistribute it\n" +
+	"    under certain conditions; use `%[1]s show c' for details.\n"
+
+// terminalNoticeWithSourceLayout is a layout for formatting
+// a terminal copyright notice with additional program source information.
+//
+// It takes 4 arguments, <program>, <year>, <name of author>, and <source>.
+const terminalNoticeWithSourceLayout = terminalNoticeLayout +
+	"    Program source: <%[4]s>.\n"

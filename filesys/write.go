@@ -35,8 +35,6 @@ import (
 	"github.com/donyori/gogo/inout"
 )
 
-const maxUint16 int = 1<<16 - 1
-
 // WritableFile represents a single file that can be written to.
 //
 // It is similar to io/fs.File but has the method Write instead of Read.
@@ -840,6 +838,8 @@ func (ew *errorWriter) ReadFrom(io.Reader) (n int64, err error) {
 
 	return 0, errors.AutoWrap(ew.err)
 }
+
+const maxUint16 int = 1<<16 - 1
 
 var (
 	isDirErrorWriter                = &errorWriter{err: ErrIsDir}

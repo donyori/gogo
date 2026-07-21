@@ -750,12 +750,6 @@ func TestReadFromFS_Offset(t *testing.T) {
 	}
 }
 
-const (
-	readFromFSAfterCloseRegFile = "file1.txt"
-	readFromFSAfterCloseTarFile = "tar file.tar"
-	readFromFSAfterCloseZipFile = "zip basic.zip"
-)
-
 var readFromFSAfterCloseTestCases = []struct {
 	methodName string
 	filename   string
@@ -1443,3 +1437,9 @@ func testZipSeq2CommonSub(
 			prefix, ctr, len(files))
 	}
 }
+
+const (
+	readFromFSAfterCloseRegFile = "file1.txt"
+	readFromFSAfterCloseTarFile = "tar file.tar"
+	readFromFSAfterCloseZipFile = "zip basic.zip"
+)

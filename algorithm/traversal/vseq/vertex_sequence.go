@@ -128,10 +128,6 @@ type VertexSequence[Vertex any] interface {
 	Replace(i int, v ...Vertex) VertexSequence[Vertex]
 }
 
-// emptyVertexSequencePanicMessage is the panic message
-// indicating that the vertex sequence is empty.
-const emptyVertexSequencePanicMessage = "VertexSequence[...] is empty"
-
 // vertexSequence is an implementation of interface VertexSequence.
 //
 // It represents a vertex sequence recursively,
@@ -312,3 +308,7 @@ func (vs *vertexSequence[Vertex]) Replace(
 ) VertexSequence[Vertex] {
 	return vs.Truncate(i).Append(v...)
 }
+
+// emptyVertexSequencePanicMessage is the panic message
+// indicating that the vertex sequence is empty.
+const emptyVertexSequencePanicMessage = "VertexSequence[...] is empty"

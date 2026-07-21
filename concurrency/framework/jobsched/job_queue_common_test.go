@@ -28,10 +28,6 @@ import (
 	"github.com/donyori/gogo/concurrency/framework/jobsched"
 )
 
-// numMetaJob is the number of jobs with their meta information
-// in the global variable metaJobs.
-const numMetaJob int = 600
-
 // metaJobs is a list of jobs with their meta information
 // for testing each job queue.
 var metaJobs []*jobsched.MetaJob[int, jobsched.NoProperty] // it is set in function init
@@ -251,3 +247,7 @@ func isEmptyQueuePanicMessage(panicValue any) bool {
 
 	return ok && strings.HasSuffix(msg, jobsched.EmptyQueuePanicMessage)
 }
+
+// numMetaJob is the number of jobs with their meta information
+// in the global variable metaJobs.
+const numMetaJob int = 600
